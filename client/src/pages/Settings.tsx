@@ -5,21 +5,77 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Database, Key, Lock, Server } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Database, Key, Lock, Server, Cpu } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState("");
   const [companyId, setCompanyId] = useState("");
-  const [isSaved, setIsSaved] = useState(false);
+  const [defaultModel, setDefaultModel] = useState("goss-20b");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
-  const handleSave = () => {
-    // In a real app, this would validate and save to secure storage
-    localStorage.setItem("poolBrain_apiKey", apiKey);
-    localStorage.setItem("poolBrain_companyId", companyId);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.poolBrainApiKey) setApiKey(data.poolBrainApiKey);
+      if (data.poolBrainCompanyId) setCompanyId(data.poolBrainCompanyId);
+      if (data.defaultAiModel) setDefaultModel(data.defaultAiModel);
+    } catch (error) {
+      console.error("Failed to fetch settings:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          poolBrainApiKey: apiKey,
+          poolBrainCompanyId: companyId,
+          defaultAiModel: defaultModel,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save settings");
+
+      toast({
+        title: "Settings saved",
+        description: "Your configuration has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading settings...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -32,6 +88,36 @@ export default function Settings() {
       </div>
 
       <div className="max-w-3xl mx-auto space-y-8">
+        {/* AI Model Configuration */}
+        <Card className="glass-card border-white/5">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Cpu className="w-5 h-5 text-secondary" />
+                    Neural Engine Configuration
+                </CardTitle>
+                <CardDescription>Select the base Large Language Model (LLM) for Ace Prime.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label>Default Model</Label>
+                    <Select value={defaultModel} onValueChange={setDefaultModel}>
+                        <SelectTrigger className="bg-white/5 border-white/10 font-ui">
+                            <SelectValue placeholder="Select Model" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-white/10 text-foreground">
+                            <SelectItem value="goss-20b">Goss 20B (Recommended)</SelectItem>
+                            <SelectItem value="llama-3">Llama 3 (70B)</SelectItem>
+                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                            <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                        "Goss 20B" is fine-tuned specifically for commercial pool management and chemistry.
+                    </p>
+                </div>
+            </CardContent>
+        </Card>
+
         <Card className="glass-card border-white/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -39,7 +125,7 @@ export default function Settings() {
               Pool Brain API Connection
             </CardTitle>
             <CardDescription>
-              Configure your connection to the Pool Brain V2 API. Keys are stored locally for this session.
+              Configure your connection to the Pool Brain V2 API.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -56,7 +142,7 @@ export default function Settings() {
                   className="pl-10 bg-white/5 border-white/10 font-mono text-sm" 
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Found in your Pool Brain Integration settings.</p>
+              <p className="text-xs text-muted-foreground">From your Pool Brain account (see screenshots).</p>
             </div>
 
             <div className="space-y-2">
@@ -74,13 +160,12 @@ export default function Settings() {
             </div>
 
             <div className="flex items-center justify-end gap-4 pt-4">
-              {isSaved && (
-                <span className="text-green-400 text-sm flex items-center gap-1 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4" /> Settings Saved
-                </span>
-              )}
-              <Button onClick={handleSave} className="bg-primary text-black hover:bg-primary/80 font-bold">
-                Save Connection
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving}
+                className="bg-primary text-black hover:bg-primary/80 font-bold"
+              >
+                {isSaving ? "Saving..." : "Save Configuration"}
               </Button>
             </div>
           </CardContent>

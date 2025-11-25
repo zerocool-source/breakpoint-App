@@ -2,16 +2,18 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Bot, Send, Terminal, Cpu, Network, Database } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Bot, Send, Terminal, Cpu, Network, Database, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function Intelligence() {
   const [messages, setMessages] = useState([
-    { role: "system", content: "Ace Prime Core Initialized. Connected to Pool Brain V2 API.", timestamp: "10:42:01" },
-    { role: "agent", content: "I'm Ace Prime. I'm scanning your pool systems for anomalies. How can I assist you today?", timestamp: "10:42:05" }
+    { role: "system", content: "Ace Prime Core Initialized. Loaded Model: Goss 20B (Fine-Tuned). Connected to Pool Brain V2 API.", timestamp: "10:42:01" },
+    { role: "agent", content: "I'm Ace Prime, powered by the Goss 20B neural engine. I'm scanning your pool systems for anomalies. How can I assist you today?", timestamp: "10:42:05" }
   ]);
   const [input, setInput] = useState("");
+  const [model, setModel] = useState("goss-20b");
 
   const handleSend = () => {
     if (!input) return;
@@ -20,7 +22,7 @@ export default function Intelligence() {
     
     // Mock AI response
     setTimeout(() => {
-      setMessages(prev => [...prev, { role: "agent", content: "Processing request... accessing historical data logs...", timestamp: new Date().toLocaleTimeString() }]);
+      setMessages(prev => [...prev, { role: "agent", content: `[${model.toUpperCase()}] Processing request... analyzing vector embeddings...`, timestamp: new Date().toLocaleTimeString() }]);
     }, 600);
   };
 
@@ -32,7 +34,14 @@ export default function Intelligence() {
             <SparkleIcon className="text-secondary w-8 h-8" />
             ACE PRIME
           </h2>
-          <p className="text-muted-foreground font-ui tracking-wide">Advanced AI Assistant • Multi-Agent System • Self-Learning Active</p>
+          <div className="flex items-center gap-2 text-muted-foreground font-ui tracking-wide">
+             <span>Advanced AI Assistant</span>
+             <span>•</span>
+             <div className="flex items-center gap-1 text-primary">
+               <Sparkles className="w-3 h-3" />
+               Running on {model === "goss-20b" ? "Goss 20B" : model === "llama-3" ? "Llama 3" : "GPT-4o"}
+             </div>
+          </div>
         </div>
         <div className="flex gap-4">
           <StatusBadge icon={Cpu} label="Neural Core" status="Online" color="text-green-400" />
@@ -46,13 +55,31 @@ export default function Intelligence() {
         <div className="lg:col-span-1 space-y-6">
             <Card className="glass-card border-white/5 h-full">
                 <CardHeader>
-                    <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">ACTIVE AGENTS</CardTitle>
+                    <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">SYSTEM CONFIGURATION</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <AgentStatus name="Analyzer Bot" action="Scanning pH Logs" progress={75} />
-                    <AgentStatus name="Inventory Bot" action="Idle" progress={0} />
-                    <AgentStatus name="Scheduler Bot" action="Optimizing Route" progress={45} />
-                    <AgentStatus name="Alert Bot" action="Monitoring Streams" progress={100} pulse />
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Active Model</label>
+                        <Select value={model} onValueChange={setModel}>
+                            <SelectTrigger className="bg-white/5 border-white/10 font-ui">
+                                <SelectValue placeholder="Select Model" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border-white/10 text-foreground">
+                                <SelectItem value="goss-20b">Goss 20B (Fine-Tuned)</SelectItem>
+                                <SelectItem value="llama-3">Llama 3 (70B)</SelectItem>
+                                <SelectItem value="gpt-4o">GPT-4o (OpenAI)</SelectItem>
+                                <SelectItem value="mistral">Mistral Large</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                
+                    <div className="space-y-4 pt-4 border-t border-white/5">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Active Agents</p>
+                        <AgentStatus name="Analyzer Bot" action="Scanning pH Logs" progress={75} />
+                        <AgentStatus name="Inventory Bot" action="Idle" progress={0} />
+                        <AgentStatus name="Scheduler Bot" action="Optimizing Route" progress={45} />
+                        <AgentStatus name="Alert Bot" action="Monitoring Streams" progress={100} pulse />
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -85,7 +112,7 @@ export default function Intelligence() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Chat with Ace Prime..." 
+                placeholder={`Message ${model === "goss-20b" ? "Ace Prime (Goss 20B)" : "AI Assistant"}...`}
                 className="bg-white/5 border-white/10 focus:border-primary/50 text-white font-ui"
               />
               <Button onClick={handleSend} className="bg-primary text-black hover:bg-primary/80 font-bold">
@@ -132,7 +159,7 @@ function AgentStatus({ name, action, progress, pulse }: any) {
 function SparkleIcon({className}: {className?: string}) {
     return (
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
-            <path fillRule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813a3.75 3.75 0 002.576-2.576l.813-2.846A.75.75 0 019 4.5zM9 15.75a.75.75 0 01.721.544l.178.622a2.25 2.25 0 001.65 1.65l.622.178a.75.75 0 010 1.442l-.622.178a2.25 2.25 0 00-1.65 1.65l-.178.622a.75.75 0 01-1.442 0l-.178-.622a2.25 2.25 0 00-1.65-1.65l-.622-.178a.75.75 0 010-1.442l.622-.178a2.25 2.25 0 001.65-1.65l.178-.622a.75.75 0 01.721-.544z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813a3.75 3.75 0 002.576-2.576l.813-2.846A.75.75 0 019 4.5zM9 15.75a.75.75 0 01.721.544l.178.622a2.25 2.25 0 001.65 1.65l.622.178a.75.75 0 010 1.442l-.622.178a2.25 2.25 0 00-1.65 1.65l-.178.622a.75.75 0 01-1.442 0l-.178-.622a2.25 2.25 0 00-1.65 1.65l-.622-.178a.75.75 0 010-1.442l.622-.178a2.25 2.25 0 001.65-1.65l.178-.622a.75.75 0 01.721-.544z" clipRule="evenodd" />
         </svg>
     )
 }

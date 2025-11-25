@@ -8,10 +8,9 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="mb-8">
-        <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">COMMAND CENTER</h2>
+        <h2 className="text-3xl font-display text-white mb-2 tracking-tight font-extrabold">COMMAND CENTER</h2>
         <p className="text-muted-foreground font-ui tracking-wide">System Standby • Waiting for Data Stream • API Connected</p>
       </div>
-
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
@@ -42,7 +41,6 @@ export default function Dashboard() {
           delay={200}
         />
       </div>
-
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Expanded Alerts Feed takes up 2 columns */}
