@@ -45,17 +45,19 @@ function setupRoutes(app: any) {
       // Fetch data in parallel - limit to 150 alerts for performance
       const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
         client.getAlertsList({ limit: 150 }),
-        client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerNotes({ limit: 1000 }).catch(() => ({ data: [] }))
+        client.getCustomerDetail({ limit: 1000 }).catch((e) => { console.error("Customer detail error:", e); return { data: [] }; }),
+        client.getCustomerPoolDetails({ limit: 1000 }).catch((e) => { console.error("Customer pool details error:", e); return { data: [] }; }),
+        client.getCustomerNotes({ limit: 1000 }).catch((e) => { console.error("Customer notes error:", e); return { data: [] }; })
       ]);
 
-      // Build maps
+      // Build customer map using RecordID as key
       const customerMap: Record<string, any> = {};
       if (customersData.data && Array.isArray(customersData.data)) {
         customersData.data.forEach((c: any) => {
-          const customerId = c.customerId || c.id;
-          if (customerId) customerMap[customerId] = c;
+          const customerId = c.RecordID; // Pool Brain uses RecordID for customer ID
+          if (customerId) {
+            customerMap[customerId] = c;
+          }
         });
       }
 
@@ -63,28 +65,34 @@ function setupRoutes(app: any) {
       const customerNotesMap: Record<string, string> = {};
       if (custNotesData.data && Array.isArray(custNotesData.data)) {
         custNotesData.data.forEach((cn: any) => {
-          const customerId = cn.customerId || cn.id;
+          const customerId = cn.RecordID || cn.CustomerID;
           if (customerId) {
-            customerNotesMap[customerId] = cn.notes || cn.description || "";
+            customerNotesMap[customerId] = cn.notes || cn.Notes || cn.description || "";
           }
         });
       }
 
+      // Pool to customer map - maps waterBodyId (RecordID from pool details) to CustomerID
       const poolToCustomerMap: Record<string, string> = {};
       if (custPoolData.data && Array.isArray(custPoolData.data)) {
         custPoolData.data.forEach((cp: any) => {
-          const poolId = cp.poolId;
-          const customerId = cp.customerId;
-          if (poolId && customerId) poolToCustomerMap[poolId] = customerId;
+          const waterBodyId = cp.RecordID; // Pool's RecordID is the waterBodyId
+          const customerId = cp.CustomerID; // Customer's RecordID
+          if (waterBodyId && customerId) {
+            poolToCustomerMap[waterBodyId] = customerId;
+          }
         });
       }
 
       const enrichedAlerts: any[] = [];
       if (alertsData.data && Array.isArray(alertsData.data)) {
         alertsData.data.forEach((pbAlert: any) => {
-          const poolId = pbAlert.BodyOfWater;
-          const poolName = poolId || "Unknown Pool";
-          const customerId = poolToCustomerMap[poolId];
+          // Use waterBodyId to get pool-customer mapping, or use CustomerID directly from alert
+          const waterBodyId = pbAlert.waterBodyId;
+          const poolName = pbAlert.BodyOfWater || "Unknown Pool";
+          
+          // Try to get customer ID from the alert directly, or from pool mapping
+          let customerId = pbAlert.CustomerID || poolToCustomerMap[waterBodyId];
           const customer = customerId ? customerMap[customerId] : undefined;
 
           let alertType = "Unknown";
@@ -146,17 +154,26 @@ function setupRoutes(app: any) {
             }
           }
 
+          // Extract address from Addresses object (first address)
+          let address = "";
+          if (customer?.Addresses && typeof customer.Addresses === 'object') {
+            const firstAddr = Object.values(customer.Addresses)[0] as any;
+            if (firstAddr) {
+              address = `${firstAddr.BillingAddress || ''}, ${firstAddr.BillingCity || ''}, ${firstAddr.BillingState || ''} ${firstAddr.BillingZip || ''}`.trim();
+            }
+          }
+
           enrichedAlerts.push({
             alertId: pbAlert.JobID || pbAlert.alertId || pbAlert.id,
-            poolId,
+            poolId: waterBodyId,
             poolName,
             customerId: customerId || null,
-            customerName: customer?.name || customer?.companyName || "Unknown Customer",
-            address: customer?.address || "",
-            phone: customer?.phone || customer?.phoneNumber || "",
-            email: customer?.email || customer?.emailAddress || "",
-            contact: customer?.contact || customer?.contactPerson || "",
-            notes: customerNotesMap[customerId] || customer?.notes || "",
+            customerName: customer?.CustomerName || customer?.CompanyName || "Unknown Customer",
+            address: address || customer?.Address || "",
+            phone: customer?.Phone || "",
+            email: customer?.Email || "",
+            contact: customer?.Contact || customer?.ContactName || "",
+            notes: customerNotesMap[customerId] || "",
             message,
             type: alertType,
             severity,
