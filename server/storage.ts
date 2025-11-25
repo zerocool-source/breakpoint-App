@@ -31,6 +31,8 @@ export interface IStorage {
   // Chat
   getChatHistory(limit?: number): Promise<ChatMessage[]>;
   addChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  saveChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  clearChatHistory(): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -116,6 +118,14 @@ export class DbStorage implements IStorage {
   async addChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
     const result = await db.insert(chatMessages).values(message).returning();
     return result[0];
+  }
+
+  async saveChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    return this.addChatMessage(message);
+  }
+
+  async clearChatHistory(): Promise<void> {
+    await db.delete(chatMessages);
   }
 }
 

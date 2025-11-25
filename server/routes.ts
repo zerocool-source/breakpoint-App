@@ -529,6 +529,87 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to update settings" });
     }
   });
+
+  // ==================== ACE AI CHAT ====================
+  
+  // Chat endpoint - proxies to local Ollama instance running ace-breakpoint model
+  app.post("/api/chat", async (req: any, res: any) => {
+    try {
+      const { message, model = "ace-breakpoint" } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const ollamaEndpoint = process.env.OLLAMA_ENDPOINT || "http://localhost:11434";
+      
+      // Call local Ollama instance
+      const response = await fetch(`${ollamaEndpoint}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: model,
+          prompt: message,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Save chat message to storage
+      const chatMessage = {
+        role: "user" as const,
+        content: message,
+        timestamp: new Date().toISOString()
+      };
+      
+      const assistantMessage = {
+        role: "assistant" as const,
+        content: data.response || "No response from Ace",
+        timestamp: new Date().toISOString()
+      };
+
+      await storage.saveChatMessage(chatMessage);
+      await storage.saveChatMessage(assistantMessage);
+
+      res.json({ 
+        response: data.response,
+        model: model
+      });
+    } catch (error: any) {
+      console.error("Error in chat endpoint:", error);
+      res.status(500).json({ 
+        error: "Failed to connect to Ace AI. Make sure Ollama is running and accessible.",
+        details: error.message 
+      });
+    }
+  });
+
+  // Get chat history
+  app.get("/api/chat/history", async (req: any, res: any) => {
+    try {
+      const history = await storage.getChatHistory();
+      res.json(history);
+    } catch (error: any) {
+      console.error("Error fetching chat history:", error);
+      res.status(500).json({ error: "Failed to fetch chat history" });
+    }
+  });
+
+  // Clear chat history
+  app.delete("/api/chat/history", async (req: any, res: any) => {
+    try {
+      await storage.clearChatHistory();
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error clearing chat history:", error);
+      res.status(500).json({ error: "Failed to clear chat history" });
+    }
+  });
 }
 
   
