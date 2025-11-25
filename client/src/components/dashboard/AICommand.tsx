@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Mic, Sparkles, TrendingUp, AlertCircle } from "lucide-react";
+import { Mic, Sparkles, TrendingUp, AlertCircle, MessageSquare } from "lucide-react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 interface EnrichedAlert {
@@ -144,6 +145,17 @@ export function AICommand() {
           <Mic className="w-3 h-3" />
           {isAnalyzing ? "Analyzing..." : "Analyze Alerts"}
         </button>
+
+        {/* Link to Full Chat */}
+        <Link href="/chat">
+          <button 
+            className="mt-2 flex items-center gap-2 px-3 py-1 rounded font-ui text-xs transition-all duration-300 text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10"
+            data-testid="button-open-chat"
+          >
+            <MessageSquare className="w-3 h-3" />
+            Open Full Chat
+          </button>
+        </Link>
       </CardContent>
     </Card>
   );
