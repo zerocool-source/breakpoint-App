@@ -49,30 +49,12 @@ export function buildChemicalOrderEmail({
 
   orders.forEach(order => {
     const rushFlag = order.rush ? " Rush!" : "";
-    // Property name in HTML bold red for Outlook
-    bodyLines.push(`<b><font color="#D32F2F">${order.accountName}${rushFlag}</font></b>`);
+    bodyLines.push(`${order.accountName}${rushFlag}`);
     if (order.address) bodyLines.push(order.address);
-    
-    // Clean lockbox info - remove bullets, plus signs, asterisks
-    if (order.entryNotes) {
-      const cleanedNotes = order.entryNotes
-        .replace(/[•\+\*]/g, '')  // Remove bullets, plus signs, asterisks
-        .replace(/^\s+/gm, '')    // Remove leading spaces from each line
-        .trim();
-      if (cleanedNotes) bodyLines.push(cleanedNotes);
-    }
-    
+    if (order.entryNotes) bodyLines.push(order.entryNotes);
     bodyLines.push(""); // empty line before items
 
-    // Clean chemical items - remove bullets, plus signs, extra whitespace
-    (order.items || []).forEach(item => {
-      const cleanedItem = item
-        .replace(/[•\+\*]/g, '')      // Remove bullets, plus signs, asterisks
-        .replace(/\n{2,}/g, '\n')     // Replace multiple newlines with single
-        .replace(/^\s+/gm, '')        // Remove leading spaces from each line
-        .trim();
-      if (cleanedItem) bodyLines.push(cleanedItem);
-    });
+    (order.items || []).forEach(item => bodyLines.push(item));
     bodyLines.push(""); // blank line between accounts
   });
 
