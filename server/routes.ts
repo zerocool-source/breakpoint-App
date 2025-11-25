@@ -535,7 +535,7 @@ function setupRoutes(app: any) {
   // Chat endpoint - proxies to local Ollama instance running ace-breakpoint model
   app.post("/api/chat", async (req: any, res: any) => {
     try {
-      const { message, model = "ace-breakpoint" } = req.body;
+      const { message, model = "ace-breakpoint", saveHistory = true } = req.body;
       
       if (!message) {
         return res.status(400).json({ error: "Message is required" });
@@ -559,25 +559,28 @@ function setupRoutes(app: any) {
       }
 
       const data = await response.json();
+      const aiResponse = data.response || "No response from Ace";
       
-      // Save chat message to storage
-      const chatMessage = {
-        role: "user" as const,
-        content: message,
-        timestamp: new Date().toISOString()
-      };
-      
-      const assistantMessage = {
-        role: "assistant" as const,
-        content: data.response || "No response from Ace",
-        timestamp: new Date().toISOString()
-      };
+      // Save chat message to storage only if requested
+      if (saveHistory) {
+        const chatMessage = {
+          role: "user" as const,
+          content: message,
+          timestamp: new Date().toISOString()
+        };
+        
+        const assistantMessage = {
+          role: "assistant" as const,
+          content: aiResponse,
+          timestamp: new Date().toISOString()
+        };
 
-      await storage.saveChatMessage(chatMessage);
-      await storage.saveChatMessage(assistantMessage);
+        await storage.saveChatMessage(chatMessage);
+        await storage.saveChatMessage(assistantMessage);
+      }
 
       res.json({ 
-        response: data.response,
+        message: aiResponse,
         model: model
       });
     } catch (error: any) {

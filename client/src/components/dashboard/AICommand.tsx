@@ -46,21 +46,36 @@ export function AICommand() {
       const alertSummary = alerts.slice(0, 3).map(a => `${a.poolName} (${a.customerName}): ${a.message}`).join("; ");
       const prompt = `Analyze these ${activeCount} active pool alerts and give a brief recommendation: ${alertSummary}`;
       
-      const res = await fetch("/api/chat/respond", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userMessage: prompt, model: "goss-20b" }),
+        body: JSON.stringify({ message: prompt, model: "ace-breakpoint", saveHistory: false }),
       });
-      if (!res.ok) throw new Error("Failed to get AI analysis");
+      
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to connect" }));
+        throw new Error(error.error || "AI service unavailable");
+      }
+      
       return res.json();
     },
     onSuccess: (data) => {
-      setAiInsight(data.content);
+      if (data.message) {
+        setAiInsight(data.message);
+      } else if (data.error) {
+        setAiInsight("AI service temporarily unavailable.");
+      } else {
+        setAiInsight("Analysis complete.");
+      }
       setIsAnalyzing(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
       setIsAnalyzing(false);
-      setAiInsight("Unable to analyze alerts at this time.");
+      if (error.message.includes("connect")) {
+        setAiInsight("Connect Ollama to enable AI analysis.");
+      } else {
+        setAiInsight("Unable to analyze alerts at this time.");
+      }
     },
   });
 
@@ -73,6 +88,10 @@ export function AICommand() {
   }, [isListening]);
 
   const handleAnalyzeAlerts = async () => {
+    if (activeCount === 0) {
+      setAiInsight("No active alerts to analyze.");
+      return;
+    }
     setIsAnalyzing(true);
     setIsListening(true);
     await analyzeAlertsMutation.mutateAsync();
