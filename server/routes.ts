@@ -284,20 +284,40 @@ function setupRoutes(app: any) {
             msgLower.includes("requesting");
 
           if (isChemicalAlert && message) {
-            // Extract address
+            // Extract PRIMARY address (preferred) or BILLING address
             let address = "";
+            let primaryAddr = null;
+            let billingAddr = null;
+            
             if (customer?.Addresses && typeof customer.Addresses === 'object') {
-              const firstAddr = Object.values(customer.Addresses)[0] as any;
-              if (firstAddr) {
-                address = `${firstAddr.BillingAddress || ''}, ${firstAddr.BillingCity || ''}, ${firstAddr.BillingState || ''} ${firstAddr.BillingZip || ''}`.trim();
+              // Look for PRIMARY and BILLING addresses
+              Object.values(customer.Addresses).forEach((addr: any) => {
+                if (addr.Type === 'PRIMARY' || addr.type === 'PRIMARY') {
+                  primaryAddr = addr;
+                } else if (addr.Type === 'BILLING' || addr.type === 'BILLING') {
+                  billingAddr = addr;
+                }
+              });
+              
+              // Use PRIMARY first, then BILLING as fallback
+              const selectedAddr: any = primaryAddr || billingAddr || Object.values(customer.Addresses)[0];
+              if (selectedAddr) {
+                const addrLine = selectedAddr.PrimaryAddress || selectedAddr.BillingAddress || selectedAddr.address || '';
+                const city = selectedAddr.PrimaryCity || selectedAddr.BillingCity || selectedAddr.city || '';
+                const state = selectedAddr.PrimaryState || selectedAddr.BillingState || selectedAddr.state || '';
+                const zip = selectedAddr.PrimaryZip || selectedAddr.BillingZip || selectedAddr.zip || '';
+                address = `${addrLine}, ${city}, ${state} ${zip}`.trim();
               }
             }
+
+            // Get Access Notes (lockbox information)
+            const accessNotes = customer?.AccessNotes || customer?.accessNotes || customer?.access_notes || "";
 
             chemicalOrders.push({
               accountName: customer?.CustomerName || customer?.CompanyName || poolName,
               rush: msgLower.includes("urgent") || msgLower.includes("below half"),
               address: address || customer?.Address || "",
-              entryNotes: "", // Could be populated from customer notes
+              entryNotes: accessNotes,
               items: [message]
             });
           }
