@@ -127,33 +127,53 @@ export default function Automations() {
       <div className="mt-8">
         <Card className="glass-card border-white/5">
           <CardHeader>
-            <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">BULK CHEMICAL EMAIL TEMPLATE</CardTitle>
-            <CardDescription>Subject: 💧 Bulk Chemical Solution for {`{{customer_name}}`} - Special Pricing</CardDescription>
+            <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">ALPHA CHEMICAL ORDER TEMPLATE</CardTitle>
+            <CardDescription>Auto-generated bulk chemical orders in Breakpoint style</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-white text-black p-8 rounded-lg font-sans max-w-2xl mx-auto shadow-2xl">
-              <div className="border-b pb-4 mb-4 flex justify-between items-center">
-                <h1 className="text-xl font-bold text-[#0078D4]">Breakpoint Commercial Pools</h1>
-                <span className="text-xs text-gray-500">Bulk Chemical Sales</span>
-              </div>
-              <p className="mb-4">Hello {`{{customer_name}}`},</p>
-              <p className="mb-4">We noticed your recent alerts for <strong>{`{{pool_name}}`}</strong> and wanted to reach out with a solution that could help prevent future issues.</p>
-              
-              <div className="bg-blue-50 p-4 rounded border-l-4 border-[#0078D4] mb-4">
-                <p className="font-bold mb-2">Recommended Bulk Chemical Package:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>55G Chlorine Drum - Special Rate</li>
-                  <li>15G Acid Carboys (2x) - Discounted</li>
-                  <li>50lb Bag Sodium Bicarbonate</li>
-                </ul>
-                <p className="mt-2 text-green-600 font-bold">Save 15% on bulk orders this month!</p>
-              </div>
+            <div className="bg-white text-black p-6 rounded-lg font-mono text-xs max-w-3xl mx-auto shadow-2xl overflow-x-auto">
+              <div className="whitespace-pre-wrap">
+                <p><strong>From:</strong> COO &lt;COO@breakpointpools.com&gt;</p>
+                <p><strong>Sent:</strong> Tuesday, November 25, 2025 8:03 AM</p>
+                <p><strong>To:</strong> Paramount Orders &lt;pmtorder@awspoolsupply.com&gt;</p>
+                <p><strong>Cc:</strong> Jesus Diaz &lt;Jesus@awspoolsupply.com&gt;</p>
+                <p><strong>Subject:</strong> Alpha Chemical Order</p>
+                <p className="mt-4"></p>
+                
+                <p className="font-bold">PRESERVE At Chino <span className="text-red-600">Rush!</span></p>
+                <p>C/O: First Service Residential, LL CPO</p>
+                <p>BOX 62499, IRVINE, CA 92602</p>
+                <p className="text-gray-600 text-[10px]">Main entry code: #7139 | Lockbox: 5090</p>
+                <p className="mt-2"></p>
+                <p>Bulk bleach – refill 150-gallon chlorine tank (currently below half)</p>
+                <p>Bulk muriatic acid – refill 50-gallon acid tank (currently below half)</p>
+                <p className="mt-4"></p>
 
-              <p className="mb-6">Let us know if you'd like a detailed quote or want to discuss your specific chemical needs.</p>
-              
-              <a href="#" className="inline-block bg-[#0078D4] text-white px-6 py-2 rounded font-bold text-sm">
-                Request Quote
-              </a>
+                <p className="font-bold">Amelia Square <span className="text-red-600">Rush!</span></p>
+                <p>3332 Wind Chime Lane</p>
+                <p>Perris, CA 92571</p>
+                <p className="text-gray-600 text-[10px]">Main entry code: #7139 | Lockbox: 5090</p>
+                <p className="mt-2"></p>
+                <p>2 – 15gal Bleach</p>
+                <p>2 – 15gal Acid</p>
+                <p className="mt-4"></p>
+
+                <p className="font-bold">Bear Creek MA</p>
+                <p>31608 Railroad Canyon Road</p>
+                <p>Canyon Lake, CA 92587</p>
+                <p className="mt-2"></p>
+                <p>1 – 55G Chlorine Drum</p>
+                <p>3 – 15gal Acid Carboys</p>
+                <p className="mt-6 border-t pt-4"></p>
+
+                <p>Warm Regards,</p>
+                <p className="mt-2"></p>
+                <p className="font-bold">David Harding Sr</p>
+                <p>Chief Operating Officer</p>
+                <p>Direct: 951-312-5060</p>
+                <p>Office: 951-653-3333 Press 6</p>
+                <p className="text-blue-600">https://www.breakpointpools.com</p>
+              </div>
             </div>
           </CardContent>
         </Card>

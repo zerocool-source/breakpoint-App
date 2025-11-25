@@ -82,50 +82,50 @@ export function AICommand() {
     <Card className="glass-card border-primary/20 bg-black/40 overflow-hidden relative group h-full flex flex-col">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 pointer-events-none" />
       
-      <CardContent className="p-6 flex flex-col items-center justify-center flex-1 relative z-10">
+      <CardContent className="p-4 flex flex-col items-center justify-center flex-1 relative z-10">
         {/* Animated Brain/Core */}
-        <div className="relative w-32 h-32 mb-6">
+        <div className="relative w-20 h-20 mb-3">
           <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-[spin_10s_linear_infinite]" />
           <div className="absolute inset-2 rounded-full border border-purple-500/30 animate-[spin_15s_linear_infinite_reverse]" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className={cn(
-              "w-20 h-20 rounded-full bg-gradient-to-br from-primary to-purple-600 blur-md transition-all duration-500 flex items-center justify-center",
+              "w-12 h-12 rounded-full bg-gradient-to-br from-primary to-purple-600 blur-md transition-all duration-500 flex items-center justify-center",
               isListening ? "scale-110 shadow-[0_0_50px_cyan]" : "scale-100 shadow-[0_0_20px_cyan]"
             )}>
-              <Sparkles className="w-10 h-10 text-white animate-pulse" />
+              <Sparkles className="w-6 h-6 text-white animate-pulse" />
             </div>
           </div>
         </div>
 
-        <h3 className="font-display text-xl font-bold text-center mb-2 text-glow" data-testid="text-ace-prime">
+        <h3 className="font-display text-lg font-bold text-center mb-2 text-glow" data-testid="text-ace-prime">
           ACE PRIME
         </h3>
 
         {/* Alert Status */}
         {activeCount > 0 && (
-          <div className="mb-4 flex items-center gap-2 text-sm bg-red-500/10 border border-red-500/30 rounded px-3 py-2 w-full justify-center">
-            <AlertCircle className="w-4 h-4 text-red-400" />
+          <div className="mb-3 flex items-center gap-2 text-xs bg-red-500/10 border border-red-500/30 rounded px-2 py-1 w-full justify-center">
+            <AlertCircle className="w-3 h-3 text-red-400" />
             <span className="text-red-300 font-bold">{urgentCount} URGENT • {activeCount} Active</span>
           </div>
         )}
 
         {aiInsight ? (
-          <p className="text-center text-sm font-ui mb-6 text-gray-200 line-clamp-3">
+          <p className="text-center text-xs font-ui mb-3 text-gray-200 line-clamp-2">
             {aiInsight}
           </p>
         ) : (
-          <p className="text-center text-muted-foreground text-sm font-ui mb-6">
-            "Hello, I'm Ace Prime. Analyzing your pool systems. How can I help?"
+          <p className="text-center text-muted-foreground text-xs font-ui mb-3">
+            "Analyzing your pool systems..."
           </p>
         )}
 
         {/* Audio Visualizer */}
-        <div className="flex items-end justify-center gap-1 h-12 mb-4 w-full max-w-[200px]">
+        <div className="flex items-end justify-center gap-1 h-8 mb-3 w-full max-w-[150px]">
           {waveHeight.map((h, i) => (
             <div 
               key={`wave-${i}`}
               className="w-1 bg-primary/60 rounded-full transition-all duration-100"
-              style={{ height: `${h}px`, opacity: Math.max(0.3, h/50) }}
+              style={{ height: `${h * 0.6}px`, opacity: Math.max(0.3, h/50) }}
             />
           ))}
         </div>
@@ -134,14 +134,14 @@ export function AICommand() {
           onClick={handleAnalyzeAlerts}
           disabled={isAnalyzing}
           className={cn(
-            "flex items-center gap-2 px-6 py-2 rounded-full font-ui text-sm tracking-widest uppercase transition-all duration-300 border border-white/10",
+            "flex items-center gap-2 px-4 py-1.5 rounded-full font-ui text-xs tracking-widest uppercase transition-all duration-300 border border-white/10",
             isListening 
               ? "bg-red-500/20 text-red-400 border-red-500/50 shadow-[0_0_15px_rgba(255,0,0,0.3)]" 
               : "bg-white/5 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30"
           )}
           data-testid="button-analyze-alerts"
         >
-          <Mic className="w-4 h-4" />
+          <Mic className="w-3 h-3" />
           {isAnalyzing ? "Analyzing..." : "Analyze Alerts"}
         </button>
       </CardContent>
