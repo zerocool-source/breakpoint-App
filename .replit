@@ -50,4 +50,4 @@ mockupState = "FULLSTACK"
 
 [userenv.shared]
 OLLAMA_ENDPOINT = "http://localhost:11434"
-ACE_APP_URL = "http://localhost:3000"
+ACE_APP_URL = "https://suppliable-elsa-ruffianly.ngrok-free.dev"
