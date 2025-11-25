@@ -28,28 +28,60 @@ export default function Chat() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (userMessage: string) => {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, saveHistory: true }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to send message");
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMessage, saveHistory: true }),
+        });
+        
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ 
+            error: "Failed to connect to ace-breakpoint-app", 
+            errorCode: response.status === 503 ? "PROXY_OFFLINE" : "UNKNOWN" 
+          }));
+          const errorWithCode = new Error(error.error || "Failed to send message") as any;
+          errorWithCode.errorCode = error.errorCode;
+          errorWithCode.status = response.status;
+          throw errorWithCode;
+        }
+        
+        return response.json();
+      } catch (error: any) {
+        // Handle network-level errors (fetch throws TypeError before response)
+        if (error.name === "TypeError" && !error.errorCode) {
+          const networkError = new Error("ace-breakpoint-app is not reachable") as any;
+          networkError.errorCode = "PROXY_OFFLINE";
+          networkError.status = 503;
+          throw networkError;
+        }
+        throw error;
       }
-      
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/history"] });
       setMessage("");
       setIsSubmitting(false);
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      const errorCode = error.errorCode || "";
+      let errorTitle = "Connection Error";
+      let errorDescription = error.message;
+      
+      if (errorCode === "PROXY_OFFLINE") {
+        errorTitle = "Proxy Offline";
+        errorDescription = "Start ace-breakpoint-app on your Mac to chat with Ace.";
+      } else if (errorCode === "NOT_CONFIGURED") {
+        errorTitle = "Configuration Error";
+        errorDescription = "ACE_APP_URL needs to be configured in environment variables.";
+      } else if (errorCode === "OLLAMA_ERROR") {
+        errorTitle = "Ollama Error";
+        errorDescription = "Check if Ollama is running on your Mac.";
+      }
+      
       toast({
-        title: "Connection Error",
-        description: error.message,
+        title: errorTitle,
+        description: errorDescription,
         variant: "destructive",
       });
       setIsSubmitting(false);
@@ -244,7 +276,7 @@ export default function Chat() {
         {/* Connection Status */}
         <div className="mt-4 text-center">
           <p className="text-xs text-cyan-400/50" style={{ fontFamily: "Rajdhani, sans-serif" }}>
-            Connected to local Ace model via Ollama
+            Connected to local Ace model via ace-breakpoint-app
           </p>
         </div>
       </div>

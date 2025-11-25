@@ -532,34 +532,53 @@ function setupRoutes(app: any) {
 
   // ==================== ACE AI CHAT ====================
   
-  // Chat endpoint - proxies to local Ollama instance running ace-breakpoint model
+  // Chat endpoint - proxies to ace-breakpoint-app (which connects to local Ollama)
   app.post("/api/chat", async (req: any, res: any) => {
     try {
-      const { message, model = "ace-breakpoint", saveHistory = true } = req.body;
+      const { message, saveHistory = true } = req.body;
       
       if (!message) {
         return res.status(400).json({ error: "Message is required" });
       }
 
-      const ollamaEndpoint = process.env.OLLAMA_ENDPOINT || "http://localhost:11434";
+      // Get ace-breakpoint-app URL (your proxy to local Ollama)
+      const aceAppUrl = process.env.ACE_APP_URL || process.env.OLLAMA_ENDPOINT;
       
-      // Call local Ollama instance
-      const response = await fetch(`${ollamaEndpoint}/api/generate`, {
+      if (!aceAppUrl) {
+        return res.status(503).json({ 
+          error: "ACE_APP_URL not configured. Set the URL to your ace-breakpoint-app proxy.",
+          errorCode: "NOT_CONFIGURED"
+        });
+      }
+
+      // Get conversation history for context (last 20 messages)
+      const chatHistory = await storage.getChatHistory(20);
+      
+      // Format history for ace-breakpoint-app (reverse to chronological order)
+      const formattedHistory = chatHistory
+        .slice()
+        .reverse()
+        .map((msg: any) => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
+      // Call ace-breakpoint-app proxy
+      const response = await fetch(`${aceAppUrl}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: model,
-          prompt: message,
-          stream: false
+          message: message,
+          history: formattedHistory
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Ace app error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      const aiResponse = data.response || "No response from Ace";
+      const aiResponse = data.answer || "No response from Ace";
       
       // Save chat message to storage only if requested
       if (saveHistory) {
@@ -580,13 +599,60 @@ function setupRoutes(app: any) {
       }
 
       res.json({ 
-        message: aiResponse,
-        model: model
+        message: aiResponse
       });
     } catch (error: any) {
       console.error("Error in chat endpoint:", error);
-      res.status(500).json({ 
-        error: "Failed to connect to Ace AI. Make sure Ollama is running and accessible.",
+      
+      // Provide specific error messages based on error type
+      let errorMessage = "Failed to connect to Ace AI.";
+      let errorCode = "UNKNOWN";
+      let statusCode = 500;
+      
+      // Walk the entire cause chain to find error codes (handles arbitrarily nested causes)
+      function findCauseCode(err: any): string | null {
+        if (!err) return null;
+        
+        // Check current level
+        if (err.code) return err.code;
+        if (err.errno) return err.errno;
+        
+        // Recurse into cause
+        if (err.cause && typeof err.cause === "object") {
+          const foundCode = findCauseCode(err.cause);
+          if (foundCode) return foundCode;
+        }
+        
+        return null;
+      }
+      
+      const causeCode = findCauseCode(error);
+      
+      // Detect fetch/connection failures (proxy offline) - comprehensive check
+      const connectionErrorCodes = ["ECONNREFUSED", "ENOTFOUND", "ETIMEDOUT", "ECONNRESET"];
+      const isConnectionError = 
+        (causeCode && connectionErrorCodes.includes(causeCode)) ||
+        (error.code && connectionErrorCodes.includes(error.code)) ||
+        error.name === "FetchError" ||
+        (error.name === "TypeError" && error.cause) ||
+        error.message?.includes("fetch failed") ||
+        error.message?.includes("ECONNREFUSED") ||
+        error.message?.includes("ENOTFOUND") ||
+        error.message?.includes("connect ECONNREFUSED");
+      
+      if (isConnectionError) {
+        errorMessage = "ace-breakpoint-app is not reachable. Make sure it's running and accessible.";
+        errorCode = "PROXY_OFFLINE";
+        statusCode = 503;
+      } else if (error.message?.includes("Ace app error")) {
+        errorMessage = "ace-breakpoint-app returned an error. Check if Ollama is running on your Mac.";
+        errorCode = "OLLAMA_ERROR";
+        statusCode = 502;
+      }
+      
+      res.status(statusCode).json({ 
+        error: errorMessage,
+        errorCode: errorCode,
         details: error.message 
       });
     }

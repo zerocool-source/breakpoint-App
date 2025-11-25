@@ -46,18 +46,35 @@ export function AICommand() {
       const alertSummary = alerts.slice(0, 3).map(a => `${a.poolName} (${a.customerName}): ${a.message}`).join("; ");
       const prompt = `Analyze these ${activeCount} active pool alerts and give a brief recommendation: ${alertSummary}`;
       
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: prompt, model: "ace-breakpoint", saveHistory: false }),
-      });
-      
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: "Failed to connect" }));
-        throw new Error(error.error || "AI service unavailable");
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt, saveHistory: false }),
+        });
+        
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ 
+            error: "Failed to connect", 
+            errorCode: res.status === 503 ? "PROXY_OFFLINE" : "UNKNOWN" 
+          }));
+          const errorWithCode = new Error(error.error || "AI service unavailable") as any;
+          errorWithCode.errorCode = error.errorCode;
+          errorWithCode.status = res.status;
+          throw errorWithCode;
+        }
+        
+        return res.json();
+      } catch (error: any) {
+        // Handle network-level errors (fetch throws TypeError before response)
+        if (error.name === "TypeError" && !error.errorCode) {
+          const networkError = new Error("ace-breakpoint-app is not reachable") as any;
+          networkError.errorCode = "PROXY_OFFLINE";
+          networkError.status = 503;
+          throw networkError;
+        }
+        throw error;
       }
-      
-      return res.json();
     },
     onSuccess: (data) => {
       if (data.message) {
@@ -69,10 +86,16 @@ export function AICommand() {
       }
       setIsAnalyzing(false);
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       setIsAnalyzing(false);
-      if (error.message.includes("connect")) {
-        setAiInsight("Connect Ollama to enable AI analysis.");
+      const errorCode = error.errorCode || "";
+      
+      if (errorCode === "PROXY_OFFLINE") {
+        setAiInsight("Start ace-breakpoint-app to enable AI analysis.");
+      } else if (errorCode === "NOT_CONFIGURED") {
+        setAiInsight("Configure ACE_APP_URL in settings.");
+      } else if (errorCode === "OLLAMA_ERROR") {
+        setAiInsight("Check Ollama connection on your Mac.");
       } else {
         setAiInsight("Unable to analyze alerts at this time.");
       }
