@@ -1,46 +1,107 @@
-import { Activity, DollarSign, Droplet, Zap } from "lucide-react";
+import { Activity } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { AICommand } from "@/components/dashboard/AICommand";
 import { AlertsFeed } from "@/components/dashboard/AlertsFeed";
+import { Button } from "@/components/ui/button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { RefreshCw } from "lucide-react";
+import type { Alert } from "@shared/schema";
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: alerts = [] } = useQuery<Alert[]>({
+    queryKey: ["alerts"],
+    queryFn: async () => {
+      const res = await fetch("/api/alerts");
+      if (!res.ok) throw new Error("Failed to fetch alerts");
+      return res.json();
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/alerts/sync", { method: "POST" });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to sync alerts");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      toast({
+        title: "Sync Complete",
+        description: data.message || `Synced ${data.syncedCount} alerts from Pool Brain`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync alerts from Pool Brain. Check your API settings.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const activeAlerts = alerts.filter(a => a.status === "Active");
+  const criticalAlerts = alerts.filter(a => a.severity === "Critical" && a.status === "Active");
+  const resolvedToday = alerts.filter(a => a.status === "Resolved");
+
   return (
     <AppLayout>
-      <div className="mb-8">
-        <h2 className="text-3xl font-display text-white mb-2 tracking-tight font-extrabold">COMMAND CENTER</h2>
-        <p className="text-muted-foreground font-ui tracking-wide">System Standby • Waiting for Data Stream • API Connected</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">COMMAND CENTER</h2>
+          <p className="text-muted-foreground font-ui tracking-wide">
+            {alerts.length > 0 ? `${alerts.length} Total Alerts • ${activeAlerts.length} Active` : "System Standby • API Connected"}
+          </p>
+        </div>
+        <Button
+          onClick={() => syncMutation.mutate()}
+          disabled={syncMutation.isPending}
+          className="bg-primary text-black hover:bg-primary/80 font-bold gap-2"
+          data-testid="button-sync-poolbrain"
+        >
+          <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+          {syncMutation.isPending ? "Syncing..." : "Sync Pool Brain"}
+        </Button>
       </div>
+
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
-          title="Active Pools" 
-          value="--" 
-          change="Syncing..." 
+          title="Total Alerts" 
+          value={alerts.length.toString()}
+          change={`${activeAlerts.length} active`}
           trend="neutral" 
-          icon={Droplet} 
+          icon={Activity} 
           color="primary"
           delay={0}
         />
         <StatCard 
-          title="Monthly Revenue" 
-          value="$--" 
-          change="Syncing..." 
-          trend="neutral" 
-          icon={DollarSign} 
-          color="secondary"
+          title="Critical Alerts" 
+          value={criticalAlerts.length.toString()}
+          change={criticalAlerts.length > 0 ? "Requires attention" : "All clear"} 
+          trend={criticalAlerts.length > 0 ? "up" : "neutral"}
+          icon={Activity} 
+          color="destructive"
           delay={100}
         />
         <StatCard 
-          title="Critical Alerts" 
-          value="--" 
-          change="No Data" 
-          trend="neutral" 
+          title="Resolved Today" 
+          value={resolvedToday.length.toString()}
+          change={resolvedToday.length > 0 ? "Good progress" : "No activity"}
+          trend={resolvedToday.length > 0 ? "down" : "neutral"}
           icon={Activity} 
-          color="destructive"
+          color="secondary"
           delay={200}
         />
       </div>
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Expanded Alerts Feed takes up 2 columns */}

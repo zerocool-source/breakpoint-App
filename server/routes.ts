@@ -2,8 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { PoolBrainClient } from "./poolbrain-client";
-import { insertAlertSchema, insertWorkflowSchema, insertCustomerSchema, insertChatMessageSchema, insertSettingsSchema } from "@shared/schema";
-import { z } from "zod";
+import { insertAlertSchema, insertWorkflowSchema, insertCustomerSchema, insertChatMessageSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Settings
@@ -62,6 +61,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating alert:", error);
       res.status(500).json({ error: "Failed to update alert" });
+    }
+  });
+
+  // Sync alerts from Pool Brain
+  app.post("/api/alerts/sync", async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      if (!settings?.poolBrainApiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured. Please configure in Settings." });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey: settings.poolBrainApiKey,
+        companyId: settings.poolBrainCompanyId || undefined,
+      });
+
+      // Get alerts from last 30 days
+      const toDate = new Date().toISOString().split('T')[0];
+      const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const poolBrainData = await client.getAlertsList({
+        fromDate,
+        toDate,
+        limit: 1000,
+      });
+
+      // Transform and store alerts
+      let syncedCount = 0;
+      if (poolBrainData.data && Array.isArray(poolBrainData.data)) {
+        for (const pbAlert of poolBrainData.data) {
+          // Map Pool Brain alert to our schema
+          const alert = {
+            externalId: pbAlert.id || pbAlert.alertId,
+            poolName: pbAlert.siteName || pbAlert.locationName || pbAlert.poolName || "Unknown Pool",
+            type: pbAlert.alertType || pbAlert.type || "Service",
+            severity: pbAlert.priority || pbAlert.severity || "Medium",
+            message: pbAlert.message || pbAlert.description || "Alert from Pool Brain",
+            status: pbAlert.status === "Resolved" || pbAlert.resolved ? "Resolved" : "Active",
+          };
+
+          await storage.createAlert(alert);
+          syncedCount++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        syncedCount,
+        message: `Synced ${syncedCount} alerts from Pool Brain`
+      });
+    } catch (error: any) {
+      console.error("Error syncing Pool Brain alerts:", error);
+      res.status(500).json({ 
+        error: "Failed to sync alerts from Pool Brain",
+        message: error.message 
+      });
     }
   });
 
@@ -129,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const messages = await storage.getChatHistory(limit);
-      res.json(messages.reverse()); // Reverse to show oldest first
+      res.json(messages.reverse());
     } catch (error) {
       console.error("Error fetching chat history:", error);
       res.status(500).json({ error: "Failed to fetch chat history" });
@@ -155,19 +210,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Pool Brain API key not configured. Please configure in Settings." });
       }
 
-      // Create Pool Brain client
       const client = new PoolBrainClient({
         apiKey: settings.poolBrainApiKey,
         companyId: settings.poolBrainCompanyId || undefined,
       });
 
-      // Parse query parameters
       const fromDate = req.query.fromDate as string | undefined;
       const toDate = req.query.toDate as string | undefined;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 1000;
 
-      // Call Pool Brain API
       const data = await client.getAlertsList({
         fromDate,
         toDate,
