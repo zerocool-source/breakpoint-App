@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Zap, Plus, ArrowRight, CheckCircle2, AlertTriangle, Droplet, FileText } from "lucide-react";
+import { Mail, Zap, Plus, ArrowRight, CheckCircle2, AlertTriangle, Droplet, FileText, Copy } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 interface Workflow {
   id: string;
@@ -20,10 +22,31 @@ interface Workflow {
 }
 
 export default function Automations() {
+  const { toast } = useToast();
   const [workflows, setWorkflows] = useState<Workflow[]>([
     { id: "1", name: "Bulk Chemical Outreach", trigger: "Algae or Repair Alert", action: "Draft Outlook Email for Chemical Sales", status: "active", executions: 87 },
     { id: "2", name: "Weekly Report", trigger: "Every Monday 8:00 AM", action: "Email Summary PDF to Clients", status: "paused", executions: 0 },
   ]);
+
+  const { data: emailData, isLoading, refetch } = useQuery({
+    queryKey: ["chemicalOrderEmail"],
+    queryFn: async () => {
+      const res = await fetch("/api/alerts/chemical-order-email");
+      if (!res.ok) throw new Error("Failed to generate email");
+      return res.json();
+    },
+    enabled: false, // Only fetch when manually triggered
+  });
+
+  const handleCopyEmail = () => {
+    if (emailData?.emailText) {
+      navigator.clipboard.writeText(emailData.emailText);
+      toast({
+        title: "Copied to Clipboard",
+        description: `Chemical order email copied (${emailData.orderCount} properties)`,
+      });
+    }
+  };
 
   return (
     <AppLayout>
@@ -126,55 +149,97 @@ export default function Automations() {
       {/* Builder Preview */}
       <div className="mt-8">
         <Card className="glass-card border-white/5">
-          <CardHeader>
-            <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">ALPHA CHEMICAL ORDER TEMPLATE</CardTitle>
-            <CardDescription>Auto-generated bulk chemical orders in Breakpoint style</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">ALPHA CHEMICAL ORDER TEMPLATE</CardTitle>
+              <CardDescription>Auto-generated bulk chemical orders in Breakpoint style</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => refetch()} 
+                disabled={isLoading}
+                variant="outline"
+                className="gap-2"
+                data-testid="button-generate-email"
+              >
+                <Mail className="w-4 h-4" />
+                {isLoading ? "Generating..." : "Generate from Alerts"}
+              </Button>
+              {emailData && (
+                <Button 
+                  onClick={handleCopyEmail}
+                  className="bg-primary text-black hover:bg-primary/80 gap-2"
+                  data-testid="button-copy-email"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Email
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="bg-white text-black p-6 rounded-lg font-mono text-xs max-w-3xl mx-auto shadow-2xl overflow-x-auto">
-              <div className="whitespace-pre-wrap">
-                <p><strong>From:</strong> COO &lt;COO@breakpointpools.com&gt;</p>
-                <p><strong>Sent:</strong> Tuesday, November 25, 2025 8:03 AM</p>
-                <p><strong>To:</strong> Paramount Orders &lt;pmtorder@awspoolsupply.com&gt;</p>
-                <p><strong>Cc:</strong> Jesus Diaz &lt;Jesus@awspoolsupply.com&gt;</p>
-                <p><strong>Subject:</strong> Alpha Chemical Order</p>
-                <p className="mt-4"></p>
-                
-                <p className="font-bold">PRESERVE At Chino <span className="text-red-600">Rush!</span></p>
-                <p>C/O: First Service Residential, LL CPO</p>
-                <p>BOX 62499, IRVINE, CA 92602</p>
-                <p className="text-gray-600 text-[10px]">Main entry code: #7139 | Lockbox: 5090</p>
-                <p className="mt-2"></p>
-                <p>Bulk bleach – refill 150-gallon chlorine tank (currently below half)</p>
-                <p>Bulk muriatic acid – refill 50-gallon acid tank (currently below half)</p>
-                <p className="mt-4"></p>
-
-                <p className="font-bold">Amelia Square <span className="text-red-600">Rush!</span></p>
-                <p>3332 Wind Chime Lane</p>
-                <p>Perris, CA 92571</p>
-                <p className="text-gray-600 text-[10px]">Main entry code: #7139 | Lockbox: 5090</p>
-                <p className="mt-2"></p>
-                <p>2 – 15gal Bleach</p>
-                <p>2 – 15gal Acid</p>
-                <p className="mt-4"></p>
-
-                <p className="font-bold">Bear Creek MA</p>
-                <p>31608 Railroad Canyon Road</p>
-                <p>Canyon Lake, CA 92587</p>
-                <p className="mt-2"></p>
-                <p>1 – 55G Chlorine Drum</p>
-                <p>3 – 15gal Acid Carboys</p>
-                <p className="mt-6 border-t pt-4"></p>
-
-                <p>Warm Regards,</p>
-                <p className="mt-2"></p>
-                <p className="font-bold">David Harding Sr</p>
-                <p>Chief Operating Officer</p>
-                <p>Direct: 951-312-5060</p>
-                <p>Office: 951-653-3333 Press 6</p>
-                <p className="text-blue-600">https://www.breakpointpools.com</p>
+            {emailData ? (
+              <div className="bg-white text-black p-6 rounded-lg font-mono text-xs max-w-3xl mx-auto shadow-2xl overflow-x-auto">
+                <div className="mb-4 flex justify-between items-center border-b pb-2">
+                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                    {emailData.orderCount} Properties
+                  </Badge>
+                  <span className="text-[10px] text-gray-500">Live from Pool Brain Alerts</span>
+                </div>
+                <div className="whitespace-pre-wrap" data-testid="email-preview">
+                  {emailData.emailText}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white text-black p-6 rounded-lg font-mono text-xs max-w-3xl mx-auto shadow-2xl overflow-x-auto">
+                <div className="whitespace-pre-wrap">
+                  <p><strong>From:</strong> COO &lt;COO@breakpointpools.com&gt;</p>
+                  <p><strong>Sent:</strong> Tuesday, November 25, 2025 8:03 AM</p>
+                  <p><strong>To:</strong> Paramount Orders &lt;pmtorder@awspoolsupply.com&gt;</p>
+                  <p><strong>Cc:</strong> Jesus Diaz &lt;Jesus@awspoolsupply.com&gt;</p>
+                  <p><strong>Subject:</strong> Alpha Chemical Order</p>
+                  <p className="mt-4"></p>
+                  
+                  <p className="font-bold">PRESERVE At Chino <span className="text-red-600">Rush!</span></p>
+                  <p>C/O: First Service Residential, LL CPO</p>
+                  <p>BOX 62499, IRVINE, CA 92602</p>
+                  <p className="text-gray-600 text-[10px]">Main entry code: #7139 | Lockbox: 5090</p>
+                  <p className="mt-2"></p>
+                  <p>Bulk bleach – refill 150-gallon chlorine tank (currently below half)</p>
+                  <p>Bulk muriatic acid – refill 50-gallon acid tank (currently below half)</p>
+                  <p className="mt-4"></p>
+
+                  <p className="font-bold">Amelia Square <span className="text-red-600">Rush!</span></p>
+                  <p>3332 Wind Chime Lane</p>
+                  <p>Perris, CA 92571</p>
+                  <p className="text-gray-600 text-[10px]">Main entry code: #7139 | Lockbox: 5090</p>
+                  <p className="mt-2"></p>
+                  <p>2 – 15gal Bleach</p>
+                  <p>2 – 15gal Acid</p>
+                  <p className="mt-4"></p>
+
+                  <p className="font-bold">Bear Creek MA</p>
+                  <p>31608 Railroad Canyon Road</p>
+                  <p>Canyon Lake, CA 92587</p>
+                  <p className="mt-2"></p>
+                  <p>1 – 55G Chlorine Drum</p>
+                  <p>3 – 15gal Acid Carboys</p>
+                  <p className="mt-6 border-t pt-4"></p>
+
+                  <p>Warm Regards,</p>
+                  <p className="mt-2"></p>
+                  <p className="font-bold">David Harding Sr</p>
+                  <p>Chief Operating Officer</p>
+                  <p>Direct: 951-312-5060</p>
+                  <p>Office: 951-653-3333 Press 6</p>
+                  <p className="text-blue-600">https://www.breakpointpools.com</p>
+                  
+                  <p className="mt-6 text-center text-gray-500 text-[10px]">
+                    Click "Generate from Alerts" to create email from live Pool Brain data
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

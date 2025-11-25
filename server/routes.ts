@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { storage } from "./storage";
 import { PoolBrainClient } from "./poolbrain-client";
+import { buildChemicalOrderEmail } from "./email-template";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -198,6 +199,155 @@ function setupRoutes(app: any) {
   // Register both endpoints
   app.get("/api/alerts/enriched", getEnrichedAlerts);
   app.get("/api/alerts_full", getEnrichedAlerts);
+
+  // Generate chemical order email from alerts
+  app.get("/api/alerts/chemical-order-email", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch data in parallel
+      const [alertsData, customersData, custPoolData] = await Promise.all([
+        client.getAlertsList({ limit: 150 }),
+        client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] }))
+      ]);
+
+      // Build customer and pool maps
+      const customerMap: Record<string, any> = {};
+      if (customersData.data && Array.isArray(customersData.data)) {
+        customersData.data.forEach((c: any) => {
+          const customerId = c.RecordID;
+          if (customerId) customerMap[customerId] = c;
+        });
+      }
+
+      const poolToCustomerMap: Record<string, string> = {};
+      if (custPoolData.data && Array.isArray(custPoolData.data)) {
+        custPoolData.data.forEach((cp: any) => {
+          const waterBodyId = cp.RecordID;
+          const customerId = cp.CustomerID;
+          if (waterBodyId && customerId) {
+            poolToCustomerMap[waterBodyId] = customerId;
+          }
+        });
+      }
+
+      // Process alerts and filter for chemical-related ones
+      const chemicalOrders: any[] = [];
+      
+      if (alertsData.data && Array.isArray(alertsData.data)) {
+        alertsData.data.forEach((pbAlert: any) => {
+          const waterBodyId = pbAlert.waterBodyId;
+          const poolName = pbAlert.BodyOfWater || "Unknown Pool";
+          let customerId = pbAlert.CustomerID || poolToCustomerMap[waterBodyId];
+          const customer = customerId ? customerMap[customerId] : undefined;
+
+          // Parse alert message
+          let message = "";
+          const messages: string[] = [];
+          
+          if (pbAlert.AlertCategories && Array.isArray(pbAlert.AlertCategories)) {
+            pbAlert.AlertCategories.forEach((cat: any) => {
+              if (cat.IssueReport && Array.isArray(cat.IssueReport)) {
+                cat.IssueReport.forEach((report: any) => {
+                  const reportText = report.IssueReports || report.AlertName || "";
+                  if (reportText) messages.push(reportText);
+                });
+              }
+            });
+          }
+          
+          message = messages.join(" | ");
+
+          // Check if this is a chemical/algae/repair alert
+          const msgLower = message.toLowerCase();
+          const isChemicalAlert = 
+            msgLower.includes("chlorine") ||
+            msgLower.includes("acid") ||
+            msgLower.includes("algae") ||
+            msgLower.includes("tank") ||
+            msgLower.includes("drum") ||
+            msgLower.includes("carboy") ||
+            msgLower.includes("chemical") ||
+            msgLower.includes("bleach") ||
+            msgLower.includes("requesting");
+
+          if (isChemicalAlert && message) {
+            // Extract address
+            let address = "";
+            if (customer?.Addresses && typeof customer.Addresses === 'object') {
+              const firstAddr = Object.values(customer.Addresses)[0] as any;
+              if (firstAddr) {
+                address = `${firstAddr.BillingAddress || ''}, ${firstAddr.BillingCity || ''}, ${firstAddr.BillingState || ''} ${firstAddr.BillingZip || ''}`.trim();
+              }
+            }
+
+            chemicalOrders.push({
+              accountName: customer?.CustomerName || customer?.CompanyName || poolName,
+              rush: msgLower.includes("urgent") || msgLower.includes("below half"),
+              address: address || customer?.Address || "",
+              entryNotes: "", // Could be populated from customer notes
+              items: [message]
+            });
+          }
+        });
+      }
+
+      // Group by customer and combine items
+      const groupedOrders: Record<string, any> = {};
+      chemicalOrders.forEach(order => {
+        const key = order.accountName;
+        if (!groupedOrders[key]) {
+          groupedOrders[key] = { ...order };
+        } else {
+          groupedOrders[key].items.push(...order.items);
+          if (order.rush) groupedOrders[key].rush = true;
+        }
+      });
+
+      const finalOrders = Object.values(groupedOrders);
+
+      if (finalOrders.length === 0) {
+        return res.json({ 
+          emailText: "No chemical alerts found at this time.",
+          orderCount: 0 
+        });
+      }
+
+      // Generate email
+      const emailText = buildChemicalOrderEmail({
+        orders: finalOrders,
+        vendorName: "Paramount Orders",
+        vendorEmail: "pmtorder@awspoolsupply.com",
+        repName: "Jesus Diaz",
+        repEmail: "Jesus@awspoolsupply.com",
+        subject: "Alpha Chemical Order"
+      });
+
+      res.json({ 
+        emailText,
+        orderCount: finalOrders.length,
+        orders: finalOrders
+      });
+    } catch (error: any) {
+      console.error("Error generating chemical order email:", error);
+      res.status(500).json({ 
+        error: "Failed to generate chemical order email",
+        message: error.message 
+      });
+    }
+  });
 
   // Sync alerts from Pool Brain
   app.post("/api/alerts/sync", async (req: any, res: any) => {
