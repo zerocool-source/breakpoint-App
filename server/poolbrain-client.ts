@@ -92,6 +92,37 @@ export class PoolBrainClient {
   }
 
   /**
+   * Get pools list
+   * Endpoint: GET /v2/pools_list
+   */
+  async getPoolsList(params: { offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/pools_list`);
+
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Get invoice list
    * Endpoint: GET /v2/invoice_list
    */

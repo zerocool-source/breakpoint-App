@@ -1,0 +1,133 @@
+A Pool Brain alert object typically contains:
+{
+  "alertId": "34d3cf50",
+  "poolId": "54702178",
+  "message": "Chlorine level low",
+  "severity": "medium",
+  "createdAt": "2025-11-25T10:20:00Z",
+  "status": "active"
+}
+
+The key part is:
+"poolId": "54702178"
+
+But your frontend is showing Unknown Pool, which means:
+❌ You are NOT converting poolId → Pool Name
+You need another API call:
+GET /v2/pools_list
+
+…and merge that data.
+
+✅ 2. Fix the Replit backend: JOIN POOLS + ALERTS
+Replace your /alerts endpoint with this version that:
+✔ fetches alerts
+✔ fetches pools
+✔ converts poolId → poolName
+✔ returns alerts with full pool info
+
+🔥 Updated /alerts endpoint for Replit
+app.get("/alerts", async (req, res) => {
+  try {
+    const { fromDate, toDate, offset = 0, limit = 1000 } = req.query;
+
+    // 1. Fetch alerts
+    const alertsUrl = new URL("https://api.poolbrain.com/v2/alerts_list");
+    if (fromDate) alertsUrl.searchParams.set("fromDate", fromDate);
+    if (toDate) alertsUrl.searchParams.set("toDate", toDate);
+    alertsUrl.searchParams.set("offset", offset);
+    alertsUrl.searchParams.set("limit", limit);
+
+    const alertRes = await fetch(alertsUrl.toString(), {
+      headers: {
+        "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+        "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+      }
+    });
+
+    const alertJson = await alertRes.json();
+
+    // 2. Fetch pools
+    const poolsRes = await fetch(
+      "https://api.poolbrain.com/v2/pools_list?limit=1000",
+      {
+        headers: {
+          "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+          "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+        }
+      }
+    );
+
+    const poolsJson = await poolsRes.json();
+
+    // Build dictionary: poolId → poolName
+    const poolMap = {};
+    poolsJson.pools.forEach(pool => {
+      poolMap[pool.poolId] = pool.name;
+    });
+
+    // 3. Attach pool names to alerts
+    const enrichedAlerts = alertJson.alerts.map(alert => ({
+      ...alert,
+      poolName: poolMap[alert.poolId] || "Unknown Pool"
+    }));
+
+    // 4. Send back to your app
+    res.json({
+      ...alertJson,
+      alerts: enrichedAlerts
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "PoolBrain proxy error" });
+  }
+});
+
+
+✅ 3. Fix the frontend card
+Your alert rendering code probably uses something like:
+<h3>{alert.poolName}</h3>
+<p>{alert.message}</p>
+<span>{alert.severity}</span>
+
+But since your backend didn’t add poolName, frontend got:
+Unknown Pool
+Alert from Pool Brain
+
+After the backend fix, your alert object now looks like:
+{
+  "poolId": "54702178",
+  "poolName": "Esperanza HOA Pool",
+  "message": "Chlorine level low",
+  "severity": "medium",
+  "status": "active"
+}
+
+So your UI should be:
+<div className="alert-card">
+  <h3>{alert.poolName}</h3>
+  <p>{alert.message}</p>
+  <span className={`severity ${alert.severity}`}>
+    {alert.severity.toUpperCase()}
+  </span>
+</div>
+
+
+🎉 End Result
+Your card will now show this:
+ESPERANZA HOA POOL
+11/25/25 • ID: 34d3cf50
+Chlorine level low
+[ Medium ]
+[ Service ]   [ Active ]
+
+instead of:
+Unknown Pool
+Alert from Pool Brain
+
+
+🚀 If you want —
+I can also:
+✔ redesign all your alert cards
+✔ add severity color badges
+✔ add icons (chlor

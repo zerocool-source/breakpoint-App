@@ -87,24 +87,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const toDate = new Date().toISOString().split('T')[0];
       const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      const poolBrainData = await client.getAlertsList({
+      // Fetch alerts
+      const alertsData = await client.getAlertsList({
         fromDate,
         toDate,
         limit: 1000,
       });
 
-      // Transform and store alerts
+      // Transform and store alerts with pool names extracted from alert data
       let syncedCount = 0;
-      if (poolBrainData.data && Array.isArray(poolBrainData.data)) {
-        for (const pbAlert of poolBrainData.data) {
-          // Map Pool Brain alert to our schema
+      if (alertsData.data && Array.isArray(alertsData.data)) {
+        for (const pbAlert of alertsData.data) {
+          // Extract pool/body name from alert data
+          let poolName = "Unknown Pool";
+          
+          // Try multiple fields to find the pool/body name
+          if (pbAlert.BodyOfWater) {
+            poolName = pbAlert.BodyOfWater;
+          } else if (pbAlert.poolName) {
+            poolName = pbAlert.poolName;
+          } else if (pbAlert.locationName) {
+            poolName = pbAlert.locationName;
+          } else if (pbAlert.siteName) {
+            poolName = pbAlert.siteName;
+          } else if (pbAlert.name) {
+            poolName = pbAlert.name;
+          }
+
+          // Extract alert details from nested structure or flat structure
+          let alertType = "Service";
+          let severity = "Medium";
+          let message = "Alert from Pool Brain";
+          let status = "Active";
+
+          // Check if this has AlertCategories structure (nested)
+          if (pbAlert.AlertCategories && Array.isArray(pbAlert.AlertCategories)) {
+            const categories = pbAlert.AlertCategories[0] || {};
+            
+            // Check for system issues
+            if (categories.SystemIssue && Array.isArray(categories.SystemIssue) && categories.SystemIssue.length > 0) {
+              const issue = categories.SystemIssue[0];
+              alertType = issue.type || "System Issue";
+              severity = issue.priorityLevel || issue.priority || "URGENT";
+              message = issue.AlertName || "System issue detected";
+              status = issue.status === "Resolved" ? "Resolved" : "Active";
+            }
+            // Check for issue reports
+            else if (categories.IssueReport && Array.isArray(categories.IssueReport) && categories.IssueReport.length > 0) {
+              const report = categories.IssueReport[0];
+              alertType = "Repair Needed";
+              severity = report.aiPriorityLevel || report.priority || "URGENT";
+              message = report.IssueReports || report.AlertName || "Repair needed";
+              status = report.status === "Resolved" ? "Resolved" : "Active";
+            }
+            // Check for custom alerts
+            else if (categories.CustomAlert && Array.isArray(categories.CustomAlert) && categories.CustomAlert.length > 0) {
+              const custom = categories.CustomAlert[0];
+              alertType = "Custom Alert";
+              severity = custom.priority || "Medium";
+              message = custom.message || custom.AlertName || "Custom alert";
+              status = custom.status === "Resolved" ? "Resolved" : "Active";
+            }
+          } else {
+            // Flat structure
+            alertType = pbAlert.alertType || pbAlert.type || "Service";
+            severity = pbAlert.priority || pbAlert.severity || pbAlert.priorityLevel || "Medium";
+            message = pbAlert.message || pbAlert.description || pbAlert.AlertName || "Alert from Pool Brain";
+            status = pbAlert.status === "Resolved" || pbAlert.resolved ? "Resolved" : "Active";
+          }
+
+          // Create alert with enriched data
           const alert = {
-            externalId: pbAlert.id || pbAlert.alertId,
-            poolName: pbAlert.siteName || pbAlert.locationName || pbAlert.poolName || "Unknown Pool",
-            type: pbAlert.alertType || pbAlert.type || "Service",
-            severity: pbAlert.priority || pbAlert.severity || "Medium",
-            message: pbAlert.message || pbAlert.description || "Alert from Pool Brain",
-            status: pbAlert.status === "Resolved" || pbAlert.resolved ? "Resolved" : "Active",
+            externalId: pbAlert.JobID || pbAlert.alertId || pbAlert.id || `alert-${syncedCount}`,
+            poolName,
+            type: alertType,
+            severity,
+            message,
+            status,
           };
 
           await storage.createAlert(alert);
