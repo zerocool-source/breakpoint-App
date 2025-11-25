@@ -67,14 +67,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync alerts from Pool Brain
   app.post("/api/alerts/sync", async (req, res) => {
     try {
+      // Try environment variables first (Replit Secrets), then fall back to database settings
       const settings = await storage.getSettings();
-      if (!settings?.poolBrainApiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured. Please configure in Settings." });
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ 
+          error: "Pool Brain API key not configured. Please add POOLBRAIN_ACCESS_KEY to Secrets or configure in Settings." 
+        });
       }
 
       const client = new PoolBrainClient({
-        apiKey: settings.poolBrainApiKey,
-        companyId: settings.poolBrainCompanyId || undefined,
+        apiKey,
+        companyId: companyId || undefined,
       });
 
       // Get alerts from last 30 days
@@ -205,14 +211,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Pool Brain API Proxy - Alerts List
   app.get("/api/poolbrain/alerts", async (req, res) => {
     try {
+      // Try environment variables first (Replit Secrets), then fall back to database settings
       const settings = await storage.getSettings();
-      if (!settings?.poolBrainApiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured. Please configure in Settings." });
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ 
+          error: "Pool Brain API key not configured. Please add POOLBRAIN_ACCESS_KEY to Secrets or configure in Settings." 
+        });
       }
 
       const client = new PoolBrainClient({
-        apiKey: settings.poolBrainApiKey,
-        companyId: settings.poolBrainCompanyId || undefined,
+        apiKey,
+        companyId: companyId || undefined,
       });
 
       const fromDate = req.query.fromDate as string | undefined;
@@ -241,13 +253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/poolbrain/customers", async (req, res) => {
     try {
       const settings = await storage.getSettings();
-      if (!settings?.poolBrainApiKey) {
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
         return res.status(400).json({ error: "Pool Brain API key not configured" });
       }
 
       const client = new PoolBrainClient({
-        apiKey: settings.poolBrainApiKey,
-        companyId: settings.poolBrainCompanyId || undefined,
+        apiKey,
+        companyId: companyId || undefined,
       });
 
       const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
@@ -268,13 +283,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/poolbrain/invoices", async (req, res) => {
     try {
       const settings = await storage.getSettings();
-      if (!settings?.poolBrainApiKey) {
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
         return res.status(400).json({ error: "Pool Brain API key not configured" });
       }
 
       const client = new PoolBrainClient({
-        apiKey: settings.poolBrainApiKey,
-        companyId: settings.poolBrainCompanyId || undefined,
+        apiKey,
+        companyId: companyId || undefined,
       });
 
       const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;

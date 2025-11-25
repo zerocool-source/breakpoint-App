@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Database, Key, Lock, Server, Cpu } from "lucide-react";
+import { CheckCircle2, Database, Key, Lock, Server, Cpu, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState("");
@@ -17,6 +17,9 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  // Check if environment variables are being used
+  const usingEnvVars = import.meta.env.POOLBRAIN_ACCESS_KEY !== undefined;
 
   useEffect(() => {
     fetchSettings();
@@ -101,7 +104,7 @@ export default function Settings() {
                 <div className="space-y-2">
                     <Label>Default Model</Label>
                     <Select value={defaultModel} onValueChange={setDefaultModel}>
-                        <SelectTrigger className="bg-white/5 border-white/10 font-ui">
+                        <SelectTrigger className="bg-white/5 border-white/10 font-ui" data-testid="select-ai-model">
                             <SelectValue placeholder="Select Model" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-white/10 text-foreground">
@@ -129,6 +132,13 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <Alert className="bg-blue-500/10 border-blue-500/30">
+              <AlertCircle className="h-4 w-4 text-blue-400" />
+              <AlertDescription className="text-blue-300 text-sm">
+                <strong>Pro Tip:</strong> For better security, add <code className="bg-black/30 px-1 rounded">POOLBRAIN_ACCESS_KEY</code> and <code className="bg-black/30 px-1 rounded">POOLBRAIN_COMPANY_ID</code> to your Replit Secrets instead. They'll override these settings.
+              </AlertDescription>
+            </Alert>
+
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Access Key (V2)</Label>
               <div className="relative">
@@ -138,25 +148,28 @@ export default function Settings() {
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="ac959f..." 
-                  className="pl-10 bg-white/5 border-white/10 font-mono text-sm" 
+                  placeholder="ac959f2477fa..." 
+                  className="pl-10 bg-white/5 border-white/10 font-mono text-sm"
+                  data-testid="input-api-key"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">From your Pool Brain account (see screenshots).</p>
+              <p className="text-xs text-muted-foreground">From your Pool Brain account settings.</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="companyId">Company ID (Optional)</Label>
+              <Label htmlFor="companyId">Company ID</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input 
                   id="companyId" 
                   value={companyId}
                   onChange={(e) => setCompanyId(e.target.value)}
-                  placeholder="Enter Company ID if using Master Key" 
-                  className="pl-10 bg-white/5 border-white/10 font-mono text-sm" 
+                  placeholder="Breakpoint" 
+                  className="pl-10 bg-white/5 border-white/10 font-mono text-sm"
+                  data-testid="input-company-id"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">Usually your company name (e.g., "Breakpoint").</p>
             </div>
 
             <div className="flex items-center justify-end gap-4 pt-4">
@@ -164,6 +177,7 @@ export default function Settings() {
                 onClick={handleSave} 
                 disabled={isSaving}
                 className="bg-primary text-black hover:bg-primary/80 font-bold"
+                data-testid="button-save-settings"
               >
                 {isSaving ? "Saving..." : "Save Configuration"}
               </Button>
@@ -173,12 +187,12 @@ export default function Settings() {
 
         <Card className="glass-card border-white/5 opacity-75">
           <CardHeader>
-            <CardTitle className="text-muted-foreground">Endpoints Status</CardTitle>
+            <CardTitle className="text-muted-foreground">API Endpoints Status</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
              {[
-                { name: "Alerts API", url: "/v2/alerts", status: "Ready" },
-                { name: "Quotes Detail", url: "/v2/customer_quotes_detail", status: "Ready" },
+                { name: "Alerts List", url: "/v2/alerts_list", status: "Ready" },
+                { name: "Customer Quotes", url: "/v2/customer_quotes_detail", status: "Ready" },
                 { name: "Invoices", url: "/v2/invoice_list", status: "Ready" },
                 { name: "Jobs", url: "/v2/one_time_job_list", status: "Ready" },
              ].map((ep, i) => (

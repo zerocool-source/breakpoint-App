@@ -1,0 +1,105 @@
+1. Set up the Replit backend
+
+Go to replit.com → Create Repl → Node.js.
+
+Name it something like breakpoint-poolbrain-api.
+
+When it opens, you’ll see a default index.js and package.json.
+
+Install dependencies
+
+Open the Shell tab at the bottom and run:
+
+npm install express node-fetch cors dotenv
+
+2. Add your secrets in Replit
+
+In Replit:
+
+Left side → 🔐 Secrets (Environment variables).
+
+Add:
+
+Key: POOLBRAIN_ACCESS_KEY
+Value: YOUR_REAL_ACCESS_KEY_HERE
+
+Key: POOLBRAIN_COMPANY_ID
+Value: Breakpoint (or whatever your company id is)
+
+These are only on the server side; your APK never sees them.
+
+3. Write the proxy server (how Replit “catches it”)
+
+Replace everything in index.js with this:
+
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Allow your app to call this server
+app.use(cors());
+app.use(express.json());
+
+// Simple health check
+app.get("/", (req, res) => {
+  res.json({ status: "PoolBrain proxy online" });
+});
+
+// GET /alerts?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD&offset=0&limit=1000
+app.get("/alerts", async (req, res) => {
+  try {
+    const { fromDate, toDate, offset = 0, limit = 1000 } = req.query;
+
+    const url = new URL("https://api.poolbrain.com/v2/alerts_list");
+
+    if (fromDate) url.searchParams.set("fromDate", fromDate);
+    if (toDate) url.searchParams.set("toDate", toDate);
+    url.searchParams.set("offset", offset);
+    url.searchParams.set("limit", limit);
+
+    const pbRes = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+        "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+      }
+    });
+
+    const data = await pbRes.json();
+
+    // Replit “catches” PoolBrain’s response and returns it to your app
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "PoolBrain proxy error" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+
+If Replit complains about ES modules, add this to package.json:
+
+{
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
+
+
+Hit the big Run button in Replit.
+You’ll see a URL like:
+
+https://breakpoint-poolbrain-api.yourname.repl.co
+
+
+That URL is your backend base URL.
