@@ -298,53 +298,42 @@ function setupRoutes(app: any) {
             msgLower.includes("requesting");
 
           if (isChemicalAlert && message) {
-            // Extract PRIMARY address (preferred) or BILLING address
+            // ONLY use PRIMARY addresses (physical delivery locations) - skip if no primary address
             let address = "";
             let primaryAddr = null;
-            let billingAddr = null;
+            let accessNotes = "";
             
             if (customer?.Addresses && typeof customer.Addresses === 'object') {
-              // Look for PRIMARY and BILLING addresses by their field names
+              // Find PRIMARY address by field names
               Object.values(customer.Addresses).forEach((addr: any) => {
                 if (addr.PrimaryAddress || addr.PrimaryCity) {
                   primaryAddr = addr;
-                } else if (addr.BillingAddress || addr.BillingCity) {
-                  billingAddr = addr;
                 }
               });
               
-              // Use PRIMARY first, then BILLING as fallback
-              const selectedAddr: any = primaryAddr || billingAddr || Object.values(customer.Addresses)[0];
-              if (selectedAddr) {
-                const addrLine = selectedAddr.PrimaryAddress || selectedAddr.BillingAddress || selectedAddr.address || '';
-                const city = selectedAddr.PrimaryCity || selectedAddr.BillingCity || selectedAddr.city || '';
-                const state = selectedAddr.PrimaryState || selectedAddr.BillingState || selectedAddr.state || '';
-                const zip = selectedAddr.PrimaryZip || selectedAddr.BillingZip || selectedAddr.zip || '';
+              // Only proceed if we found a PRIMARY address
+              if (primaryAddr) {
+                const addrLine = primaryAddr.PrimaryAddress || '';
+                const city = primaryAddr.PrimaryCity || '';
+                const state = primaryAddr.PrimaryState || '';
+                const zip = primaryAddr.PrimaryZip || '';
                 address = `${addrLine}, ${city}, ${state} ${zip}`.trim();
+                
+                // Get Access Notes from PRIMARY address only
+                accessNotes = primaryAddr.AccessNotes || "";
               }
             }
 
-            // Get Access Notes from the address object (PRIMARY first, then BILLING)
-            let accessNotes = "";
-            if (customer && customer.Addresses) {
-              const selectedAddr: any = primaryAddr || billingAddr || Object.values(customer.Addresses)[0];
-              if (selectedAddr) {
-                accessNotes = selectedAddr.AccessNotes || "";
-              }
+            // Only add to chemical orders if we have a PRIMARY address
+            if (address && primaryAddr) {
+              chemicalOrders.push({
+                accountName: customer?.CustomerName || customer?.CompanyName || poolName,
+                rush: msgLower.includes("urgent") || msgLower.includes("below half"),
+                address: address,
+                entryNotes: accessNotes,
+                items: [message]
+              });
             }
-            
-            // Fallback to customer notes if no address access notes
-            if (!accessNotes && customerId && customerNotesMap[customerId]) {
-              accessNotes = customerNotesMap[customerId];
-            }
-
-            chemicalOrders.push({
-              accountName: customer?.CustomerName || customer?.CompanyName || poolName,
-              rush: msgLower.includes("urgent") || msgLower.includes("below half"),
-              address: address || customer?.Address || "",
-              entryNotes: accessNotes,
-              items: [message]
-            });
           }
         });
       }
