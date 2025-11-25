@@ -21,9 +21,8 @@ interface Workflow {
 
 export default function Automations() {
   const [workflows, setWorkflows] = useState<Workflow[]>([
-    { id: "1", name: "Low Chemical Alert", trigger: "Chlorine < 1.0 ppm", action: "Send Outlook Email to Technician", status: "active", executions: 142 },
-    { id: "2", name: "Leak Detection Protocol", trigger: "Water Loss > 200 gal", action: "Create Work Order & Email Manager", status: "active", executions: 3 },
-    { id: "3", name: "Weekly Report", trigger: "Every Monday 8:00 AM", action: "Email Summary PDF to Clients", status: "paused", executions: 0 },
+    { id: "1", name: "Bulk Chemical Outreach", trigger: "Algae or Repair Alert", action: "Draft Outlook Email for Chemical Sales", status: "active", executions: 87 },
+    { id: "2", name: "Weekly Report", trigger: "Every Monday 8:00 AM", action: "Email Summary PDF to Clients", status: "paused", executions: 0 },
   ]);
 
   return (
@@ -128,28 +127,32 @@ export default function Automations() {
       <div className="mt-8">
         <Card className="glass-card border-white/5">
           <CardHeader>
-            <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">EMAIL TEMPLATE PREVIEW</CardTitle>
-            <CardDescription>Subject: 🚨 URGENT: Chemical Alert - {`{{pool_name}}`}</CardDescription>
+            <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">BULK CHEMICAL EMAIL TEMPLATE</CardTitle>
+            <CardDescription>Subject: 💧 Bulk Chemical Solution for {`{{customer_name}}`} - Special Pricing</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="bg-white text-black p-8 rounded-lg font-sans max-w-2xl mx-auto shadow-2xl">
               <div className="border-b pb-4 mb-4 flex justify-between items-center">
-                <h1 className="text-xl font-bold text-[#0078D4]">Breakpoint BI Alert</h1>
-                <span className="text-xs text-gray-500">Automated by Outlook</span>
+                <h1 className="text-xl font-bold text-[#0078D4]">Breakpoint Commercial Pools</h1>
+                <span className="text-xs text-gray-500">Bulk Chemical Sales</span>
               </div>
-              <p className="mb-4">Hello,</p>
-              <p className="mb-4">The following pool has triggered a critical chemical alert:</p>
+              <p className="mb-4">Hello {`{{customer_name}}`},</p>
+              <p className="mb-4">We noticed your recent alerts for <strong>{`{{pool_name}}`}</strong> and wanted to reach out with a solution that could help prevent future issues.</p>
               
-              <div className="bg-gray-100 p-4 rounded border-l-4 border-red-500 mb-4">
-                <p className="font-bold">Pool: Sunset Resort Main</p>
-                <p className="text-red-600">Metric: Chlorine Level</p>
-                <p>Value: 0.5 ppm (Threshold: &lt; 1.0 ppm)</p>
+              <div className="bg-blue-50 p-4 rounded border-l-4 border-[#0078D4] mb-4">
+                <p className="font-bold mb-2">Recommended Bulk Chemical Package:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>55G Chlorine Drum - Special Rate</li>
+                  <li>15G Acid Carboys (2x) - Discounted</li>
+                  <li>50lb Bag Sodium Bicarbonate</li>
+                </ul>
+                <p className="mt-2 text-green-600 font-bold">Save 15% on bulk orders this month!</p>
               </div>
 
-              <p className="mb-6">Please dispatch a technician immediately to correct the chemical balance.</p>
+              <p className="mb-6">Let us know if you'd like a detailed quote or want to discuss your specific chemical needs.</p>
               
               <a href="#" className="inline-block bg-[#0078D4] text-white px-6 py-2 rounded font-bold text-sm">
-                View Full Report
+                Request Quote
               </a>
             </div>
           </CardContent>

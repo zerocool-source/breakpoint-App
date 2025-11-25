@@ -23,6 +23,7 @@ interface EnrichedAlert {
   severity: string;
   status: string;
   createdAt: string;
+  pictures?: string[];
 }
 
 interface EnrichedAlertsFeedProps {
@@ -84,6 +85,15 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       categories.push("chemical");
     }
     
+    // Chemicals added
+    if (msgLower.includes("added") || 
+        msgLower.includes("requesting") ||
+        msgLower.includes("drum") ||
+        msgLower.includes("carboy") ||
+        msgLower.includes("bag")) {
+      categories.push("chemicals-added");
+    }
+    
     return categories.length > 0 ? categories : ["other"];
   };
 
@@ -130,9 +140,10 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   const categoryCounts = {
     all: alerts.length,
     algae: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("algae")).length,
+    repair: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("repair")).length,
+    "chemicals-added": alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("chemicals-added")).length,
     time: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("time")).length,
     system: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("system")).length,
-    repair: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("repair")).length,
     chemical: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("chemical")).length,
     other: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("other")).length,
   };
@@ -155,30 +166,30 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       <CardContent className="flex flex-col flex-1 pt-4 overflow-hidden">
         <Tabs value={selectedTab} onValueChange={(v) => { setSelectedTab(v); setShowAll(false); }} className="flex flex-col flex-1">
           <TabsList className="grid grid-cols-7 mb-4 bg-white/5 border border-white/10">
-            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
               All ({categoryCounts.all})
             </TabsTrigger>
-            <TabsTrigger value="algae" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
-              <Droplet className="w-3 h-3" /> Algae ({categoryCounts.algae})
+            <TabsTrigger value="algae" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+              Algae ({categoryCounts.algae})
             </TabsTrigger>
-            <TabsTrigger value="time" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
-              <Clock className="w-3 h-3" /> Time ({categoryCounts.time})
+            <TabsTrigger value="repair" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+              Repair ({categoryCounts.repair})
             </TabsTrigger>
-            <TabsTrigger value="system" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> System ({categoryCounts.system})
+            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+              Chem+ ({categoryCounts["chemicals-added"]})
             </TabsTrigger>
-            <TabsTrigger value="repair" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
-              <Wrench className="w-3 h-3" /> Repair ({categoryCounts.repair})
+            <TabsTrigger value="time" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+              Time ({categoryCounts.time})
             </TabsTrigger>
-            <TabsTrigger value="chemical" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
-              <Flame className="w-3 h-3" /> Chemical ({categoryCounts.chemical})
+            <TabsTrigger value="system" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+              System ({categoryCounts.system})
             </TabsTrigger>
-            <TabsTrigger value="other" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs">
+            <TabsTrigger value="other" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
               Other ({categoryCounts.other})
             </TabsTrigger>
           </TabsList>
 
-          {["all", "algae", "time", "system", "repair", "chemical", "other"].map((tab) => (
+          {["all", "algae", "repair", "chemicals-added", "time", "system", "other"].map((tab) => (
             <TabsContent key={tab} value={tab} className="flex-1 overflow-y-auto custom-scrollbar space-y-3 mt-0">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
@@ -256,6 +267,21 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                       <p className="text-sm text-gray-300 mb-2 leading-relaxed line-clamp-2" data-testid={`text-message-${alert.alertId}`}>
                         {alert.message}
                       </p>
+
+                      {/* Pictures if available */}
+                      {alert.pictures && alert.pictures.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                          {alert.pictures.slice(0, 3).map((pic, picIdx) => (
+                            <img 
+                              key={picIdx}
+                              src={pic} 
+                              alt={`Alert picture ${picIdx + 1}`}
+                              className="w-full h-20 object-cover rounded border border-white/10 hover:scale-105 transition-transform cursor-pointer"
+                              data-testid={`img-alert-${alert.alertId}-${picIdx}`}
+                            />
+                          ))}
+                        </div>
+                      )}
 
                       {/* Notes if available */}
                       {alert.notes && (

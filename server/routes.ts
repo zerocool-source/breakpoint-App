@@ -154,6 +154,16 @@ function setupRoutes(app: any) {
             }
           }
 
+          // Extract pictures from alert
+          const pictures: string[] = [];
+          if (pbAlert.Pictures && Array.isArray(pbAlert.Pictures)) {
+            pbAlert.Pictures.forEach((pic: any) => {
+              if (pic.url || pic.URL || pic.imageUrl) {
+                pictures.push(pic.url || pic.URL || pic.imageUrl);
+              }
+            });
+          }
+
           enrichedAlerts.push({
             alertId: pbAlert.JobID || pbAlert.alertId || pbAlert.id,
             poolId: waterBodyId,
@@ -170,6 +180,7 @@ function setupRoutes(app: any) {
             severity,
             status,
             createdAt: pbAlert.JobDate || pbAlert.Date || new Date().toISOString(),
+            pictures,
           });
         });
       }
