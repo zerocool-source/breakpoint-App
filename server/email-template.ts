@@ -23,28 +23,7 @@ export function buildChemicalOrderEmail({
   repEmail,
   subject
 }: EmailParams): string {
-  const now = new Date();
-
-  const dayName = now.toLocaleDateString("en-US", { weekday: "long" });
-  const datePart = now.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  });
-  const timePart = now.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit"
-  });
-
-  const headerLines = [
-    `From: COO <COO@breakpointpools.com>`,
-    `Sent: ${dayName}, ${datePart} ${timePart}`,
-    `To: ${vendorName} <${vendorEmail}>`,
-    `Cc: ${repName} <${repEmail}>`,
-    `Subject: ${subject}`,
-    "",
-  ];
-
+  // Outlook already shows From, To, Cc, Subject fields - no need to duplicate them in body
   const bodyLines: string[] = [];
 
   orders.forEach(order => {
@@ -68,5 +47,5 @@ export function buildChemicalOrderEmail({
     "https://www.breakpointpools.com"
   ];
 
-  return [...headerLines, ...bodyLines, ...footerLines].join("\n");
+  return [...bodyLines, ...footerLines].join("\n");
 }
