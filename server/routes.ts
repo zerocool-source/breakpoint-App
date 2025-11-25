@@ -99,60 +99,51 @@ function setupRoutes(app: any) {
           let message = "Alert from Pool Brain";
           let severity = "Medium";
           let status = "Active";
+          const messages: string[] = [];
 
+          // Parse AlertCategories - each category contains an array of alerts
           if (pbAlert.AlertCategories && Array.isArray(pbAlert.AlertCategories)) {
             pbAlert.AlertCategories.forEach((cat: any) => {
-              if (cat.SystemIssue) {
-                alertType = "SystemIssue";
-                const issue = cat.SystemIssue;
-                severity = issue.Severity || "Medium";
-                message = issue.AlertName || "System issue detected";
-                status = issue.status === "Resolved" ? "Resolved" : "Active";
-              } else if (cat.IssueReport) {
-                alertType = "IssueReport";
-                const report = cat.IssueReport;
-                severity = report.Severity || "Medium";
-                message = report.IssueReports || report.AlertName || "Repair needed";
-                status = report.status === "Resolved" ? "Resolved" : "Active";
-              } else if (cat.CustomAlert) {
-                alertType = "CustomAlert";
-                const custom = cat.CustomAlert;
-                severity = custom.Severity || "Medium";
-                message = custom.message || custom.AlertName || "Custom alert";
-                status = custom.status === "Resolved" ? "Resolved" : "Active";
+              // System Issues
+              if (cat.SystemIssue && Array.isArray(cat.SystemIssue) && cat.SystemIssue.length > 0) {
+                cat.SystemIssue.forEach((issue: any) => {
+                  alertType = "SystemIssue";
+                  severity = issue.Severity || issue.severity || "URGENT";
+                  const issueName = issue.AlertName || issue.alertName || issue.systemIssue || "";
+                  const issueDesc = issue.Description || issue.description || issue.alertDescription || "";
+                  if (issueName || issueDesc) {
+                    messages.push(issueName + (issueDesc ? `: ${issueDesc}` : ""));
+                  }
+                  if (issue.status === "Resolved" || issue.Status === "Resolved") status = "Resolved";
+                });
+              }
+              
+              // Issue Reports
+              if (cat.IssueReport && Array.isArray(cat.IssueReport) && cat.IssueReport.length > 0) {
+                cat.IssueReport.forEach((report: any) => {
+                  alertType = "IssueReport";
+                  severity = report.Severity || report.severity || "HIGH";
+                  const reportText = report.IssueReports || report.issueReports || report.AlertName || report.description || "";
+                  if (reportText) messages.push(reportText);
+                  if (report.status === "Resolved" || report.Status === "Resolved") status = "Resolved";
+                });
+              }
+              
+              // Custom Alerts
+              if (cat.CustomAlert && Array.isArray(cat.CustomAlert) && cat.CustomAlert.length > 0) {
+                cat.CustomAlert.forEach((custom: any) => {
+                  alertType = "CustomAlert";
+                  severity = custom.Severity || custom.severity || "Medium";
+                  const customMsg = custom.message || custom.Message || custom.AlertName || custom.alertName || "";
+                  if (customMsg) messages.push(customMsg);
+                  if (custom.status === "Resolved" || custom.Status === "Resolved") status = "Resolved";
+                });
               }
             });
-          } else {
-            const issue = pbAlert.SystemIssue;
-            if (issue) {
-              alertType = "SystemIssue";
-              severity = issue.Severity || "Medium";
-              message = issue.AlertName || "System issue detected";
-              status = issue.status === "Resolved" ? "Resolved" : "Active";
-            }
-
-            const report = pbAlert.IssueReport;
-            if (report) {
-              alertType = "IssueReport";
-              severity = report.Severity || "Medium";
-              message = report.IssueReports || report.AlertName || "Repair needed";
-              status = report.status === "Resolved" ? "Resolved" : "Active";
-            }
-
-            const custom = pbAlert.CustomAlert;
-            if (custom) {
-              alertType = "CustomAlert";
-              severity = custom.Severity || "Medium";
-              message = custom.message || custom.AlertName || "Custom alert";
-              status = custom.status === "Resolved" ? "Resolved" : "Active";
-            }
-
-            if (!issue && !report && !custom) {
-              message = pbAlert.message || pbAlert.description || pbAlert.AlertName || "Alert from Pool Brain";
-              severity = pbAlert.Severity || pbAlert.severity || "Medium";
-              status = pbAlert.status === "Resolved" ? "Resolved" : "Active";
-            }
           }
+
+          // Combine all messages or use default
+          message = messages.length > 0 ? messages.join(" | ") : "System alert - check pool system";
 
           // Extract address from Addresses object (first address)
           let address = "";
