@@ -49,3 +49,8 @@ waitForPort = 5000
 
 [agent]
 mockupState = "FULLSTACK"
+
+[userenv]
+
+[userenv.shared]
+OLLAMA_ENDPOINT = "http://localhost:11434"

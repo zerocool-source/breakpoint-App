@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard";
 import Intelligence from "@/pages/Intelligence";
 import Automations from "@/pages/Automations";
 import Settings from "@/pages/Settings";
+import Chat from "@/pages/Chat";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
+      <Route path="/chat" component={Chat} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
