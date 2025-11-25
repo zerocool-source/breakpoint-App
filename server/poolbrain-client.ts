@@ -123,6 +123,68 @@ export class PoolBrainClient {
   }
 
   /**
+   * Get customer details
+   * Endpoint: GET /v2/customer_detail
+   */
+  async getCustomerDetail(params: { offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/customer_detail`);
+
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get customer pool details
+   * Endpoint: GET /v2/customer_pool_details
+   */
+  async getCustomerPoolDetails(params: { offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/customer_pool_details`);
+
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Get invoice list
    * Endpoint: GET /v2/invoice_list
    */

@@ -2,25 +2,33 @@ import { Activity } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { AICommand } from "@/components/dashboard/AICommand";
-import { AlertsFeed } from "@/components/dashboard/AlertsFeed";
+import { EnrichedAlertsFeed } from "@/components/dashboard/EnrichedAlertsFeed";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { RefreshCw } from "lucide-react";
-import type { Alert } from "@shared/schema";
+interface EnrichedAlert {
+  alertId: string;
+  poolName: string;
+  customerName: string;
+  severity: string;
+  status: string;
+}
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: alerts = [] } = useQuery<Alert[]>({
-    queryKey: ["alerts"],
+  const { data: alertsData = { alerts: [] } } = useQuery({
+    queryKey: ["enrichedAlerts"],
     queryFn: async () => {
-      const res = await fetch("/api/alerts");
-      if (!res.ok) throw new Error("Failed to fetch alerts");
+      const res = await fetch("/api/alerts/enriched");
+      if (!res.ok) throw new Error("Failed to fetch enriched alerts");
       return res.json();
     },
   });
+
+  const alerts: EnrichedAlert[] = alertsData.alerts || [];
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -32,7 +40,7 @@ export default function Dashboard() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["enrichedAlerts"] });
       toast({
         title: "Sync Complete",
         description: data.message || `Synced ${data.syncedCount} alerts from Pool Brain`,
@@ -47,9 +55,9 @@ export default function Dashboard() {
     },
   });
 
-  const activeAlerts = alerts.filter(a => a.status === "Active");
-  const criticalAlerts = alerts.filter(a => a.severity === "Critical" && a.status === "Active");
-  const resolvedToday = alerts.filter(a => a.status === "Resolved");
+  const activeAlerts = alerts.filter((a: EnrichedAlert) => a.status === "Active");
+  const criticalAlerts = alerts.filter((a: EnrichedAlert) => a.severity.toUpperCase().includes("URGENT") && a.status === "Active");
+  const resolvedToday = alerts.filter((a: EnrichedAlert) => a.status === "Resolved");
 
   return (
     <AppLayout>
@@ -83,7 +91,7 @@ export default function Dashboard() {
           delay={0}
         />
         <StatCard 
-          title="Critical Alerts" 
+          title="URGENT Alerts" 
           value={criticalAlerts.length.toString()}
           change={criticalAlerts.length > 0 ? "Requires attention" : "All clear"} 
           trend={criticalAlerts.length > 0 ? "up" : "neutral"}
@@ -106,7 +114,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Expanded Alerts Feed takes up 2 columns */}
         <div className="lg:col-span-2 h-full">
-            <AlertsFeed className="h-full min-h-[400px]" />
+            <EnrichedAlertsFeed className="h-full min-h-[400px]" />
         </div>
         {/* Ace Prime Command takes up 1 column */}
         <div className="lg:col-span-1">

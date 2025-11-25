@@ -64,6 +64,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get enriched alerts with pool and customer information
+  app.get("/api/alerts/enriched", async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ 
+          error: "Pool Brain API key not configured."
+        });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch data in parallel
+      const [alertsData, customersData, custPoolData] = await Promise.all([
+        client.getAlertsList({ limit: 1000 }),
+        client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] }))
+      ]);
+
+      // Build maps
+      const customerMap: Record<string, any> = {};
+      if (customersData.data && Array.isArray(customersData.data)) {
+        customersData.data.forEach((c: any) => {
+          const customerId = c.customerId || c.id;
+          if (customerId) customerMap[customerId] = c;
+        });
+      }
+
+      const poolToCustomerMap: Record<string, string> = {};
+      if (custPoolData.data && Array.isArray(custPoolData.data)) {
+        custPoolData.data.forEach((cp: any) => {
+          const poolId = cp.poolId || cp.waterBodyId;
+          const customerId = cp.customerId || cp.customerId;
+          if (poolId && customerId) {
+            poolToCustomerMap[poolId] = customerId;
+          }
+        });
+      }
+
+      // Enrich alerts
+      const enrichedAlerts: any[] = [];
+      if (alertsData.data && Array.isArray(alertsData.data)) {
+        for (const pbAlert of alertsData.data) {
+          const poolId = pbAlert.waterBodyId || pbAlert.poolId;
+          const customerId = poolToCustomerMap[poolId];
+          const customer = customerId ? customerMap[customerId] : null;
+
+          let poolName = "Unknown Pool";
+          let alertType = "Service";
+          let severity = "Medium";
+          let message = "Alert from Pool Brain";
+          let status = "Active";
+
+          if (pbAlert.BodyOfWater) {
+            poolName = pbAlert.BodyOfWater;
+          }
+
+          if (pbAlert.AlertCategories && Array.isArray(pbAlert.AlertCategories)) {
+            const categories = pbAlert.AlertCategories[0] || {};
+            if (categories.SystemIssue && Array.isArray(categories.SystemIssue) && categories.SystemIssue.length > 0) {
+              const issue = categories.SystemIssue[0];
+              alertType = issue.type || "System Issue";
+              severity = issue.priorityLevel || issue.priority || "URGENT";
+              message = issue.AlertName || "System issue detected";
+              status = issue.status === "Resolved" ? "Resolved" : "Active";
+            } else if (categories.IssueReport && Array.isArray(categories.IssueReport) && categories.IssueReport.length > 0) {
+              const report = categories.IssueReport[0];
+              alertType = "Repair Needed";
+              severity = report.aiPriorityLevel || report.priority || "URGENT";
+              message = report.IssueReports || report.AlertName || "Repair needed";
+              status = report.status === "Resolved" ? "Resolved" : "Active";
+            }
+          }
+
+          enrichedAlerts.push({
+            alertId: pbAlert.JobID || pbAlert.alertId || pbAlert.id,
+            poolId,
+            poolName,
+            customerId: customerId || null,
+            customerName: customer?.name || customer?.companyName || "Unknown Customer",
+            address: customer?.address || "",
+            notes: customer?.notes || "",
+            message,
+            type: alertType,
+            severity,
+            status,
+            createdAt: pbAlert.JobDate || pbAlert.Date || new Date().toISOString(),
+          });
+        }
+      }
+
+      res.json({ alerts: enrichedAlerts });
+    } catch (error: any) {
+      console.error("Error fetching enriched alerts:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch enriched alerts",
+        message: error.message 
+      });
+    }
+  });
+
   // Sync alerts from Pool Brain
   app.post("/api/alerts/sync", async (req, res) => {
     try {
