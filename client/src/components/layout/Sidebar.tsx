@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, Droplet, FileText, Home, LayoutDashboard, MessageSquare, Settings, Sparkles, Users } from "lucide-react";
+import { Activity, AlertCircle, Droplet, FileText, Home, LayoutDashboard, MessageSquare, Settings, Sparkles, Users, Zap } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ export function Sidebar() {
     { icon: LayoutDashboard, label: "Overview", href: "/" },
     { icon: Droplet, label: "Pools", href: "/pools" },
     { icon: Sparkles, label: "Intelligence", href: "/intelligence" },
+    { icon: Zap, label: "Automations", href: "/automations" }, // New
     { icon: AlertCircle, label: "Alerts", href: "/alerts" },
     { icon: FileText, label: "Reports", href: "/reports" },
     { icon: Users, label: "Technicians", href: "/technicians" },
@@ -47,10 +48,13 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <button className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-colors">
+        <Link href="/settings" className={cn(
+            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-colors",
+            location === "/settings" && "text-white bg-white/5"
+        )}>
           <Settings className="w-5 h-5" />
           <span className="font-ui">Settings</span>
-        </button>
+        </Link>
       </div>
     </aside>
   );
