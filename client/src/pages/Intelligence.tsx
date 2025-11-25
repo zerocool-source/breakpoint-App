@@ -4,26 +4,64 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bot, Send, Terminal, Cpu, Network, Database, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 export default function Intelligence() {
-  const [messages, setMessages] = useState([
-    { role: "system", content: "Ace Prime Core Initialized. Loaded Model: Goss 20B (Fine-Tuned). Connected to Pool Brain V2 API.", timestamp: "10:42:01" },
-    { role: "agent", content: "I'm Ace Prime, powered by the Goss 20B neural engine. I'm scanning your pool systems for anomalies. How can I assist you today?", timestamp: "10:42:05" }
-  ]);
   const [input, setInput] = useState("");
   const [model, setModel] = useState("goss-20b");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!input) return;
-    setMessages(prev => [...prev, { role: "user", content: input, timestamp: new Date().toLocaleTimeString() }]);
+  // Fetch chat history
+  const { data: messagesData = [], refetch: refetchMessages } = useQuery({
+    queryKey: ["chatHistory"],
+    queryFn: async () => {
+      const res = await fetch("/api/chat/history");
+      if (!res.ok) return [];
+      const msgs = await res.json();
+      return msgs.reverse();
+    },
+  });
+
+  const messages = messagesData || [];
+
+  // Send message mutation
+  const sendMutation = useMutation({
+    mutationFn: async (text: string) => {
+      // Add user message
+      const userRes = await fetch("/api/chat/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "user", content: text, model }),
+      });
+
+      if (!userRes.ok) throw new Error("Failed to save user message");
+
+      // Get AI response
+      const aiRes = await fetch("/api/chat/respond", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userMessage: text, model, conversationContext: messages }),
+      });
+
+      if (!aiRes.ok) throw new Error("Failed to get AI response");
+      return aiRes.json();
+    },
+    onSuccess: () => {
+      refetchMessages();
+    },
+  });
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
     setInput("");
-    
-    // Mock AI response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: "agent", content: `[${model.toUpperCase()}] Processing request... analyzing vector embeddings...`, timestamp: new Date().toLocaleTimeString() }]);
-    }, 600);
+    setIsLoading(true);
+    try {
+      await sendMutation.mutateAsync(input);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -60,7 +98,7 @@ export default function Intelligence() {
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Active Model</label>
-                        <Select value={model} onValueChange={setModel}>
+                        <Select value={model} onValueChange={setModel} disabled={isLoading}>
                             <SelectTrigger className="bg-white/5 border-white/10 font-ui">
                                 <SelectValue placeholder="Select Model" />
                             </SelectTrigger>
@@ -85,26 +123,42 @@ export default function Intelligence() {
         </div>
 
         {/* Chat Interface / Main Panel */}
-        <Card className="lg:col-span-3 glass-card border-white/5 flex flex-col h-full bg-black/20">
+        <Card className="lg:col-span-3 glass-card border-white/5 flex flex-col h-full bg-black/20" data-testid="chat-interface">
           <div className="flex-1 p-6 space-y-6 overflow-y-auto custom-scrollbar">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={cn("flex gap-4 animate-in fade-in slide-in-from-bottom-2", msg.role === "user" ? "justify-end" : "justify-start")}>
-                {msg.role !== "user" && (
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                    {msg.role === "system" ? <Terminal className="w-5 h-5 text-primary" /> : <Bot className="w-5 h-5 text-secondary" />}
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                <p className="text-sm">Start a conversation with Ace Prime...</p>
+              </div>
+            ) : (
+              messages.map((msg: any, idx: number) => (
+                <div key={idx} className={cn("flex gap-4 animate-in fade-in slide-in-from-bottom-2", msg.role === "user" ? "justify-end" : "justify-start")}>
+                  {msg.role !== "user" && (
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      {msg.role === "system" ? <Terminal className="w-5 h-5 text-primary" /> : <Bot className="w-5 h-5 text-secondary" />}
+                    </div>
+                  )}
+                  <div className={cn(
+                    "max-w-[80%] p-4 rounded-2xl font-ui text-sm leading-relaxed",
+                    msg.role === "user" ? "bg-primary/10 border border-primary/20 text-white rounded-tr-none" : 
+                    msg.role === "system" ? "bg-white/5 border border-white/10 text-mono text-xs font-mono text-muted-foreground" :
+                    "bg-white/5 border border-white/10 text-gray-200 rounded-tl-none"
+                  )}>
+                    <p>{msg.content}</p>
+                    <span className="text-[10px] opacity-50 mt-2 block font-mono">{new Date(msg.timestamp).toLocaleTimeString()}</span>
                   </div>
-                )}
-                <div className={cn(
-                  "max-w-[80%] p-4 rounded-2xl font-ui text-sm leading-relaxed",
-                  msg.role === "user" ? "bg-primary/10 border border-primary/20 text-white rounded-tr-none" : 
-                  msg.role === "system" ? "bg-white/5 border border-white/10 text-mono text-xs font-mono text-muted-foreground" :
-                  "bg-white/5 border border-white/10 text-gray-200 rounded-tl-none"
-                )}>
-                  <p>{msg.content}</p>
-                  <span className="text-[10px] opacity-50 mt-2 block font-mono">{msg.timestamp}</span>
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="flex gap-4 justify-start">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                  <Bot className="w-5 h-5 text-secondary animate-pulse" />
+                </div>
+                <div className="bg-white/5 border border-white/10 text-gray-200 rounded-2xl rounded-tl-none p-4">
+                  <span className="text-sm font-ui">Processing your request...</span>
                 </div>
               </div>
-            ))}
+            )}
           </div>
           <div className="p-4 border-t border-white/10 bg-black/40">
             <div className="flex gap-2">
@@ -114,8 +168,15 @@ export default function Intelligence() {
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder={`Message ${model === "goss-20b" ? "Ace Prime (Goss 20B)" : "AI Assistant"}...`}
                 className="bg-white/5 border-white/10 focus:border-primary/50 text-white font-ui"
+                disabled={isLoading}
+                data-testid="input-chat-message"
               />
-              <Button onClick={handleSend} className="bg-primary text-black hover:bg-primary/80 font-bold">
+              <Button 
+                onClick={handleSend} 
+                className="bg-primary text-black hover:bg-primary/80 font-bold"
+                disabled={isLoading || !input.trim()}
+                data-testid="button-send-message"
+              >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
