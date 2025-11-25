@@ -10,42 +10,42 @@ export default function Dashboard() {
     <AppLayout>
       <div className="mb-8">
         <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">COMMAND CENTER</h2>
-        <p className="text-muted-foreground font-ui tracking-wide">System Operational • 42 Pools Monitored • 98% Uptime</p>
+        <p className="text-muted-foreground font-ui tracking-wide">System Standby • Waiting for Data Stream • API Connected</p>
       </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
           title="Active Pools" 
-          value="42" 
-          change="+3 this week" 
-          trend="up" 
+          value="--" 
+          change="Syncing..." 
+          trend="neutral" 
           icon={Droplet} 
           color="primary"
           delay={0}
         />
         <StatCard 
           title="Monthly Revenue" 
-          value="$124.5k" 
-          change="+12% vs last month" 
-          trend="up" 
+          value="$--" 
+          change="Syncing..." 
+          trend="neutral" 
           icon={DollarSign} 
           color="secondary"
           delay={100}
         />
         <StatCard 
           title="Critical Alerts" 
-          value="3" 
-          change="-2 from yesterday" 
-          trend="down" 
+          value="--" 
+          change="No Data" 
+          trend="neutral" 
           icon={Activity} 
           color="destructive"
           delay={200}
         />
         <StatCard 
           title="Auto-Dosing" 
-          value="Active" 
-          change="System Optimizing" 
+          value="Standby" 
+          change="Waiting" 
           trend="neutral" 
           icon={Zap} 
           color="accent"

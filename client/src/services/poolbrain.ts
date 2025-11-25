@@ -12,9 +12,42 @@ export const DEFAULT_CONFIG: PoolBrainConfig = {
   baseUrl: "https://prodapi.poolbrain.com",
 };
 
+// V2 API Interfaces
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface Quote {
+  id: string;
+  customerId: string;
+  status: string;
+  amount: number;
+  date: string;
+}
+
+export interface Invoice {
+  id: string;
+  customerId: string;
+  amount: number;
+  status: "paid" | "unpaid" | "overdue";
+  dueDate: string;
+}
+
+export interface Job {
+  id: string;
+  customerId: string;
+  type: string;
+  status: string;
+  scheduledDate: string;
+}
+
 // Endpoint definitions
 export const ENDPOINTS = {
-  ALERTS: "/v2/alerts", // Inferred from context
+  ALERTS: "/v2/alerts",
   CUSTOMERS: "/v2/customer_list",
   QUOTES: "/v2/customer_quotes_detail",
   INVOICES: "/v2/invoice_list",
@@ -22,7 +55,7 @@ export const ENDPOINTS = {
   ROUTE_STOPS: "/v2/route_stops_job_list",
 };
 
-// Mock Service that simulates API calls
+// Service that simulates API calls
 export class PoolBrainService {
   private config: PoolBrainConfig;
 
@@ -38,14 +71,28 @@ export class PoolBrainService {
 
   async getAlerts(filters?: { fromDate?: string; toDate?: string; limit?: number }) {
     console.log("Fetching alerts from:", `${this.config.baseUrl}${ENDPOINTS.ALERTS}`, filters);
-    // In a real app, this would be fetch()
-    // For prototype, return mock data
     return {
-      returnedRecords: 4,
+      returnedRecords: 0,
       hasMore: false,
-      data: [
-        // ... mock data
-      ]
+      data: []
+    };
+  }
+
+  async getCustomers(limit: number = 1000) {
+    console.log("Fetching customers from:", `${this.config.baseUrl}${ENDPOINTS.CUSTOMERS}`);
+    return {
+      returnedRecords: 0,
+      hasMore: false,
+      data: []
+    };
+  }
+
+  async getInvoices(limit: number = 1000) {
+    console.log("Fetching invoices from:", `${this.config.baseUrl}${ENDPOINTS.INVOICES}`);
+    return {
+      returnedRecords: 0,
+      hasMore: false,
+      data: []
     };
   }
 }
