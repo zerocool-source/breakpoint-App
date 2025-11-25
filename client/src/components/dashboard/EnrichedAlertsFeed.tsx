@@ -94,9 +94,9 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
           </div>
         ) : (
           <>
-            {displayedAlerts.map((alert: EnrichedAlert) => (
+            {displayedAlerts.map((alert: EnrichedAlert, idx: number) => (
               <div 
-                key={`alert-${alert.alertId}`}
+                key={`alert-${alert.poolId}-${alert.customerName}-${idx}`}
                 className="group relative p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 transition-all"
                 data-testid={`alert-card-${alert.alertId}`}
               >

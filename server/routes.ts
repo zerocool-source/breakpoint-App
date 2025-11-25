@@ -42,9 +42,9 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Fetch data in parallel
+      // Fetch data in parallel - limit to 150 alerts for performance
       const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
-        client.getAlertsList({ limit: 1000 }),
+        client.getAlertsList({ limit: 150 }),
         client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
         client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
         client.getCustomerNotes({ limit: 1000 }).catch(() => ({ data: [] }))
@@ -192,7 +192,7 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      const alertsData = await client.getAlertsList({ limit: 1000 });
+      const alertsData = await client.getAlertsList({ limit: 150 });
 
       if (!alertsData.data || !Array.isArray(alertsData.data)) {
         return res.json({ message: "No alerts to sync", syncedCount: 0 });
