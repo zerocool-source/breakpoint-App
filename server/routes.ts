@@ -217,10 +217,11 @@ function setupRoutes(app: any) {
       });
 
       // Fetch data in parallel
-      const [alertsData, customersData, custPoolData] = await Promise.all([
+      const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
         client.getAlertsList({ limit: 150 }),
         client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] }))
+        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerNotes({ limit: 1000 }).catch(() => ({ data: [] }))
       ]);
 
       // Build customer and pool maps
@@ -239,6 +240,17 @@ function setupRoutes(app: any) {
           const customerId = cp.CustomerID;
           if (waterBodyId && customerId) {
             poolToCustomerMap[waterBodyId] = customerId;
+          }
+        });
+      }
+
+      // Build customer notes map (access notes/lockbox codes)
+      const customerNotesMap: Record<string, string> = {};
+      if (custNotesData.data && Array.isArray(custNotesData.data)) {
+        custNotesData.data.forEach((cn: any) => {
+          const customerId = cn.RecordID || cn.CustomerID;
+          if (customerId) {
+            customerNotesMap[customerId] = cn.notes || cn.Notes || cn.description || cn.Note || "";
           }
         });
       }
@@ -310,8 +322,8 @@ function setupRoutes(app: any) {
               }
             }
 
-            // Get Access Notes (lockbox information)
-            const accessNotes = customer?.AccessNotes || customer?.accessNotes || customer?.access_notes || "";
+            // Get Access Notes (lockbox information) from customer notes
+            const accessNotes = customerId ? (customerNotesMap[customerId] || "") : "";
 
             chemicalOrders.push({
               accountName: customer?.CustomerName || customer?.CompanyName || poolName,
