@@ -51,13 +51,13 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    const to = 'pmtorder@awspoolsupply.com';
-    const cc = 'Jesus@awspoolsupply.com';
-    const subject = 'Alpha Chemical Order';
-    const body = emailData.emailText;
+    const to = encodeURIComponent('pmtorder@awspoolsupply.com');
+    const cc = encodeURIComponent('Jesus@awspoolsupply.com');
+    const subject = encodeURIComponent('Alpha Chemical Order');
+    // Use encodeURIComponent instead of URLSearchParams to avoid + signs
+    const body = encodeURIComponent(emailData.emailText);
 
-    const params = new URLSearchParams({ to, cc, subject, body });
-    const url = `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+    const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${subject}&body=${body}`;
 
     window.open(url, '_blank');
     
