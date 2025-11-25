@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle2, MapPin, Building2, AlertCircle, ChevronDown } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MapPin, Building2, AlertCircle, ChevronDown, Mail, Phone, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -13,6 +13,9 @@ interface EnrichedAlert {
   customerId: string | null;
   customerName: string;
   address: string;
+  phone: string;
+  email: string;
+  contact: string;
   notes: string;
   message: string;
   type: string;
@@ -122,13 +125,37 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                   </div>
                 </div>
 
-                {/* Location */}
-                {alert.address && (
-                  <div className="flex items-start gap-1 mb-2 text-xs text-muted-foreground truncate">
-                    <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                    <span className="leading-snug truncate">{alert.address}</span>
-                  </div>
-                )}
+                {/* Customer Info Row */}
+                <div className="grid grid-cols-1 gap-1 mb-2 text-xs">
+                  {alert.address && (
+                    <div className="flex items-start gap-1 text-muted-foreground">
+                      <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                      <span className="truncate">{alert.address}</span>
+                    </div>
+                  )}
+                  {alert.phone && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Phone className="w-3 h-3 flex-shrink-0" />
+                      <a href={`tel:${alert.phone}`} className="text-blue-400 hover:text-blue-300 truncate" data-testid={`link-phone-${alert.alertId}`}>
+                        {alert.phone}
+                      </a>
+                    </div>
+                  )}
+                  {alert.email && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Mail className="w-3 h-3 flex-shrink-0" />
+                      <a href={`mailto:${alert.email}`} className="text-blue-400 hover:text-blue-300 truncate" data-testid={`link-email-${alert.alertId}`}>
+                        {alert.email}
+                      </a>
+                    </div>
+                  )}
+                  {alert.contact && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <User className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">{alert.contact}</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Alert Message */}
                 <p className="text-sm text-gray-300 mb-2 leading-relaxed line-clamp-2" data-testid={`text-message-${alert.alertId}`}>

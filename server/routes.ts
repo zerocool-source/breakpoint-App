@@ -147,11 +147,15 @@ function setupRoutes(app: any) {
           }
 
           enrichedAlerts.push({
+            alertId: pbAlert.JobID || pbAlert.alertId || pbAlert.id,
             poolId,
             poolName,
             customerId: customerId || null,
             customerName: customer?.name || customer?.companyName || "Unknown Customer",
             address: customer?.address || "",
+            phone: customer?.phone || customer?.phoneNumber || "",
+            email: customer?.email || customer?.emailAddress || "",
+            contact: customer?.contact || customer?.contactPerson || "",
             notes: customerNotesMap[customerId] || customer?.notes || "",
             message,
             type: alertType,
