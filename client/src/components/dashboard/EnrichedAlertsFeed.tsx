@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle2, MapPin, Building2, AlertCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MapPin, Building2, AlertCircle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 interface EnrichedAlert {
   alertId: string;
@@ -25,7 +26,7 @@ interface EnrichedAlertsFeedProps {
 }
 
 export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
-  const queryClient = useQueryClient();
+  const [showAll, setShowAll] = useState(false);
 
   const { data: alertsData = { alerts: [] }, isLoading } = useQuery({
     queryKey: ["enrichedAlerts"],
@@ -37,6 +38,23 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   });
 
   const alerts = alertsData.alerts || [];
+  
+  // Sort by severity: URGENT first, then Active status first
+  const sortedAlerts = [...alerts].sort((a: EnrichedAlert, b: EnrichedAlert) => {
+    const severityOrder = { URGENT: 0, CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 };
+    const aSev = severityOrder[a.severity.toUpperCase() as keyof typeof severityOrder] ?? 5;
+    const bSev = severityOrder[b.severity.toUpperCase() as keyof typeof severityOrder] ?? 5;
+    if (aSev !== bSev) return aSev - bSev;
+    
+    // Then sort by status (Active first)
+    if (a.status === "Active" && b.status !== "Active") return -1;
+    if (a.status !== "Active" && b.status === "Active") return 1;
+    return 0;
+  });
+
+  // Show only top 5, unless "Show All" is clicked
+  const displayedAlerts = showAll ? sortedAlerts : sortedAlerts.slice(0, 5);
+  const hasMore = sortedAlerts.length > 5;
 
   const getSeverityColor = (severity: string) => {
     const upper = severity.toUpperCase();
@@ -75,72 +93,83 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
             <p className="text-xs mt-1">All systems operational</p>
           </div>
         ) : (
-          alerts.map((alert: EnrichedAlert) => (
-            <div 
-              key={alert.alertId} 
-              className="group relative p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 transition-all"
-              data-testid={`alert-card-${alert.alertId}`}
-            >
-              {alert.status === "Active" && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-destructive to-transparent rounded-l-lg opacity-50 group-hover:opacity-100" />
-              )}
-              
-              {/* Header: Pool + Customer */}
-              <div className="mb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <h4 className="font-bold text-sm leading-tight text-white group-hover:text-primary transition-colors" data-testid={`text-pool-${alert.alertId}`}>
-                      {alert.poolName}
-                    </h4>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      <Building2 className="w-3 h-3" />
-                      <span data-testid={`text-customer-${alert.alertId}`}>{alert.customerName}</span>
+          <>
+            {displayedAlerts.map((alert: EnrichedAlert) => (
+              <div 
+                key={`alert-${alert.alertId}`}
+                className="group relative p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 transition-all"
+                data-testid={`alert-card-${alert.alertId}`}
+              >
+                {alert.status === "Active" && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-destructive to-transparent rounded-l-lg opacity-50 group-hover:opacity-100" />
+                )}
+                
+                {/* Header: Pool + Customer */}
+                <div className="mb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm leading-tight text-white group-hover:text-primary transition-colors truncate" data-testid={`text-pool-${alert.alertId}`}>
+                        {alert.poolName}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground truncate">
+                        <Building2 className="w-3 h-3 flex-shrink-0" />
+                        <span data-testid={`text-customer-${alert.alertId}`} className="truncate">{alert.customerName}</span>
+                      </div>
                     </div>
+                    <Badge className={cn("font-mono text-[10px] uppercase tracking-wider shrink-0", getSeverityColor(alert.severity))} data-testid={`badge-severity-${alert.alertId}`}>
+                      {alert.severity}
+                    </Badge>
                   </div>
-                  <Badge className={cn("font-mono text-[10px] uppercase tracking-wider shrink-0", getSeverityColor(alert.severity))} data-testid={`badge-severity-${alert.alertId}`}>
-                    {alert.severity}
-                  </Badge>
                 </div>
-              </div>
 
-              {/* Location */}
-              {alert.address && (
-                <div className="flex items-start gap-1 mb-2 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  <span className="leading-snug">{alert.address}</span>
-                </div>
-              )}
+                {/* Location */}
+                {alert.address && (
+                  <div className="flex items-start gap-1 mb-2 text-xs text-muted-foreground truncate">
+                    <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <span className="leading-snug truncate">{alert.address}</span>
+                  </div>
+                )}
 
-              {/* Alert Message */}
-              <p className="text-sm text-gray-300 mb-2 leading-relaxed" data-testid={`text-message-${alert.alertId}`}>
-                {alert.message}
-              </p>
+                {/* Alert Message */}
+                <p className="text-sm text-gray-300 mb-2 leading-relaxed line-clamp-2" data-testid={`text-message-${alert.alertId}`}>
+                  {alert.message}
+                </p>
 
-              {/* Notes if available */}
-              {alert.notes && (
-                <div className="bg-white/5 rounded px-2 py-1 mb-2 text-xs text-muted-foreground border border-white/5">
-                  <p className="line-clamp-2">{alert.notes}</p>
-                </div>
-              )}
+                {/* Notes if available */}
+                {alert.notes && (
+                  <div className="bg-white/5 rounded px-2 py-1 mb-2 text-xs text-muted-foreground border border-white/5">
+                    <p className="line-clamp-1">{alert.notes}</p>
+                  </div>
+                )}
 
-              {/* Footer: Type + Time + Status */}
-              <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                <div className="flex gap-2">
-                  <span className="bg-white/5 px-2 py-1 rounded text-muted-foreground" data-testid={`text-type-${alert.alertId}`}>
-                    {alert.type}
-                  </span>
-                  {alert.status === "Resolved" && (
-                    <span className="bg-green-500/10 text-green-400 px-2 py-1 rounded flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Resolved
+                {/* Footer: Type + Status */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+                  <div className="flex gap-2">
+                    <span className="bg-white/5 px-2 py-1 rounded text-muted-foreground text-[10px]" data-testid={`text-type-${alert.alertId}`}>
+                      {alert.type}
                     </span>
-                  )}
+                  </div>
+                  <time className="text-muted-foreground text-[10px]" data-testid={`text-time-${alert.alertId}`}>
+                    {new Date(alert.createdAt).toLocaleDateString()}
+                  </time>
                 </div>
-                <time className="text-muted-foreground" data-testid={`text-time-${alert.alertId}`}>
-                  {new Date(alert.createdAt).toLocaleDateString()}
-                </time>
               </div>
-            </div>
-          ))
+            ))}
+
+            {/* Show All / Show Less Button */}
+            {hasMore && (
+              <Button
+                onClick={() => setShowAll(!showAll)}
+                variant="outline"
+                size="sm"
+                className="w-full text-xs mt-2 bg-white/5 border-white/10 hover:bg-white/10 hover:border-primary/30"
+                data-testid="button-toggle-all-alerts"
+              >
+                <ChevronDown className={cn("w-3 h-3 transition-transform", showAll && "rotate-180")} />
+                {showAll ? `Show Top 5` : `Show All (${sortedAlerts.length})`}
+              </Button>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
