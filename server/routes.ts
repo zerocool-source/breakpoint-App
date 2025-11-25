@@ -48,7 +48,7 @@ function setupRoutes(app: any) {
         client.getAlertsList({ limit: 150 }),
         client.getCustomerDetail({ limit: 1000 }).catch((e) => { console.error("Customer detail error:", e); return { data: [] }; }),
         client.getCustomerPoolDetails({ limit: 1000 }).catch((e) => { console.error("Customer pool details error:", e); return { data: [] }; }),
-        client.getCustomerNotes({ limit: 1000 }).catch((e) => { console.error("Customer notes error:", e); return { data: [] }; })
+        client.getCustomerNotes({ limit: 5000 }).catch((e) => { console.error("Customer notes error:", e); return { data: [] }; })
       ]);
 
       // Build customer map using RecordID as key
@@ -62,13 +62,14 @@ function setupRoutes(app: any) {
         });
       }
 
-      // Customer notes map
+      // Customer notes map (access notes/lockbox codes)
       const customerNotesMap: Record<string, string> = {};
       if (custNotesData.data && Array.isArray(custNotesData.data)) {
         custNotesData.data.forEach((cn: any) => {
-          const customerId = cn.RecordID || cn.CustomerID;
-          if (customerId) {
-            customerNotesMap[customerId] = cn.notes || cn.Notes || cn.description || "";
+          const customerId = cn.CustomerID;
+          const noteText = cn.Note || cn.notes || cn.Notes || cn.description || "";
+          if (customerId && noteText) {
+            customerNotesMap[customerId] = noteText;
           }
         });
       }
@@ -216,12 +217,12 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Fetch data in parallel
+      // Fetch data in parallel - increase customer notes limit
       const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
         client.getAlertsList({ limit: 150 }),
         client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
         client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerNotes({ limit: 1000 }).catch(() => ({ data: [] }))
+        client.getCustomerNotes({ limit: 5000 }).catch(() => ({ data: [] }))
       ]);
 
       // Build customer and pool maps
@@ -244,13 +245,14 @@ function setupRoutes(app: any) {
         });
       }
 
-      // Build customer notes map (access notes/lockbox codes)
+      // Build customer notes map (access notes/lockbox codes from customer_notes_detail)
       const customerNotesMap: Record<string, string> = {};
       if (custNotesData.data && Array.isArray(custNotesData.data)) {
         custNotesData.data.forEach((cn: any) => {
-          const customerId = cn.RecordID || cn.CustomerID;
-          if (customerId) {
-            customerNotesMap[customerId] = cn.notes || cn.Notes || cn.description || cn.Note || "";
+          const customerId = cn.CustomerID;
+          const noteText = cn.Note || cn.notes || cn.Notes || cn.description || "";
+          if (customerId && noteText) {
+            customerNotesMap[customerId] = noteText;
           }
         });
       }
@@ -302,11 +304,11 @@ function setupRoutes(app: any) {
             let billingAddr = null;
             
             if (customer?.Addresses && typeof customer.Addresses === 'object') {
-              // Look for PRIMARY and BILLING addresses
+              // Look for PRIMARY and BILLING addresses by their field names
               Object.values(customer.Addresses).forEach((addr: any) => {
-                if (addr.Type === 'PRIMARY' || addr.type === 'PRIMARY') {
+                if (addr.PrimaryAddress || addr.PrimaryCity) {
                   primaryAddr = addr;
-                } else if (addr.Type === 'BILLING' || addr.type === 'BILLING') {
+                } else if (addr.BillingAddress || addr.BillingCity) {
                   billingAddr = addr;
                 }
               });
@@ -322,8 +324,19 @@ function setupRoutes(app: any) {
               }
             }
 
-            // Get Access Notes (lockbox information) from customer notes
-            const accessNotes = customerId ? (customerNotesMap[customerId] || "") : "";
+            // Get Access Notes from the address object (PRIMARY first, then BILLING)
+            let accessNotes = "";
+            if (customer && customer.Addresses) {
+              const selectedAddr: any = primaryAddr || billingAddr || Object.values(customer.Addresses)[0];
+              if (selectedAddr) {
+                accessNotes = selectedAddr.AccessNotes || "";
+              }
+            }
+            
+            // Fallback to customer notes if no address access notes
+            if (!accessNotes && customerId && customerNotesMap[customerId]) {
+              accessNotes = customerNotesMap[customerId];
+            }
 
             chemicalOrders.push({
               accountName: customer?.CustomerName || customer?.CompanyName || poolName,
