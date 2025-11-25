@@ -84,10 +84,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Fetch data in parallel
-      const [alertsData, customersData, custPoolData] = await Promise.all([
+      const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
         client.getAlertsList({ limit: 1000 }),
         client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] }))
+        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerNotes({ limit: 1000 }).catch(() => ({ data: [] }))
       ]);
 
       // Build maps
@@ -96,6 +97,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customersData.data.forEach((c: any) => {
           const customerId = c.customerId || c.id;
           if (customerId) customerMap[customerId] = c;
+        });
+      }
+
+      // Customer notes map
+      const customerNotesMap: Record<string, string> = {};
+      if (custNotesData.data && Array.isArray(custNotesData.data)) {
+        custNotesData.data.forEach((cn: any) => {
+          const customerId = cn.customerId || cn.id;
+          if (customerId) {
+            customerNotesMap[customerId] = cn.notes || cn.description || "";
+          }
         });
       }
 
@@ -152,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             customerId: customerId || null,
             customerName: customer?.name || customer?.companyName || "Unknown Customer",
             address: customer?.address || "",
-            notes: customer?.notes || "",
+            notes: customerNotesMap[customerId] || customer?.notes || "",
             message,
             type: alertType,
             severity,

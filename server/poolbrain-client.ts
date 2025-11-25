@@ -154,6 +154,37 @@ export class PoolBrainClient {
   }
 
   /**
+   * Get customer notes
+   * Endpoint: GET /v2/customer_notes_detail
+   */
+  async getCustomerNotes(params: { offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/customer_notes_detail`);
+
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Get customer pool details
    * Endpoint: GET /v2/customer_pool_details
    */
