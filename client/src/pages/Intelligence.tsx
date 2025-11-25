@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 
 export default function Intelligence() {
   const [messages, setMessages] = useState([
-    { role: "system", content: "Gemini 3.0 Core Initialized. Connected to Pool Brain V2 API.", timestamp: "10:42:01" },
-    { role: "agent", content: "I've analyzed the chemical usage patterns for Sunset Resort. Chlorine consumption is 15% higher than projected. Potential leak or sensor calibration needed.", timestamp: "10:42:05" }
+    { role: "system", content: "Ace Prime Core Initialized. Connected to Pool Brain V2 API.", timestamp: "10:42:01" },
+    { role: "agent", content: "I'm Ace Prime. I'm scanning your pool systems for anomalies. How can I assist you today?", timestamp: "10:42:05" }
   ]);
   const [input, setInput] = useState("");
 
@@ -30,9 +30,9 @@ export default function Intelligence() {
         <div>
           <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight flex items-center gap-3">
             <SparkleIcon className="text-secondary w-8 h-8" />
-            AI INTELLIGENCE
+            ACE PRIME
           </h2>
-          <p className="text-muted-foreground font-ui tracking-wide">Multi-Agent System • Self-Learning Active</p>
+          <p className="text-muted-foreground font-ui tracking-wide">Advanced AI Assistant • Multi-Agent System • Self-Learning Active</p>
         </div>
         <div className="flex gap-4">
           <StatusBadge icon={Cpu} label="Neural Core" status="Online" color="text-green-400" />
@@ -85,7 +85,7 @@ export default function Intelligence() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Ask the intelligence engine..." 
+                placeholder="Chat with Ace Prime..." 
                 className="bg-white/5 border-white/10 focus:border-primary/50 text-white font-ui"
               />
               <Button onClick={handleSend} className="bg-primary text-black hover:bg-primary/80 font-bold">

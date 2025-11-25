@@ -16,10 +16,10 @@ export function AICommand() {
   }, [isListening]);
 
   return (
-    <Card className="glass-card border-primary/20 bg-black/40 overflow-hidden relative group">
+    <Card className="glass-card border-primary/20 bg-black/40 overflow-hidden relative group h-full">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 pointer-events-none" />
       
-      <CardContent className="p-6 flex flex-col items-center justify-center min-h-[250px] relative z-10">
+      <CardContent className="p-6 flex flex-col items-center justify-center min-h-[250px] h-full relative z-10">
         {/* Animated Brain/Core */}
         <div className="relative w-32 h-32 mb-6">
           <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-[spin_10s_linear_infinite]" />
@@ -35,10 +35,10 @@ export function AICommand() {
         </div>
 
         <h3 className="font-display text-xl font-bold text-center mb-2 text-glow">
-          GEMINI INTELLIGENCE
+          ACE PRIME
         </h3>
         <p className="text-center text-muted-foreground text-sm font-ui mb-6 max-w-[80%]">
-          "System optimized. 3 alerts require attention. Chemical inventory low at Sunset Resort."
+          "Hello, I'm Ace Prime. All systems are currently optimal. How can I help you manage your pools today?"
         </p>
 
         {/* Audio Visualizer */}
@@ -62,7 +62,7 @@ export function AICommand() {
           )}
         >
           <Mic className="w-4 h-4" />
-          {isListening ? "Listening..." : "Activate Voice"}
+          {isListening ? "Listening..." : "Talk to Ace Prime"}
         </button>
       </CardContent>
     </Card>

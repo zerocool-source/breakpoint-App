@@ -1,7 +1,6 @@
 import { Activity, DollarSign, Droplet, Zap } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { PoolHealthChart } from "@/components/dashboard/PoolHealthChart";
 import { AICommand } from "@/components/dashboard/AICommand";
 import { AlertsFeed } from "@/components/dashboard/AlertsFeed";
 
@@ -14,7 +13,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard 
           title="Active Pools" 
           value="--" 
@@ -42,26 +41,18 @@ export default function Dashboard() {
           color="destructive"
           delay={200}
         />
-        <StatCard 
-          title="Auto-Dosing" 
-          value="Standby" 
-          change="Waiting" 
-          trend="neutral" 
-          icon={Zap} 
-          color="accent"
-          delay={300}
-        />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <PoolHealthChart />
-        <AICommand />
-      </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 gap-8">
-        <AlertsFeed />
+        {/* Expanded Alerts Feed takes up 2 columns */}
+        <div className="lg:col-span-2 h-full">
+            <AlertsFeed className="h-full min-h-[400px]" />
+        </div>
+        {/* Ace Prime Command takes up 1 column */}
+        <div className="lg:col-span-1">
+            <AICommand />
+        </div>
       </div>
     </AppLayout>
   );

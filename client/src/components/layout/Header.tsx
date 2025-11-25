@@ -9,7 +9,7 @@ export function Header() {
         <div className="relative w-full max-w-md group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input 
-            placeholder="Ask Gemini anything about your pools..." 
+            placeholder="Ask Ace Prime anything about your pools..." 
             className="pl-10 bg-white/5 border-white/10 focus:border-primary/50 focus:ring-primary/20 transition-all rounded-full font-ui"
           />
         </div>
