@@ -1,0 +1,145 @@
+Nice, good choice. We’ll make your app launch Outlook with a pre-written email that looks just like that Alpha Chemical Order, and you just hit Send.
+
+I’ll assume your app is a web app (JS/React/etc.). If it’s something else you can still copy the same idea.
+
+1️⃣ The Outlook compose URL pattern
+
+Outlook on the web lets you open a new message with everything filled in just by opening a URL:
+
+https://outlook.office.com/mail/deeplink/compose
+  ?to=EMAIL
+  &cc=EMAIL
+  &subject=SUBJECT
+  &body=BODY_TEXT
+
+
+All values (to, cc, subject, body) must be URL-encoded.
+
+2️⃣ Simple JavaScript function you can drop into your app
+
+This will:
+
+Take your order text,
+
+Build the Outlook compose URL,
+
+Open a new tab with the message ready to send.
+
+function openOutlookOrderEmail() {
+  const to = 'pmtorder@awspoolsupply.com';
+  const cc = 'jesus@awspoolsupply.com';
+  const subject = 'Alpha Chemical Order';
+
+  // This is where you inject the text built from your app’s data
+  const body = `
+LAKE VILLAGE HOA
+30151 Rancho Vista Road, Temecula, California 92592
+Lockbox: 5090 (Left corner of entry gate)
+
+• Equipment Room: 5090
+• Pool Entry Padlock: 5090
+• NO TAB FEEDER TO BE INSTALLED DUE TO COPPER PLUMBING
+
+Requesting:
+12 gallon jugs of acid. PLEASE JUST THE JUGS, NO CARBOY. THERE IS NO ACID ROLOCHEM INSTALLED HERE. THANKS!
+
+Hayes/Westport – Eastvale Square Community Association
+12951 Lassen Dr., Eastvale, CA 92880
+• Lockbox code: 5090 (to the right of pump room on fence)
+
+Requesting:
+(1) 55G Chlorine Drum
+(2) 15G Acid Carboys
+(1) 50lb Bag Sodium Bicarbonate
+
+CITRO OWNERS ASSOCIATION (CIOW) – Fallbrook
+35200 Hacienda Hts. Fallbrook, CA 92028
+Arrive after 5 am due to the alarm
+1080 (located left of entrance gate)
+Storage Lock: 6307
+
+Requesting:
+Acid refill 50 gal
+3 bags sodium bicarbonate
+1 bucket tabs
+2 bottles of enzymes
+
+PRESERVE at Chino Rush!
+Parkhouse – 15871 Main St., Chino, CA 91708
+• Lockbox: 5090 (Gas meter right of pump room)
+• Bulk chlor tank size: 500 gal
+
+150 gallon chlorine tank (below half)
+50 gallon muriatic acid tank (below half)
+
+Warm Regards,
+COO
+Breakpoint Commercial Pool Systems, Inc.
+`.trim();
+
+  const params = new URLSearchParams({
+    to,
+    cc,
+    subject,
+    body
+  });
+
+  const url = `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+
+  // Open Outlook compose in a new tab/window
+  window.open(url, '_blank');
+}
+
+
+Now just wire that to a button in your app:
+
+<button onclick="openOutlookOrderEmail()">
+  Send Alpha Chemical Order
+</button>
+
+
+Or in React:
+
+<button onClick={openOutlookOrderEmail}>
+  Send Alpha Chemical Order
+</button>
+
+3️⃣ Hook it up to your app’s data instead of hard-coding
+
+In your real app you’ll be building the body string from form values / database records.
+
+Pseudo-example:
+
+function buildOrderBody(orders) {
+  // orders = array of properties with name, address, lockbox, items, notes, etc.
+  return orders.map(o => `
+${o.name}
+${o.address}
+Lockbox: ${o.lockbox}
+
+${o.notes ? o.notes + '\n\n' : ''}Requesting:
+${o.items.map(item => `- ${item.qty} ${item.unit} ${item.name}`).join('\n')}
+`).join('\n\n');
+}
+
+function openOutlookOrderEmailFromData(orders) {
+  const to = 'pmtorder@awspoolsupply.com';
+  const cc = 'jesus@awspoolsupply.com';
+  const subject = 'Alpha Chemical Order';
+  const body = buildOrderBody(orders);
+
+  const params = new URLSearchParams({ to, cc, subject, body });
+  const url = `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+  window.open(url, '_blank');
+}
+
+
+Your app just passes in the properties + chemicals object, and Outlook opens with the exact text.
+
+4️⃣ Notes / gotchas
+
+The user needs to be logged into Outlook in that browser; otherwise Outlook will prompt for login first.
+
+Keep the body as plain text for reliability; Outlook will still format bullets and line breaks decently.
+
+URLSearchParams automatically URL-encodes everything (line breaks, spaces, etc.), so you don’t have to manually call encodeURIComponent.

@@ -298,34 +298,51 @@ function setupRoutes(app: any) {
             msgLower.includes("requesting");
 
           if (isChemicalAlert && message) {
-            // ONLY use PRIMARY addresses (physical delivery locations) - skip if no primary address
+            // ONLY use PRIMARY addresses OR when PRIMARY and BILLING are shared (same location)
             let address = "";
-            let primaryAddr = null;
+            let primaryAddr: any = null;
+            let billingAddr: any = null;
             let accessNotes = "";
             
             if (customer?.Addresses && typeof customer.Addresses === 'object') {
-              // Find PRIMARY address by field names
+              // Find PRIMARY and BILLING addresses
               Object.values(customer.Addresses).forEach((addr: any) => {
                 if (addr.PrimaryAddress || addr.PrimaryCity) {
                   primaryAddr = addr;
+                } else if (addr.BillingAddress || addr.BillingCity) {
+                  billingAddr = addr;
                 }
               });
               
-              // Only proceed if we found a PRIMARY address
+              // Use PRIMARY address if it exists
               if (primaryAddr) {
                 const addrLine = primaryAddr.PrimaryAddress || '';
                 const city = primaryAddr.PrimaryCity || '';
                 const state = primaryAddr.PrimaryState || '';
                 const zip = primaryAddr.PrimaryZip || '';
                 address = `${addrLine}, ${city}, ${state} ${zip}`.trim();
-                
-                // Get Access Notes from PRIMARY address only
                 accessNotes = primaryAddr.AccessNotes || "";
+              }
+              // If no PRIMARY but BILLING and PRIMARY share same location, use it
+              else if (billingAddr && !primaryAddr) {
+                // Check if billing address looks like a physical location (not a PO Box)
+                const billingAddrLine = billingAddr.BillingAddress || '';
+                const isPOBox = billingAddrLine.toLowerCase().includes('p.o. box') || 
+                               billingAddrLine.toLowerCase().includes('po box') ||
+                               billingAddrLine.toLowerCase().includes('p o box');
+                
+                if (!isPOBox) {
+                  const city = billingAddr.BillingCity || '';
+                  const state = billingAddr.BillingState || '';
+                  const zip = billingAddr.BillingZip || '';
+                  address = `${billingAddrLine}, ${city}, ${state} ${zip}`.trim();
+                  accessNotes = billingAddr.AccessNotes || "";
+                }
               }
             }
 
-            // Only add to chemical orders if we have a PRIMARY address
-            if (address && primaryAddr) {
+            // Only add to chemical orders if we have a valid delivery address
+            if (address) {
               chemicalOrders.push({
                 accountName: customer?.CustomerName || customer?.CompanyName || poolName,
                 rush: msgLower.includes("urgent") || msgLower.includes("below half"),

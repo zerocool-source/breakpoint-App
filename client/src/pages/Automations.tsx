@@ -48,6 +48,25 @@ export default function Automations() {
     }
   };
 
+  const handleOpenInOutlook = () => {
+    if (!emailData?.emailText) return;
+
+    const to = 'pmtorder@awspoolsupply.com';
+    const cc = 'Jesus@awspoolsupply.com';
+    const subject = 'Alpha Chemical Order';
+    const body = emailData.emailText;
+
+    const params = new URLSearchParams({ to, cc, subject, body });
+    const url = `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+
+    window.open(url, '_blank');
+    
+    toast({
+      title: "Opening Outlook",
+      description: `Chemical order email for ${emailData.orderCount} properties`,
+    });
+  };
+
   return (
     <AppLayout>
       <div className="mb-8 flex items-center justify-between">
@@ -166,14 +185,25 @@ export default function Automations() {
                 {isLoading ? "Generating..." : "Generate from Alerts"}
               </Button>
               {emailData && (
-                <Button 
-                  onClick={handleCopyEmail}
-                  className="bg-primary text-black hover:bg-primary/80 gap-2"
-                  data-testid="button-copy-email"
-                >
-                  <Copy className="w-4 h-4" />
-                  Copy Email
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleOpenInOutlook}
+                    className="bg-[#0078D4] text-white hover:bg-[#0078D4]/80 gap-2"
+                    data-testid="button-open-outlook"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Open in Outlook
+                  </Button>
+                  <Button 
+                    onClick={handleCopyEmail}
+                    variant="outline"
+                    className="gap-2"
+                    data-testid="button-copy-email"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy Email
+                  </Button>
+                </>
               )}
             </div>
           </CardHeader>
