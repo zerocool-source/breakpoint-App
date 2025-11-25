@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { PoolBrainClient } from "./poolbrain-client";
 import { insertAlertSchema, insertWorkflowSchema, insertCustomerSchema, insertChatMessageSchema, insertSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -146,20 +147,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Pool Brain API Proxy (will call actual Pool Brain API using stored credentials)
+  // Pool Brain API Proxy - Alerts List
   app.get("/api/poolbrain/alerts", async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      if (!settings?.poolBrainApiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured. Please configure in Settings." });
+      }
+
+      // Create Pool Brain client
+      const client = new PoolBrainClient({
+        apiKey: settings.poolBrainApiKey,
+        companyId: settings.poolBrainCompanyId || undefined,
+      });
+
+      // Parse query parameters
+      const fromDate = req.query.fromDate as string | undefined;
+      const toDate = req.query.toDate as string | undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 1000;
+
+      // Call Pool Brain API
+      const data = await client.getAlertsList({
+        fromDate,
+        toDate,
+        offset,
+        limit,
+      });
+
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching Pool Brain alerts:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch alerts from Pool Brain",
+        message: error.message 
+      });
+    }
+  });
+
+  // Pool Brain API Proxy - Customer List
+  app.get("/api/poolbrain/customers", async (req, res) => {
     try {
       const settings = await storage.getSettings();
       if (!settings?.poolBrainApiKey) {
         return res.status(400).json({ error: "Pool Brain API key not configured" });
       }
 
-      // TODO: Make actual API call to Pool Brain
-      // For now, return empty array
-      res.json({ data: [], returnedRecords: 0, hasMore: false });
-    } catch (error) {
-      console.error("Error fetching Pool Brain alerts:", error);
-      res.status(500).json({ error: "Failed to fetch alerts from Pool Brain" });
+      const client = new PoolBrainClient({
+        apiKey: settings.poolBrainApiKey,
+        companyId: settings.poolBrainCompanyId || undefined,
+      });
+
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 1000;
+
+      const data = await client.getCustomerList({ offset, limit });
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching Pool Brain customers:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch customers from Pool Brain",
+        message: error.message 
+      });
+    }
+  });
+
+  // Pool Brain API Proxy - Invoice List
+  app.get("/api/poolbrain/invoices", async (req, res) => {
+    try {
+      const settings = await storage.getSettings();
+      if (!settings?.poolBrainApiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey: settings.poolBrainApiKey,
+        companyId: settings.poolBrainCompanyId || undefined,
+      });
+
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 1000;
+
+      const data = await client.getInvoiceList({ offset, limit });
+      res.json(data);
+    } catch (error: any) {
+      console.error("Error fetching Pool Brain invoices:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch invoices from Pool Brain",
+        message: error.message 
+      });
     }
   });
 
