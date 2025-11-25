@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, CheckCircle2, MapPin, Building2, AlertCircle, ChevronDown, Mail, Phone, User, Clock, Wrench, Flame } from "lucide-react";
+import { AlertTriangle, CheckCircle2, MapPin, Building2, AlertCircle, ChevronDown, Mail, Phone, User, Clock, Wrench, Flame, Droplet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -47,33 +47,40 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   // Categorize alerts
   const categorizeAlert = (alert: EnrichedAlert): string[] => {
     const categories: string[] = [];
+    const msgLower = alert.message.toLowerCase();
+    const typeLower = alert.type.toLowerCase();
+    
+    // Check for algae
+    if (msgLower.includes("algae") || typeLower.includes("algae")) {
+      categories.push("algae");
+    }
     
     // Check for time-related issues
-    if (alert.message.toLowerCase().includes("not enough time") || 
-        alert.message.toLowerCase().includes("insufficient time") ||
-        alert.type.toLowerCase().includes("notcompleted") ||
-        alert.type.toLowerCase().includes("not completed")) {
+    if (msgLower.includes("not enough time") || 
+        msgLower.includes("insufficient time") ||
+        typeLower.includes("notcompleted") ||
+        typeLower.includes("not completed")) {
       categories.push("time");
     }
     
     // System issues
-    if (alert.type === "SystemIssue" || alert.message.toLowerCase().includes("system")) {
+    if (alert.type === "SystemIssue" || msgLower.includes("system")) {
       categories.push("system");
     }
     
     // Repair/maintenance issues
     if (alert.type === "IssueReport" || 
-        alert.message.toLowerCase().includes("repair") ||
-        alert.message.toLowerCase().includes("broken") ||
-        alert.message.toLowerCase().includes("fix")) {
+        msgLower.includes("repair") ||
+        msgLower.includes("broken") ||
+        msgLower.includes("fix")) {
       categories.push("repair");
     }
     
     // Chemical alerts
-    if (alert.message.toLowerCase().includes("chemical") ||
-        alert.message.toLowerCase().includes("chlorine") ||
-        alert.message.toLowerCase().includes("ph") ||
-        alert.message.toLowerCase().includes("orp")) {
+    if (msgLower.includes("chemical") ||
+        msgLower.includes("chlorine") ||
+        msgLower.includes("ph") ||
+        msgLower.includes("orp")) {
       categories.push("chemical");
     }
     
@@ -122,11 +129,12 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   // Count alerts by category
   const categoryCounts = {
     all: alerts.length,
-    time: alerts.filter(a => categorizeAlert(a).includes("time")).length,
-    system: alerts.filter(a => categorizeAlert(a).includes("system")).length,
-    repair: alerts.filter(a => categorizeAlert(a).includes("repair")).length,
-    chemical: alerts.filter(a => categorizeAlert(a).includes("chemical")).length,
-    other: alerts.filter(a => categorizeAlert(a).includes("other")).length,
+    algae: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("algae")).length,
+    time: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("time")).length,
+    system: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("system")).length,
+    repair: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("repair")).length,
+    chemical: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("chemical")).length,
+    other: alerts.filter((a: EnrichedAlert) => categorizeAlert(a).includes("other")).length,
   };
 
   return (
@@ -146,9 +154,12 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       
       <CardContent className="flex flex-col flex-1 pt-4 overflow-hidden">
         <Tabs value={selectedTab} onValueChange={(v) => { setSelectedTab(v); setShowAll(false); }} className="flex flex-col flex-1">
-          <TabsList className="grid grid-cols-6 mb-4 bg-white/5 border border-white/10">
+          <TabsList className="grid grid-cols-7 mb-4 bg-white/5 border border-white/10">
             <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs">
               All ({categoryCounts.all})
+            </TabsTrigger>
+            <TabsTrigger value="algae" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
+              <Droplet className="w-3 h-3" /> Algae ({categoryCounts.algae})
             </TabsTrigger>
             <TabsTrigger value="time" className="data-[state=active]:bg-primary data-[state=active]:text-black text-xs flex items-center gap-1">
               <Clock className="w-3 h-3" /> Time ({categoryCounts.time})
@@ -167,7 +178,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
             </TabsTrigger>
           </TabsList>
 
-          {["all", "time", "system", "repair", "chemical", "other"].map((tab) => (
+          {["all", "algae", "time", "system", "repair", "chemical", "other"].map((tab) => (
             <TabsContent key={tab} value={tab} className="flex-1 overflow-y-auto custom-scrollbar space-y-3 mt-0">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
