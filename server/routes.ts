@@ -65,7 +65,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get enriched alerts with pool and customer information
-  app.get("/api/alerts/enriched", async (req, res) => {
+  // Also exposed as /api/alerts_full for API consistency
+  const getEnrichedAlerts = async (req: any, res: any) => {
     try {
       const settings = await storage.getSettings();
       const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
@@ -169,7 +170,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error.message 
       });
     }
-  });
+  };
+
+  // Register both endpoints
+  app.get("/api/alerts/enriched", getEnrichedAlerts);
+  app.get("/api/alerts_full", getEnrichedAlerts);
 
   // Sync alerts from Pool Brain
   app.post("/api/alerts/sync", async (req, res) => {

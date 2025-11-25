@@ -1,0 +1,289 @@
+Nice, B is the sweet spot. Let’s build you a single Replit endpoint that returns alerts already joined with pool + customer info:
+
+GET /alerts_full
+returns objects like:
+
+{
+  "alerts": [
+    {
+      "alertId": "34d3cf50",
+      "poolId": "54702178",
+      "poolName": "Esperanza HOA Pool",
+      "customerId": "C1023",
+      "customerName": "Avalon Management",
+      "address": "1234 Evergreen Dr, Ontario, CA",
+      "notes": "Heater replaced 10/2025",
+      "message": "ORP below threshold",
+      "severity": "medium",
+      "status": "active",
+      "createdAt": "2025-11-25T10:20:00Z"
+    }
+  ]
+}
+
+
+Core “B” fields in there are:
+
+poolName
+
+customerName
+
+address
+
+notes
+
+message
+
+severity
+
+status
+
+createdAt
+
+1. Replit backend – full joined /alerts_full
+Install deps (if you haven’t already)
+
+In the Replit shell:
+
+npm install express cors dotenv node-fetch@2
+
+index.js
+
+Here’s a drop-in server file using CommonJS (Replit default):
+
+// index.js
+const express = require("express");
+const cors = require("cors");
+const fetch = require("node-fetch");
+require("dotenv").config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Simple health check
+app.get("/", (req, res) => {
+  res.json({ status: "PoolBrain proxy online" });
+});
+
+/**
+ * GET /alerts_full
+ * Query: fromDate=YYYY-MM-DD, toDate=YYYY-MM-DD, offset, limit
+ */
+app.get("/alerts_full", async (req, res) => {
+  try {
+    const { fromDate, toDate, offset = 0, limit = 1000 } = req.query;
+
+    // ---------- 1. Fetch alerts ----------
+    const alertsUrl = new URL("https://api.poolbrain.com/v2/alerts_list");
+    if (fromDate) alertsUrl.searchParams.set("fromDate", fromDate);
+    if (toDate) alertsUrl.searchParams.set("toDate", toDate);
+    alertsUrl.searchParams.set("offset", offset);
+    alertsUrl.searchParams.set("limit", limit);
+
+    const alertsRes = await fetch(alertsUrl.toString(), {
+      method: "GET",
+      headers: {
+        "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+        "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+      }
+    });
+
+    const alertsJson = await alertsRes.json();
+
+    // TODO: adjust "alertsJson.alerts" to whatever the Swagger
+    // actually calls the array (e.g. `alertsJson.data`).
+    const rawAlerts = alertsJson.alerts || alertsJson.data || [];
+
+    // ---------- 2. Fetch pools ----------
+    const poolsUrl = new URL("https://api.poolbrain.com/v2/pools_list");
+    poolsUrl.searchParams.set("limit", 1000);
+
+    const poolsRes = await fetch(poolsUrl.toString(), {
+      method: "GET",
+      headers: {
+        "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+        "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+      }
+    });
+
+    const poolsJson = await poolsRes.json();
+    // TODO: adjust to correct array name, e.g. poolsJson.pools
+    const pools = poolsJson.pools || poolsJson.data || [];
+
+    // ---------- 3. Fetch customer_pool_details ----------
+    const custPoolUrl = new URL(
+      "https://api.poolbrain.com/v2/customer_pool_details"
+    );
+    custPoolUrl.searchParams.set("limit", 1000);
+
+    const custPoolRes = await fetch(custPoolUrl.toString(), {
+      method: "GET",
+      headers: {
+        "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+        "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+      }
+    });
+
+    const custPoolJson = await custPoolRes.json();
+    const customerPools = custPoolJson.customerPools || custPoolJson.data || [];
+
+    // ---------- 4. Fetch customers ----------
+    const customersUrl = new URL(
+      "https://api.poolbrain.com/v2/customer_detail"
+    );
+    customersUrl.searchParams.set("limit", 1000);
+
+    const customersRes = await fetch(customersUrl.toString(), {
+      method: "GET",
+      headers: {
+        "ACCESS-KEY": process.env.POOLBRAIN_ACCESS_KEY,
+        "COMPANY-ID": process.env.POOLBRAIN_COMPANY_ID
+      }
+    });
+
+    const customersJson = await customersRes.json();
+    const customers = customersJson.customers || customersJson.data || [];
+
+    // ---------- 5. Build lookup maps ----------
+
+    // poolId -> pool object
+    const poolMap = {};
+    pools.forEach(pool => {
+      // TODO: confirm property names from docs:
+      // pool.poolId, pool.name, pool.customerId, pool.address, etc.
+      poolMap[pool.poolId] = pool;
+    });
+
+    // poolId -> customerId (from customer_pool_details)
+    const poolToCustomerId = {};
+    customerPools.forEach(cp => {
+      // TODO: confirm: cp.poolId, cp.customerId
+      poolToCustomerId[cp.poolId] = cp.customerId;
+    });
+
+    // customerId -> customer object
+    const customerMap = {};
+    customers.forEach(c => {
+      // TODO: confirm: c.customerId, c.name, c.address, c.notes
+      customerMap[c.customerId] = c;
+    });
+
+    // ---------- 6. Enrich each alert ----------
+
+    const enrichedAlerts = rawAlerts.map(a => {
+      // TODO: confirm field names: a.alertId, a.poolId, a.message, a.severity, a.status, a.createdAt
+      const pool = poolMap[a.poolId] || {};
+      const customerId = poolToCustomerId[a.poolId];
+      const customer = customerMap[customerId] || {};
+
+      return {
+        // IDs (handy for linking)
+        alertId: a.alertId || a.id,
+        poolId: a.poolId,
+        customerId: customerId,
+
+        // B-level fields:
+        poolName: pool.name || "Unknown Pool",
+        customerName: customer.name || "Unknown Customer",
+        address: pool.address || customer.address || "",
+        notes: customer.notes || pool.notes || "",
+
+        message: a.message || a.description || "",
+        severity: a.severity || a.level || "unknown",
+        status: a.status || a.state || "unknown",
+        createdAt: a.createdAt || a.date || null
+      };
+    });
+
+    res.json({
+      alerts: enrichedAlerts,
+      hasMore: alertsJson.hasMore,
+      returnedRecords: alertsJson.returnedRecords
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "PoolBrain joined alert pipeline failed" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+
+Important: Anywhere you see a TODO comment, you just match the real field names from the PoolBrain Swagger (e.g. if the alerts array is alertsJson.results, plug that in).
+
+2. What your front-end card should consume
+
+Now your app (web, Android, whatever) just calls:
+
+GET https://<your-replit-url>/alerts_full?fromDate=2025-11-01&toDate=2025-11-25
+
+
+It receives:
+
+{
+  "alerts": [
+    {
+      "alertId": "34d3cf50",
+      "poolId": "54702178",
+      "customerId": "C1023",
+      "poolName": "Esperanza HOA Pool",
+      "customerName": "Avalon Management",
+      "address": "1234 Evergreen Dr, Ontario, CA",
+      "notes": "Heater replaced 10/2025",
+      "message": "ORP below threshold",
+      "severity": "medium",
+      "status": "active",
+      "createdAt": "2025-11-25T10:20:00Z"
+    }
+  ]
+}
+
+
+So your System Alerts card can be something like (React example):
+
+function AlertCard({ alert }) {
+  return (
+    <div className="alert-card">
+      <div className="alert-card-header">
+        <h3>{alert.poolName}</h3>
+        <span className={`severity-pill ${alert.severity}`}>
+          {alert.severity.toUpperCase()}
+        </span>
+      </div>
+
+      <div className="alert-card-sub">
+        <span>{alert.customerName}</span>
+        {alert.address && <span> • {alert.address}</span>}
+      </div>
+
+      <p className="alert-message">{alert.message}</p>
+
+      {alert.notes && (
+        <p className="alert-notes">
+          Notes: {alert.notes}
+        </p>
+      )}
+
+      <div className="alert-card-footer">
+        <span>{new Date(alert.createdAt).toLocaleString()}</span>
+        <span className={`status-pill status-${alert.status}`}>
+          {alert.status}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+
+That will turn the “Unknown Pool / Alert from PoolBrain” block into a fully identified alert:
+
+Esperanza HOA Pool
+Avalon Management • 1234 Evergreen Dr, Ontario, CA
+ORP below threshold
+Notes: Heater replaced 10/2025
+11/25/2025 10:20 AM  MEDIUM  ACTIVE
