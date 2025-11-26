@@ -51,19 +51,32 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    const to = encodeURIComponent('pmtorder@awspoolsupply.com');
-    const cc = encodeURIComponent('Jesus@awspoolsupply.com');
-    const subject = encodeURIComponent('Alpha Chemical Order');
-    // Use encodeURIComponent instead of URLSearchParams to avoid + signs
-    const body = encodeURIComponent(emailData.emailText);
+    // Copy email to clipboard first
+    navigator.clipboard.writeText(emailData.emailText);
 
-    const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${subject}&body=${body}`;
-
-    window.open(url, '_blank');
+    // Try desktop Outlook app first (works better with long emails)
+    const to = 'pmtorder@awspoolsupply.com';
+    const cc = 'Jesus@awspoolsupply.com';
+    const subject = 'Alpha Chemical Order';
+    
+    // Try ms-outlook protocol for desktop app
+    const desktopUrl = `ms-outlook://compose?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}`;
+    
+    // Create a hidden iframe to try opening desktop Outlook
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = desktopUrl;
+    document.body.appendChild(iframe);
+    
+    // Clean up iframe after a short delay
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1000);
     
     toast({
-      title: "Opening Outlook",
-      description: `Chemical order email for ${emailData.orderCount} properties`,
+      title: "Email Copied & Outlook Opening",
+      description: `Email copied to clipboard. Paste into Outlook (${emailData.orderCount} properties)`,
+      duration: 5000,
     });
   };
 
