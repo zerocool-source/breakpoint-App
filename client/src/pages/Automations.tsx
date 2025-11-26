@@ -55,31 +55,15 @@ export default function Automations() {
     const cc = 'Jesus@awspoolsupply.com';
     const subject = 'Alpha Chemical Order';
     
-    // Create EML file format (email message file that Outlook can open)
-    const emlContent = [
-      `To: ${to}`,
-      `Cc: ${cc}`,
-      `Subject: ${subject}`,
-      `Content-Type: text/plain; charset=utf-8`,
-      ``,
-      emailData.emailText
-    ].join('\r\n');
+    // Use mailto protocol which works with desktop Outlook
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailData.emailText)}`;
     
-    // Create blob and download
-    const blob = new Blob([emlContent], { type: 'message/rfc822' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Chemical_Order_${new Date().toISOString().split('T')[0]}.eml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Open directly
+    window.location.href = mailtoUrl;
     
     toast({
-      title: "Email File Downloaded",
-      description: `Double-click the .eml file to open in Outlook with everything pre-filled (${emailData.orderCount} properties)`,
-      duration: 6000,
+      title: "Opening Outlook",
+      description: `Chemical order email for ${emailData.orderCount} properties`,
     });
   };
 
