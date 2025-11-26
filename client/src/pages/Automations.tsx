@@ -51,15 +51,14 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    const to = 'pmtorder@awspoolsupply.com';
-    const cc = 'Jesus@awspoolsupply.com';
-    const subject = 'Alpha Chemical Order';
-    
-    // Use mailto protocol which works with desktop Outlook
-    const mailtoUrl = `mailto:${encodeURIComponent(to)}?cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailData.emailText)}`;
-    
-    // Open directly
-    window.location.href = mailtoUrl;
+    const to = encodeURIComponent('pmtorder@awspoolsupply.com');
+    const cc = encodeURIComponent('Jesus@awspoolsupply.com');
+    const subject = encodeURIComponent('Alpha Chemical Order');
+    const body = encodeURIComponent(emailData.emailText);
+
+    const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${subject}&body=${body}`;
+
+    window.open(url, '_blank');
     
     toast({
       title: "Opening Outlook",
