@@ -24,6 +24,11 @@ interface EnrichedAlert {
   status: string;
   createdAt: string;
   pictures?: string[];
+  techName?: string;
+  techPhone?: string;
+  techEmail?: string;
+  techId?: number;
+  rawAlert?: any;
 }
 
 interface EnrichedAlertsFeedProps {
@@ -33,6 +38,7 @@ interface EnrichedAlertsFeedProps {
 export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   const [showAll, setShowAll] = useState(false);
   const [selectedTab, setSelectedTab] = useState("all");
+  const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
 
   const { data: alertsData = { alerts: [] }, isLoading } = useQuery({
     queryKey: ["enrichedAlerts"],
@@ -290,17 +296,67 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                         </div>
                       )}
 
-                      {/* Footer: Type + Status */}
+                      {/* Technician Info */}
+                      {alert.techName && (
+                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
+                          <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 border border-primary/30">
+                            <User className="w-3 h-3 text-primary flex-shrink-0" />
+                            <span className="text-xs font-medium text-primary" data-testid={`text-tech-${alert.alertId}`}>
+                              {alert.techName}
+                            </span>
+                          </div>
+                          {alert.techPhone && (
+                            <a href={`tel:${alert.techPhone}`} className="text-xs text-blue-400 hover:text-blue-300">
+                              {alert.techPhone}
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Footer: Type + Status + Expand Button */}
                       <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
                           <span className="bg-white/5 px-2 py-1 rounded text-muted-foreground text-[10px]" data-testid={`text-type-${alert.alertId}`}>
                             {alert.type}
                           </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const newExpanded = new Set(expandedAlerts);
+                              if (newExpanded.has(alert.alertId)) {
+                                newExpanded.delete(alert.alertId);
+                              } else {
+                                newExpanded.add(alert.alertId);
+                              }
+                              setExpandedAlerts(newExpanded);
+                            }}
+                            className="h-6 px-2 text-[10px] text-primary hover:text-primary/80"
+                            data-testid={`button-expand-${alert.alertId}`}
+                          >
+                            <ChevronDown className={cn("w-3 h-3 transition-transform mr-1", expandedAlerts.has(alert.alertId) && "rotate-180")} />
+                            {expandedAlerts.has(alert.alertId) ? "Hide" : "Show All"}
+                          </Button>
                         </div>
                         <time className="text-muted-foreground text-[10px]" data-testid={`text-time-${alert.alertId}`}>
                           {new Date(alert.createdAt).toLocaleDateString()}
                         </time>
                       </div>
+
+                      {/* Expanded Raw Data Section */}
+                      {expandedAlerts.has(alert.alertId) && alert.rawAlert && (
+                        <div className="mt-3 pt-3 border-t border-white/10">
+                          <h5 className="text-xs font-bold text-primary mb-2 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            Complete Alert Data
+                          </h5>
+                          <div className="bg-black/30 rounded p-2 max-h-96 overflow-y-auto custom-scrollbar">
+                            <pre className="text-[10px] text-gray-300 whitespace-pre-wrap break-words font-mono">
+                              {JSON.stringify(alert.rawAlert, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
 

@@ -43,12 +43,36 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Fetch data in parallel - limit to 150 alerts for performance
-      const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
-        client.getAlertsList({ limit: 150 }),
+      // Fetch ALL technicians with pagination
+      const fetchAllTechnicians = async () => {
+        const allTechs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+
+        while (hasMore) {
+          try {
+            const techData = await client.getTechnicianDetail({ offset, limit });
+            if (techData.data && Array.isArray(techData.data)) {
+              allTechs.push(...techData.data);
+            }
+            hasMore = techData.hasMore === true;
+            offset += limit;
+          } catch (e) {
+            console.error("Error fetching technicians at offset", offset, e);
+            break;
+          }
+        }
+        return { data: allTechs };
+      };
+
+      // Fetch data in parallel - fetch ALL alerts (no limit)
+      const [alertsData, customersData, custPoolData, custNotesData, techniciansData] = await Promise.all([
+        client.getAlertsList({ limit: 10000 }),
         client.getCustomerDetail({ limit: 1000 }).catch((e) => { console.error("Customer detail error:", e); return { data: [] }; }),
         client.getCustomerPoolDetails({ limit: 1000 }).catch((e) => { console.error("Customer pool details error:", e); return { data: [] }; }),
-        client.getCustomerNotes({ limit: 5000 }).catch((e) => { console.error("Customer notes error:", e); return { data: [] }; })
+        client.getCustomerNotes({ limit: 5000 }).catch((e) => { console.error("Customer notes error:", e); return { data: [] }; }),
+        fetchAllTechnicians()
       ]);
 
       // Build customer map using RecordID as key
@@ -82,6 +106,17 @@ function setupRoutes(app: any) {
           const customerId = cp.CustomerID; // Customer's RecordID
           if (waterBodyId && customerId) {
             poolToCustomerMap[waterBodyId] = customerId;
+          }
+        });
+      }
+
+      // Technician map - maps TechnicianID to technician data
+      const technicianMap: Record<string, any> = {};
+      if (techniciansData.data && Array.isArray(techniciansData.data)) {
+        techniciansData.data.forEach((tech: any) => {
+          const techId = tech.RecordID;
+          if (techId) {
+            technicianMap[techId] = tech;
           }
         });
       }
@@ -166,6 +201,13 @@ function setupRoutes(app: any) {
             });
           }
 
+          // Get technician info
+          const techId = pbAlert.TechnicianID;
+          const technician = techId ? technicianMap[techId] : undefined;
+          const techName = technician?.Name || "";
+          const techPhone = technician?.Phone || "";
+          const techEmail = technician?.Email || "";
+
           enrichedAlerts.push({
             alertId: pbAlert.JobID || pbAlert.alertId || pbAlert.id,
             poolId: waterBodyId,
@@ -183,6 +225,11 @@ function setupRoutes(app: any) {
             status,
             createdAt: pbAlert.JobDate || pbAlert.Date || new Date().toISOString(),
             pictures,
+            techName,
+            techPhone,
+            techEmail,
+            techId,
+            rawAlert: pbAlert,
           });
         });
       }
@@ -217,12 +264,36 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Fetch data in parallel - increase customer notes limit
-      const [alertsData, customersData, custPoolData, custNotesData] = await Promise.all([
-        client.getAlertsList({ limit: 150 }),
+      // Fetch ALL technicians with pagination
+      const fetchAllTechnicians = async () => {
+        const allTechs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+
+        while (hasMore) {
+          try {
+            const techData = await client.getTechnicianDetail({ offset, limit });
+            if (techData.data && Array.isArray(techData.data)) {
+              allTechs.push(...techData.data);
+            }
+            hasMore = techData.hasMore === true;
+            offset += limit;
+          } catch (e) {
+            console.error("Error fetching technicians at offset", offset, e);
+            break;
+          }
+        }
+        return { data: allTechs };
+      };
+
+      // Fetch data in parallel - fetch ALL alerts
+      const [alertsData, customersData, custPoolData, custNotesData, techniciansData] = await Promise.all([
+        client.getAlertsList({ limit: 10000 }),
         client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
         client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerNotes({ limit: 5000 }).catch(() => ({ data: [] }))
+        client.getCustomerNotes({ limit: 5000 }).catch(() => ({ data: [] })),
+        fetchAllTechnicians()
       ]);
 
       // Build customer and pool maps
@@ -610,7 +681,7 @@ function setupRoutes(app: any) {
       let statusCode = 500;
       
       // Walk the entire cause chain to find error codes (handles arbitrarily nested causes)
-      function findCauseCode(err: any): string | null {
+      const findCauseCode = (err: any): string | null => {
         if (!err) return null;
         
         // Check current level
@@ -624,7 +695,7 @@ function setupRoutes(app: any) {
         }
         
         return null;
-      }
+      };
       
       const causeCode = findCauseCode(error);
       
