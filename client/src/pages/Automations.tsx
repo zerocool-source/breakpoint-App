@@ -51,32 +51,35 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    // Copy email to clipboard first
-    navigator.clipboard.writeText(emailData.emailText);
-
-    // Try desktop Outlook app first (works better with long emails)
     const to = 'pmtorder@awspoolsupply.com';
     const cc = 'Jesus@awspoolsupply.com';
     const subject = 'Alpha Chemical Order';
     
-    // Try ms-outlook protocol for desktop app
-    const desktopUrl = `ms-outlook://compose?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}`;
+    // Create EML file format (email message file that Outlook can open)
+    const emlContent = [
+      `To: ${to}`,
+      `Cc: ${cc}`,
+      `Subject: ${subject}`,
+      `Content-Type: text/plain; charset=utf-8`,
+      ``,
+      emailData.emailText
+    ].join('\r\n');
     
-    // Create a hidden iframe to try opening desktop Outlook
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = desktopUrl;
-    document.body.appendChild(iframe);
-    
-    // Clean up iframe after a short delay
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1000);
+    // Create blob and download
+    const blob = new Blob([emlContent], { type: 'message/rfc822' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Chemical_Order_${new Date().toISOString().split('T')[0]}.eml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     
     toast({
-      title: "Email Copied & Outlook Opening",
-      description: `Email copied to clipboard. Paste into Outlook (${emailData.orderCount} properties)`,
-      duration: 5000,
+      title: "Email File Downloaded",
+      description: `Double-click the .eml file to open in Outlook with everything pre-filled (${emailData.orderCount} properties)`,
+      duration: 6000,
     });
   };
 
