@@ -55,7 +55,7 @@ export default function Repairs() {
     },
   });
 
-  const completedIds = new Set<string>(completedData.completedIds || []);
+  const completedIds = new Set<string>((completedData.completedIds || []).map(String));
 
   const markCompleteMutation = useMutation({
     mutationFn: async ({ alertId, completed }: { alertId: string; completed: boolean }) => {
@@ -73,7 +73,27 @@ export default function Repairs() {
         return res.json();
       }
     },
-    onSuccess: () => {
+    onMutate: async ({ alertId, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ["completedAlerts"] });
+      const previousData = queryClient.getQueryData(["completedAlerts"]);
+      
+      queryClient.setQueryData(["completedAlerts"], (old: any) => {
+        const currentIds = old?.completedIds || [];
+        if (completed) {
+          return { completedIds: [...currentIds, alertId] };
+        } else {
+          return { completedIds: currentIds.filter((id: string) => String(id) !== String(alertId)) };
+        }
+      });
+      
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["completedAlerts"], context.previousData);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["completedAlerts"] });
     },
   });
@@ -99,14 +119,14 @@ export default function Repairs() {
 
   const repairAlerts = allAlerts.filter(isRepairAlert);
   const activeRepairs = repairAlerts.filter(a => a.status === "Active");
-  const incompleteRepairs = activeRepairs.filter(a => !completedIds.has(a.alertId));
-  const completedRepairs = activeRepairs.filter(a => completedIds.has(a.alertId));
+  const incompleteRepairs = activeRepairs.filter(a => !completedIds.has(String(a.alertId)));
+  const completedRepairs = activeRepairs.filter(a => completedIds.has(String(a.alertId)));
 
   const displayedAlerts = showCompleted ? activeRepairs : incompleteRepairs;
 
   const sortedAlerts = [...displayedAlerts].sort((a, b) => {
-    const aCompleted = completedIds.has(a.alertId) ? 1 : 0;
-    const bCompleted = completedIds.has(b.alertId) ? 1 : 0;
+    const aCompleted = completedIds.has(String(a.alertId)) ? 1 : 0;
+    const bCompleted = completedIds.has(String(b.alertId)) ? 1 : 0;
     if (aCompleted !== bCompleted) return aCompleted - bCompleted;
 
     const severityOrder = { URGENT: 0, CRITICAL: 1, HIGH: 2, MEDIUM: 3, LOW: 4 };
@@ -254,7 +274,7 @@ export default function Repairs() {
           ) : (
             <div className="space-y-4">
               {sortedAlerts.map((alert, idx) => {
-                const isCompleted = completedIds.has(alert.alertId);
+                const isCompleted = completedIds.has(String(alert.alertId));
                 return (
                   <div
                     key={`repair-${alert.alertId}-${idx}`}
@@ -276,7 +296,7 @@ export default function Repairs() {
                         <Checkbox
                           checked={isCompleted}
                           onCheckedChange={(checked) => {
-                            markCompleteMutation.mutate({ alertId: alert.alertId, completed: !!checked });
+                            markCompleteMutation.mutate({ alertId: String(alert.alertId), completed: !!checked });
                           }}
                           className={cn(
                             "h-6 w-6 border-2",
