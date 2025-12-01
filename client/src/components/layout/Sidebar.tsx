@@ -2,6 +2,8 @@ import { FileText, LayoutDashboard, MessageSquare, Settings, Sparkles, Zap } fro
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
+import Breakpoint_Icon_Sticker___Artwork from "@assets/Breakpoint Icon Sticker - Artwork.png";
+
 export function Sidebar() {
   const [location] = useLocation();
 
@@ -17,7 +19,7 @@ export function Sidebar() {
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50 backdrop-blur-xl bg-opacity-80">
       <div className="p-6 flex items-center gap-3">
         <img 
-          src="/attached_assets/Breakpoint Icon Sticker - Artwork_1764606204826.png" 
+          src={Breakpoint_Icon_Sticker___Artwork} 
           alt="Breakpoint Logo" 
           className="w-10 h-10 object-contain"
         />
@@ -26,7 +28,6 @@ export function Sidebar() {
           <p className="text-xs text-muted-foreground font-ui tracking-widest">INTELLIGENCE</p>
         </div>
       </div>
-
       <nav className="flex-1 px-4 py-6 space-y-2">
         {navItems.map((item) => {
           const isActive = location === item.href;
@@ -46,7 +47,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
       <div className="p-4 border-t border-sidebar-border">
         <Link href="/settings" className={cn(
             "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-colors",
