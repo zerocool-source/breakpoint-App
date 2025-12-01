@@ -4,10 +4,11 @@ import {
   type Workflow, type InsertWorkflow,
   type Customer, type InsertCustomer,
   type ChatMessage, type InsertChatMessage,
-  settings, alerts, workflows, customers, chatMessages
+  type CompletedAlert, type InsertCompletedAlert,
+  settings, alerts, workflows, customers, chatMessages, completedAlerts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Settings
@@ -33,6 +34,13 @@ export interface IStorage {
   addChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   saveChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   clearChatHistory(): Promise<void>;
+
+  // Completed Alerts
+  getCompletedAlerts(): Promise<CompletedAlert[]>;
+  getCompletedAlertIds(): Promise<string[]>;
+  markAlertCompleted(alertId: string, category: string): Promise<CompletedAlert>;
+  unmarkAlertCompleted(alertId: string): Promise<void>;
+  isAlertCompleted(alertId: string): Promise<boolean>;
 }
 
 export class DbStorage implements IStorage {
@@ -126,6 +134,34 @@ export class DbStorage implements IStorage {
 
   async clearChatHistory(): Promise<void> {
     await db.delete(chatMessages);
+  }
+
+  // Completed Alerts
+  async getCompletedAlerts(): Promise<CompletedAlert[]> {
+    return db.select().from(completedAlerts).orderBy(desc(completedAlerts.completedAt));
+  }
+
+  async getCompletedAlertIds(): Promise<string[]> {
+    const results = await db.select({ alertId: completedAlerts.alertId }).from(completedAlerts);
+    return results.map(r => r.alertId);
+  }
+
+  async markAlertCompleted(alertId: string, category: string): Promise<CompletedAlert> {
+    const existing = await db.select().from(completedAlerts).where(eq(completedAlerts.alertId, alertId)).limit(1);
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    const result = await db.insert(completedAlerts).values({ alertId, category }).returning();
+    return result[0];
+  }
+
+  async unmarkAlertCompleted(alertId: string): Promise<void> {
+    await db.delete(completedAlerts).where(eq(completedAlerts.alertId, alertId));
+  }
+
+  async isAlertCompleted(alertId: string): Promise<boolean> {
+    const result = await db.select().from(completedAlerts).where(eq(completedAlerts.alertId, alertId)).limit(1);
+    return result.length > 0;
   }
 }
 

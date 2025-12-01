@@ -57,6 +57,15 @@ export const chatMessages = pgTable("chat_messages", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Completed/Reviewed Alerts (tracks which Pool Brain alerts have been handled)
+export const completedAlerts = pgTable("completed_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertId: text("alert_id").notNull().unique(), // Pool Brain alert ID
+  category: text("category").notNull(), // "repair", "chemical", etc.
+  completedAt: timestamp("completed_at").defaultNow(),
+  reviewedBy: text("reviewed_by"), // Optional: who reviewed it
+});
+
 // Insert Schemas
 export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
@@ -85,6 +94,11 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   timestamp: true,
 });
 
+export const insertCompletedAlertSchema = createInsertSchema(completedAlerts).omit({
+  id: true,
+  completedAt: true,
+});
+
 // Types
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
@@ -100,3 +114,6 @@ export type Customer = typeof customers.$inferSelect;
 
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+
+export type InsertCompletedAlert = z.infer<typeof insertCompletedAlertSchema>;
+export type CompletedAlert = typeof completedAlerts.$inferSelect;

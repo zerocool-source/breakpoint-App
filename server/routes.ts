@@ -26,6 +26,44 @@ function setupRoutes(app: any) {
     }
   });
 
+  // ==================== COMPLETED ALERTS ====================
+  
+  // Get all completed alert IDs
+  app.get("/api/alerts/completed", async (req: any, res: any) => {
+    try {
+      const completedIds = await storage.getCompletedAlertIds();
+      res.json({ completedIds });
+    } catch (error: any) {
+      console.error("Error getting completed alerts:", error);
+      res.status(500).json({ error: "Failed to get completed alerts" });
+    }
+  });
+
+  // Mark an alert as completed
+  app.post("/api/alerts/:alertId/complete", async (req: any, res: any) => {
+    try {
+      const { alertId } = req.params;
+      const { category } = req.body;
+      const completed = await storage.markAlertCompleted(alertId, category || "general");
+      res.json({ success: true, completed });
+    } catch (error: any) {
+      console.error("Error marking alert completed:", error);
+      res.status(500).json({ error: "Failed to mark alert completed" });
+    }
+  });
+
+  // Unmark an alert as completed
+  app.delete("/api/alerts/:alertId/complete", async (req: any, res: any) => {
+    try {
+      const { alertId } = req.params;
+      await storage.unmarkAlertCompleted(alertId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error unmarking alert:", error);
+      res.status(500).json({ error: "Failed to unmark alert" });
+    }
+  });
+
   // Get enriched alerts with pool and customer information
   // Also exposed as /api/alerts_full for API consistency
   const getEnrichedAlerts = async (req: any, res: any) => {
