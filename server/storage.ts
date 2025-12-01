@@ -147,12 +147,26 @@ export class DbStorage implements IStorage {
   }
 
   async markAlertCompleted(alertId: string, category: string): Promise<CompletedAlert> {
-    const existing = await db.select().from(completedAlerts).where(eq(completedAlerts.alertId, alertId)).limit(1);
-    if (existing.length > 0) {
+    try {
+      const result = await db
+        .insert(completedAlerts)
+        .values({ alertId, category })
+        .onConflictDoNothing({ target: completedAlerts.alertId })
+        .returning();
+      
+      if (result.length > 0) {
+        return result[0];
+      }
+      
+      const existing = await db.select().from(completedAlerts).where(eq(completedAlerts.alertId, alertId)).limit(1);
       return existing[0];
+    } catch (error: any) {
+      if (error.code === '23505') {
+        const existing = await db.select().from(completedAlerts).where(eq(completedAlerts.alertId, alertId)).limit(1);
+        return existing[0];
+      }
+      throw error;
     }
-    const result = await db.insert(completedAlerts).values({ alertId, category }).returning();
-    return result[0];
   }
 
   async unmarkAlertCompleted(alertId: string): Promise<void> {
