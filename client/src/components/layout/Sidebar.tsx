@@ -7,7 +7,6 @@ export function Sidebar() {
 
   const navItems = [
     { icon: LayoutDashboard, label: "Overview", href: "/" },
-    { icon: Droplet, label: "Pools", href: "/pools" },
     { icon: Sparkles, label: "Ace Prime", href: "/intelligence" },
     { icon: MessageSquare, label: "Chat with Ace", href: "/chat" },
     { icon: Zap, label: "Automations", href: "/automations" },
