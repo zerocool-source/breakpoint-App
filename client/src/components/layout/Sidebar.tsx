@@ -1,4 +1,4 @@
-import { Activity, AlertCircle, Droplet, FileText, Home, LayoutDashboard, MessageSquare, Settings, Sparkles, Zap } from "lucide-react";
+import { FileText, LayoutDashboard, MessageSquare, Settings, Sparkles, Zap } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -16,9 +16,11 @@ export function Sidebar() {
   return (
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50 backdrop-blur-xl bg-opacity-80">
       <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/20">
-          <Activity className="text-white w-6 h-6" />
-        </div>
+        <img 
+          src="/attached_assets/Breakpoint Icon Sticker - Artwork_1764606204826.png" 
+          alt="Breakpoint Logo" 
+          className="w-10 h-10 object-contain"
+        />
         <div>
           <h1 className="font-display font-bold text-lg tracking-wider text-foreground">BREAKPOINT</h1>
           <p className="text-xs text-muted-foreground font-ui tracking-widest">INTELLIGENCE</p>
