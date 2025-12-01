@@ -1,4 +1,4 @@
-import { FileText, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap } from "lucide-react";
+import { Droplets, FileText, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ export function Sidebar() {
   const navItems = [
     { icon: LayoutDashboard, label: "Overview", href: "/" },
     { icon: Wrench, label: "Repairs", href: "/repairs" },
+    { icon: Droplets, label: "Chemicals", href: "/chemicals" },
     { icon: Sparkles, label: "Ace Prime", href: "/intelligence" },
     { icon: MessageSquare, label: "Chat with Ace", href: "/chat" },
     { icon: Zap, label: "Automations", href: "/automations" },

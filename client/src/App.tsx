@@ -9,6 +9,7 @@ import Automations from "@/pages/Automations";
 import Settings from "@/pages/Settings";
 import Chat from "@/pages/Chat";
 import Repairs from "@/pages/Repairs";
+import Chemicals from "@/pages/Chemicals";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/repairs" component={Repairs} />
+      <Route path="/chemicals" component={Chemicals} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
