@@ -8,12 +8,14 @@ import Intelligence from "@/pages/Intelligence";
 import Automations from "@/pages/Automations";
 import Settings from "@/pages/Settings";
 import Chat from "@/pages/Chat";
+import Repairs from "@/pages/Repairs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/repairs" component={Repairs} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
