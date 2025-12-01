@@ -11,7 +11,6 @@ export function Sidebar() {
     { icon: Sparkles, label: "Ace Prime", href: "/intelligence" },
     { icon: MessageSquare, label: "Chat with Ace", href: "/chat" },
     { icon: Zap, label: "Automations", href: "/automations" },
-    { icon: AlertCircle, label: "Alerts", href: "/alerts" },
     { icon: FileText, label: "Reports", href: "/reports" },
   ];
 
