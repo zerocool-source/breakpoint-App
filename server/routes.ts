@@ -286,6 +286,32 @@ function setupRoutes(app: any) {
   app.get("/api/alerts/enriched", getEnrichedAlerts);
   app.get("/api/alerts_full", getEnrichedAlerts);
 
+  // Create Outlook compose link
+  app.post("/api/open-outlook", async (req: any, res: any) => {
+    try {
+      const { subject, to, cc, emailText } = req.body;
+
+      // For Mac Outlook: Use ms-outlook:// URI scheme
+      // Build the parameters - URL encode the content
+      const params = new URLSearchParams();
+      if (to) params.append('to', to);
+      if (cc) params.append('cc', cc);
+      if (subject) params.append('subject', subject);
+      if (emailText) params.append('body', emailText);
+
+      // Create ms-outlook:// URI
+      const outlookUri = `ms-outlook://compose?${params.toString()}`;
+
+      res.json({ 
+        outlookUri,
+        success: true 
+      });
+    } catch (error: any) {
+      console.error("Error creating Outlook link:", error);
+      res.status(500).json({ error: "Failed to create Outlook link" });
+    }
+  });
+
   // Generate chemical order email from alerts
   app.get("/api/alerts/chemical-order-email", async (req: any, res: any) => {
     try {

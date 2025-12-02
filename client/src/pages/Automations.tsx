@@ -48,24 +48,41 @@ export default function Automations() {
     }
   };
 
-  const handleOpenInOutlook = () => {
+  const handleOpenInOutlook = async () => {
     if (!emailData?.emailText) return;
 
-    // Copy email to clipboard
-    navigator.clipboard.writeText(emailData.emailText);
+    try {
+      // Call backend to create Outlook URI
+      const response = await fetch('/api/open-outlook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: 'Alpha Chemical Order',
+          to: 'pmtorder@awspoolsupply.com',
+          cc: 'Jesus@awspoolsupply.com',
+          emailText: emailData.emailText
+        })
+      });
 
-    // Open Outlook compose window
-    const subject = encodeURIComponent('Alpha Chemical Order');
-    const to = 'pmtorder@awspoolsupply.com';
-    const cc = 'Jesus@awspoolsupply.com';
-    
-    // Use mailto protocol to open Outlook
-    window.location.href = `mailto:${to}?subject=${subject}&cc=${cc}`;
-    
-    toast({
-      title: "Outlook Opening",
-      description: `Email copied! Paste it into the compose window (Cmd+V).`,
-    });
+      const data = await response.json();
+      
+      if (data.outlookUri) {
+        // Open Outlook with pre-filled email
+        window.location.href = data.outlookUri;
+        
+        toast({
+          title: "Opening Outlook",
+          description: `Chemical order for ${emailData.orderCount} properties`,
+        });
+      }
+    } catch (error) {
+      console.error('Error opening Outlook:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open Outlook",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
