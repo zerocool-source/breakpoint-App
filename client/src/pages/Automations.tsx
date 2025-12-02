@@ -51,37 +51,48 @@ export default function Automations() {
   const handleOpenInOutlook = async () => {
     if (!emailData?.emailText) return;
 
-    // Copy email body to clipboard first
+    // Copy full email to clipboard as backup
     await navigator.clipboard.writeText(emailData.emailText);
 
-    // Use Outlook web deep link (works cross-platform)
+    // Use Outlook web deep link
     const to = 'pmtorder@awspoolsupply.com';
     const cc = 'Jesus@awspoolsupply.com';
-    const subject = encodeURIComponent('Alpha Chemical Order');
-    const body = encodeURIComponent(emailData.emailText);
+    const subject = 'Alpha Chemical Order';
     
-    // Try Outlook web deep link - it opens Outlook web in browser
-    // If body is too long (>1500 chars), open without body and user pastes
+    // Use thin spaces to avoid Outlook converting spaces to + signs
+    // and encode the body properly
+    const bodyWithThinSpaces = emailData.emailText.replace(/ /g, '\u2009');
+    
+    // Build base URL
     const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
+    const baseParams = `?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}`;
+    
+    // Check if full body fits in URL (max ~2000 chars total)
+    const encodedBody = encodeURIComponent(bodyWithThinSpaces);
+    const fullUrl = `${baseUrl}${baseParams}&body=${encodedBody}`;
     
     let outlookUrl: string;
-    if (emailData.emailText.length > 1500) {
-      // Body too long for URL - open compose without body, user will paste
-      outlookUrl = `${baseUrl}?to=${to}&cc=${cc}&subject=${subject}`;
-      toast({
-        title: "Opening Outlook",
-        description: `Email copied! Paste into compose window (Cmd+V)`,
-      });
+    let needsPaste = false;
+    
+    if (fullUrl.length <= 2000) {
+      // Full body fits in URL
+      outlookUrl = fullUrl;
     } else {
-      // Body fits in URL - include it
-      outlookUrl = `${baseUrl}?to=${to}&cc=${cc}&subject=${subject}&body=${body}`;
-      toast({
-        title: "Opening Outlook",
-        description: `Chemical order for ${emailData.orderCount} properties`,
-      });
+      // Body too long - truncate to fit
+      const maxBodyChars = Math.floor((2000 - baseUrl.length - baseParams.length - 10) / 3); // URL encoding triples size
+      const truncatedBody = emailData.emailText.substring(0, maxBodyChars).replace(/ /g, '\u2009');
+      outlookUrl = `${baseUrl}${baseParams}&body=${encodeURIComponent(truncatedBody + '\n\n[PASTE REMAINING CONTENT - Cmd+V]')}`;
+      needsPaste = true;
     }
     
     window.open(outlookUrl, '_blank');
+    
+    toast({
+      title: "Opening Outlook",
+      description: needsPaste 
+        ? `Email copied! Some content truncated - paste full email (Cmd+V)` 
+        : `Chemical order for ${emailData.orderCount} properties`,
+    });
   };
 
   return (
