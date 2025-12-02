@@ -51,14 +51,15 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    const to = encodeURIComponent('pmtorder@awspoolsupply.com');
-    const cc = encodeURIComponent('Jesus@awspoolsupply.com');
+    // Use mailto: protocol which has no URL length limit (unlike deeplink)
     const subject = encodeURIComponent('Alpha Chemical Order');
     const body = encodeURIComponent(emailData.emailText);
+    const cc = 'Jesus@awspoolsupply.com';
+    
+    // mailto: format: mailto:to?subject=...&body=...&cc=...
+    const mailtoUrl = `mailto:pmtorder@awspoolsupply.com?subject=${subject}&body=${body}&cc=${cc}`;
 
-    const url = `https://outlook.office.com/mail/deeplink/compose?to=${to}&cc=${cc}&subject=${subject}&body=${body}`;
-
-    window.open(url, '_blank');
+    window.location.href = mailtoUrl;
     
     toast({
       title: "Opening Outlook",
