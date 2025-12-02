@@ -51,19 +51,20 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    // Open native Outlook app
+    // Copy email to clipboard
+    navigator.clipboard.writeText(emailData.emailText);
+
+    // Open Outlook compose window
     const subject = encodeURIComponent('Alpha Chemical Order');
-    const body = encodeURIComponent(emailData.emailText);
+    const to = 'pmtorder@awspoolsupply.com';
     const cc = 'Jesus@awspoolsupply.com';
     
-    // Create mailto link and trigger it
-    const link = document.createElement('a');
-    link.href = `mailto:pmtorder@awspoolsupply.com?subject=${subject}&body=${body}&cc=${cc}`;
-    link.click();
+    // Use mailto protocol to open Outlook
+    window.location.href = `mailto:${to}?subject=${subject}&cc=${cc}`;
     
     toast({
-      title: "Opening Outlook",
-      description: `Chemical order email for ${emailData.orderCount} properties`,
+      title: "Outlook Opening",
+      description: `Email copied! Paste it into the compose window (Cmd+V).`,
     });
   };
 
