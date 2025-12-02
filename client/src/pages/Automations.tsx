@@ -51,38 +51,37 @@ export default function Automations() {
   const handleOpenInOutlook = async () => {
     if (!emailData?.emailText) return;
 
-    try {
-      // Call backend to create Outlook URI
-      const response = await fetch('/api/open-outlook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: 'Alpha Chemical Order',
-          to: 'pmtorder@awspoolsupply.com',
-          cc: 'Jesus@awspoolsupply.com',
-          emailText: emailData.emailText
-        })
-      });
+    // Copy email body to clipboard first
+    await navigator.clipboard.writeText(emailData.emailText);
 
-      const data = await response.json();
-      
-      if (data.outlookUri) {
-        // Open Outlook with pre-filled email
-        window.location.href = data.outlookUri;
-        
-        toast({
-          title: "Opening Outlook",
-          description: `Chemical order for ${emailData.orderCount} properties`,
-        });
-      }
-    } catch (error) {
-      console.error('Error opening Outlook:', error);
+    // Use Outlook web deep link (works cross-platform)
+    const to = 'pmtorder@awspoolsupply.com';
+    const cc = 'Jesus@awspoolsupply.com';
+    const subject = encodeURIComponent('Alpha Chemical Order');
+    const body = encodeURIComponent(emailData.emailText);
+    
+    // Try Outlook web deep link - it opens Outlook web in browser
+    // If body is too long (>1500 chars), open without body and user pastes
+    const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
+    
+    let outlookUrl: string;
+    if (emailData.emailText.length > 1500) {
+      // Body too long for URL - open compose without body, user will paste
+      outlookUrl = `${baseUrl}?to=${to}&cc=${cc}&subject=${subject}`;
       toast({
-        title: "Error",
-        description: "Failed to open Outlook",
-        variant: "destructive"
+        title: "Opening Outlook",
+        description: `Email copied! Paste into compose window (Cmd+V)`,
+      });
+    } else {
+      // Body fits in URL - include it
+      outlookUrl = `${baseUrl}?to=${to}&cc=${cc}&subject=${subject}&body=${body}`;
+      toast({
+        title: "Opening Outlook",
+        description: `Chemical order for ${emailData.orderCount} properties`,
       });
     }
+    
+    window.open(outlookUrl, '_blank');
   };
 
   return (
