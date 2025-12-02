@@ -51,47 +51,63 @@ export default function Automations() {
   const handleOpenInOutlook = async () => {
     if (!emailData?.emailText) return;
 
+    // Try to create draft via Microsoft Graph (full content, no limitations)
+    try {
+      const response = await fetch('/api/outlook/create-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: 'Alpha Chemical Order',
+          to: 'pmtorder@awspoolsupply.com',
+          cc: 'Jesus@awspoolsupply.com',
+          body: emailData.emailText
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.webLink) {
+        toast({
+          title: "Draft Created in Outlook",
+          description: `Full chemical order for ${emailData.orderCount} properties - opening now`,
+        });
+        window.open(data.webLink, '_blank');
+        return;
+      }
+
+      // Fallback if Graph not configured
+      if (data.fallback) {
+        await fallbackToDeepLink();
+        return;
+      }
+    } catch (error) {
+      console.error('Graph API error, falling back:', error);
+      await fallbackToDeepLink();
+    }
+  };
+
+  const fallbackToDeepLink = async () => {
+    if (!emailData?.emailText) return;
+
     // Copy full email to clipboard as backup
     await navigator.clipboard.writeText(emailData.emailText);
 
-    // Use Outlook web deep link
+    // Fallback: Use Outlook web deep link (limited)
     const to = 'pmtorder@awspoolsupply.com';
     const cc = 'Jesus@awspoolsupply.com';
     const subject = 'Alpha Chemical Order';
     
-    // Use thin spaces to avoid Outlook converting spaces to + signs
-    // and encode the body properly
-    const bodyWithThinSpaces = emailData.emailText.replace(/ /g, '\u2009');
-    
-    // Build base URL
     const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
     const baseParams = `?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}`;
     
-    // Check if full body fits in URL (max ~2000 chars total)
-    const encodedBody = encodeURIComponent(bodyWithThinSpaces);
-    const fullUrl = `${baseUrl}${baseParams}&body=${encodedBody}`;
-    
-    let outlookUrl: string;
-    let needsPaste = false;
-    
-    if (fullUrl.length <= 2000) {
-      // Full body fits in URL
-      outlookUrl = fullUrl;
-    } else {
-      // Body too long - truncate to fit
-      const maxBodyChars = Math.floor((2000 - baseUrl.length - baseParams.length - 10) / 3); // URL encoding triples size
-      const truncatedBody = emailData.emailText.substring(0, maxBodyChars).replace(/ /g, '\u2009');
-      outlookUrl = `${baseUrl}${baseParams}&body=${encodeURIComponent(truncatedBody + '\n\n[PASTE REMAINING CONTENT - Cmd+V]')}`;
-      needsPaste = true;
-    }
+    // Deep link has URL length limit - just open compose without body
+    const outlookUrl = `${baseUrl}${baseParams}`;
     
     window.open(outlookUrl, '_blank');
     
     toast({
       title: "Opening Outlook",
-      description: needsPaste 
-        ? `Email copied! Some content truncated - paste full email (Cmd+V)` 
-        : `Chemical order for ${emailData.orderCount} properties`,
+      description: `Email copied to clipboard! Paste with Cmd+V`,
     });
   };
 

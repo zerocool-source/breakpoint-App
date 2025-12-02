@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { storage } from "./storage";
 import { PoolBrainClient } from "./poolbrain-client";
 import { buildChemicalOrderEmail } from "./email-template";
+import { OutlookGraphClient } from "./outlook-graph";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -286,7 +287,61 @@ function setupRoutes(app: any) {
   app.get("/api/alerts/enriched", getEnrichedAlerts);
   app.get("/api/alerts_full", getEnrichedAlerts);
 
-  // Create Outlook compose link
+  // Create Outlook draft via Microsoft Graph API
+  app.post("/api/outlook/create-draft", async (req: any, res: any) => {
+    try {
+      const { subject, to, cc, body } = req.body;
+
+      const tenantId = process.env.AZURE_TENANT_ID;
+      const clientId = process.env.AZURE_CLIENT_ID;
+      const clientSecret = process.env.AZURE_CLIENT_SECRET;
+      const userEmail = process.env.OUTLOOK_USER_EMAIL;
+
+      if (!tenantId || !clientId || !clientSecret || !userEmail) {
+        return res.status(400).json({ 
+          error: "Microsoft Graph not configured",
+          message: "Azure credentials are required for full Outlook integration",
+          fallback: true
+        });
+      }
+
+      const client = new OutlookGraphClient({
+        tenantId,
+        clientId,
+        clientSecret,
+        userEmail,
+      });
+
+      const draft = await client.createDraft({
+        to: to || 'pmtorder@awspoolsupply.com',
+        cc: cc || 'Jesus@awspoolsupply.com',
+        subject: subject || 'Alpha Chemical Order',
+        body: body || '',
+      });
+
+      if (!draft) {
+        return res.status(500).json({ 
+          error: "Failed to create draft",
+          fallback: true
+        });
+      }
+
+      res.json({ 
+        success: true,
+        draftId: draft.draftId,
+        webLink: draft.webLink,
+      });
+    } catch (error: any) {
+      console.error("Error creating Outlook draft:", error);
+      res.status(500).json({ 
+        error: "Failed to create Outlook draft",
+        message: error.message,
+        fallback: true
+      });
+    }
+  });
+
+  // Legacy: Create Outlook compose link (fallback)
   app.post("/api/open-outlook", async (req: any, res: any) => {
     try {
       const { subject, to, cc, emailText } = req.body;
