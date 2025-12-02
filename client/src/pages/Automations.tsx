@@ -51,12 +51,15 @@ export default function Automations() {
   const handleOpenInOutlook = () => {
     if (!emailData?.emailText) return;
 
-    // Open Outlook desktop app using mailto protocol
+    // Open native Outlook app
     const subject = encodeURIComponent('Alpha Chemical Order');
     const body = encodeURIComponent(emailData.emailText);
     const cc = 'Jesus@awspoolsupply.com';
     
-    window.open(`mailto:pmtorder@awspoolsupply.com?subject=${subject}&body=${body}&cc=${cc}`);
+    // Create mailto link and trigger it
+    const link = document.createElement('a');
+    link.href = `mailto:pmtorder@awspoolsupply.com?subject=${subject}&body=${body}&cc=${cc}`;
+    link.click();
     
     toast({
       title: "Opening Outlook",
