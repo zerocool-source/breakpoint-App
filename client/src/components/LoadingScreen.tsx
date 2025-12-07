@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import loadingVideo from "@assets/Lets_add_this_202512071522_1765149757829.mp4";
-import logo from "@assets/Breakpoint Icon Sticker - Artwork.png";
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -8,7 +7,6 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [showLogo, setShowLogo] = useState(true);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -19,19 +17,28 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
     };
 
     const handleError = () => {
-      setTimeout(onLoadingComplete, 3000);
+      onLoadingComplete();
+    };
+
+    const handleCanPlay = () => {
+      video.play().catch(() => {
+        onLoadingComplete();
+      });
     };
 
     video.addEventListener("ended", handleEnded);
     video.addEventListener("error", handleError);
+    video.addEventListener("canplay", handleCanPlay);
 
-    video.play().catch(() => {
-      setTimeout(onLoadingComplete, 3000);
-    });
+    const maxTimeout = setTimeout(() => {
+      onLoadingComplete();
+    }, 15000);
 
     return () => {
       video.removeEventListener("ended", handleEnded);
       video.removeEventListener("error", handleError);
+      video.removeEventListener("canplay", handleCanPlay);
+      clearTimeout(maxTimeout);
     };
   }, [onLoadingComplete]);
 
@@ -45,26 +52,10 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
         className="absolute inset-0 w-full h-full object-cover"
         muted
         playsInline
-        autoPlay
+        preload="auto"
       >
         <source src={loadingVideo} type="video/mp4" />
       </video>
-      
-      {showLogo && (
-        <div className="relative z-10 flex flex-col items-center animate-pulse">
-          <img 
-            src={logo} 
-            alt="Breakpoint BI" 
-            className="w-32 h-32 object-contain drop-shadow-2xl"
-            data-testid="loading-logo"
-          />
-          <div className="mt-6 flex items-center gap-2">
-            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
