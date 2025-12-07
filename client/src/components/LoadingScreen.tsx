@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import loadingVideo from "@assets/Lets_add_this_202512071522_1765149757829.mp4";
+import logo from "@assets/Breakpoint Icon Sticker - Artwork.png";
 
 interface LoadingScreenProps {
   onLoadingComplete: () => void;
@@ -7,13 +8,15 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleEnded = () => {
-      onLoadingComplete();
+      setProgress(100);
+      setTimeout(onLoadingComplete, 300);
     };
 
     const handleError = () => {
@@ -26,18 +29,27 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
       });
     };
 
+    const handleTimeUpdate = () => {
+      if (video.duration) {
+        const percent = Math.round((video.currentTime / video.duration) * 100);
+        setProgress(percent);
+      }
+    };
+
     video.addEventListener("ended", handleEnded);
     video.addEventListener("error", handleError);
     video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("timeupdate", handleTimeUpdate);
 
     const maxTimeout = setTimeout(() => {
       onLoadingComplete();
-    }, 15000);
+    }, 30000);
 
     return () => {
       video.removeEventListener("ended", handleEnded);
       video.removeEventListener("error", handleError);
       video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
       clearTimeout(maxTimeout);
     };
   }, [onLoadingComplete]);
@@ -56,6 +68,21 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
       >
         <source src={loadingVideo} type="video/mp4" />
       </video>
+
+      <div className="absolute bottom-6 left-6 z-10 flex items-center gap-3" data-testid="loading-indicator">
+        <div className="relative">
+          <img 
+            src={logo} 
+            alt="Loading" 
+            className="w-10 h-10 object-contain animate-spin"
+            style={{ animationDuration: '2s' }}
+          />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-white/80 text-xs font-ui tracking-wider">LOADING</span>
+          <span className="text-primary text-lg font-bold font-ui">{progress}%</span>
+        </div>
+      </div>
     </div>
   );
 }
