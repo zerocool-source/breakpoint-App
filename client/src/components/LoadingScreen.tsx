@@ -69,18 +69,18 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
         <source src={loadingVideo} type="video/mp4" />
       </video>
 
-      <div className="absolute bottom-6 left-6 z-10 flex items-center gap-3" data-testid="loading-indicator">
+      <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2" data-testid="loading-indicator">
         <div className="relative">
           <img 
             src={logo} 
             alt="Loading" 
-            className="w-10 h-10 object-contain animate-spin"
+            className="w-6 h-6 object-contain animate-spin"
             style={{ animationDuration: '2s' }}
           />
         </div>
-        <div className="flex flex-col">
-          <span className="text-white/80 text-xs font-ui tracking-wider">LOADING</span>
-          <span className="text-primary text-lg font-bold font-ui">{progress}%</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-white/70 text-[10px] font-ui tracking-wider">LOADING</span>
+          <span className="text-primary text-sm font-bold font-ui">{progress}%</span>
         </div>
       </div>
     </div>
