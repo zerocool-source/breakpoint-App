@@ -24,7 +24,11 @@ interface Job {
 }
 
 interface TechnicianSummary {
+  techId: string;
   name: string;
+  phone: string;
+  email: string;
+  status: string;
   jobCount: number;
   jobs: Job[];
 }
@@ -34,11 +38,15 @@ interface JobsData {
   unscheduledJobs: Job[];
   scheduledJobs: Job[];
   technicians: TechnicianSummary[];
+  techsWithJobs: TechnicianSummary[];
+  techsWithoutJobs: TechnicianSummary[];
   summary: {
     totalJobs: number;
     scheduledCount: number;
     unscheduledCount: number;
     technicianCount: number;
+    techsWithJobsCount: number;
+    techsWithoutJobsCount: number;
   };
 }
 
@@ -102,41 +110,59 @@ function JobCard({ job }: { job: Job }) {
   );
 }
 
-function TechnicianCard({ tech }: { tech: TechnicianSummary }) {
+function TechnicianCard({ tech, showDetails = false }: { tech: TechnicianSummary; showDetails?: boolean }) {
   return (
-    <Card className="bg-card/50 border-border/50" data-testid={`tech-card-${tech.name}`}>
+    <Card className={`bg-card/50 border-border/50 ${tech.jobCount === 0 ? 'opacity-70' : ''}`} data-testid={`tech-card-${tech.name}`}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-primary" />
+            <User className={`w-5 h-5 ${tech.jobCount > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
             <span className="font-ui text-lg">{tech.name}</span>
           </div>
-          <Badge className="bg-primary/20 text-primary border-primary/30">
+          <Badge className={tech.jobCount > 0 ? "bg-primary/20 text-primary border-primary/30" : "bg-muted/20 text-muted-foreground border-muted/30"}>
             {tech.jobCount} jobs
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
-        <div className="space-y-2">
-          {tech.jobs.slice(0, 5).map((job) => (
-            <div key={job.jobId} className="flex items-center justify-between text-sm border-b border-border/30 pb-2 last:border-0">
-              <div className="flex-1 min-w-0">
-                <p className="text-foreground truncate">{job.customerName}</p>
-                <p className="text-xs text-muted-foreground">{job.title}</p>
+        {(tech.phone || tech.email) && (
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-3 pb-2 border-b border-border/30">
+            {tech.phone && (
+              <a href={`tel:${tech.phone}`} className="hover:text-primary transition-colors">
+                {tech.phone}
+              </a>
+            )}
+            {tech.email && (
+              <a href={`mailto:${tech.email}`} className="hover:text-primary transition-colors truncate">
+                {tech.email}
+              </a>
+            )}
+          </div>
+        )}
+        {tech.jobs.length > 0 ? (
+          <div className="space-y-2">
+            {tech.jobs.slice(0, 5).map((job) => (
+              <div key={job.jobId} className="flex items-center justify-between text-sm border-b border-border/30 pb-2 last:border-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-foreground truncate">{job.customerName}</p>
+                  <p className="text-xs text-muted-foreground">{job.title}</p>
+                </div>
+                {job.scheduledDate && (
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(job.scheduledDate).toLocaleDateString()}
+                  </span>
+                )}
               </div>
-              {job.scheduledDate && (
-                <span className="text-xs text-muted-foreground">
-                  {new Date(job.scheduledDate).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-          ))}
-          {tech.jobs.length > 5 && (
-            <p className="text-xs text-muted-foreground text-center">
-              +{tech.jobs.length - 5} more jobs
-            </p>
-          )}
-        </div>
+            ))}
+            {tech.jobs.length > 5 && (
+              <p className="text-xs text-muted-foreground text-center">
+                +{tech.jobs.length - 5} more jobs
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground/60 text-center py-2">No jobs assigned</p>
+        )}
       </CardContent>
     </Card>
   );
@@ -240,17 +266,21 @@ export default function Jobs() {
             </div>
 
             <Tabs defaultValue="technicians" className="w-full">
-              <TabsList className="bg-card/50 border border-border/50">
+              <TabsList className="bg-card/50 border border-border/50 flex-wrap">
                 <TabsTrigger value="technicians" data-testid="tab-technicians">
                   <User className="w-4 h-4 mr-2" />
-                  By Technician
+                  All Technicians ({data.summary.technicianCount})
+                </TabsTrigger>
+                <TabsTrigger value="techs-with-jobs" data-testid="tab-techs-with-jobs">
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  With Jobs ({data.summary.techsWithJobsCount})
                 </TabsTrigger>
                 <TabsTrigger value="unscheduled" data-testid="tab-unscheduled">
                   <AlertCircle className="w-4 h-4 mr-2" />
                   Unscheduled ({data.unscheduledJobs.length})
                 </TabsTrigger>
                 <TabsTrigger value="scheduled" data-testid="tab-scheduled">
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  <Calendar className="w-4 h-4 mr-2" />
                   Scheduled ({data.scheduledJobs.length})
                 </TabsTrigger>
                 <TabsTrigger value="all" data-testid="tab-all">
@@ -263,13 +293,52 @@ export default function Jobs() {
                 {data.technicians.length === 0 ? (
                   <Card className="bg-card/50 border-border/50">
                     <CardContent className="p-8 text-center text-muted-foreground">
+                      No technicians found
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-6">
+                    {data.techsWithJobs.length > 0 && (
+                      <div>
+                        <h3 className="font-ui text-lg text-foreground mb-3 flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-green-400" />
+                          Technicians with Jobs ({data.techsWithJobs.length})
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {data.techsWithJobs.map((tech) => (
+                            <TechnicianCard key={tech.techId || tech.name} tech={tech} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {data.techsWithoutJobs.length > 0 && (
+                      <div>
+                        <h3 className="font-ui text-lg text-foreground mb-3 flex items-center gap-2">
+                          <User className="w-5 h-5 text-muted-foreground" />
+                          Available Technicians ({data.techsWithoutJobs.length})
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {data.techsWithoutJobs.map((tech) => (
+                            <TechnicianCard key={tech.techId || tech.name} tech={tech} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="techs-with-jobs" className="mt-4">
+                {data.techsWithJobs.length === 0 ? (
+                  <Card className="bg-card/50 border-border/50">
+                    <CardContent className="p-8 text-center text-muted-foreground">
                       No technicians with assigned jobs found
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {data.technicians.map((tech) => (
-                      <TechnicianCard key={tech.name} tech={tech} />
+                    {data.techsWithJobs.map((tech) => (
+                      <TechnicianCard key={tech.techId || tech.name} tech={tech} />
                     ))}
                   </div>
                 )}

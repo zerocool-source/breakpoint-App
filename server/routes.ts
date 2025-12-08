@@ -732,9 +732,28 @@ function setupRoutes(app: any) {
       }
 
       // Group jobs by technician for summary
-      const technicianSummary: Record<string, { name: string; jobCount: number; jobs: any[] }> = {};
+      const technicianSummary: Record<string, { name: string; jobCount: number; jobs: any[]; techId: string; phone: string; email: string; status: string }> = {};
       const unscheduledJobs: any[] = [];
       const scheduledJobs: any[] = [];
+
+      // First, add ALL technicians to the summary (even those without jobs)
+      if (techniciansData.data && Array.isArray(techniciansData.data)) {
+        techniciansData.data.forEach((tech: any) => {
+          const techId = tech.RecordID;
+          const techName = tech.Name || `${tech.FirstName || ''} ${tech.LastName || ''}`.trim() || "Unknown";
+          if (techId) {
+            technicianSummary[techId] = {
+              techId: techId,
+              name: techName,
+              phone: tech.Phone || tech.CellPhone || "",
+              email: tech.Email || "",
+              status: tech.Status || "Active",
+              jobCount: 0,
+              jobs: []
+            };
+          }
+        });
+      }
 
       jobs.forEach(job => {
         if (!job.isScheduled || job.technicianName === "Unassigned") {
@@ -743,31 +762,48 @@ function setupRoutes(app: any) {
           scheduledJobs.push(job);
           
           const techKey = job.technicianId || job.technicianName;
-          if (!technicianSummary[techKey]) {
+          if (technicianSummary[techKey]) {
+            technicianSummary[techKey].jobCount++;
+            technicianSummary[techKey].jobs.push(job);
+          } else if (techKey) {
             technicianSummary[techKey] = {
+              techId: techKey,
               name: job.technicianName,
-              jobCount: 0,
-              jobs: []
+              phone: "",
+              email: "",
+              status: "Active",
+              jobCount: 1,
+              jobs: [job]
             };
           }
-          technicianSummary[techKey].jobCount++;
-          technicianSummary[techKey].jobs.push(job);
         }
       });
 
-      // Get technician list
-      const technicians = Object.values(technicianSummary).sort((a, b) => b.jobCount - a.jobCount);
+      // Get technician list - sort by job count descending, then by name
+      const technicians = Object.values(technicianSummary).sort((a, b) => {
+        if (b.jobCount !== a.jobCount) return b.jobCount - a.jobCount;
+        return a.name.localeCompare(b.name);
+      });
+
+      // Separate techs with jobs and without jobs
+      const techsWithJobs = technicians.filter(t => t.jobCount > 0);
+      const techsWithoutJobs = technicians.filter(t => t.jobCount === 0);
 
       res.json({
         jobs,
         unscheduledJobs,
         scheduledJobs,
         technicians,
+        techsWithJobs,
+        techsWithoutJobs,
+        allTechnicians: techniciansData.data || [],
         summary: {
           totalJobs: jobs.length,
           scheduledCount: scheduledJobs.length,
           unscheduledCount: unscheduledJobs.length,
-          technicianCount: technicians.length
+          technicianCount: technicians.length,
+          techsWithJobsCount: techsWithJobs.length,
+          techsWithoutJobsCount: techsWithoutJobs.length
         }
       });
     } catch (error: any) {
