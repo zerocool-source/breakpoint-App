@@ -640,15 +640,19 @@ function setupRoutes(app: any) {
         return { data: allTechs };
       };
 
-      // Fetch jobs and technicians data in parallel
-      const [oneTimeJobsData, routeStopsData, techniciansData, customersData] = await Promise.all([
+      // Fetch jobs, alerts, and technicians data in parallel
+      const [oneTimeJobsData, routeStopsData, alertsData, techniciansData, customersData, custPoolData] = await Promise.all([
         client.getOneTimeJobList({ fromDate: formatDate(fromDate), toDate: formatDate(toDate), limit: 1000 })
           .catch((e) => { console.error("One time jobs error:", e); return { data: [] }; }),
         client.getRouteStopsJobList({ fromDate: formatDate(fromDate), toDate: formatDate(toDate), limit: 1000 })
           .catch((e) => { console.error("Route stops error:", e); return { data: [] }; }),
+        client.getAlertsList({ limit: 10000 })
+          .catch((e) => { console.error("Alerts error:", e); return { data: [] }; }),
         fetchAllTechnicians(),
         client.getCustomerDetail({ limit: 1000 })
           .catch((e) => { console.error("Customer detail error:", e); return { data: [] }; }),
+        client.getCustomerPoolDetails({ limit: 1000 })
+          .catch((e) => { console.error("Customer pool details error:", e); return { data: [] }; }),
       ]);
 
       // Build technician map
@@ -669,6 +673,18 @@ function setupRoutes(app: any) {
           const customerId = c.RecordID;
           if (customerId) {
             customerMap[customerId] = c;
+          }
+        });
+      }
+
+      // Build pool to customer map
+      const poolToCustomerMap: Record<string, string> = {};
+      if (custPoolData.data && Array.isArray(custPoolData.data)) {
+        custPoolData.data.forEach((cp: any) => {
+          const waterBodyId = cp.RecordID;
+          const customerId = cp.CustomerID;
+          if (waterBodyId && customerId) {
+            poolToCustomerMap[waterBodyId] = customerId;
           }
         });
       }
@@ -727,6 +743,84 @@ function setupRoutes(app: any) {
             address: job.Address || customer?.Address || "",
             isScheduled: !!(job.ScheduledDate || job.scheduledDate || job.ServiceDate),
             raw: job
+          });
+        });
+      }
+
+      // Process alerts as jobs (this is where the REAL data is)
+      if (alertsData.data && Array.isArray(alertsData.data)) {
+        alertsData.data.forEach((alert: any) => {
+          const techId = alert.TechnicianID;
+          const technician = techId ? technicianMap[techId] : undefined;
+          const waterBodyId = alert.waterBodyId;
+          let customerId = alert.CustomerID || poolToCustomerMap[waterBodyId];
+          const customer = customerId ? customerMap[customerId] : undefined;
+
+          // Parse alert message from AlertCategories
+          let alertType = "Alert";
+          let message = "";
+          const messages: string[] = [];
+          
+          if (alert.AlertCategories && Array.isArray(alert.AlertCategories)) {
+            alert.AlertCategories.forEach((cat: any) => {
+              if (cat.SystemIssue && Array.isArray(cat.SystemIssue) && cat.SystemIssue.length > 0) {
+                alertType = "Repair";
+                cat.SystemIssue.forEach((issue: any) => {
+                  const issueName = issue.AlertName || issue.alertName || issue.systemIssue || "";
+                  const issueDesc = issue.Description || issue.description || "";
+                  if (issueName || issueDesc) {
+                    messages.push(issueName + (issueDesc ? `: ${issueDesc}` : ""));
+                  }
+                });
+              }
+              if (cat.IssueReport && Array.isArray(cat.IssueReport) && cat.IssueReport.length > 0) {
+                alertType = "Issue Report";
+                cat.IssueReport.forEach((report: any) => {
+                  const reportText = report.IssueReports || report.issueReports || report.AlertName || "";
+                  if (reportText) messages.push(reportText);
+                });
+              }
+              if (cat.CustomAlert && Array.isArray(cat.CustomAlert) && cat.CustomAlert.length > 0) {
+                alertType = "Custom Alert";
+                cat.CustomAlert.forEach((custom: any) => {
+                  const customMsg = custom.message || custom.Message || custom.AlertName || "";
+                  if (customMsg) messages.push(customMsg);
+                });
+              }
+            });
+          }
+          
+          message = messages.length > 0 ? messages.join(" | ") : "Pool Brain Alert";
+
+          // Get address from customer
+          let address = "";
+          if (customer?.Addresses && typeof customer.Addresses === 'object') {
+            const firstAddr = Object.values(customer.Addresses)[0] as any;
+            if (firstAddr) {
+              const addrLine = firstAddr.PrimaryAddress || firstAddr.BillingAddress || '';
+              const city = firstAddr.PrimaryCity || firstAddr.BillingCity || '';
+              const state = firstAddr.PrimaryState || firstAddr.BillingState || '';
+              const zip = firstAddr.PrimaryZip || firstAddr.BillingZip || '';
+              address = `${addrLine}, ${city}, ${state} ${zip}`.trim();
+            }
+          }
+
+          jobs.push({
+            jobId: alert.JobID || alert.alertId || alert.id,
+            jobType: alertType,
+            title: message.substring(0, 100) || "Pool Alert",
+            description: message,
+            status: alert.Status || "Active",
+            scheduledDate: alert.JobDate || alert.Date || null,
+            scheduledTime: null,
+            technicianId: techId,
+            technicianName: technician?.Name || (technician?.FirstName ? `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() : "Unassigned"),
+            customerId: customerId,
+            customerName: customer?.CustomerName || customer?.CompanyName || "Unknown Customer",
+            poolName: alert.BodyOfWater || "",
+            address: address,
+            isScheduled: !!(alert.JobDate || alert.Date) && !!techId,
+            raw: alert
           });
         });
       }
