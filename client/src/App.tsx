@@ -12,6 +12,7 @@ import Settings from "@/pages/Settings";
 import Chat from "@/pages/Chat";
 import Repairs from "@/pages/Repairs";
 import Chemicals from "@/pages/Chemicals";
+import Jobs from "@/pages/Jobs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/repairs" component={Repairs} />
       <Route path="/chemicals" component={Chemicals} />
+      <Route path="/jobs" component={Jobs} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />

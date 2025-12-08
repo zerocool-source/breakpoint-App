@@ -276,4 +276,137 @@ export class PoolBrainClient {
 
     return response.json();
   }
+
+  /**
+   * Get one-time job list
+   * Endpoint: GET /v2/one_time_job_list
+   */
+  async getOneTimeJobList(params: { fromDate?: string; toDate?: string; customerId?: string; offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/one_time_job_list`);
+
+    if (params.fromDate) url.searchParams.append("fromDate", params.fromDate);
+    if (params.toDate) url.searchParams.append("toDate", params.toDate);
+    if (params.customerId) url.searchParams.append("customerId", params.customerId);
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get one-time job list details
+   * Endpoint: GET /v2/one_time_job_list_details
+   */
+  async getOneTimeJobListDetails(params: { fromDate?: string; toDate?: string; offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/one_time_job_list_details`);
+
+    if (params.fromDate) url.searchParams.append("fromDate", params.fromDate);
+    if (params.toDate) url.searchParams.append("toDate", params.toDate);
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get route stops job list
+   * Endpoint: GET /v2/route_stops_job_list
+   */
+  async getRouteStopsJobList(params: { fromDate?: string; toDate?: string; offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/route_stops_job_list`);
+
+    if (params.fromDate) url.searchParams.append("fromDate", params.fromDate);
+    if (params.toDate) url.searchParams.append("toDate", params.toDate);
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get route stops job list details
+   * Endpoint: GET /v2/route_stops_job_list_details
+   */
+  async getRouteStopsJobListDetails(params: { fromDate?: string; toDate?: string; offset?: number; limit?: number } = {}) {
+    const url = new URL(`${this.baseUrl}/v2/route_stops_job_list_details`);
+
+    if (params.fromDate) url.searchParams.append("fromDate", params.fromDate);
+    if (params.toDate) url.searchParams.append("toDate", params.toDate);
+    if (params.offset) url.searchParams.append("offset", params.offset.toString());
+    if (params.limit) url.searchParams.append("limit", params.limit.toString());
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
