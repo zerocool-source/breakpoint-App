@@ -4,164 +4,227 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench } from "lucide-react";
 
 interface Job {
   jobId: string;
-  jobType: string;
   title: string;
   description: string;
   status: string;
+  isCompleted: boolean;
   scheduledDate: string | null;
   scheduledTime: string | null;
+  createdDate: string | null;
   technicianId: string;
   technicianName: string;
   customerId: string;
   customerName: string;
   poolName: string;
   address: string;
-  isScheduled: boolean;
+  price: number;
+  items: { productId: string; qty: number; unitCost: number; taxable: number }[];
 }
 
-interface TechnicianSummary {
+interface Account {
+  accountId: string;
+  accountName: string;
+  address: string;
+  totalJobs: number;
+  completedJobs: number;
+  totalValue: number;
+  jobs: Job[];
+}
+
+interface Technician {
   techId: string;
   name: string;
   phone: string;
   email: string;
-  status: string;
-  jobCount: number;
+  totalJobs: number;
+  completedJobs: number;
+  totalValue: number;
   jobs: Job[];
 }
 
 interface JobsData {
   jobs: Job[];
-  unscheduledJobs: Job[];
-  scheduledJobs: Job[];
-  technicians: TechnicianSummary[];
-  techsWithJobs: TechnicianSummary[];
-  techsWithoutJobs: TechnicianSummary[];
+  accounts: Account[];
+  technicians: Technician[];
+  techsWithJobs: Technician[];
+  techsWithoutJobs: Technician[];
+  completedJobs: Job[];
+  pendingJobs: Job[];
   summary: {
     totalJobs: number;
-    scheduledCount: number;
-    unscheduledCount: number;
+    completedCount: number;
+    pendingCount: number;
+    totalValue: number;
+    accountCount: number;
     technicianCount: number;
     techsWithJobsCount: number;
-    techsWithoutJobsCount: number;
   };
 }
 
-function JobCard({ job }: { job: Job }) {
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
+}
+
+function JobRow({ job }: { job: Job }) {
   return (
-    <Card className="bg-card/50 border-border/50 hover:border-primary/30 transition-colors" data-testid={`job-card-${job.jobId}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge variant="outline" className={job.jobType === "One-Time" ? "border-purple-500/50 text-purple-400" : "border-cyan-500/50 text-cyan-400"}>
-                {job.jobType}
-              </Badge>
-              <Badge variant="outline" className={
-                job.status === "Completed" ? "border-green-500/50 text-green-400" :
-                job.status === "In Progress" ? "border-yellow-500/50 text-yellow-400" :
-                "border-muted-foreground/50 text-muted-foreground"
-              }>
-                {job.status}
-              </Badge>
-            </div>
-            <h4 className="font-ui font-semibold text-foreground truncate" data-testid={`job-title-${job.jobId}`}>
-              {job.title}
-            </h4>
-            <p className="text-sm text-muted-foreground truncate" data-testid={`job-customer-${job.jobId}`}>
-              {job.customerName} {job.poolName && `- ${job.poolName}`}
-            </p>
-            {job.description && (
-              <p className="text-xs text-muted-foreground/70 mt-1 line-clamp-2">
-                {job.description}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
+    <div 
+      className="flex items-center justify-between py-3 px-4 bg-background/30 rounded-lg border border-border/30 hover:border-primary/30 transition-colors"
+      data-testid={`job-row-${job.jobId}`}
+    >
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+          job.isCompleted ? 'bg-green-500/20' : 'bg-yellow-500/20'
+        }`}>
+          {job.isCompleted ? (
+            <CheckCircle2 className="w-4 h-4 text-green-400" />
+          ) : (
+            <Clock className="w-4 h-4 text-yellow-400" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate" data-testid={`job-title-${job.jobId}`}>
+            {job.title || "Service Job"}
+          </p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {job.scheduledDate && (
-              <div className="flex items-center gap-1">
+              <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
-              </div>
+                {new Date(job.scheduledDate).toLocaleDateString()}
+              </span>
             )}
-            {job.scheduledTime && (
-              <div className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                <span>{job.scheduledTime}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1">
+            <span className="flex items-center gap-1">
               <User className="w-3 h-3" />
-              <span className={job.technicianName === "Unassigned" ? "text-yellow-400" : ""}>{job.technicianName}</span>
-            </div>
+              {job.technicianName}
+            </span>
           </div>
         </div>
-        {job.address && (
-          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground/70">
-            <MapPin className="w-3 h-3" />
-            <span className="truncate">{job.address}</span>
+      </div>
+      <div className="flex items-center gap-4 shrink-0">
+        <Badge variant="outline" className={
+          job.isCompleted ? "border-green-500/50 text-green-400" : "border-yellow-500/50 text-yellow-400"
+        }>
+          {job.isCompleted ? "Complete" : "Pending"}
+        </Badge>
+        <span className="font-ui font-semibold text-primary min-w-[80px] text-right" data-testid={`job-price-${job.jobId}`}>
+          {formatPrice(job.price)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function AccountCard({ account }: { account: Account }) {
+  const completionPercent = account.totalJobs > 0 
+    ? Math.round((account.completedJobs / account.totalJobs) * 100) 
+    : 0;
+
+  return (
+    <Card className="bg-card/50 border-border/50 hover:border-primary/30 transition-colors" data-testid={`account-card-${account.accountId}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-ui text-lg text-foreground" data-testid={`account-name-${account.accountId}`}>
+                {account.accountName}
+              </p>
+              {account.address && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3 h-3" />
+                  {account.address.substring(0, 50)}...
+                </p>
+              )}
+            </div>
           </div>
-        )}
+          <div className="text-right">
+            <p className="font-ui font-bold text-xl text-primary" data-testid={`account-value-${account.accountId}`}>
+              {formatPrice(account.totalValue)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {account.completedJobs}/{account.totalJobs} complete ({completionPercent}%)
+            </p>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="w-full bg-background/30 rounded-full h-2 mb-4">
+          <div 
+            className="bg-primary h-2 rounded-full transition-all duration-300"
+            style={{ width: `${completionPercent}%` }}
+          />
+        </div>
+        <div className="space-y-2">
+          {account.jobs.map((job) => (
+            <JobRow key={job.jobId} job={job} />
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function TechnicianCard({ tech, showDetails = false }: { tech: TechnicianSummary; showDetails?: boolean }) {
+function TechnicianCard({ tech }: { tech: Technician }) {
+  const completionPercent = tech.totalJobs > 0 
+    ? Math.round((tech.completedJobs / tech.totalJobs) * 100) 
+    : 0;
+
   return (
-    <Card className={`bg-card/50 border-border/50 ${tech.jobCount === 0 ? 'opacity-70' : ''}`} data-testid={`tech-card-${tech.name}`}>
-      <CardHeader className="pb-2">
+    <Card className={`bg-card/50 border-border/50 hover:border-primary/30 transition-colors ${tech.totalJobs === 0 ? 'opacity-60' : ''}`} data-testid={`tech-card-${tech.techId}`}>
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <User className={`w-5 h-5 ${tech.jobCount > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
-            <span className="font-ui text-lg">{tech.name}</span>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              tech.totalJobs > 0 ? 'bg-purple-500/20' : 'bg-muted/20'
+            }`}>
+              <User className={`w-5 h-5 ${tech.totalJobs > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
+            </div>
+            <div>
+              <p className="font-ui text-lg text-foreground" data-testid={`tech-name-${tech.techId}`}>
+                {tech.name}
+              </p>
+              {(tech.phone || tech.email) && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {tech.phone || tech.email}
+                </p>
+              )}
+            </div>
           </div>
-          <Badge className={tech.jobCount > 0 ? "bg-primary/20 text-primary border-primary/30" : "bg-muted/20 text-muted-foreground border-muted/30"}>
-            {tech.jobCount} jobs
-          </Badge>
+          <div className="text-right">
+            <p className="font-ui font-bold text-xl text-primary" data-testid={`tech-value-${tech.techId}`}>
+              {formatPrice(tech.totalValue)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {tech.totalJobs} jobs ({completionPercent}% done)
+            </p>
+          </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-2">
-        {(tech.phone || tech.email) && (
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-3 pb-2 border-b border-border/30">
-            {tech.phone && (
-              <a href={`tel:${tech.phone}`} className="hover:text-primary transition-colors">
-                {tech.phone}
-              </a>
-            )}
-            {tech.email && (
-              <a href={`mailto:${tech.email}`} className="hover:text-primary transition-colors truncate">
-                {tech.email}
-              </a>
-            )}
-          </div>
+      <CardContent className="pt-0">
+        {tech.totalJobs > 0 && (
+          <>
+            <div className="w-full bg-background/30 rounded-full h-2 mb-4">
+              <div 
+                className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${completionPercent}%` }}
+              />
+            </div>
+            <div className="space-y-2">
+              {tech.jobs.map((job) => (
+                <JobRow key={job.jobId} job={job} />
+              ))}
+            </div>
+          </>
         )}
-        {tech.jobs.length > 0 ? (
-          <div className="space-y-2">
-            {tech.jobs.slice(0, 5).map((job) => (
-              <div key={job.jobId} className="flex items-center justify-between text-sm border-b border-border/30 pb-2 last:border-0">
-                <div className="flex-1 min-w-0">
-                  <p className="text-foreground truncate">{job.customerName}</p>
-                  <p className="text-xs text-muted-foreground">{job.title}</p>
-                </div>
-                {job.scheduledDate && (
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(job.scheduledDate).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            ))}
-            {tech.jobs.length > 5 && (
-              <p className="text-xs text-muted-foreground text-center">
-                +{tech.jobs.length - 5} more jobs
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground/60 text-center py-2">No jobs assigned</p>
+        {tech.totalJobs === 0 && (
+          <p className="text-center text-muted-foreground/60 py-4 text-sm">
+            No jobs assigned
+          </p>
         )}
       </CardContent>
     </Card>
@@ -190,7 +253,7 @@ export default function Jobs() {
               JOBS & SCHEDULING
             </h1>
             <p className="text-muted-foreground font-ui mt-1">
-              View job assignments, unscheduled work, and technician schedules
+              Jobs grouped by account and technician with pricing
             </p>
           </div>
           <button
@@ -222,10 +285,10 @@ export default function Jobs() {
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-primary" />
+                    <Wrench className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-foreground">{data.summary.totalJobs}</p>
+                    <p className="text-2xl font-bold font-ui text-foreground" data-testid="total-jobs-count">{data.summary.totalJobs}</p>
                     <p className="text-sm text-muted-foreground">Total Jobs</p>
                   </div>
                 </CardContent>
@@ -236,163 +299,155 @@ export default function Jobs() {
                     <CheckCircle2 className="w-6 h-6 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-foreground">{data.summary.scheduledCount}</p>
-                    <p className="text-sm text-muted-foreground">Scheduled</p>
+                    <p className="text-2xl font-bold font-ui text-foreground" data-testid="completed-count">{data.summary.completedCount}</p>
+                    <p className="text-sm text-muted-foreground">Completed</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                    <AlertCircle className="w-6 h-6 text-yellow-400" />
+                    <Clock className="w-6 h-6 text-yellow-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-foreground">{data.summary.unscheduledCount}</p>
-                    <p className="text-sm text-muted-foreground">Unscheduled</p>
+                    <p className="text-2xl font-bold font-ui text-foreground" data-testid="pending-count">{data.summary.pendingCount}</p>
+                    <p className="text-sm text-muted-foreground">Pending</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <User className="w-6 h-6 text-purple-400" />
+                    <DollarSign className="w-6 h-6 text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-foreground">{data.summary.technicianCount}</p>
-                    <p className="text-sm text-muted-foreground">Technicians</p>
+                    <p className="text-2xl font-bold font-ui text-foreground" data-testid="total-value">{formatPrice(data.summary.totalValue)}</p>
+                    <p className="text-sm text-muted-foreground">Total Value</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Tabs defaultValue="technicians" className="w-full">
+            <Tabs defaultValue="accounts" className="w-full">
               <TabsList className="bg-card/50 border border-border/50 flex-wrap">
+                <TabsTrigger value="accounts" data-testid="tab-accounts">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  By Account ({data.summary.accountCount})
+                </TabsTrigger>
                 <TabsTrigger value="technicians" data-testid="tab-technicians">
                   <User className="w-4 h-4 mr-2" />
-                  All Technicians ({data.summary.technicianCount})
+                  By Technician ({data.summary.techsWithJobsCount})
                 </TabsTrigger>
-                <TabsTrigger value="techs-with-jobs" data-testid="tab-techs-with-jobs">
+                <TabsTrigger value="completed" data-testid="tab-completed">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  With Jobs ({data.summary.techsWithJobsCount})
+                  Completed ({data.summary.completedCount})
                 </TabsTrigger>
-                <TabsTrigger value="unscheduled" data-testid="tab-unscheduled">
-                  <AlertCircle className="w-4 h-4 mr-2" />
-                  Unscheduled ({data.unscheduledJobs.length})
-                </TabsTrigger>
-                <TabsTrigger value="scheduled" data-testid="tab-scheduled">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Scheduled ({data.scheduledJobs.length})
-                </TabsTrigger>
-                <TabsTrigger value="all" data-testid="tab-all">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  All Jobs
+                <TabsTrigger value="pending" data-testid="tab-pending">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Pending ({data.summary.pendingCount})
                 </TabsTrigger>
               </TabsList>
 
+              <TabsContent value="accounts" className="mt-4">
+                <ScrollArea className="h-[700px]">
+                  {data.accounts.length === 0 ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        No accounts with jobs found
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {data.accounts.map((account) => (
+                        <AccountCard key={account.accountId || account.accountName} account={account} />
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
               <TabsContent value="technicians" className="mt-4">
-                {data.technicians.length === 0 ? (
-                  <Card className="bg-card/50 border-border/50">
-                    <CardContent className="p-8 text-center text-muted-foreground">
-                      No technicians found
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-6">
-                    {data.techsWithJobs.length > 0 && (
-                      <div>
-                        <h3 className="font-ui text-lg text-foreground mb-3 flex items-center gap-2">
-                          <CheckCircle2 className="w-5 h-5 text-green-400" />
-                          Technicians with Jobs ({data.techsWithJobs.length})
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {data.techsWithJobs.map((tech) => (
-                            <TechnicianCard key={tech.techId || tech.name} tech={tech} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {data.techsWithoutJobs.length > 0 && (
-                      <div>
-                        <h3 className="font-ui text-lg text-foreground mb-3 flex items-center gap-2">
-                          <User className="w-5 h-5 text-muted-foreground" />
-                          Available Technicians ({data.techsWithoutJobs.length})
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {data.techsWithoutJobs.map((tech) => (
-                            <TechnicianCard key={tech.techId || tech.name} tech={tech} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <ScrollArea className="h-[700px]">
+                  {data.techsWithJobs.length === 0 ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        No technicians with jobs found
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {data.techsWithJobs.map((tech) => (
+                        <TechnicianCard key={tech.techId || tech.name} tech={tech} />
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="techs-with-jobs" className="mt-4">
-                {data.techsWithJobs.length === 0 ? (
-                  <Card className="bg-card/50 border-border/50">
-                    <CardContent className="p-8 text-center text-muted-foreground">
-                      No technicians with assigned jobs found
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {data.techsWithJobs.map((tech) => (
-                      <TechnicianCard key={tech.techId || tech.name} tech={tech} />
-                    ))}
-                  </div>
-                )}
+              <TabsContent value="completed" className="mt-4">
+                <ScrollArea className="h-[700px]">
+                  {data.completedJobs.length === 0 ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <Clock className="w-12 h-12 mx-auto mb-4 text-yellow-400" />
+                        <p>No completed jobs yet</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-2">
+                      {data.completedJobs.map((job) => (
+                        <Card key={job.jobId} className="bg-card/50 border-border/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                                <div>
+                                  <p className="font-medium text-foreground">{job.title}</p>
+                                  <p className="text-sm text-muted-foreground">{job.customerName} • {job.technicianName}</p>
+                                </div>
+                              </div>
+                              <span className="font-ui font-semibold text-primary">{formatPrice(job.price)}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="unscheduled" className="mt-4">
-                <ScrollArea className="h-[600px]">
-                  {data.unscheduledJobs.length === 0 ? (
+              <TabsContent value="pending" className="mt-4">
+                <ScrollArea className="h-[700px]">
+                  {data.pendingJobs.length === 0 ? (
                     <Card className="bg-card/50 border-border/50">
                       <CardContent className="p-8 text-center text-muted-foreground">
                         <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-green-400" />
-                        <p>All jobs are scheduled!</p>
+                        <p>All jobs are completed!</p>
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-3">
-                      {data.unscheduledJobs.map((job) => (
-                        <JobCard key={job.jobId} job={job} />
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="scheduled" className="mt-4">
-                <ScrollArea className="h-[600px]">
-                  {data.scheduledJobs.length === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        No scheduled jobs found
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-3">
-                      {data.scheduledJobs.map((job) => (
-                        <JobCard key={job.jobId} job={job} />
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="all" className="mt-4">
-                <ScrollArea className="h-[600px]">
-                  {data.jobs.length === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        No jobs found
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-3">
-                      {data.jobs.map((job) => (
-                        <JobCard key={job.jobId} job={job} />
+                    <div className="space-y-2">
+                      {data.pendingJobs.map((job) => (
+                        <Card key={job.jobId} className="bg-card/50 border-border/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Clock className="w-5 h-5 text-yellow-400" />
+                                <div>
+                                  <p className="font-medium text-foreground">{job.title}</p>
+                                  <p className="text-sm text-muted-foreground">{job.customerName} • {job.technicianName}</p>
+                                  {job.scheduledDate && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(job.scheduledDate).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="font-ui font-semibold text-primary">{formatPrice(job.price)}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
                   )}

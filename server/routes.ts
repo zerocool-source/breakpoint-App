@@ -592,7 +592,7 @@ function setupRoutes(app: any) {
 
   // ==================== JOBS ====================
   
-  // Get jobs with scheduling information
+  // Get jobs with scheduling information - grouped by account and technician
   app.get("/api/jobs", async (req: any, res: any) => {
     try {
       const settings = await storage.getSettings();
@@ -608,10 +608,10 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Get date range - last 30 days to next 30 days
+      // Get date range - last 90 days to next 30 days for more data
       const today = new Date();
       const fromDate = new Date(today);
-      fromDate.setDate(fromDate.getDate() - 30);
+      fromDate.setDate(fromDate.getDate() - 90);
       const toDate = new Date(today);
       toDate.setDate(toDate.getDate() + 30);
 
@@ -640,19 +640,40 @@ function setupRoutes(app: any) {
         return { data: allTechs };
       };
 
-      // Fetch jobs, alerts, and technicians data in parallel
-      const [oneTimeJobsData, routeStopsData, alertsData, techniciansData, customersData, custPoolData] = await Promise.all([
-        client.getOneTimeJobList({ fromDate: formatDate(fromDate), toDate: formatDate(toDate), limit: 1000 })
-          .catch((e) => { console.error("One time jobs error:", e); return { data: [] }; }),
-        client.getRouteStopsJobList({ fromDate: formatDate(fromDate), toDate: formatDate(toDate), limit: 1000 })
-          .catch((e) => { console.error("Route stops error:", e); return { data: [] }; }),
-        client.getAlertsList({ limit: 10000 })
-          .catch((e) => { console.error("Alerts error:", e); return { data: [] }; }),
+      // Fetch ALL job details with pagination
+      const fetchAllJobDetails = async () => {
+        const allJobs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+
+        while (hasMore) {
+          try {
+            const jobData = await client.getOneTimeJobListDetails({ 
+              fromDate: formatDate(fromDate), 
+              toDate: formatDate(toDate), 
+              offset, 
+              limit 
+            });
+            if (jobData.data && Array.isArray(jobData.data)) {
+              allJobs.push(...jobData.data);
+            }
+            hasMore = jobData.hasMore === true;
+            offset += limit;
+          } catch (e) {
+            console.error("Error fetching job details at offset", offset, e);
+            break;
+          }
+        }
+        return { data: allJobs };
+      };
+
+      // Fetch jobs and technicians data in parallel
+      const [jobDetailsData, techniciansData, customersData] = await Promise.all([
+        fetchAllJobDetails(),
         fetchAllTechnicians(),
-        client.getCustomerDetail({ limit: 1000 })
+        client.getCustomerDetail({ limit: 2000 })
           .catch((e) => { console.error("Customer detail error:", e); return { data: [] }; }),
-        client.getCustomerPoolDetails({ limit: 1000 })
-          .catch((e) => { console.error("Customer pool details error:", e); return { data: [] }; }),
       ]);
 
       // Build technician map
@@ -677,120 +698,35 @@ function setupRoutes(app: any) {
         });
       }
 
-      // Build pool to customer map
-      const poolToCustomerMap: Record<string, string> = {};
-      if (custPoolData.data && Array.isArray(custPoolData.data)) {
-        custPoolData.data.forEach((cp: any) => {
-          const waterBodyId = cp.RecordID;
-          const customerId = cp.CustomerID;
-          if (waterBodyId && customerId) {
-            poolToCustomerMap[waterBodyId] = customerId;
-          }
-        });
-      }
-
-      // Process one-time jobs
+      // Process job details - includes price, completion status, etc.
       const jobs: any[] = [];
       
-      if (oneTimeJobsData.data && Array.isArray(oneTimeJobsData.data)) {
-        oneTimeJobsData.data.forEach((job: any) => {
+      if (jobDetailsData.data && Array.isArray(jobDetailsData.data)) {
+        jobDetailsData.data.forEach((job: any) => {
           const techId = job.TechnicianID || job.technicianId;
           const technician = techId ? technicianMap[techId] : undefined;
           const customerId = job.CustomerID || job.customerId;
           const customer = customerId ? customerMap[customerId] : undefined;
-          
-          jobs.push({
-            jobId: job.RecordID || job.JobID || job.id,
-            jobType: "One-Time",
-            title: job.Title || job.title || job.JobTitle || "Service Job",
-            description: job.Description || job.description || "",
-            status: job.Status || job.status || "Pending",
-            scheduledDate: job.ScheduledDate || job.scheduledDate || job.ServiceDate || null,
-            scheduledTime: job.ScheduledTime || job.scheduledTime || null,
-            technicianId: techId,
-            technicianName: technician?.Name || technician?.FirstName ? `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() : "Unassigned",
-            customerId: customerId,
-            customerName: customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer",
-            poolName: job.BodyOfWater || job.poolName || "",
-            address: job.Address || customer?.Address || "",
-            isScheduled: !!(job.ScheduledDate || job.scheduledDate || job.ServiceDate),
-            raw: job
-          });
-        });
-      }
 
-      // Process route stops jobs
-      if (routeStopsData.data && Array.isArray(routeStopsData.data)) {
-        routeStopsData.data.forEach((job: any) => {
-          const techId = job.TechnicianID || job.technicianId;
-          const technician = techId ? technicianMap[techId] : undefined;
-          const customerId = job.CustomerID || job.customerId;
-          const customer = customerId ? customerMap[customerId] : undefined;
+          // Calculate total price from OneOfJobItemDetails
+          let totalPrice = 0;
+          let totalCost = 0;
+          const items: any[] = [];
           
-          jobs.push({
-            jobId: job.RecordID || job.JobID || job.id,
-            jobType: "Route Stop",
-            title: job.Title || job.title || job.JobTitle || "Route Service",
-            description: job.Description || job.description || "",
-            status: job.Status || job.status || "Pending",
-            scheduledDate: job.ScheduledDate || job.scheduledDate || job.ServiceDate || null,
-            scheduledTime: job.ScheduledTime || job.scheduledTime || null,
-            technicianId: techId,
-            technicianName: technician?.Name || technician?.FirstName ? `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() : "Unassigned",
-            customerId: customerId,
-            customerName: customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer",
-            poolName: job.BodyOfWater || job.poolName || "",
-            address: job.Address || customer?.Address || "",
-            isScheduled: !!(job.ScheduledDate || job.scheduledDate || job.ServiceDate),
-            raw: job
-          });
-        });
-      }
-
-      // Process alerts as jobs (this is where the REAL data is)
-      if (alertsData.data && Array.isArray(alertsData.data)) {
-        alertsData.data.forEach((alert: any) => {
-          const techId = alert.TechnicianID;
-          const technician = techId ? technicianMap[techId] : undefined;
-          const waterBodyId = alert.waterBodyId;
-          let customerId = alert.CustomerID || poolToCustomerMap[waterBodyId];
-          const customer = customerId ? customerMap[customerId] : undefined;
-
-          // Parse alert message from AlertCategories
-          let alertType = "Alert";
-          let message = "";
-          const messages: string[] = [];
-          
-          if (alert.AlertCategories && Array.isArray(alert.AlertCategories)) {
-            alert.AlertCategories.forEach((cat: any) => {
-              if (cat.SystemIssue && Array.isArray(cat.SystemIssue) && cat.SystemIssue.length > 0) {
-                alertType = "Repair";
-                cat.SystemIssue.forEach((issue: any) => {
-                  const issueName = issue.AlertName || issue.alertName || issue.systemIssue || "";
-                  const issueDesc = issue.Description || issue.description || "";
-                  if (issueName || issueDesc) {
-                    messages.push(issueName + (issueDesc ? `: ${issueDesc}` : ""));
-                  }
-                });
-              }
-              if (cat.IssueReport && Array.isArray(cat.IssueReport) && cat.IssueReport.length > 0) {
-                alertType = "Issue Report";
-                cat.IssueReport.forEach((report: any) => {
-                  const reportText = report.IssueReports || report.issueReports || report.AlertName || "";
-                  if (reportText) messages.push(reportText);
-                });
-              }
-              if (cat.CustomAlert && Array.isArray(cat.CustomAlert) && cat.CustomAlert.length > 0) {
-                alertType = "Custom Alert";
-                cat.CustomAlert.forEach((custom: any) => {
-                  const customMsg = custom.message || custom.Message || custom.AlertName || "";
-                  if (customMsg) messages.push(customMsg);
-                });
-              }
+          if (job.OneOfJobItemDetails && Array.isArray(job.OneOfJobItemDetails)) {
+            job.OneOfJobItemDetails.forEach((item: any) => {
+              const qty = item.Qty || item.qty || 1;
+              const unitPrice = item.UnitCost || item.unitCost || item.Price || item.price || 0;
+              const taxable = item.Taxable || item.taxable || 0;
+              totalPrice += qty * unitPrice;
+              items.push({
+                productId: item.ProductID || item.productId,
+                qty: qty,
+                unitCost: unitPrice,
+                taxable: taxable
+              });
             });
           }
-          
-          message = messages.length > 0 ? messages.join(" | ") : "Pool Brain Alert";
 
           // Get address from customer
           let address = "";
@@ -805,44 +741,69 @@ function setupRoutes(app: any) {
             }
           }
 
+          const techName = technician?.Name || (technician?.FirstName ? `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() : "Unassigned");
+
           jobs.push({
-            jobId: alert.JobID || alert.alertId || alert.id,
-            jobType: alertType,
-            title: message.substring(0, 100) || "Pool Alert",
-            description: message,
-            status: alert.Status || "Active",
-            scheduledDate: alert.JobDate || alert.Date || null,
-            scheduledTime: null,
+            jobId: job.JobID || job.RecordID || job.id,
+            title: job.Title || job.title || job.JobTitle || "Service Job",
+            description: job.Description || job.description || "",
+            status: job.Status || job.status || "Pending",
+            isCompleted: job.Status === "Completed" || job.Completed === true || job.completed === true,
+            scheduledDate: job.ScheduledDate || job.scheduledDate || job.ServiceDate || job.CreatedDate || null,
+            scheduledTime: job.ScheduledTime || job.scheduledTime || null,
+            createdDate: job.CreatedDate || null,
+            lastModifiedDate: job.LastModifiedDate || null,
             technicianId: techId,
-            technicianName: technician?.Name || (technician?.FirstName ? `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() : "Unassigned"),
+            technicianName: techName,
             customerId: customerId,
-            customerName: customer?.CustomerName || customer?.CompanyName || "Unknown Customer",
-            poolName: alert.BodyOfWater || "",
+            customerName: customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer",
+            poolName: job.BodyOfWater || job.poolName || "",
             address: address,
-            isScheduled: !!(alert.JobDate || alert.Date) && !!techId,
-            raw: alert
+            price: totalPrice,
+            items: items,
+            chemicalReadings: job.chemicalReadings || null,
+            raw: job
           });
         });
       }
 
-      // Group jobs by technician for summary
-      const technicianSummary: Record<string, { name: string; jobCount: number; jobs: any[]; techId: string; phone: string; email: string; status: string }> = {};
-      const unscheduledJobs: any[] = [];
-      const scheduledJobs: any[] = [];
+      // Group jobs by ACCOUNT (customer)
+      const accountsMap: Record<string, { 
+        accountId: string; 
+        accountName: string; 
+        address: string;
+        totalJobs: number;
+        completedJobs: number;
+        totalValue: number;
+        jobs: any[] 
+      }> = {};
 
-      // First, add ALL technicians to the summary (even those without jobs)
+      // Group jobs by TECHNICIAN
+      const technicianJobsMap: Record<string, { 
+        techId: string; 
+        name: string; 
+        phone: string;
+        email: string;
+        totalJobs: number;
+        completedJobs: number;
+        totalValue: number;
+        jobs: any[] 
+      }> = {};
+
+      // Initialize all technicians in the map
       if (techniciansData.data && Array.isArray(techniciansData.data)) {
         techniciansData.data.forEach((tech: any) => {
           const techId = tech.RecordID;
           const techName = tech.Name || `${tech.FirstName || ''} ${tech.LastName || ''}`.trim() || "Unknown";
           if (techId) {
-            technicianSummary[techId] = {
+            technicianJobsMap[techId] = {
               techId: techId,
               name: techName,
               phone: tech.Phone || tech.CellPhone || "",
               email: tech.Email || "",
-              status: tech.Status || "Active",
-              jobCount: 0,
+              totalJobs: 0,
+              completedJobs: 0,
+              totalValue: 0,
               jobs: []
             };
           }
@@ -850,54 +811,72 @@ function setupRoutes(app: any) {
       }
 
       jobs.forEach(job => {
-        if (!job.isScheduled || job.technicianName === "Unassigned") {
-          unscheduledJobs.push(job);
-        } else {
-          scheduledJobs.push(job);
-          
-          const techKey = job.technicianId || job.technicianName;
-          if (technicianSummary[techKey]) {
-            technicianSummary[techKey].jobCount++;
-            technicianSummary[techKey].jobs.push(job);
-          } else if (techKey) {
-            technicianSummary[techKey] = {
-              techId: techKey,
-              name: job.technicianName,
-              phone: "",
-              email: "",
-              status: "Active",
-              jobCount: 1,
-              jobs: [job]
-            };
-          }
+        // Group by account
+        const accountKey = job.customerId || job.customerName;
+        if (!accountsMap[accountKey]) {
+          accountsMap[accountKey] = {
+            accountId: job.customerId,
+            accountName: job.customerName,
+            address: job.address,
+            totalJobs: 0,
+            completedJobs: 0,
+            totalValue: 0,
+            jobs: []
+          };
+        }
+        accountsMap[accountKey].totalJobs++;
+        accountsMap[accountKey].totalValue += job.price || 0;
+        if (job.isCompleted) accountsMap[accountKey].completedJobs++;
+        accountsMap[accountKey].jobs.push(job);
+
+        // Group by technician
+        const techKey = job.technicianId;
+        if (techKey && technicianJobsMap[techKey]) {
+          technicianJobsMap[techKey].totalJobs++;
+          technicianJobsMap[techKey].totalValue += job.price || 0;
+          if (job.isCompleted) technicianJobsMap[techKey].completedJobs++;
+          technicianJobsMap[techKey].jobs.push(job);
+        } else if (techKey) {
+          technicianJobsMap[techKey] = {
+            techId: techKey,
+            name: job.technicianName,
+            phone: "",
+            email: "",
+            totalJobs: 1,
+            completedJobs: job.isCompleted ? 1 : 0,
+            totalValue: job.price || 0,
+            jobs: [job]
+          };
         }
       });
 
-      // Get technician list - sort by job count descending, then by name
-      const technicians = Object.values(technicianSummary).sort((a, b) => {
-        if (b.jobCount !== a.jobCount) return b.jobCount - a.jobCount;
-        return a.name.localeCompare(b.name);
-      });
+      // Convert to arrays and sort
+      const accounts = Object.values(accountsMap).sort((a, b) => b.totalJobs - a.totalJobs);
+      const technicians = Object.values(technicianJobsMap).sort((a, b) => b.totalJobs - a.totalJobs);
+      const techsWithJobs = technicians.filter(t => t.totalJobs > 0);
+      const techsWithoutJobs = technicians.filter(t => t.totalJobs === 0);
 
-      // Separate techs with jobs and without jobs
-      const techsWithJobs = technicians.filter(t => t.jobCount > 0);
-      const techsWithoutJobs = technicians.filter(t => t.jobCount === 0);
+      // Calculate totals
+      const totalValue = jobs.reduce((sum, j) => sum + (j.price || 0), 0);
+      const completedJobs = jobs.filter(j => j.isCompleted);
+      const pendingJobs = jobs.filter(j => !j.isCompleted);
 
       res.json({
         jobs,
-        unscheduledJobs,
-        scheduledJobs,
+        accounts,
         technicians,
         techsWithJobs,
         techsWithoutJobs,
-        allTechnicians: techniciansData.data || [],
+        completedJobs,
+        pendingJobs,
         summary: {
           totalJobs: jobs.length,
-          scheduledCount: scheduledJobs.length,
-          unscheduledCount: unscheduledJobs.length,
+          completedCount: completedJobs.length,
+          pendingCount: pendingJobs.length,
+          totalValue: totalValue,
+          accountCount: accounts.length,
           technicianCount: technicians.length,
-          techsWithJobsCount: techsWithJobs.length,
-          techsWithoutJobsCount: techsWithoutJobs.length
+          techsWithJobsCount: techsWithJobs.length
         }
       });
     } catch (error: any) {
