@@ -12,7 +12,12 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) {
+      onLoadingComplete();
+      return;
+    }
+
+    let videoStarted = false;
 
     const handleEnded = () => {
       setProgress(100);
@@ -29,6 +34,10 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
       });
     };
 
+    const handlePlay = () => {
+      videoStarted = true;
+    };
+
     const handleTimeUpdate = () => {
       if (video.duration) {
         const percent = Math.round((video.currentTime / video.duration) * 100);
@@ -39,8 +48,17 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
     video.addEventListener("ended", handleEnded);
     video.addEventListener("error", handleError);
     video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("play", handlePlay);
     video.addEventListener("timeupdate", handleTimeUpdate);
 
+    // If video doesn't start within 3 seconds, skip loading screen
+    const quickTimeout = setTimeout(() => {
+      if (!videoStarted) {
+        onLoadingComplete();
+      }
+    }, 3000);
+
+    // Maximum timeout of 30 seconds
     const maxTimeout = setTimeout(() => {
       onLoadingComplete();
     }, 30000);
@@ -49,7 +67,9 @@ export function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
       video.removeEventListener("ended", handleEnded);
       video.removeEventListener("error", handleError);
       video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("play", handlePlay);
       video.removeEventListener("timeupdate", handleTimeUpdate);
+      clearTimeout(quickTimeout);
       clearTimeout(maxTimeout);
     };
   }, [onLoadingComplete]);

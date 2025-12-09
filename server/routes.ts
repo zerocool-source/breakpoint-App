@@ -640,7 +640,36 @@ function setupRoutes(app: any) {
         return { data: allTechs };
       };
 
-      // Fetch ALL job details with pagination
+      // Fetch basic job list (has CustomerID, TechnicianID)
+      const fetchAllBasicJobs = async () => {
+        const allJobs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+
+        while (hasMore) {
+          try {
+            const jobData = await client.getOneTimeJobList({ 
+              fromDate: formatDate(fromDate), 
+              toDate: formatDate(toDate), 
+              offset, 
+              limit 
+            });
+            if (jobData.data && Array.isArray(jobData.data)) {
+              allJobs.push(...jobData.data);
+            }
+            hasMore = jobData.hasMore === true;
+            offset += limit;
+          } catch (e) {
+            console.error("Error fetching basic jobs at offset", offset, e);
+            break;
+          }
+        }
+        console.log(`Fetched ${allJobs.length} basic jobs`);
+        return { data: allJobs };
+      };
+
+      // Fetch job details (has pricing info)
       const fetchAllJobDetails = async () => {
         const allJobs: any[] = [];
         let offset = 0;
@@ -665,16 +694,52 @@ function setupRoutes(app: any) {
             break;
           }
         }
+        console.log(`Fetched ${allJobs.length} job details`);
         return { data: allJobs };
       };
 
-      // Fetch jobs and technicians data in parallel
-      const [jobDetailsData, techniciansData, customersData] = await Promise.all([
+      // Fetch ALL customers with pagination
+      const fetchAllCustomers = async () => {
+        const allCustomers: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+
+        while (hasMore) {
+          try {
+            const custData = await client.getCustomerDetail({ offset, limit });
+            if (custData.data && Array.isArray(custData.data)) {
+              allCustomers.push(...custData.data);
+            }
+            hasMore = custData.hasMore === true;
+            offset += limit;
+          } catch (e) {
+            console.error("Error fetching customers at offset", offset, e);
+            break;
+          }
+        }
+        console.log(`Fetched ${allCustomers.length} customers`);
+        return { data: allCustomers };
+      };
+
+      // Fetch all data in parallel
+      const [basicJobsData, jobDetailsData, techniciansData, customersData] = await Promise.all([
+        fetchAllBasicJobs(),
         fetchAllJobDetails(),
         fetchAllTechnicians(),
-        client.getCustomerDetail({ limit: 2000 })
-          .catch((e) => { console.error("Customer detail error:", e); return { data: [] }; }),
+        fetchAllCustomers(),
       ]);
+
+      // Build job details map by JobID for price lookup
+      const jobDetailsMap: Record<string, any> = {};
+      if (jobDetailsData.data && Array.isArray(jobDetailsData.data)) {
+        jobDetailsData.data.forEach((detail: any) => {
+          const jobId = detail.JobID || detail.RecordID;
+          if (jobId) {
+            jobDetailsMap[jobId] = detail;
+          }
+        });
+      }
 
       // Build technician map
       const technicianMap: Record<string, any> = {};
@@ -698,23 +763,27 @@ function setupRoutes(app: any) {
         });
       }
 
-      // Process job details - includes price, completion status, etc.
+      // Process basic jobs and merge with details for pricing
       const jobs: any[] = [];
       
-      if (jobDetailsData.data && Array.isArray(jobDetailsData.data)) {
-        jobDetailsData.data.forEach((job: any) => {
-          const techId = job.TechnicianID || job.technicianId;
+      if (basicJobsData.data && Array.isArray(basicJobsData.data)) {
+        basicJobsData.data.forEach((job: any) => {
+          const jobId = job.JobID || job.RecordID || job.id;
+          const techId = job.TechnicianID || job.technicianId || job.TechnicianId;
           const technician = techId ? technicianMap[techId] : undefined;
-          const customerId = job.CustomerID || job.customerId;
+          const customerId = job.CustomerId || job.CustomerID || job.customerId;
           const customer = customerId ? customerMap[customerId] : undefined;
 
-          // Calculate total price from OneOfJobItemDetails
+          // Get detailed job info for pricing
+          const jobDetail = jobDetailsMap[jobId] || {};
+
+          // Calculate total price from OneOfJobItemDetails in details
           let totalPrice = 0;
-          let totalCost = 0;
           const items: any[] = [];
           
-          if (job.OneOfJobItemDetails && Array.isArray(job.OneOfJobItemDetails)) {
-            job.OneOfJobItemDetails.forEach((item: any) => {
+          const itemDetails = jobDetail.OneOfJobItemDetails || job.OneOfJobItemDetails || [];
+          if (Array.isArray(itemDetails)) {
+            itemDetails.forEach((item: any) => {
               const qty = item.Qty || item.qty || 1;
               const unitPrice = item.UnitCost || item.unitCost || item.Price || item.price || 0;
               const taxable = item.Taxable || item.taxable || 0;
@@ -728,9 +797,14 @@ function setupRoutes(app: any) {
             });
           }
 
-          // Get address from customer
-          let address = "";
-          if (customer?.Addresses && typeof customer.Addresses === 'object') {
+          // Also check for Price/TotalAmount field directly
+          if (totalPrice === 0) {
+            totalPrice = job.TotalAmount || job.Price || job.TotalPrice || job.Amount || jobDetail.Price || jobDetail.TotalPrice || 0;
+          }
+
+          // Get address - prefer ServiceAddress from job, then customer address
+          let address = job.ServiceAddress || "";
+          if (!address && customer?.Addresses && typeof customer.Addresses === 'object') {
             const firstAddr = Object.values(customer.Addresses)[0] as any;
             if (firstAddr) {
               const addrLine = firstAddr.PrimaryAddress || firstAddr.BillingAddress || '';
@@ -742,30 +816,37 @@ function setupRoutes(app: any) {
           }
 
           const techName = technician?.Name || (technician?.FirstName ? `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() : "Unassigned");
+          const customerName = customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer";
+
+          // Determine completion status - JobStatus field is primary
+          const status = job.JobStatus || job.Status || jobDetail.Status || "Pending";
+          const isCompleted = status === "Completed" || status === "Complete" || status === "Invoiced" || job.Completed === true || jobDetail.Completed === true;
 
           jobs.push({
-            jobId: job.JobID || job.RecordID || job.id,
-            title: job.Title || job.title || job.JobTitle || "Service Job",
-            description: job.Description || job.description || "",
-            status: job.Status || job.status || "Pending",
-            isCompleted: job.Status === "Completed" || job.Completed === true || job.completed === true,
-            scheduledDate: job.ScheduledDate || job.scheduledDate || job.ServiceDate || job.CreatedDate || null,
-            scheduledTime: job.ScheduledTime || job.scheduledTime || null,
-            createdDate: job.CreatedDate || null,
-            lastModifiedDate: job.LastModifiedDate || null,
+            jobId: jobId,
+            title: job.Title || job.JobTitle || jobDetail.Title || "Service Job",
+            description: job.Description || jobDetail.Description || "",
+            status: status,
+            isCompleted: isCompleted,
+            scheduledDate: job.JobDate || job.ScheduledDate || job.ServiceDate || jobDetail.ScheduledDate || job.CreatedDate || null,
+            scheduledTime: job.ScheduledTime || jobDetail.ScheduledTime || null,
+            createdDate: job.CreatedDate || jobDetail.CreatedDate || null,
+            lastModifiedDate: job.LastModifiedDate || jobDetail.LastModifiedDate || null,
             technicianId: techId,
             technicianName: techName,
             customerId: customerId,
-            customerName: customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer",
-            poolName: job.BodyOfWater || job.poolName || "",
+            customerName: customerName,
+            poolName: job.BodyOfWater || job.poolName || jobDetail.BodyOfWater || "",
             address: address,
             price: totalPrice,
             items: items,
-            chemicalReadings: job.chemicalReadings || null,
-            raw: job
+            chemicalReadings: jobDetail.chemicalReadings || null,
+            raw: { ...job, details: jobDetail }
           });
         });
       }
+
+      console.log(`Processed ${jobs.length} jobs, ${jobs.filter(j => j.customerName !== 'Unknown Customer').length} with customer names`);
 
       // Group jobs by ACCOUNT (customer)
       const accountsMap: Record<string, { 
