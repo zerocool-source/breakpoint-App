@@ -1,6 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import bgImage from "@assets/ChatGPT_Image_Dec_9,_2025,_08_34_36_PM_1765341308891.png";
+import bgImage from "@assets/ChatGPT_Image_Dec_9,_2025,_08_01_29_PM_1765341521755.png";
 
 interface AppLayoutProps {
   children: React.ReactNode;
