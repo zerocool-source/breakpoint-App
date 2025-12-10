@@ -1407,27 +1407,27 @@ export default function Jobs() {
                       <ScrollArea className="h-[550px]">
                         <div className="space-y-4">
                           {techStats.map((tech, index) => (
-                            <Card key={tech.name} className="bg-card/50 border-border/50 hover:border-cyan-500/30 transition-colors" data-testid={`sr-stat-${tech.name}`}>
+                            <Card key={tech.name} className="bg-gradient-to-br from-violet-950/40 to-indigo-950/30 border-violet-500/30 hover:border-violet-400/50 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all duration-300" data-testid={`sr-stat-${tech.name}`}>
                               <CardHeader className="pb-2">
                                 <CardTitle className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                                      <span className="text-lg font-bold text-cyan-400">#{index + 1}</span>
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 flex items-center justify-center border border-violet-400/30">
+                                      <span className="text-lg font-bold text-violet-300">#{index + 1}</span>
                                     </div>
                                     <div>
                                       <p className="font-ui text-lg text-foreground">{tech.name}</p>
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="text-xs text-violet-300/70">
                                         {tech.completedCount}/{tech.jobCount} completed
                                       </p>
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-ui font-bold text-2xl text-cyan-400">{formatPrice(tech.totalValue)}</p>
+                                    <p className="font-ui font-bold text-2xl text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">{formatPrice(tech.totalValue)}</p>
                                     <div className="flex gap-2 mt-1">
-                                      <Badge className="bg-primary/20 text-primary border-primary/50 text-xs">
+                                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-xs">
                                         10%: {formatPrice(tech.commission10)}
                                       </Badge>
-                                      <Badge className="bg-primary/20 text-primary border-primary/50 text-xs">
+                                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-xs">
                                         15%: {formatPrice(tech.commission15)}
                                       </Badge>
                                     </div>
@@ -1435,13 +1435,13 @@ export default function Jobs() {
                                 </CardTitle>
                               </CardHeader>
                               <CardContent className="pt-0">
-                                <div className="mt-3 pt-3 border-t border-border/30">
-                                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Repair Types</p>
+                                <div className="mt-3 pt-3 border-t border-violet-500/20">
+                                  <p className="text-xs text-violet-300/60 uppercase tracking-wider mb-2">Repair Types</p>
                                   <div className="flex flex-wrap gap-2">
                                     {tech.repairTypes.slice(0, 8).map(([type, data]) => (
-                                      <Badge key={type} variant="outline" className="text-xs border-cyan-500/30 text-cyan-300">
+                                      <Badge key={type} variant="outline" className="text-xs border-violet-400/30 text-violet-200 bg-violet-500/10">
                                         {type.length > 30 ? type.substring(0, 30) + '...' : type}
-                                        <span className="ml-1 text-muted-foreground">({data.count}x, {formatPrice(data.value)})</span>
+                                        <span className="ml-1 text-violet-300/60">({data.count}x, {formatPrice(data.value)})</span>
                                       </Badge>
                                     ))}
                                     {tech.repairTypes.length > 8 && (
