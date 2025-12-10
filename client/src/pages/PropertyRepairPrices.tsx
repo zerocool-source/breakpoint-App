@@ -1,0 +1,458 @@
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Building2, DollarSign, Wrench, Search, ChevronDown, ChevronRight, Loader2, TrendingUp, MapPin, Calendar, User, CheckCircle2, Clock, AlertCircle, ArrowUpDown, FileDown } from "lucide-react";
+import { PropertyRepairSummary } from "@shared/schema";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
+
+interface PropertyRepairsResponse {
+  properties: PropertyRepairSummary[];
+  summary: {
+    totalProperties: number;
+    totalRepairs: number;
+    totalSpend: number;
+    averageSpendPerProperty: number;
+    topSpender: { name: string; spend: number } | null;
+  };
+}
+
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
+}
+
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "N/A";
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+type SortField = "totalSpend" | "totalRepairs" | "propertyName" | "lastServiceDate";
+type SortDirection = "asc" | "desc";
+
+function exportPropertyRepairsPDF(properties: PropertyRepairSummary[], summary: PropertyRepairsResponse['summary']) {
+  const doc = new jsPDF();
+  const now = new Date();
+  
+  doc.setFontSize(20);
+  doc.setTextColor(0, 128, 128);
+  doc.text("Property Repair Prices Report", 14, 20);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
+  
+  doc.setFontSize(11);
+  doc.text(`Total Properties: ${summary.totalProperties}`, 14, 38);
+  doc.text(`Total Repairs: ${summary.totalRepairs}`, 14, 45);
+  doc.text(`Total Spend: ${formatPrice(summary.totalSpend)}`, 14, 52);
+  doc.text(`Avg per Property: ${formatPrice(summary.averageSpendPerProperty)}`, 14, 59);
+  
+  const tableData = properties.map(p => [
+    p.propertyName.substring(0, 25),
+    p.totalRepairs.toString(),
+    `${p.completedRepairs}/${p.pendingRepairs}`,
+    formatPrice(p.totalSpend),
+    formatPrice(p.averageRepairCost),
+    formatDate(p.lastServiceDate)
+  ]);
+
+  doc.autoTable({
+    startY: 68,
+    head: [['Property', 'Repairs', 'Done/Pending', 'Total Spend', 'Avg Cost', 'Last Service']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: { fillColor: [0, 128, 128], textColor: 255 },
+    styles: { fontSize: 8 }
+  });
+
+  doc.save(`property-repairs-report-${now.toISOString().split('T')[0]}.pdf`);
+}
+
+export default function PropertyRepairPrices() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<SortField>("totalSpend");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const { data, isLoading, error } = useQuery<PropertyRepairsResponse>({
+    queryKey: ["/api/properties/repairs"],
+    queryFn: async () => {
+      const res = await fetch("/api/properties/repairs");
+      if (!res.ok) throw new Error("Failed to fetch property repairs");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const toggleProperty = (propertyId: string) => {
+    setExpandedProperties(prev => {
+      const next = new Set(prev);
+      if (next.has(propertyId)) {
+        next.delete(propertyId);
+      } else {
+        next.add(propertyId);
+      }
+      return next;
+    });
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const filteredProperties = data?.properties.filter(p => 
+    p.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.poolNames.some(pool => pool.toLowerCase().includes(searchTerm.toLowerCase()))
+  ) || [];
+
+  const sortedProperties = [...filteredProperties].sort((a, b) => {
+    const mult = sortDirection === "asc" ? 1 : -1;
+    switch (sortField) {
+      case "totalSpend":
+        return (a.totalSpend - b.totalSpend) * mult;
+      case "totalRepairs":
+        return (a.totalRepairs - b.totalRepairs) * mult;
+      case "propertyName":
+        return a.propertyName.localeCompare(b.propertyName) * mult;
+      case "lastServiceDate":
+        if (!a.lastServiceDate && !b.lastServiceDate) return 0;
+        if (!a.lastServiceDate) return 1;
+        if (!b.lastServiceDate) return -1;
+        return (new Date(a.lastServiceDate).getTime() - new Date(b.lastServiceDate).getTime()) * mult;
+      default:
+        return 0;
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+          <p className="text-muted-foreground font-ui">Loading property repair data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Card className="bg-red-500/10 border-red-500/30">
+          <CardContent className="p-6 flex items-center gap-3">
+            <AlertCircle className="w-6 h-6 text-red-400" />
+            <p className="text-red-400">Failed to load property repair data</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const summary = data?.summary;
+
+  return (
+    <div className="h-full flex flex-col gap-6 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-cyan-400" data-testid="page-title">
+            Property Repair Prices
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Comprehensive repair spending by property
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => exportPropertyRepairsPDF(sortedProperties, summary!)}
+          className="gap-2 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
+          data-testid="btn-export-pdf"
+        >
+          <FileDown className="w-4 h-4" />
+          Export PDF
+        </Button>
+      </div>
+
+      {summary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-card/50 border-cyan-500/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-cyan-500/20">
+                  <Building2 className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Properties</p>
+                  <p className="text-2xl font-display font-bold text-cyan-400" data-testid="stat-total-properties">
+                    {summary.totalProperties}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/50 border-purple-500/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/20">
+                  <Wrench className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Repairs</p>
+                  <p className="text-2xl font-display font-bold text-purple-400" data-testid="stat-total-repairs">
+                    {summary.totalRepairs}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/50 border-green-500/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/20">
+                  <DollarSign className="w-5 h-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Spend</p>
+                  <p className="text-2xl font-display font-bold text-green-400" data-testid="stat-total-spend">
+                    {formatPrice(summary.totalSpend)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/50 border-orange-500/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-orange-500/20">
+                  <TrendingUp className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Avg per Property</p>
+                  <p className="text-2xl font-display font-bold text-orange-400" data-testid="stat-avg-spend">
+                    {formatPrice(summary.averageSpendPerProperty)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search properties, addresses, pools..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-background/50"
+            data-testid="input-search"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={sortField === "totalSpend" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleSort("totalSpend")}
+            className="gap-1"
+            data-testid="btn-sort-spend"
+          >
+            <DollarSign className="w-3 h-3" />
+            Spend
+            {sortField === "totalSpend" && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </Button>
+          <Button
+            variant={sortField === "totalRepairs" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleSort("totalRepairs")}
+            className="gap-1"
+            data-testid="btn-sort-repairs"
+          >
+            <Wrench className="w-3 h-3" />
+            Repairs
+            {sortField === "totalRepairs" && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </Button>
+          <Button
+            variant={sortField === "propertyName" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleSort("propertyName")}
+            className="gap-1"
+            data-testid="btn-sort-name"
+          >
+            <Building2 className="w-3 h-3" />
+            Name
+            {sortField === "propertyName" && (
+              <ArrowUpDown className="w-3 h-3" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="space-y-3 pr-4">
+          {sortedProperties.map((property, index) => (
+            <Collapsible
+              key={property.propertyId}
+              open={expandedProperties.has(property.propertyId)}
+              onOpenChange={() => toggleProperty(property.propertyId)}
+            >
+              <Card className="bg-card/50 border-border/50 hover:border-cyan-500/30 transition-colors">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 font-display font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg font-ui text-foreground flex items-center gap-2" data-testid={`property-name-${property.propertyId}`}>
+                            {property.propertyName}
+                            {property.poolNames.length > 0 && (
+                              <Badge variant="outline" className="text-xs text-blue-400 border-blue-500/30">
+                                {property.poolNames.length} {property.poolNames.length === 1 ? 'pool' : 'pools'}
+                              </Badge>
+                            )}
+                          </CardTitle>
+                          {property.address && (
+                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              {property.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-2xl font-display font-bold text-green-400" data-testid={`property-spend-${property.propertyId}`}>
+                            {formatPrice(property.totalSpend)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {property.totalRepairs} repairs · avg {formatPrice(property.averageRepairCost)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`${property.completedRepairs > 0 ? 'text-green-400 border-green-500/30' : 'text-muted-foreground'}`}
+                          >
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            {property.completedRepairs}
+                          </Badge>
+                          {property.pendingRepairs > 0 && (
+                            <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {property.pendingRepairs}
+                            </Badge>
+                          )}
+                        </div>
+                        {expandedProperties.has(property.propertyId) ? (
+                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 pb-4">
+                    <div className="border-t border-border/30 pt-4">
+                      {property.technicians.length > 0 && (
+                        <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                          <User className="w-4 h-4" />
+                          <span>Technicians: {property.technicians.join(", ")}</span>
+                        </div>
+                      )}
+                      {property.poolNames.length > 0 && (
+                        <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                          <Building2 className="w-4 h-4" />
+                          <span>Pools: {property.poolNames.join(", ")}</span>
+                        </div>
+                      )}
+                      <div className="space-y-2 mt-4">
+                        <h4 className="text-sm font-ui font-semibold text-cyan-400">Repair History</h4>
+                        <div className="grid gap-2">
+                          {property.repairs.slice(0, 10).map((repair, rIndex) => (
+                            <div 
+                              key={repair.jobId || rIndex}
+                              className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/30"
+                              data-testid={`repair-item-${repair.jobId}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {repair.isCompleted ? (
+                                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <Clock className="w-4 h-4 text-yellow-400" />
+                                )}
+                                <div>
+                                  <p className="font-ui text-sm">{repair.title}</p>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                    <Calendar className="w-3 h-3" />
+                                    {formatDate(repair.scheduledDate)}
+                                    {repair.technician && (
+                                      <>
+                                        <span>·</span>
+                                        <User className="w-3 h-3" />
+                                        {repair.technician}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="font-display font-semibold text-green-400">
+                                {formatPrice(repair.price)}
+                              </p>
+                            </div>
+                          ))}
+                          {property.repairs.length > 10 && (
+                            <p className="text-sm text-muted-foreground text-center py-2">
+                              + {property.repairs.length - 10} more repairs
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          ))}
+
+          {sortedProperties.length === 0 && (
+            <Card className="bg-card/50 border-border/50">
+              <CardContent className="p-8 text-center">
+                <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground">
+                  {searchTerm ? "No properties match your search" : "No property data available"}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}

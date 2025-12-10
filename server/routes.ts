@@ -1321,6 +1321,191 @@ function setupRoutes(app: any) {
     }
   });
 
+  // ==================== PROPERTY REPAIR PRICES ====================
+
+  // Get repair summaries aggregated by property
+  app.get("/api/properties/repairs", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({ apiKey, companyId: companyId || undefined });
+
+      // Get date range - last 90 days to next 30 days
+      const today = new Date();
+      const fromDate = new Date(today);
+      fromDate.setDate(fromDate.getDate() - 90);
+      const toDate = new Date(today);
+      toDate.setDate(toDate.getDate() + 30);
+      const formatDateStr = (d: Date) => d.toISOString().split('T')[0];
+
+      // Fetch jobs, customers, and technicians
+      const [jobsData, customersData, techniciansData] = await Promise.all([
+        client.getOneTimeJobListDetails({ fromDate: formatDateStr(fromDate), toDate: formatDateStr(toDate) }),
+        client.getCustomerDetail(),
+        client.getTechnicianDetail()
+      ]);
+
+      // Build lookup maps
+      const customerMap: Record<string, any> = {};
+      if (customersData.data && Array.isArray(customersData.data)) {
+        customersData.data.forEach((c: any) => {
+          const customerId = c.RecordID;
+          if (customerId) customerMap[customerId] = c;
+        });
+      }
+
+      const techMap: Record<string, string> = {};
+      if (techniciansData.data && Array.isArray(techniciansData.data)) {
+        techniciansData.data.forEach((t: any) => {
+          techMap[t.RecordID] = t.Name || `${t.FirstName || ''} ${t.LastName || ''}`.trim() || "Unknown";
+        });
+      }
+
+      // Aggregate by property (customer)
+      const propertyMap: Record<string, {
+        propertyId: string;
+        propertyName: string;
+        customerName: string;
+        address: string;
+        poolNames: Set<string>;
+        technicians: Set<string>;
+        repairs: any[];
+        totalSpend: number;
+        completedRepairs: number;
+        pendingRepairs: number;
+        lastServiceDate: string | null;
+      }> = {};
+
+      const jobs = jobsData.data || [];
+      jobs.forEach((job: any) => {
+        const customerId = job.CustomerId || job.CustomerID || job.customerId;
+        const customer = customerId ? customerMap[customerId] : null;
+        const propertyId = customerId || job.CustomerName || "unknown";
+        const customerName = customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer";
+        
+        // Get address
+        let address = "";
+        if (customer?.CustomerAddress && Array.isArray(customer.CustomerAddress) && customer.CustomerAddress.length > 0) {
+          const addr = customer.CustomerAddress[0];
+          const addrLine = addr.PrimaryStreet || addr.BillingStreet || '';
+          const city = addr.PrimaryCity || addr.BillingCity || '';
+          const state = addr.PrimaryState || addr.BillingState || '';
+          const zip = addr.PrimaryZip || addr.BillingZip || '';
+          address = `${addrLine}, ${city}, ${state} ${zip}`.trim().replace(/^,\s*/, '');
+        }
+
+        if (!propertyMap[propertyId]) {
+          propertyMap[propertyId] = {
+            propertyId: String(propertyId),
+            propertyName: customerName,
+            customerName: customerName,
+            address: address,
+            poolNames: new Set(),
+            technicians: new Set(),
+            repairs: [],
+            totalSpend: 0,
+            completedRepairs: 0,
+            pendingRepairs: 0,
+            lastServiceDate: null
+          };
+        }
+
+        const prop = propertyMap[propertyId];
+        
+        // Add pool name
+        const poolName = job.BodyOfWater || job.poolName || "";
+        if (poolName) prop.poolNames.add(poolName);
+
+        // Add technician
+        const techId = job.TechId || job.TechnicianId || job.technicianId;
+        const techName = techId ? techMap[techId] : (job.TechnicianName || job.technicianName || null);
+        if (techName && techName !== "Unassigned") prop.technicians.add(techName);
+
+        // Get price
+        let price = 0;
+        if (job.LineItems && Array.isArray(job.LineItems)) {
+          job.LineItems.forEach((item: any) => {
+            price += parseFloat(item.ItemTotal || item.Price || item.Total || 0) || 0;
+          });
+        }
+        if (!price) price = parseFloat(job.Total || job.Price || job.TotalPrice || 0) || 0;
+
+        const status = job.JobStatus || job.Status || "Pending";
+        const isCompleted = status === "Completed" || status === "Complete" || status === "Invoiced" || job.Completed === true;
+        const scheduledDate = job.JobDate || job.ScheduledDate || job.ServiceDate || job.CreatedDate || null;
+
+        prop.repairs.push({
+          jobId: job.RecordID || job.JobId,
+          title: job.Title || job.JobTitle || "Service Job",
+          price: price,
+          isCompleted: isCompleted,
+          scheduledDate: scheduledDate,
+          technician: techName
+        });
+
+        prop.totalSpend += price;
+        if (isCompleted) {
+          prop.completedRepairs++;
+        } else {
+          prop.pendingRepairs++;
+        }
+
+        // Track last service date
+        if (scheduledDate) {
+          if (!prop.lastServiceDate || new Date(scheduledDate) > new Date(prop.lastServiceDate)) {
+            prop.lastServiceDate = scheduledDate;
+          }
+        }
+      });
+
+      // Convert to array
+      const properties = Object.values(propertyMap).map(prop => ({
+        propertyId: prop.propertyId,
+        propertyName: prop.propertyName,
+        customerName: prop.customerName,
+        address: prop.address,
+        poolNames: Array.from(prop.poolNames),
+        totalRepairs: prop.repairs.length,
+        completedRepairs: prop.completedRepairs,
+        pendingRepairs: prop.pendingRepairs,
+        totalSpend: Math.round(prop.totalSpend * 100) / 100,
+        averageRepairCost: prop.repairs.length > 0 ? Math.round((prop.totalSpend / prop.repairs.length) * 100) / 100 : 0,
+        lastServiceDate: prop.lastServiceDate,
+        technicians: Array.from(prop.technicians),
+        repairs: prop.repairs.sort((a, b) => {
+          if (!a.scheduledDate) return 1;
+          if (!b.scheduledDate) return -1;
+          return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
+        })
+      })).sort((a, b) => b.totalSpend - a.totalSpend);
+
+      // Calculate totals
+      const totalSpend = properties.reduce((sum, p) => sum + p.totalSpend, 0);
+      const totalRepairs = properties.reduce((sum, p) => sum + p.totalRepairs, 0);
+      const topSpender = properties[0] || null;
+
+      res.json({
+        properties,
+        summary: {
+          totalProperties: properties.length,
+          totalRepairs,
+          totalSpend: Math.round(totalSpend * 100) / 100,
+          averageSpendPerProperty: properties.length > 0 ? Math.round((totalSpend / properties.length) * 100) / 100 : 0,
+          topSpender: topSpender ? { name: topSpender.propertyName, spend: topSpender.totalSpend } : null
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching property repairs:", error);
+      res.status(500).json({ error: "Failed to fetch property repairs" });
+    }
+  });
+
   // ==================== PAYROLL ====================
 
   // Get all pay periods

@@ -176,3 +176,27 @@ export type PayrollEntry = typeof payrollEntries.$inferSelect;
 
 export type InsertArchivedAlert = z.infer<typeof insertArchivedAlertSchema>;
 export type ArchivedAlert = typeof archivedAlerts.$inferSelect;
+
+// Property Repair Summary (computed, not stored)
+export interface PropertyRepairSummary {
+  propertyId: string;
+  propertyName: string;
+  customerName: string;
+  address: string;
+  poolNames: string[];
+  totalRepairs: number;
+  completedRepairs: number;
+  pendingRepairs: number;
+  totalSpend: number;
+  averageRepairCost: number;
+  lastServiceDate: string | null;
+  technicians: string[];
+  repairs: {
+    jobId: number;
+    title: string;
+    price: number;
+    isCompleted: boolean;
+    scheduledDate: string | null;
+    technician: string | null;
+  }[];
+}
