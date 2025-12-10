@@ -708,58 +708,58 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-white/80 border-slate-300 hover:border-primary/50 transition-colors shadow-sm" data-testid={`sr-tech-${techName}`}>
+      <Card className="bg-gradient-to-br from-[#0891b2]/15 to-[#0891b2]/5 border-[#067997]/40 hover:border-[#067997] transition-colors shadow-md" data-testid={`sr-tech-${techName}`}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer hover:bg-slate-50 transition-colors">
+          <CardHeader className="pb-3 cursor-pointer hover:bg-[#0891b2]/10 transition-colors">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-primary" />
+                  <ChevronDown className="w-5 h-5 text-white" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-slate-500" />
+                  <ChevronRight className="w-5 h-5 text-slate-300" />
                 )}
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-primary" />
+                <div className="w-10 h-10 rounded-full bg-[#0891b2] flex items-center justify-center shadow-lg">
+                  <Settings className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-ui text-lg text-slate-800">{techName}</p>
-                    <Badge className="bg-primary/20 text-primary border-primary/50">SR</Badge>
+                    <p className="font-ui text-lg font-bold text-white">{techName}</p>
+                    <Badge className="bg-[#0891b2] text-white border-[#067997]">SR</Badge>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     Service Repairs (&lt;$500) • {jobsByAccount.length} accounts
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-slate-100 text-slate-700 border-slate-300" data-testid={`sr-commission10-${techName}`}>
+                  <Badge className="bg-slate-800/50 text-white border-slate-600" data-testid={`sr-commission10-${techName}`}>
                     10%: {formatPrice(commission10)}
                   </Badge>
-                  <Badge className="bg-slate-100 text-slate-700 border-slate-300" data-testid={`sr-commission15-${techName}`}>
+                  <Badge className="bg-slate-800/50 text-white border-slate-600" data-testid={`sr-commission15-${techName}`}>
                     15%: {formatPrice(commission15)}
                   </Badge>
                 </div>
                 <div className="text-right">
-                  <p className="font-ui font-bold text-xl text-primary">
+                  <p className="font-ui font-bold text-2xl text-white">
                     {formatPrice(totalValue)}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-300">
                     {completedCount}/{jobs.length} complete ({completionPercent}%)
                   </p>
                 </div>
               </div>
             </CardTitle>
-            <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
+            <div className="w-full bg-slate-700/50 rounded-full h-3 mt-3">
               <div 
-                className="bg-primary h-2 rounded-full transition-all duration-300"
+                className="bg-[#0891b2] h-3 rounded-full transition-all duration-300 shadow-[0_0_8px_rgba(8,145,178,0.6)]"
                 style={{ width: `${completionPercent}%` }}
               />
             </div>
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-slate-200">
+          <CardContent className="pt-0 border-t border-[#067997]/30 bg-slate-900/20">
             <div className="space-y-3 pt-4">
               {jobsByAccount.map(([accountName, accountJobs]) => (
                 <SRAccountSubfolder key={accountName} accountName={accountName} jobs={accountJobs} />
@@ -791,59 +791,59 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-white/80 border-slate-300 hover:border-primary/50 transition-colors shadow-sm" data-testid={`repair-tech-${tech.name}`}>
+      <Card className="bg-gradient-to-br from-[#0891b2]/15 to-[#0891b2]/5 border-[#067997]/40 hover:border-[#067997] transition-colors shadow-md" data-testid={`repair-tech-${tech.name}`}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-2 cursor-pointer hover:bg-slate-50 transition-colors">
+          <CardHeader className="pb-2 cursor-pointer hover:bg-[#0891b2]/10 transition-colors">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-primary" />
+                  <ChevronDown className="w-5 h-5 text-white" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-slate-500" />
+                  <ChevronRight className="w-5 h-5 text-slate-300" />
                 )}
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <HardHat className="w-5 h-5 text-primary" />
+                <div className="w-10 h-10 rounded-full bg-[#0891b2] flex items-center justify-center shadow-lg">
+                  <HardHat className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
-                  <p className="font-ui text-lg text-slate-800">{tech.name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="font-ui text-lg font-bold text-white">{tech.name}</p>
+                  <p className="text-xs text-slate-300">
                     {tech.completedCount}/{tech.jobs.length} completed
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-slate-100 text-slate-700 border-slate-300 text-xs">
+                  <Badge className="bg-slate-800/50 text-white border-slate-600 text-xs">
                     10%: {formatPrice(tech.commission10)}
                   </Badge>
-                  <Badge className="bg-slate-100 text-slate-700 border-slate-300 text-xs">
+                  <Badge className="bg-slate-800/50 text-white border-slate-600 text-xs">
                     15%: {formatPrice(tech.commission15)}
                   </Badge>
                 </div>
                 <div className="text-right">
-                  <p className="font-ui font-bold text-2xl text-primary">{formatPrice(tech.totalValue)}</p>
+                  <p className="font-ui font-bold text-2xl text-white">{formatPrice(tech.totalValue)}</p>
                 </div>
               </div>
             </CardTitle>
-            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 mt-3">
+            <div className="bg-slate-800/40 rounded-lg p-3 border border-[#067997]/30 mt-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-500 uppercase tracking-wider">Monthly Quota Progress</span>
+                <span className="text-xs text-slate-300 uppercase tracking-wider">Monthly Quota Progress</span>
                 <span className="text-sm font-ui">
-                  <span className={tech.quotaPercent >= 100 ? "text-primary font-bold" : "text-slate-700"}>
+                  <span className={tech.quotaPercent >= 100 ? "text-[#0891b2] font-bold" : "text-white"}>
                     {formatPrice(tech.monthlyValue)}
                   </span>
-                  <span className="text-slate-500"> / {formatPrice(monthlyQuota)}</span>
+                  <span className="text-slate-400"> / {formatPrice(monthlyQuota)}</span>
                 </span>
               </div>
               <Progress 
                 value={tech.quotaPercent} 
-                className="h-2 bg-slate-200"
+                className="h-3 bg-slate-700/50"
               />
               <div className="flex justify-between mt-1">
-                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-primary' : 'text-slate-600'}`}>
+                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-[#0891b2]' : 'text-slate-300'}`}>
                   {tech.quotaPercent}%
                 </span>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-400">
                   {tech.quotaPercent >= 100 ? '✓ Quota Met!' : `${formatPrice(monthlyQuota - tech.monthlyValue)} to go`}
                 </span>
               </div>
@@ -851,9 +851,9 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-slate-200">
+          <CardContent className="pt-0 border-t border-[#067997]/30 bg-slate-900/20">
             <div className="mt-3 pt-3">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
+              <p className="text-xs text-slate-300 uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
               <div className="flex flex-wrap gap-1 mb-4">
                 {Array.from({ length: tech.daysInMonth }, (_, i) => i + 1).map(day => {
                   const value = tech.dailyValues[day] || 0;
@@ -864,10 +864,10 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
                       key={day}
                       className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
                         hasActivity 
-                          ? intensity > 0.7 ? 'bg-primary text-white' 
-                          : intensity > 0.3 ? 'bg-primary/60 text-white' 
-                          : 'bg-primary/30 text-slate-700'
-                          : 'bg-slate-100 text-slate-400'
+                          ? intensity > 0.7 ? 'bg-[#0891b2] text-white' 
+                          : intensity > 0.3 ? 'bg-[#0891b2]/60 text-white' 
+                          : 'bg-[#0891b2]/30 text-white'
+                          : 'bg-slate-700/50 text-slate-500'
                       }`}
                       title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}
                     >
@@ -876,21 +876,21 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
                   );
                 })}
               </div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Repair Types</p>
+              <p className="text-xs text-slate-300 uppercase tracking-wider mb-2">Repair Types</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {Object.entries(tech.repairTypes).slice(0, 6).map(([type, data]) => (
-                  <Badge key={type} variant="outline" className="text-xs border-slate-300 text-slate-700 bg-slate-50">
+                  <Badge key={type} className="text-xs bg-[#0891b2] text-white border-[#067997]">
                     {type.length > 25 ? type.substring(0, 25) + '...' : type}
-                    <span className="ml-1 text-slate-500">({data.count}x, {formatPrice(data.value)})</span>
+                    <span className="ml-1 text-white/80">({data.count}x, {formatPrice(data.value)})</span>
                   </Badge>
                 ))}
                 {Object.keys(tech.repairTypes).length > 6 && (
-                  <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
+                  <Badge className="text-xs bg-slate-700 text-white border-slate-600">
                     +{Object.keys(tech.repairTypes).length - 6} more
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Jobs ({tech.jobs.length})</p>
+              <p className="text-xs text-slate-300 uppercase tracking-wider mb-2">Jobs ({tech.jobs.length})</p>
               <div className="space-y-2">
                 {tech.jobs.map((job) => (
                   <ExpandableJobCard key={job.jobId} job={job} />
