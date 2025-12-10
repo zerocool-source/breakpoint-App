@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Bot, Send, Terminal, Cpu, Network, Database, Sparkles } from "lucide-react";
+import { Bot, Send, Terminal, Cpu, Network, Database, Sparkles, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -68,6 +69,12 @@ export default function Intelligence() {
     <AppLayout>
       <div className="mb-8 flex items-center justify-between">
         <div>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
           <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight flex items-center gap-3">
             <SparkleIcon className="text-secondary w-8 h-8" />
             ACE PRIME

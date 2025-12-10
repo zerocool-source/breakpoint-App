@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Building2, DollarSign, Wrench, Search, ChevronDown, ChevronRight, ChevronLeft, Loader2, TrendingUp, MapPin, Calendar, User, CheckCircle2, Clock, AlertCircle, ArrowUpDown, FileDown, BarChart3 } from "lucide-react";
+import { Building2, DollarSign, Wrench, Search, ChevronDown, ChevronRight, ChevronLeft, Loader2, TrendingUp, MapPin, Calendar, User, CheckCircle2, Clock, AlertCircle, ArrowUpDown, FileDown, BarChart3, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { PropertyRepairSummary } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
@@ -265,6 +266,12 @@ export default function PropertyRepairPrices() {
     <div className="h-full flex flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <div>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
           <h1 className="text-3xl font-display font-bold text-cyan-400" data-testid="page-title">
             Property Repair Prices
           </h1>

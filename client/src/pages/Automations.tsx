@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mail, Zap, Plus, ArrowRight, CheckCircle2, AlertTriangle, Droplet, Copy, Loader2, Send } from "lucide-react";
+import { Mail, Zap, Plus, ArrowRight, CheckCircle2, AlertTriangle, Droplet, Copy, Loader2, Send, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -130,6 +131,12 @@ export default function Automations() {
     <AppLayout>
       <div className="mb-8 flex items-center justify-between">
         <div>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
           <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight flex items-center gap-3">
             <Zap className="text-primary w-8 h-8" />
             AUTOMATION FLOWS

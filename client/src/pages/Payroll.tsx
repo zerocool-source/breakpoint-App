@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, DollarSign, Users, Briefcase, Clock, Plus, Trash2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, DollarSign, Users, Briefcase, Clock, Plus, Trash2, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isFriday, addDays, isBefore, isAfter, isWithinInterval } from "date-fns";
 
 interface PayPeriod {
@@ -260,6 +261,12 @@ export default function Payroll() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Dashboard
+              </Button>
+            </Link>
             <h1 className="text-3xl font-display font-bold tracking-tight text-foreground" data-testid="page-title">
               Payroll Calendar
             </h1>

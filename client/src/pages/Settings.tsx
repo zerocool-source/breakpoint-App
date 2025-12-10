@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Database, Key, Lock, Server, Cpu, AlertCircle } from "lucide-react";
+import { CheckCircle2, Database, Key, Lock, Server, Cpu, AlertCircle, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -83,6 +84,12 @@ export default function Settings() {
   return (
     <AppLayout>
       <div className="mb-8">
+        <Link href="/">
+          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
+        </Link>
         <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight flex items-center gap-3">
           <Server className="text-primary w-8 h-8" />
           SYSTEM CONFIGURATION

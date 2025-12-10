@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Droplets, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Droplets, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -158,6 +159,12 @@ export default function Chemicals() {
     <AppLayout>
       <div className="mb-8 flex items-center justify-between">
         <div>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </Button>
+          </Link>
           <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight flex items-center gap-3">
             <Droplets className="w-8 h-8 text-primary" />
             CHEMICALS CENTER
