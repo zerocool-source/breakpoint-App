@@ -1,0 +1,62 @@
+// index.js (Node.js script to create a repair job from the latest "repair needed" issue)
+const fetch = require('node-fetch');  // Ensure this package is installed
+
+// Load API key from environment variable (or replace with a string for testing)
+const API_KEY = process.env.POOLBRAIN_API_KEY || "<YOUR_API_KEY_HERE>";
+
+// Basic start log
+console.log("Starting Pool Brain repair job creation script...");
+
+(async () => {
+  try {
+    // 1. Fetch the most recent issue flagged as "repair needed" and not yet processed
+    const issuesUrl = "https://api.poolbrain.com/v1/issues?category=repair needed&processed=false&sort=createdAt:desc&limit=1";
+    const issuesResponse = await fetch(issuesUrl, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${API_KEY}` }
+    });
+    if (!issuesResponse.ok) {
+      throw new Error(`Failed to fetch issues: ${issuesResponse.status} ${issuesResponse.statusText}`);
+    }
+    const issuesData = await issuesResponse.json();
+
+    // Determine the latest issue (simulate if none returned)
+    let latestIssue = null;
+    if (issuesData && issuesData.length > 0) {
+      latestIssue = issuesData[0];
+    } else {
+      console.log("No unprocessed 'repair needed' issues found. Exiting.");
+      return;  // Exit if no relevant issue is found
+      // **For testing without a real API**, you could simulate an issue:
+      // latestIssue = { id: 123, customerId: 456, category: "repair needed", notes: "Pump is leaking", processed: false };
+      // console.log("Simulating issue:", latestIssue);
+    }
+
+    console.log(`Found issue ${latestIssue.id} (category: '${latestIssue.category}') for customer ${latestIssue.customerId}.`);
+
+    // 2. Create a new repair job for the customer associated with the issue
+    const jobPayload = {
+      customerId: latestIssue.customerId,
+      title: `Repair for Issue ${latestIssue.id}`,
+      notes: latestIssue.notes || "Auto-created repair job from issue report"
+    };
+
+    const jobResponse = await fetch("https://api.poolbrain.com/v1/jobs", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(jobPayload)
+    });
+    if (!jobResponse.ok) {
+      throw new Error(`Failed to create job: ${jobResponse.status} ${jobResponse.statusText}`);
+    }
+    const jobData = await jobResponse.json();
+
+    console.log(`✅ Success! Created repair job (ID: ${jobData.id}) for customer ${jobData.customerId}.`);
+    // The script can end here. (In a real implementation, you might update the issue status to processed.)
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+  } 
+})();
