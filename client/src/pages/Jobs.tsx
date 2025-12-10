@@ -376,7 +376,7 @@ function ExpandableJobCard({ job }: { job: Job }) {
                 </div>
               </div>
             )}
-            {archive && job.isCompleted && (
+            {archive && (
               <div className="mt-4 pt-4 border-t border-slate-600/50 flex justify-end gap-2">
                 {archive.showArchived ? (
                   <>
