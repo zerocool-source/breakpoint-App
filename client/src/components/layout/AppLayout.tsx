@@ -1,6 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
-import bgVideo from "@assets/Lets_just_give_202512071620_1765153241061.mp4";
+import bgImage from "@assets/ChatGPT_Image_Dec_9,_2025,_08_23_44_PM_1765340637298.png";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -11,17 +11,12 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background text-foreground flex font-sans selection:bg-primary selection:text-background">
       <Sidebar />
       <div className="flex-1 ml-64 flex flex-col min-h-screen relative overflow-hidden">
-        {/* Background Video & Overlay */}
-        <video
-          className="absolute inset-0 z-0 w-full h-full object-cover pointer-events-none opacity-60"
-          autoPlay
-          loop
-          muted
-          playsInline
-        >
-          <source src={bgVideo} type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 z-0 bg-background/60 backdrop-blur-[2px] pointer-events-none" />
+        {/* Background Image & Overlay */}
+        <div 
+          className="absolute inset-0 z-0 w-full h-full bg-cover bg-center bg-no-repeat pointer-events-none opacity-70"
+          style={{ backgroundImage: `url(${bgImage})` }}
+        />
+        <div className="absolute inset-0 z-0 bg-background/40 pointer-events-none" />
         
         <Header />
         <main className="flex-1 p-8 relative z-10 overflow-y-auto scrollbar-hide">
