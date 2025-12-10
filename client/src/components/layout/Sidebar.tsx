@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_07_48_50_PM_1765338556188.png";
-import SidebarBg from "@assets/ChatGPT_Image_Dec_9,_2025,_08_19_22_PM_1765340386100.png";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -21,7 +20,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-screen border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50 relative overflow-hidden" style={{ backgroundImage: `url(${SidebarBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50 backdrop-blur-xl bg-opacity-80">
       <div className="p-4">
         <div className="relative">
           <img 
