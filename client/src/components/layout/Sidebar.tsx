@@ -38,13 +38,13 @@ export function Sidebar() {
             <Link key={item.href} href={item.href} className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden",
                 isActive 
-                  ? "text-white bg-primary/10 border border-primary/20 shadow-[0_0_15px_rgba(0,255,255,0.1)]" 
+                  ? "text-white bg-[#0891b2]/20 border border-[#0891b2]/30 shadow-[0_0_15px_rgba(8,145,178,0.15)]" 
                   : "text-muted-foreground hover:text-white hover:bg-white/5"
               )}>
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_10px_cyan]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#0891b2]" />
                 )}
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary drop-shadow-[0_0_5px_cyan]" : "group-hover:text-white")} />
+                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-[#f5a962]" : "text-[#f5a962]/80 group-hover:text-[#f5a962]")} />
                 <span className="font-ui tracking-wide">{item.label}</span>
             </Link>
           );
@@ -53,9 +53,9 @@ export function Sidebar() {
       <div className="p-4 border-t border-sidebar-border">
         <Link href="/settings" className={cn(
             "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-muted-foreground hover:text-white hover:bg-white/5 transition-colors",
-            location === "/settings" && "text-white bg-white/5"
+            location === "/settings" && "text-white bg-[#0891b2]/20 border border-[#0891b2]/30"
         )}>
-          <Settings className="w-5 h-5" />
+          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-[#f5a962]" : "text-[#f5a962]/80")} />
           <span className="font-ui">Settings</span>
         </Link>
       </div>
