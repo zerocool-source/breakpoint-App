@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown, ArrowLeft, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -907,7 +907,7 @@ export default function Jobs() {
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
 
-  const { data, isLoading, error, refetch } = useQuery<JobsData>({
+  const { data, isLoading, error, refetch, isFetching } = useQuery<JobsData>({
     queryKey: ["/api/jobs"],
     queryFn: async () => {
       const response = await fetch("/api/jobs");
@@ -917,6 +917,7 @@ export default function Jobs() {
       return response.json();
     },
     refetchInterval: 60000,
+    staleTime: 0,
   });
 
   const { data: archivedData = { archivedIds: [] } } = useQuery({
@@ -1158,11 +1159,25 @@ export default function Jobs() {
               Export Excel
             </Button>
             <button
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg font-ui text-sm transition-colors"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+                refetch();
+              }}
+              disabled={isFetching}
+              className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white border border-sky-400 rounded-lg font-ui text-sm transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               data-testid="refresh-jobs-btn"
             >
-              Refresh
+              {isFetching ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Sync with Pool Brain
+                </>
+              )}
             </button>
           </div>
         </div>
