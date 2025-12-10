@@ -1518,7 +1518,7 @@ export default function Jobs() {
 
                   {!selectedRepairTech && repairTechData.topEarner && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-400/50 shadow-lg">
+                      <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-amber-400/50 shadow-lg">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-2">
                             <Trophy className="w-8 h-8 text-amber-400" />
@@ -1529,7 +1529,7 @@ export default function Jobs() {
                           </div>
                           <div className="flex gap-4 text-sm">
                             <span className="text-amber-300 font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
-                            <span className="text-slate-400">{repairTechData.topEarner.jobs.length} jobs</span>
+                            <span className="text-slate-300">{repairTechData.topEarner.jobs.length} jobs</span>
                           </div>
                         </CardContent>
                       </Card>
