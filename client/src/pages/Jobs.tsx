@@ -1359,45 +1359,45 @@ export default function Jobs() {
 
                   return (
                     <div className="space-y-4">
-                      <div className="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                      <div className="p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-sky-400/40 rounded-lg shadow-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <BarChart3 className="w-5 h-5 text-cyan-400" />
-                          <h3 className="font-ui font-semibold text-cyan-400">Service Tech Performance Stats</h3>
+                          <BarChart3 className="w-5 h-5 text-sky-400" />
+                          <h3 className="font-ui font-semibold text-white">Service Tech Performance Stats</h3>
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-slate-300">
                           Who does the most SR repairs, what they're working on, and who's making the most money.
                         </p>
                       </div>
 
                       {topEarner && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/50">
+                          <Card className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-400/50 shadow-lg">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
-                                <Trophy className="w-8 h-8 text-secondary" />
+                                <Trophy className="w-8 h-8 text-amber-400" />
                                 <div>
-                                  <p className="text-xs text-secondary uppercase tracking-wider">Top Earner</p>
-                                  <p className="text-xl font-ui font-bold text-foreground">{topEarner.name}</p>
+                                  <p className="text-xs text-amber-400 uppercase tracking-wider font-semibold">Top Earner</p>
+                                  <p className="text-xl font-ui font-bold text-white">{topEarner.name}</p>
                                 </div>
                               </div>
                               <div className="flex gap-4 text-sm">
-                                <span className="text-secondary font-semibold">{formatPrice(topEarner.totalValue)}</span>
-                                <span className="text-muted-foreground">{topEarner.jobCount} jobs</span>
+                                <span className="text-amber-300 font-semibold">{formatPrice(topEarner.totalValue)}</span>
+                                <span className="text-slate-400">{topEarner.jobCount} jobs</span>
                               </div>
                             </CardContent>
                           </Card>
-                          <Card className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border-cyan-500/50">
+                          <Card className="bg-gradient-to-br from-sky-500/20 to-sky-600/10 border-sky-400/50 shadow-lg">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
-                                <Wrench className="w-8 h-8 text-cyan-400" />
+                                <Wrench className="w-8 h-8 text-sky-400" />
                                 <div>
-                                  <p className="text-xs text-cyan-400 uppercase tracking-wider">Most Repairs</p>
-                                  <p className="text-xl font-ui font-bold text-foreground">{mostJobs?.name}</p>
+                                  <p className="text-xs text-sky-400 uppercase tracking-wider font-semibold">Most Repairs</p>
+                                  <p className="text-xl font-ui font-bold text-white">{mostJobs?.name}</p>
                                 </div>
                               </div>
                               <div className="flex gap-4 text-sm">
-                                <span className="text-cyan-400 font-semibold">{mostJobs?.jobCount} jobs</span>
-                                <span className="text-muted-foreground">{formatPrice(mostJobs?.totalValue || 0)}</span>
+                                <span className="text-sky-300 font-semibold">{mostJobs?.jobCount} jobs</span>
+                                <span className="text-slate-400">{formatPrice(mostJobs?.totalValue || 0)}</span>
                               </div>
                             </CardContent>
                           </Card>

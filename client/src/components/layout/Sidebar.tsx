@@ -2,7 +2,7 @@ import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Z
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
-import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_07_48_50_PM_1765338556188.png";
+
 
 interface NavItem {
   icon: any;
@@ -30,15 +30,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-50 shadow-sm">
-      <div className="p-5 border-b border-slate-200 bg-slate-50">
-        <div className="relative">
-          <img 
-            src={BreakpointLogo} 
-            alt="Breakpoint Logo" 
-            className="w-full h-auto object-contain"
-          />
-          <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-[#0891b2] text-white border border-[#067997] rounded-full uppercase tracking-wider shadow-sm">Beta</span>
-        </div>
+      <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-end">
+        <span className="px-2 py-0.5 text-[10px] font-bold bg-[#0891b2] text-white border border-[#067997] rounded-full uppercase tracking-wider shadow-sm">Beta</span>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1 bg-white">
         {navItems.map((item) => {
