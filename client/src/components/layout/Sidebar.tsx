@@ -18,7 +18,7 @@ export function Sidebar() {
   const [location] = useLocation();
 
   const navItems: NavItem[] = [
-    { icon: LayoutDashboard, label: "Overview", href: "/" },
+    { icon: LayoutDashboard, label: "Overview", href: "/", badge: "Alpha", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
     { icon: Wrench, label: "Repairs", href: "/repairs", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: Droplets, label: "Chemicals", href: "/chemicals", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: CalendarClock, label: "Jobs", href: "/jobs" },
