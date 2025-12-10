@@ -28,9 +28,7 @@ export function Sidebar() {
             alt="Breakpoint Logo" 
             className="w-full h-auto object-contain"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" 
-               style={{ backgroundSize: '200% 100%' }} />
-          <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded uppercase tracking-wider animate-pulse">Beta</span>
+          <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded uppercase tracking-wider">Beta</span>
         </div>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
