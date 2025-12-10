@@ -409,4 +409,55 @@ export class PoolBrainClient {
 
     return response.json();
   }
+
+  /**
+   * Create a new one-time job in Pool Brain
+   * Endpoint: POST /v2/one_time_job_create
+   */
+  async createOneTimeJob(params: {
+    customerId: number;
+    poolId?: number;
+    technicianId?: number;
+    title: string;
+    description?: string;
+    scheduledDate?: string;
+    estimatedDuration?: number;
+    priority?: string;
+  }) {
+    const url = new URL(`${this.baseUrl}/v2/one_time_job_create`);
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const body: Record<string, any> = {
+      CustomerID: params.customerId,
+      Title: params.title,
+    };
+
+    if (params.poolId) body.PoolID = params.poolId;
+    if (params.technicianId) body.TechnicianID = params.technicianId;
+    if (params.description) body.Description = params.description;
+    if (params.scheduledDate) body.ScheduledDate = params.scheduledDate;
+    if (params.estimatedDuration) body.EstimatedDuration = params.estimatedDuration;
+    if (params.priority) body.Priority = params.priority;
+
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return response.json();
+  }
 }

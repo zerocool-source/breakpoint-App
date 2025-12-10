@@ -6,7 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown, ArrowLeft, RefreshCw } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown, ArrowLeft, RefreshCw, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -1002,6 +1007,53 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
 export default function Jobs() {
   const queryClient = useQueryClient();
   const [showArchived, setShowArchived] = useState(false);
+  const [createJobOpen, setCreateJobOpen] = useState(false);
+  const [newJob, setNewJob] = useState({
+    customerId: "",
+    technicianId: "",
+    title: "",
+    description: "",
+    scheduledDate: "",
+    priority: "Normal"
+  });
+
+  const { data: customersData } = useQuery({
+    queryKey: ["/api/customers"],
+    queryFn: async () => {
+      const res = await fetch("/api/customers");
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      return res.json();
+    },
+  });
+
+  const { data: techniciansData } = useQuery({
+    queryKey: ["/api/technicians"],
+    queryFn: async () => {
+      const res = await fetch("/api/technicians");
+      if (!res.ok) throw new Error("Failed to fetch technicians");
+      return res.json();
+    },
+  });
+
+  const createJobMutation = useMutation({
+    mutationFn: async (jobData: typeof newJob) => {
+      const res = await fetch("/api/jobs/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jobData),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create job");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setCreateJobOpen(false);
+      setNewJob({ customerId: "", technicianId: "", title: "", description: "", scheduledDate: "", priority: "Normal" });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    },
+  });
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<JobsData>({
     queryKey: ["/api/jobs"],
@@ -1244,6 +1296,135 @@ export default function Jobs() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Dialog open={createJobOpen} onOpenChange={setCreateJobOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 shadow-md"
+                  data-testid="btn-create-job"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Job
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-slate-900 border-sky-400/40 text-white max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-display text-sky-400">Create New Job in Pool Brain</DialogTitle>
+                  <DialogDescription className="text-slate-400">
+                    Fill in the details below to create a new repair or service job.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customer" className="text-slate-300">Customer *</Label>
+                    <Select value={newJob.customerId} onValueChange={(v) => setNewJob(prev => ({ ...prev, customerId: v }))}>
+                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white" data-testid="select-customer">
+                        <SelectValue placeholder="Select a customer..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-600">
+                        {(customersData?.customers || []).map((c: any) => (
+                          <SelectItem key={c.id} value={String(c.id)} className="text-white hover:bg-slate-700">
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-slate-300">Job Title *</Label>
+                    <Input
+                      id="title"
+                      value={newJob.title}
+                      onChange={(e) => setNewJob(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="e.g. SR Pump Repair"
+                      className="bg-slate-800 border-slate-600 text-white"
+                      data-testid="input-job-title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-slate-300">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={newJob.description}
+                      onChange={(e) => setNewJob(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe the work to be done..."
+                      className="bg-slate-800 border-slate-600 text-white min-h-[80px]"
+                      data-testid="input-job-description"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="technician" className="text-slate-300">Assign Technician</Label>
+                      <Select value={newJob.technicianId} onValueChange={(v) => setNewJob(prev => ({ ...prev, technicianId: v }))}>
+                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white" data-testid="select-technician">
+                          <SelectValue placeholder="Optional..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          {(techniciansData?.technicians || []).map((t: any) => (
+                            <SelectItem key={t.id} value={String(t.id)} className="text-white hover:bg-slate-700">
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="priority" className="text-slate-300">Priority</Label>
+                      <Select value={newJob.priority} onValueChange={(v) => setNewJob(prev => ({ ...prev, priority: v }))}>
+                        <SelectTrigger className="bg-slate-800 border-slate-600 text-white" data-testid="select-priority">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          <SelectItem value="Low" className="text-white hover:bg-slate-700">Low</SelectItem>
+                          <SelectItem value="Normal" className="text-white hover:bg-slate-700">Normal</SelectItem>
+                          <SelectItem value="High" className="text-white hover:bg-slate-700">High</SelectItem>
+                          <SelectItem value="Urgent" className="text-white hover:bg-slate-700">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="scheduledDate" className="text-slate-300">Scheduled Date</Label>
+                    <Input
+                      id="scheduledDate"
+                      type="date"
+                      value={newJob.scheduledDate}
+                      onChange={(e) => setNewJob(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                      className="bg-slate-800 border-slate-600 text-white"
+                      data-testid="input-scheduled-date"
+                    />
+                  </div>
+                  {createJobMutation.error && (
+                    <div className="p-3 bg-red-500/20 border border-red-500/40 rounded text-red-300 text-sm">
+                      {(createJobMutation.error as Error).message}
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreateJobOpen(false)}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => createJobMutation.mutate(newJob)}
+                    disabled={!newJob.customerId || !newJob.title || createJobMutation.isPending}
+                    className="bg-sky-500 hover:bg-sky-400 text-white"
+                    data-testid="btn-submit-job"
+                  >
+                    {createJobMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Job"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button
               variant="outline"
               onClick={() => data && exportJobsExcel(data.jobs, data.technicians, data.summary)}

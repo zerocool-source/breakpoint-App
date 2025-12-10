@@ -1040,6 +1040,113 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Create a new job in Pool Brain
+  app.post("/api/jobs/create", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const { customerId, poolId, technicianId, title, description, scheduledDate, priority } = req.body;
+
+      if (!customerId || !title) {
+        return res.status(400).json({ error: "Customer ID and title are required" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const result = await client.createOneTimeJob({
+        customerId: parseInt(customerId),
+        poolId: poolId ? parseInt(poolId) : undefined,
+        technicianId: technicianId ? parseInt(technicianId) : undefined,
+        title,
+        description,
+        scheduledDate,
+        priority,
+      });
+
+      res.json({
+        success: true,
+        message: "Job created successfully in Pool Brain",
+        job: result,
+      });
+    } catch (error: any) {
+      console.error("Error creating job in Pool Brain:", error);
+      res.status(500).json({
+        error: "Failed to create job in Pool Brain",
+        message: error.message,
+      });
+    }
+  });
+
+  // Get customers list for job creation dropdown
+  app.get("/api/customers", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const customersData = await client.getCustomerDetail({ limit: 1000 });
+      
+      const customers = (customersData.data || []).map((c: any) => ({
+        id: c.RecordID,
+        name: c.CustomerName || c.CompanyName || "Unknown",
+        address: c.Address || "",
+      }));
+
+      res.json({ customers });
+    } catch (error: any) {
+      console.error("Error fetching customers:", error);
+      res.status(500).json({ error: "Failed to fetch customers", message: error.message });
+    }
+  });
+
+  // Get technicians list for job creation dropdown
+  app.get("/api/technicians", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const techsData = await client.getTechnicianDetail({ limit: 500 });
+      
+      const technicians = (techsData.data || []).map((t: any) => ({
+        id: t.RecordID,
+        name: t.Name || `${t.FirstName || ''} ${t.LastName || ''}`.trim() || "Unknown",
+      }));
+
+      res.json({ technicians });
+    } catch (error: any) {
+      console.error("Error fetching technicians:", error);
+      res.status(500).json({ error: "Failed to fetch technicians", message: error.message });
+    }
+  });
+
   // ==================== CHAT ====================
 
   app.get("/api/chat/history", async (req: any, res: any) => {
