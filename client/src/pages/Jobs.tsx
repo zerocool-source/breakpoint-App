@@ -478,72 +478,90 @@ function AccountCard({ account }: { account: Account }) {
 }
 
 function TechnicianCard({ tech }: { tech: Technician }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const completionPercent = tech.totalJobs > 0 
     ? Math.round((tech.completedJobs / tech.totalJobs) * 100) 
     : 0;
 
   return (
-    <Card className={`bg-card/50 border-border/50 hover:border-primary/30 transition-colors ${tech.totalJobs === 0 ? 'opacity-60' : ''}`} data-testid={`tech-card-${tech.techId}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              tech.totalJobs > 0 ? 'bg-purple-500/20' : 'bg-muted/20'
-            }`}>
-              <User className={`w-5 h-5 ${tech.totalJobs > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
-            </div>
-            <div>
-              <p className="font-ui text-lg text-foreground" data-testid={`tech-name-${tech.techId}`}>
-                {tech.name}
-              </p>
-              {(tech.phone || tech.email) && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {tech.phone || tech.email}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="font-ui font-bold text-xl text-primary" data-testid={`tech-value-${tech.techId}`}>
-              {formatPrice(tech.totalValue)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {tech.totalJobs} jobs ({completionPercent}% done)
-            </p>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {tech.totalJobs > 0 && (
-          <>
-            <div className="flex gap-2 mb-3">
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`tech-commission10-${tech.techId}`}>
-                10%: {formatPrice(tech.commission10 || 0)}
-              </Badge>
-              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`tech-commission15-${tech.techId}`}>
-                15%: {formatPrice(tech.commission15 || 0)}
-              </Badge>
-            </div>
-            <div className="w-full bg-background/30 rounded-full h-2 mb-4">
-              <div 
-                className="bg-purple-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${completionPercent}%` }}
-              />
-            </div>
-            <div className="space-y-2">
-              {tech.jobs.map((job) => (
-                <ExpandableJobCard key={job.jobId} job={job} />
-              ))}
-            </div>
-          </>
-        )}
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Card className={`bg-card/50 border-border/50 hover:border-primary/30 transition-colors ${tech.totalJobs === 0 ? 'opacity-60' : ''}`} data-testid={`tech-card-${tech.techId}`}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {tech.totalJobs > 0 ? (
+                  isExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-purple-400" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  )
+                ) : null}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  tech.totalJobs > 0 ? 'bg-purple-500/20' : 'bg-muted/20'
+                }`}>
+                  <User className={`w-5 h-5 ${tech.totalJobs > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
+                </div>
+                <div>
+                  <p className="font-ui text-lg text-foreground" data-testid={`tech-name-${tech.techId}`}>
+                    {tech.name}
+                  </p>
+                  {(tech.phone || tech.email) && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {tech.phone || tech.email}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`tech-commission10-${tech.techId}`}>
+                    10%: {formatPrice(tech.commission10 || 0)}
+                  </Badge>
+                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`tech-commission15-${tech.techId}`}>
+                    15%: {formatPrice(tech.commission15 || 0)}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="font-ui font-bold text-xl text-primary" data-testid={`tech-value-${tech.techId}`}>
+                    {formatPrice(tech.totalValue)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tech.totalJobs} jobs ({completionPercent}% done)
+                  </p>
+                </div>
+              </div>
+            </CardTitle>
+            {tech.totalJobs > 0 && (
+              <div className="w-full bg-background/30 rounded-full h-2 mt-3">
+                <div 
+                  className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+            )}
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            {tech.totalJobs > 0 && (
+              <div className="space-y-2 border-t border-border/30 pt-4">
+                {tech.jobs.map((job) => (
+                  <ExpandableJobCard key={job.jobId} job={job} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </CollapsibleContent>
         {tech.totalJobs === 0 && (
-          <p className="text-center text-muted-foreground/60 py-4 text-sm">
-            No jobs assigned
-          </p>
+          <CardContent className="pt-0">
+            <p className="text-center text-muted-foreground/60 py-4 text-sm">
+              No jobs assigned
+            </p>
+          </CardContent>
         )}
-      </CardContent>
-    </Card>
+      </Card>
+    </Collapsible>
   );
 }
 
