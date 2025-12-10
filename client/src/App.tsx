@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { IntroVideo } from "@/components/IntroVideo";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import Dashboard from "@/pages/Dashboard";
 import Intelligence from "@/pages/Intelligence";
@@ -35,10 +36,14 @@ function Router() {
   );
 }
 
-type AppStage = "loading" | "ready";
+type AppStage = "intro" | "loading" | "ready";
 
 function App() {
-  const [stage, setStage] = useState<AppStage>("loading");
+  const [stage, setStage] = useState<AppStage>("intro");
+
+  if (stage === "intro") {
+    return <IntroVideo onComplete={() => setStage("loading")} />;
+  }
 
   if (stage === "loading") {
     return <LoadingScreen onLoadingComplete={() => setStage("ready")} />;
