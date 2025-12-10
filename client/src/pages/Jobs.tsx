@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle } from "lucide-react";
 
 interface Job {
   jobId: string;
@@ -96,10 +96,19 @@ function PriceDisplay({ price, productName, testId }: { price: number; productNa
 
 function ExpandableJobCard({ job }: { job: Job }) {
   const [isOpen, setIsOpen] = useState(false);
+  
+  const isPastDue = (() => {
+    if (job.isCompleted || !job.scheduledDate) return false;
+    const scheduled = new Date(job.scheduledDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    scheduled.setHours(0, 0, 0, 0);
+    return scheduled < today;
+  })();
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="bg-card/50 border-border/50 hover:border-primary/30 transition-colors" data-testid={`job-card-${job.jobId}`}>
+      <Card className={`bg-card/50 hover:border-primary/30 transition-colors ${isPastDue ? 'border-red-500/50' : 'border-border/50'}`} data-testid={`job-card-${job.jobId}`}>
         <CollapsibleTrigger className="w-full">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -110,10 +119,12 @@ function ExpandableJobCard({ job }: { job: Job }) {
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                  job.isCompleted ? 'bg-green-500/20' : 'bg-yellow-500/20'
+                  job.isCompleted ? 'bg-green-500/20' : isPastDue ? 'bg-red-500/20' : 'bg-yellow-500/20'
                 }`}>
                   {job.isCompleted ? (
                     <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  ) : isPastDue ? (
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
                   ) : (
                     <Clock className="w-4 h-4 text-yellow-400" />
                   )}
@@ -125,11 +136,21 @@ function ExpandableJobCard({ job }: { job: Job }) {
                   <p className="text-sm text-muted-foreground">
                     {job.customerName} • {job.technicianName}
                   </p>
+                  {isPastDue && (
+                    <p className="text-xs text-red-400 font-semibold animate-pulse mt-1">
+                      ⚠ Did not do repair - needs rescheduling
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-4">
+                {isPastDue && (
+                  <Badge className="bg-red-500/20 text-red-400 border-red-500/50 animate-pulse">
+                    Past Due
+                  </Badge>
+                )}
                 <Badge variant="outline" className={
-                  job.isCompleted ? "border-green-500/50 text-green-400" : "border-yellow-500/50 text-yellow-400"
+                  job.isCompleted ? "border-green-500/50 text-green-400" : isPastDue ? "border-red-500/50 text-red-400" : "border-yellow-500/50 text-yellow-400"
                 }>
                   {job.status}
                 </Badge>
