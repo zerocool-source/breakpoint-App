@@ -68,7 +68,7 @@ function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
   const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   
   doc.setFontSize(20);
-  doc.setTextColor(128, 0, 128);
+  doc.setTextColor(8, 145, 178);
   doc.text("Repair Technician Performance Report", 14, 20);
   
   doc.setFontSize(12);
@@ -91,7 +91,7 @@ function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
     head: [['Technician', 'Jobs', 'Total Value', 'This Month', 'Quota %', '10% Comm', '15% Comm']],
     body: tableData,
     theme: 'striped',
-    headStyles: { fillColor: [128, 0, 128], textColor: 255 },
+    headStyles: { fillColor: [8, 145, 178], textColor: 255 },
     styles: { fontSize: 9 }
   });
 
@@ -104,7 +104,7 @@ function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
     }
     
     doc.setFontSize(14);
-    doc.setTextColor(128, 0, 128);
+    doc.setTextColor(8, 145, 178);
     doc.text(tech.name, 14, yPos);
     yPos += 8;
     
@@ -218,10 +218,10 @@ function formatPrice(price: number): string {
 function PriceDisplay({ price, productName, testId }: { price: number; productName?: string; testId?: string }) {
   if (!price || price === 0) {
     return (
-      <span className="text-yellow-400 font-ui text-sm" data-testid={testId}>
+      <span className="text-secondary font-ui text-sm" data-testid={testId}>
         <span className="animate-pulse font-semibold">⚠ Need Estimate</span>
         {productName && (
-          <span className="block text-xs text-yellow-300 mt-0.5">
+          <span className="block text-xs text-secondary/80 mt-0.5">
             → Look up: {productName}
           </span>
         )}
@@ -261,14 +261,14 @@ function ExpandableJobCard({ job }: { job: Job }) {
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                  job.isCompleted ? 'bg-green-500/20' : isPastDue ? 'bg-red-500/20' : 'bg-yellow-500/20'
+                  job.isCompleted ? 'bg-primary/20' : isPastDue ? 'bg-destructive/20' : 'bg-secondary/20'
                 }`}>
                   {job.isCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    <CheckCircle2 className="w-4 h-4 text-primary" />
                   ) : isPastDue ? (
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
                   ) : (
-                    <Clock className="w-4 h-4 text-yellow-400" />
+                    <Clock className="w-4 h-4 text-secondary" />
                   )}
                 </div>
                 <div className="text-left">
@@ -292,7 +292,7 @@ function ExpandableJobCard({ job }: { job: Job }) {
                   </Badge>
                 )}
                 <Badge variant="outline" className={
-                  job.isCompleted ? "border-green-500/50 text-green-400" : isPastDue ? "border-red-500/50 text-red-400" : "border-yellow-500/50 text-yellow-400"
+                  job.isCompleted ? "border-primary/50 text-primary" : isPastDue ? "border-destructive/50 text-destructive" : "border-secondary/50 text-secondary"
                 }>
                   {job.status}
                 </Badge>
@@ -337,7 +337,7 @@ function ExpandableJobCard({ job }: { job: Job }) {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
                   <Badge className={
-                    job.isCompleted ? "bg-green-500/20 text-green-400 border-green-500/50" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/50"
+                    job.isCompleted ? "bg-primary/20 text-primary border-primary/50" : "bg-secondary/20 text-secondary border-secondary/50"
                   }>
                     {job.status}
                   </Badge>
@@ -384,7 +384,7 @@ function ExpandableJobCard({ job }: { job: Job }) {
                       size="sm"
                       variant="outline"
                       onClick={() => archive.unarchiveJob(String(job.jobId))}
-                      className="gap-1 text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
+                      className="gap-1 text-primary border-primary/30 hover:bg-primary/10"
                       data-testid={`btn-unarchive-${job.jobId}`}
                     >
                       <ArchiveRestore className="w-3 h-3" />
@@ -435,12 +435,12 @@ function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          job.isCompleted ? 'bg-green-500/20' : 'bg-yellow-500/20'
+          job.isCompleted ? 'bg-primary/20' : 'bg-secondary/20'
         }`}>
           {job.isCompleted ? (
-            <CheckCircle2 className="w-4 h-4 text-green-400" />
+            <CheckCircle2 className="w-4 h-4 text-primary" />
           ) : (
-            <Clock className="w-4 h-4 text-yellow-400" />
+            <Clock className="w-4 h-4 text-secondary" />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -463,7 +463,7 @@ function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
       </div>
       <div className="flex items-center gap-4 shrink-0">
         <Badge variant="outline" className={
-          job.isCompleted ? "border-green-500/50 text-green-400" : "border-yellow-500/50 text-yellow-400"
+          job.isCompleted ? "border-primary/50 text-primary" : "border-secondary/50 text-secondary"
         }>
           {job.isCompleted ? "Complete" : "Pending"}
         </Badge>
@@ -542,15 +542,15 @@ function TechnicianCard({ tech }: { tech: Technician }) {
               <div className="flex items-center gap-3">
                 {tech.totalJobs > 0 ? (
                   isExpanded ? (
-                    <ChevronDown className="w-5 h-5 text-purple-400" />
+                    <ChevronDown className="w-5 h-5 text-primary" />
                   ) : (
                     <ChevronRight className="w-5 h-5 text-muted-foreground" />
                   )
                 ) : null}
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  tech.totalJobs > 0 ? 'bg-purple-500/20' : 'bg-muted/20'
+                  tech.totalJobs > 0 ? 'bg-primary/20' : 'bg-muted/20'
                 }`}>
-                  <User className={`w-5 h-5 ${tech.totalJobs > 0 ? 'text-purple-400' : 'text-muted-foreground'}`} />
+                  <User className={`w-5 h-5 ${tech.totalJobs > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
                 <div>
                   <p className="font-ui text-lg text-foreground" data-testid={`tech-name-${tech.techId}`}>
@@ -565,10 +565,10 @@ function TechnicianCard({ tech }: { tech: Technician }) {
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`tech-commission10-${tech.techId}`}>
+                  <Badge className="bg-primary/20 text-primary border-primary/50" data-testid={`tech-commission10-${tech.techId}`}>
                     10%: {formatPrice(tech.commission10 || 0)}
                   </Badge>
-                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`tech-commission15-${tech.techId}`}>
+                  <Badge className="bg-primary/20 text-primary border-primary/50" data-testid={`tech-commission15-${tech.techId}`}>
                     15%: {formatPrice(tech.commission15 || 0)}
                   </Badge>
                 </div>
@@ -585,7 +585,7 @@ function TechnicianCard({ tech }: { tech: Technician }) {
             {tech.totalJobs > 0 && (
               <div className="w-full bg-background/30 rounded-full h-2 mt-3">
                 <div 
-                  className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>
@@ -638,7 +638,7 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className={`border rounded-lg bg-background/20 overflow-hidden ${readyToInvoice ? 'border-green-500/50' : 'border-orange-500/20'}`}>
+      <div className={`border rounded-lg bg-background/20 overflow-hidden ${readyToInvoice ? 'border-primary/50' : 'border-orange-500/20'}`}>
         <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-orange-500/10 transition-colors">
           <div className="flex items-center gap-2">
             {isOpen ? (
@@ -652,14 +652,14 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
               {jobs.length} jobs
             </Badge>
             {readyToInvoice && (
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/50 animate-pulse text-xs">
+              <Badge className="bg-primary/20 text-primary border-primary/50 animate-pulse text-xs">
                 Ready to Invoice
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted-foreground">{completedCount}/{jobs.length} done</span>
-            <span className={`font-ui font-semibold ${readyToInvoice ? 'text-green-400' : 'text-orange-400'}`}>
+            <span className={`font-ui font-semibold ${readyToInvoice ? 'text-primary' : 'text-orange-400'}`}>
               {formatPrice(totalValue)}
             </span>
           </div>
@@ -669,7 +669,7 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
             {readyToInvoice && (
               <button
                 onClick={handleSendInvoice}
-                className="w-full mb-3 py-2 px-4 bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 rounded-lg text-green-400 font-ui font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full mb-3 py-2 px-4 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg text-primary font-ui font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
                 data-testid={`send-invoice-${accountName}`}
               >
                 <Mail className="w-4 h-4" />
@@ -733,10 +733,10 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`sr-commission10-${techName}`}>
+                  <Badge className="bg-primary/20 text-primary border-primary/50" data-testid={`sr-commission10-${techName}`}>
                     10%: {formatPrice(commission10)}
                   </Badge>
-                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`sr-commission15-${techName}`}>
+                  <Badge className="bg-primary/20 text-primary border-primary/50" data-testid={`sr-commission15-${techName}`}>
                     15%: {formatPrice(commission15)}
                   </Badge>
                 </div>
@@ -791,18 +791,18 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-card/50 border-purple-500/30 hover:border-purple-500/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
+      <Card className="bg-card/50 border-primary/30 hover:border-primary/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-2 cursor-pointer hover:bg-purple-500/5 transition-colors">
+          <CardHeader className="pb-2 cursor-pointer hover:bg-primary/5 transition-colors">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-purple-400" />
+                  <ChevronDown className="w-5 h-5 text-primary" />
                 ) : (
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 )}
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                  <HardHat className="w-5 h-5 text-purple-400" />
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <HardHat className="w-5 h-5 text-primary" />
                 </div>
                 <div className="text-left">
                   <p className="font-ui text-lg text-foreground">{tech.name}</p>
@@ -813,23 +813,23 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
+                  <Badge className="bg-primary/20 text-primary border-primary/50 text-xs">
                     10%: {formatPrice(tech.commission10)}
                   </Badge>
-                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                  <Badge className="bg-primary/20 text-primary border-primary/50 text-xs">
                     15%: {formatPrice(tech.commission15)}
                   </Badge>
                 </div>
                 <div className="text-right">
-                  <p className="font-ui font-bold text-2xl text-purple-400">{formatPrice(tech.totalValue)}</p>
+                  <p className="font-ui font-bold text-2xl text-primary">{formatPrice(tech.totalValue)}</p>
                 </div>
               </div>
             </CardTitle>
-            <div className="bg-background/30 rounded-lg p-3 border border-purple-500/20 mt-3">
+            <div className="bg-background/30 rounded-lg p-3 border border-primary/20 mt-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">Monthly Quota Progress</span>
                 <span className="text-sm font-ui">
-                  <span className={tech.quotaPercent >= 100 ? "text-green-400 font-bold" : "text-purple-400"}>
+                  <span className={tech.quotaPercent >= 100 ? "text-primary font-bold" : "text-primary"}>
                     {formatPrice(tech.monthlyValue)}
                   </span>
                   <span className="text-muted-foreground"> / {formatPrice(monthlyQuota)}</span>
@@ -837,10 +837,10 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
               </div>
               <Progress 
                 value={tech.quotaPercent} 
-                className="h-2 bg-purple-500/10"
+                className="h-2 bg-primary/10"
               />
               <div className="flex justify-between mt-1">
-                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-green-400' : tech.quotaPercent >= 70 ? 'text-yellow-400' : 'text-purple-400'}`}>
+                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-primary' : tech.quotaPercent >= 70 ? 'text-secondary' : 'text-primary'}`}>
                   {tech.quotaPercent}%
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -851,7 +851,7 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-purple-500/10">
+          <CardContent className="pt-0 border-t border-primary/10">
             <div className="mt-3 pt-3">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
               <div className="flex flex-wrap gap-1 mb-4">
@@ -864,9 +864,9 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
                       key={day}
                       className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
                         hasActivity 
-                          ? intensity > 0.7 ? 'bg-green-500 text-white' 
-                          : intensity > 0.3 ? 'bg-green-500/60 text-white' 
-                          : 'bg-green-500/30 text-green-200'
+                          ? intensity > 0.7 ? 'bg-primary text-white' 
+                          : intensity > 0.3 ? 'bg-primary/60 text-white' 
+                          : 'bg-primary/30 text-primary/70'
                           : 'bg-muted/20 text-muted-foreground/50'
                       }`}
                       title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}
@@ -879,7 +879,7 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Repair Types</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 {Object.entries(tech.repairTypes).slice(0, 6).map(([type, data]) => (
-                  <Badge key={type} variant="outline" className="text-xs border-purple-500/30 text-purple-300">
+                  <Badge key={type} variant="outline" className="text-xs border-primary/30 text-primary/80">
                     {type.length > 25 ? type.substring(0, 25) + '...' : type}
                     <span className="ml-1 text-muted-foreground">({data.count}x, {formatPrice(data.value)})</span>
                   </Badge>
@@ -1152,7 +1152,7 @@ export default function Jobs() {
               variant="outline"
               onClick={() => data && exportJobsExcel(data.jobs, data.technicians, data.summary)}
               disabled={!data}
-              className="gap-2 text-green-400 border-green-500/30 hover:bg-green-500/10"
+              className="gap-2 text-primary border-primary/30 hover:bg-primary/10"
               data-testid="btn-export-excel"
             >
               <FileDown className="w-4 h-4" />
@@ -1198,8 +1198,8 @@ export default function Jobs() {
               </Card>
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-6 h-6 text-green-400" />
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-primary" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold font-ui text-foreground" data-testid="completed-count">{data.summary.completedCount}</p>
@@ -1209,8 +1209,8 @@ export default function Jobs() {
               </Card>
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-yellow-400" />
+                  <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-secondary" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold font-ui text-foreground" data-testid="pending-count">{data.summary.pendingCount}</p>
@@ -1231,8 +1231,8 @@ export default function Jobs() {
               </Card>
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-purple-400" />
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-primary" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold font-ui text-foreground" data-testid="total-value">{formatPrice(data.summary.totalValue)}</p>
@@ -1244,15 +1244,15 @@ export default function Jobs() {
 
             <Tabs defaultValue="sr" className="w-full">
               <TabsList className="bg-card/50 border border-border/50 flex-wrap">
-                <TabsTrigger value="sr" data-testid="tab-sr" className="data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400">
+                <TabsTrigger value="sr" data-testid="tab-sr" className="data-[state=active]:bg-secondary/20 data-[state=active]:text-secondary">
                   <Settings className="w-4 h-4 mr-2" />
                   SR Jobs ({srData.srCount})
                 </TabsTrigger>
-                <TabsTrigger value="sr-stats" data-testid="tab-sr-stats" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+                <TabsTrigger value="sr-stats" data-testid="tab-sr-stats" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Service Tech Stats
                 </TabsTrigger>
-                <TabsTrigger value="repair-techs" data-testid="tab-repair-techs" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400">
+                <TabsTrigger value="repair-techs" data-testid="tab-repair-techs" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                   <HardHat className="w-4 h-4 mr-2" />
                   Repair Techs ({repairTechData.totalJobs})
                 </TabsTrigger>
@@ -1371,17 +1371,17 @@ export default function Jobs() {
 
                       {topEarner && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/50">
+                          <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/50">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
-                                <Trophy className="w-8 h-8 text-yellow-400" />
+                                <Trophy className="w-8 h-8 text-secondary" />
                                 <div>
-                                  <p className="text-xs text-yellow-400 uppercase tracking-wider">Top Earner</p>
+                                  <p className="text-xs text-secondary uppercase tracking-wider">Top Earner</p>
                                   <p className="text-xl font-ui font-bold text-foreground">{topEarner.name}</p>
                                 </div>
                               </div>
                               <div className="flex gap-4 text-sm">
-                                <span className="text-yellow-400 font-semibold">{formatPrice(topEarner.totalValue)}</span>
+                                <span className="text-secondary font-semibold">{formatPrice(topEarner.totalValue)}</span>
                                 <span className="text-muted-foreground">{topEarner.jobCount} jobs</span>
                               </div>
                             </CardContent>
@@ -1424,10 +1424,10 @@ export default function Jobs() {
                                   <div className="text-right">
                                     <p className="font-ui font-bold text-2xl text-cyan-400">{formatPrice(tech.totalValue)}</p>
                                     <div className="flex gap-2 mt-1">
-                                      <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
+                                      <Badge className="bg-primary/20 text-primary border-primary/50 text-xs">
                                         10%: {formatPrice(tech.commission10)}
                                       </Badge>
-                                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                                      <Badge className="bg-primary/20 text-primary border-primary/50 text-xs">
                                         15%: {formatPrice(tech.commission15)}
                                       </Badge>
                                     </div>
@@ -1463,22 +1463,22 @@ export default function Jobs() {
 
               <TabsContent value="repair-techs" className="mt-4">
                 <div className="space-y-4">
-                  <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                  <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <HardHat className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-ui font-semibold text-purple-400">Repair Technicians</h3>
+                        <HardHat className="w-5 h-5 text-primary" />
+                        <h3 className="font-ui font-semibold text-primary">Repair Technicians</h3>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="flex gap-2 text-sm">
-                          <span className="text-purple-400 font-semibold">{repairTechData.totalJobs} Jobs</span>
-                          <span className="text-purple-400 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
+                          <span className="text-primary font-semibold">{repairTechData.totalJobs} Jobs</span>
+                          <span className="text-primary font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
                         </div>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => exportRepairTechsPDF(repairTechData.repairTechs, MONTHLY_QUOTA)}
-                          className="gap-1 text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
+                          className="gap-1 text-primary border-primary/30 hover:bg-primary/10"
                           data-testid="btn-export-repair-techs-pdf"
                         >
                           <FileDown className="w-3 h-3" />
@@ -1491,8 +1491,8 @@ export default function Jobs() {
                         onClick={() => setSelectedRepairTech(null)}
                         className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all ${
                           selectedRepairTech === null 
-                            ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
-                            : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                            ? 'bg-primary text-white shadow-[0_0_10px_rgba(8,145,178,0.5)]' 
+                            : 'bg-primary/20 text-primary/80 hover:bg-primary/30'
                         }`}
                         data-testid="repair-tech-all"
                       >
@@ -1506,8 +1506,8 @@ export default function Jobs() {
                             onClick={() => setSelectedRepairTech(name)}
                             className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all flex items-center gap-2 ${
                               selectedRepairTech === name 
-                                ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
-                                : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                                ? 'bg-primary text-white shadow-[0_0_10px_rgba(8,145,178,0.5)]' 
+                                : 'bg-primary/20 text-primary/80 hover:bg-primary/30'
                             }`}
                             data-testid={`repair-tech-btn-${name}`}
                           >
@@ -1523,32 +1523,32 @@ export default function Jobs() {
 
                   {!selectedRepairTech && repairTechData.topEarner && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/50">
+                      <Card className="bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/50">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <Trophy className="w-8 h-8 text-yellow-400" />
+                            <Trophy className="w-8 h-8 text-secondary" />
                             <div>
-                              <p className="text-xs text-yellow-400 uppercase tracking-wider">Top Earner</p>
+                              <p className="text-xs text-secondary uppercase tracking-wider">Top Earner</p>
                               <p className="text-xl font-ui font-bold text-foreground">{repairTechData.topEarner.name}</p>
                             </div>
                           </div>
                           <div className="flex gap-4 text-sm">
-                            <span className="text-yellow-400 font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
+                            <span className="text-secondary font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
                             <span className="text-muted-foreground">{repairTechData.topEarner.jobs.length} jobs</span>
                           </div>
                         </CardContent>
                       </Card>
-                      <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/50">
+                      <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/50">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <Wrench className="w-8 h-8 text-purple-400" />
+                            <Wrench className="w-8 h-8 text-primary" />
                             <div>
-                              <p className="text-xs text-purple-400 uppercase tracking-wider">Most Jobs</p>
+                              <p className="text-xs text-primary uppercase tracking-wider">Most Jobs</p>
                               <p className="text-xl font-ui font-bold text-foreground">{repairTechData.mostJobs?.name}</p>
                             </div>
                           </div>
                           <div className="flex gap-4 text-sm">
-                            <span className="text-purple-400 font-semibold">{repairTechData.mostJobs?.jobs.length} jobs</span>
+                            <span className="text-primary font-semibold">{repairTechData.mostJobs?.jobs.length} jobs</span>
                             <span className="text-muted-foreground">{formatPrice(repairTechData.mostJobs?.totalValue || 0)}</span>
                           </div>
                         </CardContent>
@@ -1615,7 +1615,7 @@ export default function Jobs() {
                   {data.completedJobs.length === 0 ? (
                     <Card className="bg-card/50 border-border/50">
                       <CardContent className="p-8 text-center text-muted-foreground">
-                        <Clock className="w-12 h-12 mx-auto mb-4 text-yellow-400" />
+                        <Clock className="w-12 h-12 mx-auto mb-4 text-secondary" />
                         <p>No completed jobs yet</p>
                       </CardContent>
                     </Card>
@@ -1634,7 +1634,7 @@ export default function Jobs() {
                   {data.pendingJobs.length === 0 ? (
                     <Card className="bg-card/50 border-border/50">
                       <CardContent className="p-8 text-center text-muted-foreground">
-                        <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-green-400" />
+                        <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-primary" />
                         <p>All jobs are completed!</p>
                       </CardContent>
                     </Card>
