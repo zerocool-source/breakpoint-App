@@ -948,11 +948,11 @@ function setupRoutes(app: any) {
       const accounts = Object.values(accountsMap).sort((a, b) => b.totalJobs - a.totalJobs);
       const techniciansRaw = Object.values(technicianJobsMap).sort((a, b) => b.totalJobs - a.totalJobs);
       
-      // Add commission calculations (10% and 50% of total value)
+      // Add commission calculations (10% and 15% of total value)
       const technicians = techniciansRaw.map(tech => ({
         ...tech,
         commission10: Math.round(tech.totalValue * 0.10 * 100) / 100,
-        commission50: Math.round(tech.totalValue * 0.50 * 100) / 100
+        commission15: Math.round(tech.totalValue * 0.15 * 100) / 100
       }));
       
       const techsWithJobs = technicians.filter(t => t.totalJobs > 0);

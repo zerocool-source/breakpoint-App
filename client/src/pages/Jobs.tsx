@@ -47,7 +47,7 @@ interface Technician {
   completedJobs: number;
   totalValue: number;
   commission10: number;
-  commission50: number;
+  commission15: number;
   jobs: Job[];
 }
 
@@ -344,8 +344,8 @@ function TechnicianCard({ tech }: { tech: Technician }) {
               <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`tech-commission10-${tech.techId}`}>
                 10%: {formatPrice(tech.commission10 || 0)}
               </Badge>
-              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`tech-commission50-${tech.techId}`}>
-                50%: {formatPrice(tech.commission50 || 0)}
+              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`tech-commission15-${tech.techId}`}>
+                15%: {formatPrice(tech.commission15 || 0)}
               </Badge>
             </div>
             <div className="w-full bg-background/30 rounded-full h-2 mb-4">
@@ -376,7 +376,7 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
   const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
   const completionPercent = jobs.length > 0 ? Math.round((completedCount / jobs.length) * 100) : 0;
   const commission10 = Math.round(totalValue * 0.10 * 100) / 100;
-  const commission50 = Math.round(totalValue * 0.50 * 100) / 100;
+  const commission15 = Math.round(totalValue * 0.15 * 100) / 100;
 
   return (
     <Card className="bg-card/50 border-orange-500/30 hover:border-orange-500/50 transition-colors" data-testid={`sr-tech-${techName}`}>
@@ -411,8 +411,8 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
           <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`sr-commission10-${techName}`}>
             10%: {formatPrice(commission10)}
           </Badge>
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`sr-commission50-${techName}`}>
-            50%: {formatPrice(commission50)}
+          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`sr-commission15-${techName}`}>
+            15%: {formatPrice(commission15)}
           </Badge>
         </div>
         <div className="w-full bg-background/30 rounded-full h-2 mb-4">
