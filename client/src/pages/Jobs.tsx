@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3 } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat } from "lucide-react";
 
 interface Job {
   jobId: string;
@@ -588,6 +588,69 @@ export default function Jobs() {
     return { srJobs, srByTechnician, srCount: srJobs.length, srValue };
   }, [data?.jobs]);
 
+  const repairTechData = useMemo(() => {
+    if (!data?.jobs) return { repairTechs: [], totalJobs: 0, totalValue: 0, topEarner: null, mostJobs: null };
+
+    const REPAIR_TECH_NAMES = new Set([
+      "Alan Bateman",
+      "Don Johnson", 
+      "Jose Puente",
+      "Matt Cummins",
+      "Rick Jacobs",
+      "Vit Kruml"
+    ]);
+
+    const repairJobs = data.jobs.filter(job => REPAIR_TECH_NAMES.has(job.technicianName));
+
+    const techMap: Record<string, {
+      name: string;
+      jobs: Job[];
+      totalValue: number;
+      completedCount: number;
+      commission10: number;
+      commission15: number;
+      repairTypes: Record<string, { count: number; value: number }>;
+    }> = {};
+
+    repairJobs.forEach(job => {
+      const name = job.technicianName;
+      if (!techMap[name]) {
+        techMap[name] = {
+          name,
+          jobs: [],
+          totalValue: 0,
+          completedCount: 0,
+          commission10: 0,
+          commission15: 0,
+          repairTypes: {}
+        };
+      }
+      techMap[name].jobs.push(job);
+      techMap[name].totalValue += job.price;
+      if (job.isCompleted) techMap[name].completedCount++;
+      
+      const repairType = job.title || "Other";
+      if (!techMap[name].repairTypes[repairType]) {
+        techMap[name].repairTypes[repairType] = { count: 0, value: 0 };
+      }
+      techMap[name].repairTypes[repairType].count++;
+      techMap[name].repairTypes[repairType].value += job.price;
+    });
+
+    Object.values(techMap).forEach(tech => {
+      tech.commission10 = Math.round(tech.totalValue * 0.10 * 100) / 100;
+      tech.commission15 = Math.round(tech.totalValue * 0.15 * 100) / 100;
+    });
+
+    const repairTechs = Object.values(techMap).sort((a, b) => b.totalValue - a.totalValue);
+    const totalJobs = repairJobs.length;
+    const totalValue = repairJobs.reduce((sum, j) => sum + j.price, 0);
+    const topEarner = repairTechs[0] || null;
+    const mostJobs = [...repairTechs].sort((a, b) => b.jobs.length - a.jobs.length)[0] || null;
+
+    return { repairTechs, totalJobs, totalValue, topEarner, mostJobs };
+  }, [data?.jobs]);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -692,6 +755,10 @@ export default function Jobs() {
                 <TabsTrigger value="sr-stats" data-testid="tab-sr-stats" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Service Tech Stats
+                </TabsTrigger>
+                <TabsTrigger value="repair-techs" data-testid="tab-repair-techs" className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400">
+                  <HardHat className="w-4 h-4 mr-2" />
+                  Repair Techs ({repairTechData.totalJobs})
                 </TabsTrigger>
                 <TabsTrigger value="accounts" data-testid="tab-accounts">
                   <Building2 className="w-4 h-4 mr-2" />
@@ -873,6 +940,133 @@ export default function Jobs() {
                     </div>
                   );
                 })()}
+              </TabsContent>
+
+              <TabsContent value="repair-techs" className="mt-4">
+                <div className="space-y-4">
+                  <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <HardHat className="w-5 h-5 text-purple-400" />
+                      <h3 className="font-ui font-semibold text-purple-400">Repair Technicians</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Alan Bateman, Don Johnson, Jose Puente, Matt Cummins, Rick Jacobs, Vit Kruml
+                    </p>
+                    <div className="flex gap-4 mt-2 text-sm">
+                      <span className="text-purple-400 font-semibold">{repairTechData.totalJobs} Jobs</span>
+                      <span className="text-purple-400 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
+                      <span className="text-muted-foreground">{repairTechData.repairTechs.length} Techs</span>
+                    </div>
+                  </div>
+
+                  {repairTechData.topEarner && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Trophy className="w-8 h-8 text-yellow-400" />
+                            <div>
+                              <p className="text-xs text-yellow-400 uppercase tracking-wider">Top Earner</p>
+                              <p className="text-xl font-ui font-bold text-foreground">{repairTechData.topEarner.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-yellow-400 font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
+                            <span className="text-muted-foreground">{repairTechData.topEarner.jobs.length} jobs</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Wrench className="w-8 h-8 text-purple-400" />
+                            <div>
+                              <p className="text-xs text-purple-400 uppercase tracking-wider">Most Jobs</p>
+                              <p className="text-xl font-ui font-bold text-foreground">{repairTechData.mostJobs?.name}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-4 text-sm">
+                            <span className="text-purple-400 font-semibold">{repairTechData.mostJobs?.jobs.length} jobs</span>
+                            <span className="text-muted-foreground">{formatPrice(repairTechData.mostJobs?.totalValue || 0)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+
+                  <ScrollArea className="h-[550px]">
+                    <div className="space-y-4">
+                      {repairTechData.repairTechs.length === 0 ? (
+                        <Card className="bg-card/50 border-border/50">
+                          <CardContent className="p-8 text-center text-muted-foreground">
+                            No jobs found for repair technicians
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        repairTechData.repairTechs.map((tech) => (
+                          <Collapsible key={tech.name} defaultOpen>
+                            <Card className="bg-card/50 border-purple-500/30 hover:border-purple-500/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
+                              <CollapsibleTrigger className="w-full">
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                                        <HardHat className="w-5 h-5 text-purple-400" />
+                                      </div>
+                                      <div className="text-left">
+                                        <p className="font-ui text-lg text-foreground">{tech.name}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {tech.completedCount}/{tech.jobs.length} completed
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-ui font-bold text-2xl text-purple-400">{formatPrice(tech.totalValue)}</p>
+                                      <div className="flex gap-2 mt-1">
+                                        <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
+                                          10%: {formatPrice(tech.commission10)}
+                                        </Badge>
+                                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                                          15%: {formatPrice(tech.commission15)}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </CardTitle>
+                                </CardHeader>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <CardContent className="pt-0">
+                                  <div className="mt-3 pt-3 border-t border-border/30">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Repair Types</p>
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                      {Object.entries(tech.repairTypes).slice(0, 6).map(([type, data]) => (
+                                        <Badge key={type} variant="outline" className="text-xs border-purple-500/30 text-purple-300">
+                                          {type.length > 25 ? type.substring(0, 25) + '...' : type}
+                                          <span className="ml-1 text-muted-foreground">({data.count}x, {formatPrice(data.value)})</span>
+                                        </Badge>
+                                      ))}
+                                      {Object.keys(tech.repairTypes).length > 6 && (
+                                        <Badge variant="outline" className="text-xs border-muted text-muted-foreground">
+                                          +{Object.keys(tech.repairTypes).length - 6} more
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Jobs ({tech.jobs.length})</p>
+                                    <div className="space-y-2">
+                                      {tech.jobs.map((job) => (
+                                        <ExpandableJobCard key={job.jobId} job={job} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </CollapsibleContent>
+                            </Card>
+                          </Collapsible>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="accounts" className="mt-4">
