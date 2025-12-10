@@ -192,7 +192,7 @@ export interface PropertyRepairSummary {
   lastServiceDate: string | null;
   technicians: string[];
   repairs: {
-    jobId: number;
+    jobId: string;
     title: string;
     price: number;
     isCompleted: boolean;

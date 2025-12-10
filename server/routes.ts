@@ -1441,7 +1441,7 @@ function setupRoutes(app: any) {
         const scheduledDate = job.JobDate || job.ScheduledDate || job.ServiceDate || job.CreatedDate || null;
 
         prop.repairs.push({
-          jobId: job.RecordID || job.JobId,
+          jobId: String(job.RecordID || job.JobId || ""),
           title: job.Title || job.JobTitle || "Service Job",
           price: price,
           isCompleted: isCompleted,
