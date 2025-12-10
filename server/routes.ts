@@ -1514,15 +1514,18 @@ function setupRoutes(app: any) {
         const techName = techId ? techMap[techId] : null;
         if (techName && techName !== "Unknown") prop.technicians.add(techName);
 
-        // Get price from line items
+        // Get price from OneOfJobItemDetails (same as /api/jobs)
         let price = 0;
-        const lineItems = jobDetail.LineItems || job.LineItems || [];
-        if (Array.isArray(lineItems)) {
-          lineItems.forEach((item: any) => {
-            price += parseFloat(item.ItemTotal || item.Price || item.Total || 0) || 0;
+        const itemDetails = jobDetail.OneOfJobItemDetails || job.OneOfJobItemDetails || [];
+        if (Array.isArray(itemDetails)) {
+          itemDetails.forEach((item: any) => {
+            const qty = item.Qty || item.qty || 1;
+            const unitPrice = item.UnitCost || item.unitCost || item.Price || item.price || 0;
+            price += qty * unitPrice;
           });
         }
-        if (!price) price = parseFloat(jobDetail.Total || job.Total || job.Price || 0) || 0;
+        // Also check for TotalAmount/Price field directly
+        if (!price) price = parseFloat(job.TotalAmount || jobDetail.TotalAmount || job.Price || jobDetail.Price || job.TotalPrice || 0) || 0;
 
         const status = job.JobStatus || job.Status || jobDetail.Status || "Pending";
         const isCompleted = status === "Completed" || status === "Complete" || status === "Invoiced" || job.Completed === true;
