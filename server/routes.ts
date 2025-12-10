@@ -1270,6 +1270,45 @@ function setupRoutes(app: any) {
     }
   });
 
+  // ==================== ARCHIVED ALERTS ====================
+
+  // Get all archived alert IDs
+  app.get("/api/alerts/archived", async (req: any, res: any) => {
+    try {
+      const { type } = req.query;
+      const archivedIds = await storage.getArchivedAlertIds(type);
+      res.json({ archivedIds });
+    } catch (error: any) {
+      console.error("Error getting archived alerts:", error);
+      res.status(500).json({ error: "Failed to get archived alerts" });
+    }
+  });
+
+  // Archive an alert
+  app.post("/api/alerts/:alertId/archive", async (req: any, res: any) => {
+    try {
+      const { alertId } = req.params;
+      const { type } = req.body;
+      const archived = await storage.archiveAlert(alertId, type || "repair");
+      res.json({ success: true, archived });
+    } catch (error: any) {
+      console.error("Error archiving alert:", error);
+      res.status(500).json({ error: "Failed to archive alert" });
+    }
+  });
+
+  // Unarchive an alert
+  app.delete("/api/alerts/:alertId/archive", async (req: any, res: any) => {
+    try {
+      const { alertId } = req.params;
+      await storage.unarchiveAlert(alertId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error unarchiving alert:", error);
+      res.status(500).json({ error: "Failed to unarchive alert" });
+    }
+  });
+
   // ==================== PAYROLL ====================
 
   // Get all pay periods

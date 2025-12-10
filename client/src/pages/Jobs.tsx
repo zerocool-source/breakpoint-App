@@ -1,12 +1,28 @@
-import React, { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useMemo, createContext, useContext } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface ArchiveContext {
+  archivedIds: Set<string>;
+  showArchived: boolean;
+  archiveJob: (jobId: string) => void;
+  unarchiveJob: (jobId: string) => void;
+}
+
+const ArchiveContext = createContext<ArchiveContext | null>(null);
+
+function useArchive() {
+  const ctx = useContext(ArchiveContext);
+  if (!ctx) throw new Error("useArchive must be used within ArchiveContext");
+  return ctx;
+}
 
 interface Job {
   jobId: string;
@@ -96,6 +112,7 @@ function PriceDisplay({ price, productName, testId }: { price: number; productNa
 
 function ExpandableJobCard({ job }: { job: Job }) {
   const [isOpen, setIsOpen] = useState(false);
+  const archive = useContext(ArchiveContext);
   
   const isPastDue = (() => {
     if (job.isCompleted || !job.scheduledDate) return false;
@@ -232,6 +249,33 @@ function ExpandableJobCard({ job }: { job: Job }) {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+            {archive && job.isCompleted && (
+              <div className="mt-4 pt-4 border-t border-border/30 flex justify-end">
+                {archive.showArchived ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => archive.unarchiveJob(String(job.jobId))}
+                    className="gap-1 text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
+                    data-testid={`btn-unarchive-${job.jobId}`}
+                  >
+                    <ArchiveRestore className="w-3 h-3" />
+                    Restore from Archive
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => archive.archiveJob(String(job.jobId))}
+                    className="gap-1 text-orange-400 border-orange-500/30 hover:bg-orange-500/10"
+                    data-testid={`btn-archive-${job.jobId}`}
+                  >
+                    <Archive className="w-3 h-3" />
+                    Archive Job
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
@@ -556,6 +600,9 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
 }
 
 export default function Jobs() {
+  const queryClient = useQueryClient();
+  const [showArchived, setShowArchived] = useState(false);
+
   const { data, isLoading, error, refetch } = useQuery<JobsData>({
     queryKey: ["/api/jobs"],
     queryFn: async () => {
@@ -568,10 +615,59 @@ export default function Jobs() {
     refetchInterval: 60000,
   });
 
-  const srData = useMemo(() => {
-    if (!data?.jobs) return { srJobs: [], srByTechnician: {}, srCount: 0, srValue: 0 };
+  const { data: archivedData = { archivedIds: [] } } = useQuery({
+    queryKey: ["archivedAlerts", "job"],
+    queryFn: async () => {
+      const res = await fetch("/api/alerts/archived?type=job");
+      return res.json();
+    },
+  });
 
-    const srJobs = data.jobs.filter(job => {
+  const archivedIds = new Set<string>((archivedData.archivedIds || []).map(String));
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ jobId, archive }: { jobId: string; archive: boolean }) => {
+      if (archive) {
+        const res = await fetch(`/api/alerts/${jobId}/archive`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "job" }),
+        });
+        return res.json();
+      } else {
+        const res = await fetch(`/api/alerts/${jobId}/archive`, { method: "DELETE" });
+        return res.json();
+      }
+    },
+    onMutate: async ({ jobId, archive }) => {
+      await queryClient.cancelQueries({ queryKey: ["archivedAlerts", "job"] });
+      const previousData = queryClient.getQueryData(["archivedAlerts", "job"]);
+      queryClient.setQueryData(["archivedAlerts", "job"], (old: any) => {
+        const currentIds = old?.archivedIds || [];
+        if (archive) {
+          return { archivedIds: [...currentIds, jobId] };
+        } else {
+          return { archivedIds: currentIds.filter((id: string) => String(id) !== String(jobId)) };
+        }
+      });
+      return { previousData };
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["archivedAlerts", "job"] });
+    },
+  });
+
+  const archiveContextValue: ArchiveContext = {
+    archivedIds,
+    showArchived,
+    archiveJob: (jobId: string) => archiveMutation.mutate({ jobId, archive: true }),
+    unarchiveJob: (jobId: string) => archiveMutation.mutate({ jobId, archive: false }),
+  };
+
+  const srData = useMemo(() => {
+    if (!data?.jobs) return { srJobs: [], srByTechnician: {}, srCount: 0, srValue: 0, archivedCount: 0 };
+
+    const allSrJobs = data.jobs.filter(job => {
       const title = job.title?.toUpperCase() || "";
       const template = job.raw?.Template?.toUpperCase() || "";
       
@@ -595,6 +691,9 @@ export default function Jobs() {
       return isSR && job.price < 500;
     });
 
+    const archivedSrJobs = allSrJobs.filter(job => archivedIds.has(String(job.jobId)));
+    const srJobs = showArchived ? archivedSrJobs : allSrJobs.filter(job => !archivedIds.has(String(job.jobId)));
+
     const srByTechnician: Record<string, Job[]> = {};
     srJobs.forEach(job => {
       const techName = job.technicianName || "Unassigned";
@@ -606,8 +705,8 @@ export default function Jobs() {
 
     const srValue = srJobs.reduce((sum, j) => sum + j.price, 0);
 
-    return { srJobs, srByTechnician, srCount: srJobs.length, srValue };
-  }, [data?.jobs]);
+    return { srJobs, srByTechnician, srCount: srJobs.length, srValue, archivedCount: archivedSrJobs.length };
+  }, [data?.jobs, archivedIds, showArchived]);
 
   const repairTechData = useMemo(() => {
     if (!data?.jobs) return { repairTechs: [], totalJobs: 0, totalValue: 0, topEarner: null, mostJobs: null };
@@ -680,6 +779,7 @@ export default function Jobs() {
   }, [selectedRepairTech, repairTechData.repairTechs]);
 
   return (
+    <ArchiveContext.Provider value={archiveContextValue}>
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -808,12 +908,35 @@ export default function Jobs() {
 
               <TabsContent value="sr" className="mt-4">
                 <div className="mb-4 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Settings className="w-5 h-5 text-orange-400" />
-                    <h3 className="font-ui font-semibold text-orange-400">Service Repairs (SR)</h3>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-orange-400" />
+                      <h3 className="font-ui font-semibold text-orange-400">Service Repairs (SR)</h3>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={!showArchived ? "default" : "outline"}
+                        onClick={() => setShowArchived(false)}
+                        className={!showArchived ? "bg-orange-500 text-white" : "text-orange-400 border-orange-500/30"}
+                        data-testid="btn-show-active-jobs"
+                      >
+                        Active ({srData.srCount})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={showArchived ? "default" : "outline"}
+                        onClick={() => setShowArchived(true)}
+                        className={showArchived ? "bg-orange-500 text-white" : "text-orange-400 border-orange-500/30"}
+                        data-testid="btn-show-archived-jobs"
+                      >
+                        <Archive className="w-3 h-3 mr-1" />
+                        Archived ({srData.archivedCount})
+                      </Button>
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Small repairs under $500, grouped by technician. Click any job to see full details.
+                    {showArchived ? "Archived jobs - click Restore to bring back." : "Small repairs under $500, grouped by technician. Click any job to see full details."}
                   </p>
                   <div className="flex gap-4 mt-2 text-sm">
                     <span className="text-orange-400 font-semibold">{srData.srCount} SR Jobs</span>
@@ -1206,5 +1329,6 @@ export default function Jobs() {
         ) : null}
       </div>
     </AppLayout>
+    </ArchiveContext.Provider>
   );
 }

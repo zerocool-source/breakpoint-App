@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Wrench, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Wrench, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff, Archive, ArchiveRestore } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -36,6 +36,7 @@ export default function Repairs() {
   const queryClient = useQueryClient();
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: alertsData = { alerts: [] }, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["enrichedAlerts"],
@@ -55,7 +56,17 @@ export default function Repairs() {
     },
   });
 
+  const { data: archivedData = { archivedIds: [] } } = useQuery({
+    queryKey: ["archivedAlerts", "repair"],
+    queryFn: async () => {
+      const res = await fetch("/api/alerts/archived?type=repair");
+      if (!res.ok) throw new Error("Failed to fetch archived alerts");
+      return res.json();
+    },
+  });
+
   const completedIds = new Set<string>((completedData.completedIds || []).map(String));
+  const archivedIds = new Set<string>((archivedData.archivedIds || []).map(String));
 
   const markCompleteMutation = useMutation({
     mutationFn: async ({ alertId, completed }: { alertId: string; completed: boolean }) => {
@@ -98,6 +109,47 @@ export default function Repairs() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ alertId, archive }: { alertId: string; archive: boolean }) => {
+      if (archive) {
+        const res = await fetch(`/api/alerts/${alertId}/archive`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "repair" }),
+        });
+        if (!res.ok) throw new Error("Failed to archive");
+        return res.json();
+      } else {
+        const res = await fetch(`/api/alerts/${alertId}/archive`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to unarchive");
+        return res.json();
+      }
+    },
+    onMutate: async ({ alertId, archive }) => {
+      await queryClient.cancelQueries({ queryKey: ["archivedAlerts", "repair"] });
+      const previousData = queryClient.getQueryData(["archivedAlerts", "repair"]);
+      
+      queryClient.setQueryData(["archivedAlerts", "repair"], (old: any) => {
+        const currentIds = old?.archivedIds || [];
+        if (archive) {
+          return { archivedIds: [...currentIds, alertId] };
+        } else {
+          return { archivedIds: currentIds.filter((id: string) => String(id) !== String(alertId)) };
+        }
+      });
+      
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["archivedAlerts", "repair"], context.previousData);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["archivedAlerts", "repair"] });
+    },
+  });
+
   const allAlerts: EnrichedAlert[] = alertsData.alerts || [];
 
   const isRepairAlert = (alert: EnrichedAlert): boolean => {
@@ -119,10 +171,14 @@ export default function Repairs() {
 
   const repairAlerts = allAlerts.filter(isRepairAlert);
   const activeRepairs = repairAlerts.filter(a => a.status === "Active");
-  const incompleteRepairs = activeRepairs.filter(a => !completedIds.has(String(a.alertId)));
-  const completedRepairs = activeRepairs.filter(a => completedIds.has(String(a.alertId)));
+  const nonArchivedRepairs = activeRepairs.filter(a => !archivedIds.has(String(a.alertId)));
+  const archivedRepairs = activeRepairs.filter(a => archivedIds.has(String(a.alertId)));
+  const incompleteRepairs = nonArchivedRepairs.filter(a => !completedIds.has(String(a.alertId)));
+  const completedRepairs = nonArchivedRepairs.filter(a => completedIds.has(String(a.alertId)));
 
-  const displayedAlerts = showCompleted ? activeRepairs : incompleteRepairs;
+  const displayedAlerts = showArchived 
+    ? archivedRepairs 
+    : (showCompleted ? nonArchivedRepairs : incompleteRepairs);
 
   const sortedAlerts = [...displayedAlerts].sort((a, b) => {
     const aCompleted = completedIds.has(String(a.alertId)) ? 1 : 0;
@@ -220,14 +276,14 @@ export default function Repairs() {
         </Card>
       </div>
 
-      {/* Toggle Pending/All */}
+      {/* Toggle Pending/All/Archived */}
       <div className="flex gap-2 mb-6">
         <Button
-          variant={!showCompleted ? "default" : "outline"}
-          onClick={() => setShowCompleted(false)}
+          variant={!showCompleted && !showArchived ? "default" : "outline"}
+          onClick={() => { setShowCompleted(false); setShowArchived(false); }}
           className={cn(
             "gap-2",
-            !showCompleted ? "bg-primary text-black" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+            !showCompleted && !showArchived ? "bg-primary text-black" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
           )}
           data-testid="button-show-pending"
         >
@@ -235,16 +291,28 @@ export default function Repairs() {
           Pending ({incompleteRepairs.length})
         </Button>
         <Button
-          variant={showCompleted ? "default" : "outline"}
-          onClick={() => setShowCompleted(true)}
+          variant={showCompleted && !showArchived ? "default" : "outline"}
+          onClick={() => { setShowCompleted(true); setShowArchived(false); }}
           className={cn(
             "gap-2",
-            showCompleted ? "bg-primary text-black" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+            showCompleted && !showArchived ? "bg-primary text-black" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
           )}
           data-testid="button-show-all"
         >
           <Eye className="w-4 h-4" />
-          Show All ({activeRepairs.length})
+          Show All ({nonArchivedRepairs.length})
+        </Button>
+        <Button
+          variant={showArchived ? "default" : "outline"}
+          onClick={() => { setShowArchived(true); setShowCompleted(false); }}
+          className={cn(
+            "gap-2",
+            showArchived ? "bg-orange-500 text-white" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+          )}
+          data-testid="button-show-archived"
+        >
+          <Archive className="w-4 h-4" />
+          Archived ({archivedRepairs.length})
         </Button>
       </div>
 
@@ -253,9 +321,9 @@ export default function Repairs() {
         <CardHeader className="pb-2">
           <CardTitle className="font-display text-lg tracking-wide flex items-center gap-2">
             <Wrench className="w-5 h-5 text-primary" />
-            {showCompleted ? "ALL REPAIRS" : "PENDING REPAIRS"}
+            {showArchived ? "ARCHIVED REPAIRS" : showCompleted ? "ALL REPAIRS" : "PENDING REPAIRS"}
             <span className="text-xs text-muted-foreground font-normal ml-2">
-              (Check box to mark as reviewed)
+              {showArchived ? "(Click Restore to bring back)" : "(Check box to mark as reviewed)"}
             </span>
           </CardTitle>
         </CardHeader>
@@ -405,25 +473,53 @@ export default function Repairs() {
                       </div>
                     )}
 
-                    {/* Footer: Technician + Expand */}
+                    {/* Footer: Technician + Archive + Expand */}
                     <div className="flex items-center justify-between pt-3 border-t border-white/10 ml-10">
-                      {alert.techName ? (
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30">
-                            <User className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-primary" data-testid={`text-tech-${alert.alertId}`}>
-                              {alert.techName}
-                            </span>
-                          </div>
-                          {alert.techPhone && (
-                            <a href={`tel:${alert.techPhone}`} className="text-sm text-blue-400 hover:text-blue-300">
-                              {alert.techPhone}
-                            </a>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No technician assigned</span>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {alert.techName ? (
+                          <>
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30">
+                              <User className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-medium text-primary" data-testid={`text-tech-${alert.alertId}`}>
+                                {alert.techName}
+                              </span>
+                            </div>
+                            {alert.techPhone && (
+                              <a href={`tel:${alert.techPhone}`} className="text-sm text-blue-400 hover:text-blue-300">
+                                {alert.techPhone}
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No technician assigned</span>
+                        )}
+                        
+                        {/* Archive/Unarchive Button */}
+                        {isCompleted && !showArchived && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => archiveMutation.mutate({ alertId: String(alert.alertId), archive: true })}
+                            className="gap-1 text-orange-400 border-orange-500/30 hover:bg-orange-500/10"
+                            data-testid={`btn-archive-${alert.alertId}`}
+                          >
+                            <Archive className="w-3 h-3" />
+                            Archive
+                          </Button>
+                        )}
+                        {showArchived && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => archiveMutation.mutate({ alertId: String(alert.alertId), archive: false })}
+                            className="gap-1 text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
+                            data-testid={`btn-unarchive-${alert.alertId}`}
+                          >
+                            <ArchiveRestore className="w-3 h-3" />
+                            Restore
+                          </Button>
+                        )}
+                      </div>
 
                       <Button
                         size="sm"

@@ -7,8 +7,9 @@ import {
   type CompletedAlert, type InsertCompletedAlert,
   type PayPeriod, type InsertPayPeriod,
   type PayrollEntry, type InsertPayrollEntry,
+  type ArchivedAlert, type InsertArchivedAlert,
   settings, alerts, workflows, customers, chatMessages, completedAlerts,
-  payPeriods, payrollEntries
+  payPeriods, payrollEntries, archivedAlerts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and } from "drizzle-orm";
@@ -56,6 +57,13 @@ export interface IStorage {
   getPayrollEntriesByTechnician(technicianId: string, payPeriodId?: string): Promise<PayrollEntry[]>;
   createPayrollEntry(entry: InsertPayrollEntry): Promise<PayrollEntry>;
   deletePayrollEntry(id: string): Promise<void>;
+
+  // Archived Alerts
+  getArchivedAlerts(alertType?: string): Promise<ArchivedAlert[]>;
+  getArchivedAlertIds(alertType?: string): Promise<string[]>;
+  archiveAlert(alertId: string, alertType: string): Promise<ArchivedAlert>;
+  unarchiveAlert(alertId: string): Promise<void>;
+  isAlertArchived(alertId: string): Promise<boolean>;
 }
 
 export class DbStorage implements IStorage {
@@ -248,6 +256,56 @@ export class DbStorage implements IStorage {
 
   async deletePayrollEntry(id: string): Promise<void> {
     await db.delete(payrollEntries).where(eq(payrollEntries.id, id));
+  }
+
+  // Archived Alerts
+  async getArchivedAlerts(alertType?: string): Promise<ArchivedAlert[]> {
+    if (alertType) {
+      return db.select().from(archivedAlerts)
+        .where(eq(archivedAlerts.alertType, alertType))
+        .orderBy(desc(archivedAlerts.archivedAt));
+    }
+    return db.select().from(archivedAlerts).orderBy(desc(archivedAlerts.archivedAt));
+  }
+
+  async getArchivedAlertIds(alertType?: string): Promise<string[]> {
+    const query = alertType 
+      ? db.select({ alertId: archivedAlerts.alertId }).from(archivedAlerts).where(eq(archivedAlerts.alertType, alertType))
+      : db.select({ alertId: archivedAlerts.alertId }).from(archivedAlerts);
+    const results = await query;
+    return results.map(r => r.alertId);
+  }
+
+  async archiveAlert(alertId: string, alertType: string): Promise<ArchivedAlert> {
+    try {
+      const result = await db
+        .insert(archivedAlerts)
+        .values({ alertId, alertType })
+        .onConflictDoNothing({ target: archivedAlerts.alertId })
+        .returning();
+      
+      if (result.length > 0) {
+        return result[0];
+      }
+      
+      const existing = await db.select().from(archivedAlerts).where(eq(archivedAlerts.alertId, alertId)).limit(1);
+      return existing[0];
+    } catch (error: any) {
+      if (error.code === '23505') {
+        const existing = await db.select().from(archivedAlerts).where(eq(archivedAlerts.alertId, alertId)).limit(1);
+        return existing[0];
+      }
+      throw error;
+    }
+  }
+
+  async unarchiveAlert(alertId: string): Promise<void> {
+    await db.delete(archivedAlerts).where(eq(archivedAlerts.alertId, alertId));
+  }
+
+  async isAlertArchived(alertId: string): Promise<boolean> {
+    const result = await db.select().from(archivedAlerts).where(eq(archivedAlerts.alertId, alertId)).limit(1);
+    return result.length > 0;
   }
 }
 

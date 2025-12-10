@@ -75,6 +75,15 @@ export const payPeriods = pgTable("pay_periods", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Archived Alerts (repairs/jobs that have been archived after processing)
+export const archivedAlerts = pgTable("archived_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertId: text("alert_id").notNull().unique(),
+  alertType: text("alert_type").notNull(), // "repair", "job", etc.
+  archivedAt: timestamp("archived_at").defaultNow(),
+  archivedBy: text("archived_by"),
+});
+
 // Payroll Entries (service jobs assigned to technician payroll)
 export const payrollEntries = pgTable("payroll_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -135,6 +144,11 @@ export const insertPayrollEntrySchema = createInsertSchema(payrollEntries).omit(
   createdAt: true,
 });
 
+export const insertArchivedAlertSchema = createInsertSchema(archivedAlerts).omit({
+  id: true,
+  archivedAt: true,
+});
+
 // Types
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
@@ -159,3 +173,6 @@ export type PayPeriod = typeof payPeriods.$inferSelect;
 
 export type InsertPayrollEntry = z.infer<typeof insertPayrollEntrySchema>;
 export type PayrollEntry = typeof payrollEntries.$inferSelect;
+
+export type InsertArchivedAlert = z.infer<typeof insertArchivedAlertSchema>;
+export type ArchivedAlert = typeof archivedAlerts.$inferSelect;
