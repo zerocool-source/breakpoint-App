@@ -1367,7 +1367,7 @@ export default function Jobs() {
 
                       {topEarner && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Card className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 border-amber-400/50 shadow-lg">
+                          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-amber-400/50 shadow-lg">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
                                 <Trophy className="w-8 h-8 text-amber-400" />
@@ -1378,21 +1378,21 @@ export default function Jobs() {
                               </div>
                               <div className="flex gap-4 text-sm">
                                 <span className="text-amber-300 font-semibold">{formatPrice(topEarner.totalValue)}</span>
-                                <span className="text-slate-400">{topEarner.jobCount} jobs</span>
+                                <span className="text-slate-300">{topEarner.jobCount} jobs</span>
                               </div>
                             </CardContent>
                           </Card>
-                          <Card className="bg-gradient-to-br from-sky-500/20 to-sky-600/10 border-sky-400/50 shadow-lg">
+                          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-400/50 shadow-lg">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
-                                <Wrench className="w-8 h-8 text-sky-400" />
+                                <Wrench className="w-8 h-8 text-slate-300" />
                                 <div>
-                                  <p className="text-xs text-sky-400 uppercase tracking-wider font-semibold">Most Repairs</p>
+                                  <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Most Repairs</p>
                                   <p className="text-xl font-ui font-bold text-white">{mostJobs?.name}</p>
                                 </div>
                               </div>
                               <div className="flex gap-4 text-sm">
-                                <span className="text-sky-300 font-semibold">{mostJobs?.jobCount} jobs</span>
+                                <span className="text-slate-200 font-semibold">{mostJobs?.jobCount} jobs</span>
                                 <span className="text-slate-400">{formatPrice(mostJobs?.totalValue || 0)}</span>
                               </div>
                             </CardContent>
@@ -1533,17 +1533,17 @@ export default function Jobs() {
                           </div>
                         </CardContent>
                       </Card>
-                      <Card className="bg-gradient-to-br from-sky-500/20 to-sky-600/10 border-sky-400/50 shadow-lg">
+                      <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-400/50 shadow-lg">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <Wrench className="w-8 h-8 text-sky-400" />
+                            <Wrench className="w-8 h-8 text-slate-300" />
                             <div>
-                              <p className="text-xs text-sky-400 uppercase tracking-wider font-semibold">Most Jobs</p>
+                              <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Most Jobs</p>
                               <p className="text-xl font-ui font-bold text-white">{repairTechData.mostJobs?.name}</p>
                             </div>
                           </div>
                           <div className="flex gap-4 text-sm">
-                            <span className="text-sky-300 font-semibold">{repairTechData.mostJobs?.jobs.length} jobs</span>
+                            <span className="text-slate-200 font-semibold">{repairTechData.mostJobs?.jobs.length} jobs</span>
                             <span className="text-slate-400">{formatPrice(repairTechData.mostJobs?.totalValue || 0)}</span>
                           </div>
                         </CardContent>
