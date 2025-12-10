@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -964,23 +964,61 @@ export default function Jobs() {
               </TabsContent>
 
               <TabsContent value="repair-techs" className="mt-4">
+                {(() => {
+                  const [selectedTech, setSelectedTech] = React.useState<string | null>(null);
+                  const filteredTechs = selectedTech 
+                    ? repairTechData.repairTechs.filter(t => t.name === selectedTech)
+                    : repairTechData.repairTechs;
+
+                  return (
                 <div className="space-y-4">
                   <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <HardHat className="w-5 h-5 text-purple-400" />
-                      <h3 className="font-ui font-semibold text-purple-400">Repair Technicians</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <HardHat className="w-5 h-5 text-purple-400" />
+                        <h3 className="font-ui font-semibold text-purple-400">Repair Technicians</h3>
+                      </div>
+                      <div className="flex gap-2 text-sm">
+                        <span className="text-purple-400 font-semibold">{repairTechData.totalJobs} Jobs</span>
+                        <span className="text-purple-400 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Alan Bateman, Don Johnson, Jose Puente, Matt Cummins, Rick Jacobs, Vit Kruml
-                    </p>
-                    <div className="flex gap-4 mt-2 text-sm">
-                      <span className="text-purple-400 font-semibold">{repairTechData.totalJobs} Jobs</span>
-                      <span className="text-purple-400 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
-                      <span className="text-muted-foreground">{repairTechData.repairTechs.length} Techs</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedTech(null)}
+                        className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all ${
+                          selectedTech === null 
+                            ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
+                            : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                        }`}
+                        data-testid="repair-tech-all"
+                      >
+                        All Techs
+                      </button>
+                      {["Alan Bateman", "Don Johnson", "Jose Puente", "Matt Cummins", "Rick Jacobs", "Vit Kruml"].map(name => {
+                        const techData = repairTechData.repairTechs.find(t => t.name === name);
+                        return (
+                          <button
+                            key={name}
+                            onClick={() => setSelectedTech(name)}
+                            className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all flex items-center gap-2 ${
+                              selectedTech === name 
+                                ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
+                                : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
+                            }`}
+                            data-testid={`repair-tech-btn-${name}`}
+                          >
+                            {name}
+                            {techData && (
+                              <span className="text-xs opacity-75">({techData.jobs.length})</span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {repairTechData.topEarner && (
+                  {!selectedTech && repairTechData.topEarner && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/50">
                         <CardContent className="p-4">
@@ -1024,7 +1062,7 @@ export default function Jobs() {
                           </CardContent>
                         </Card>
                       ) : (
-                        repairTechData.repairTechs.map((tech) => (
+                        filteredTechs.map((tech) => (
                           <Collapsible key={tech.name} defaultOpen>
                             <Card className="bg-card/50 border-purple-500/30 hover:border-purple-500/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
                               <CollapsibleTrigger className="w-full">
@@ -1088,6 +1126,8 @@ export default function Jobs() {
                     </div>
                   </ScrollArea>
                 </div>
+                  );
+                })()}
               </TabsContent>
 
               <TabsContent value="accounts" className="mt-4">
