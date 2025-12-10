@@ -1309,6 +1309,18 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Permanently delete an archived alert
+  app.delete("/api/alerts/:alertId/permanent", async (req: any, res: any) => {
+    try {
+      const { alertId } = req.params;
+      await storage.deleteArchivedAlert(alertId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error permanently deleting alert:", error);
+      res.status(500).json({ error: "Failed to permanently delete alert" });
+    }
+  });
+
   // ==================== PAYROLL ====================
 
   // Get all pay periods

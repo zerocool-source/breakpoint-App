@@ -6,14 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 
 interface ArchiveContext {
   archivedIds: Set<string>;
   showArchived: boolean;
   archiveJob: (jobId: string) => void;
   unarchiveJob: (jobId: string) => void;
+  deleteJob: (jobId: string) => void;
 }
 
 const ArchiveContext = createContext<ArchiveContext | null>(null);
@@ -717,6 +719,8 @@ export default function Jobs() {
     return { srJobs, srByTechnician, srCount: srJobs.length, srValue, archivedCount: archivedSrJobs.length };
   }, [data?.jobs, archivedIds, showArchived]);
 
+  const MONTHLY_QUOTA = 27000;
+  
   const repairTechData = useMemo(() => {
     if (!data?.jobs) return { repairTechs: [], totalJobs: 0, totalValue: 0, topEarner: null, mostJobs: null };
 
@@ -730,6 +734,11 @@ export default function Jobs() {
     ]);
 
     const repairJobs = data.jobs.filter(job => REPAIR_TECH_NAMES.has(job.technicianName));
+    
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
     const techMap: Record<string, {
       name: string;
@@ -739,6 +748,10 @@ export default function Jobs() {
       commission10: number;
       commission15: number;
       repairTypes: Record<string, { count: number; value: number }>;
+      monthlyValue: number;
+      dailyValues: Record<number, number>;
+      quotaPercent: number;
+      daysInMonth: number;
     }> = {};
 
     repairJobs.forEach(job => {
@@ -751,12 +764,23 @@ export default function Jobs() {
           completedCount: 0,
           commission10: 0,
           commission15: 0,
-          repairTypes: {}
+          repairTypes: {},
+          monthlyValue: 0,
+          dailyValues: {},
+          quotaPercent: 0,
+          daysInMonth
         };
       }
       techMap[name].jobs.push(job);
       techMap[name].totalValue += job.price;
       if (job.isCompleted) techMap[name].completedCount++;
+      
+      const jobDate = job.scheduledDate ? new Date(job.scheduledDate) : (job.createdDate ? new Date(job.createdDate) : null);
+      if (jobDate && jobDate.getMonth() === currentMonth && jobDate.getFullYear() === currentYear) {
+        const day = jobDate.getDate();
+        techMap[name].monthlyValue += job.price;
+        techMap[name].dailyValues[day] = (techMap[name].dailyValues[day] || 0) + job.price;
+      }
       
       const repairType = job.title || "Other";
       if (!techMap[name].repairTypes[repairType]) {
@@ -769,6 +793,7 @@ export default function Jobs() {
     Object.values(techMap).forEach(tech => {
       tech.commission10 = Math.round(tech.totalValue * 0.10 * 100) / 100;
       tech.commission15 = Math.round(tech.totalValue * 0.15 * 100) / 100;
+      tech.quotaPercent = Math.min(100, Math.round((tech.monthlyValue / MONTHLY_QUOTA) * 100));
     });
 
     const repairTechs = Object.values(techMap).sort((a, b) => b.totalValue - a.totalValue);
@@ -1225,6 +1250,56 @@ export default function Jobs() {
                                   </CardTitle>
                                 </CardHeader>
                               </CollapsibleTrigger>
+                              <CardContent className="pt-0 pb-3">
+                                <div className="bg-background/30 rounded-lg p-3 border border-purple-500/20">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Monthly Quota Progress</span>
+                                    <span className="text-sm font-ui">
+                                      <span className={tech.quotaPercent >= 100 ? "text-green-400 font-bold" : "text-purple-400"}>
+                                        {formatPrice(tech.monthlyValue)}
+                                      </span>
+                                      <span className="text-muted-foreground"> / {formatPrice(MONTHLY_QUOTA)}</span>
+                                    </span>
+                                  </div>
+                                  <Progress 
+                                    value={tech.quotaPercent} 
+                                    className="h-2 bg-purple-500/10"
+                                  />
+                                  <div className="flex justify-between mt-1">
+                                    <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-green-400' : tech.quotaPercent >= 70 ? 'text-yellow-400' : 'text-purple-400'}`}>
+                                      {tech.quotaPercent}%
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {tech.quotaPercent >= 100 ? '✓ Quota Met!' : `${formatPrice(MONTHLY_QUOTA - tech.monthlyValue)} to go`}
+                                    </span>
+                                  </div>
+                                  <div className="mt-3 pt-3 border-t border-border/30">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {Array.from({ length: tech.daysInMonth }, (_, i) => i + 1).map(day => {
+                                        const value = tech.dailyValues[day] || 0;
+                                        const hasActivity = value > 0;
+                                        const intensity = hasActivity ? Math.min(1, value / 1000) : 0;
+                                        return (
+                                          <div
+                                            key={day}
+                                            className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
+                                              hasActivity 
+                                                ? intensity > 0.7 ? 'bg-green-500 text-white' 
+                                                : intensity > 0.3 ? 'bg-green-500/60 text-white' 
+                                                : 'bg-green-500/30 text-green-200'
+                                                : 'bg-muted/20 text-muted-foreground/50'
+                                            }`}
+                                            title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}
+                                          >
+                                            {day}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardContent>
                               <CollapsibleContent>
                                 <CardContent className="pt-0">
                                   <div className="mt-3 pt-3 border-t border-border/30">

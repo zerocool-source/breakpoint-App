@@ -27,7 +27,10 @@ export function Sidebar() {
           className="w-10 h-10 object-contain"
         />
         <div>
-          <h1 className="font-display font-bold text-lg tracking-wider text-foreground">BREAKPOINT</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display font-bold text-lg tracking-wider text-foreground">BREAKPOINT</h1>
+            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded uppercase tracking-wider">Beta</span>
+          </div>
           <p className="text-xs text-muted-foreground font-ui tracking-widest">INTELLIGENCE</p>
         </div>
       </div>

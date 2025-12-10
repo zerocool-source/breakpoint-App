@@ -307,6 +307,10 @@ export class DbStorage implements IStorage {
     const result = await db.select().from(archivedAlerts).where(eq(archivedAlerts.alertId, alertId)).limit(1);
     return result.length > 0;
   }
+
+  async deleteArchivedAlert(alertId: string): Promise<void> {
+    await db.delete(archivedAlerts).where(eq(archivedAlerts.alertId, alertId));
+  }
 }
 
 export const storage = new DbStorage();
