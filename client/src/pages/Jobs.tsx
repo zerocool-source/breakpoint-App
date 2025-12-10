@@ -9,6 +9,85 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+
+declare module "jspdf" {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
+
+function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
+  const doc = new jsPDF();
+  const now = new Date();
+  const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  
+  doc.setFontSize(20);
+  doc.setTextColor(128, 0, 128);
+  doc.text("Repair Technician Performance Report", 14, 20);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
+  doc.text(`Monthly Quota: $${monthlyQuota.toLocaleString()}`, 14, 35);
+  
+  const tableData = repairTechs.map(tech => [
+    tech.name,
+    tech.jobs.length.toString(),
+    `$${tech.totalValue.toLocaleString()}`,
+    `$${tech.monthlyValue?.toLocaleString() || '0'}`,
+    `${tech.quotaPercent || 0}%`,
+    `$${tech.commission10?.toLocaleString() || '0'}`,
+    `$${tech.commission15?.toLocaleString() || '0'}`
+  ]);
+
+  doc.autoTable({
+    startY: 42,
+    head: [['Technician', 'Jobs', 'Total Value', 'This Month', 'Quota %', '10% Comm', '15% Comm']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: { fillColor: [128, 0, 128], textColor: 255 },
+    styles: { fontSize: 9 }
+  });
+
+  let yPos = (doc as any).lastAutoTable?.finalY + 15 || 100;
+  
+  repairTechs.forEach(tech => {
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(128, 0, 128);
+    doc.text(tech.name, 14, yPos);
+    yPos += 8;
+    
+    const jobsData = tech.jobs.slice(0, 10).map((job: any) => [
+      job.title?.substring(0, 30) || 'N/A',
+      job.customerName?.substring(0, 25) || 'N/A',
+      `$${job.price?.toLocaleString() || '0'}`,
+      job.isCompleted ? 'Complete' : 'Pending',
+      job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
+    ]);
+    
+    if (jobsData.length > 0) {
+      doc.autoTable({
+        startY: yPos,
+        head: [['Job Title', 'Customer', 'Price', 'Status', 'Date']],
+        body: jobsData,
+        theme: 'grid',
+        headStyles: { fillColor: [100, 100, 100], textColor: 255 },
+        styles: { fontSize: 8 },
+        margin: { left: 14, right: 14 }
+      });
+      yPos = (doc as any).lastAutoTable?.finalY + 15 || yPos + 50;
+    }
+  });
+
+  doc.save(`repair-techs-report-${now.toISOString().split('T')[0]}.pdf`);
+}
 
 interface ArchiveContext {
   archivedIds: Set<string>;
@@ -254,18 +333,34 @@ function ExpandableJobCard({ job }: { job: Job }) {
               </div>
             )}
             {archive && job.isCompleted && (
-              <div className="mt-4 pt-4 border-t border-border/30 flex justify-end">
+              <div className="mt-4 pt-4 border-t border-border/30 flex justify-end gap-2">
                 {archive.showArchived ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => archive.unarchiveJob(String(job.jobId))}
-                    className="gap-1 text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
-                    data-testid={`btn-unarchive-${job.jobId}`}
-                  >
-                    <ArchiveRestore className="w-3 h-3" />
-                    Restore from Archive
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => archive.unarchiveJob(String(job.jobId))}
+                      className="gap-1 text-blue-400 border-blue-500/30 hover:bg-blue-500/10"
+                      data-testid={`btn-unarchive-${job.jobId}`}
+                    >
+                      <ArchiveRestore className="w-3 h-3" />
+                      Restore
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (confirm("Permanently delete this job? This cannot be undone.")) {
+                          archive.deleteJob(String(job.jobId));
+                        }
+                      }}
+                      className="gap-1 text-red-400 border-red-500/30 hover:bg-red-500/10"
+                      data-testid={`btn-delete-${job.jobId}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     size="sm"
@@ -668,11 +763,24 @@ export default function Jobs() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (jobId: string) => {
+      const res = await fetch(`/api/alerts/${jobId}/permanent`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete job");
+      return res.json();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["archivedAlerts", "job"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+    },
+  });
+
   const archiveContextValue: ArchiveContext = {
     archivedIds,
     showArchived,
     archiveJob: (jobId: string) => archiveMutation.mutate({ jobId, archive: true }),
     unarchiveJob: (jobId: string) => archiveMutation.mutate({ jobId, archive: false }),
+    deleteJob: (jobId: string) => deleteMutation.mutate(jobId),
   };
 
   const srData = useMemo(() => {
@@ -1135,9 +1243,21 @@ export default function Jobs() {
                         <HardHat className="w-5 h-5 text-purple-400" />
                         <h3 className="font-ui font-semibold text-purple-400">Repair Technicians</h3>
                       </div>
-                      <div className="flex gap-2 text-sm">
-                        <span className="text-purple-400 font-semibold">{repairTechData.totalJobs} Jobs</span>
-                        <span className="text-purple-400 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
+                      <div className="flex items-center gap-4">
+                        <div className="flex gap-2 text-sm">
+                          <span className="text-purple-400 font-semibold">{repairTechData.totalJobs} Jobs</span>
+                          <span className="text-purple-400 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => exportRepairTechsPDF(repairTechData.repairTechs, MONTHLY_QUOTA)}
+                          className="gap-1 text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
+                          data-testid="btn-export-repair-techs-pdf"
+                        >
+                          <FileDown className="w-3 h-3" />
+                          Export PDF
+                        </Button>
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
