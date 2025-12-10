@@ -1,6 +1,7 @@
 import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap, CalendarClock, DollarSign, Building2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_11_02_17_PM_1765350238464.png";
 
 
 
@@ -30,8 +31,15 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-50 shadow-sm">
-      <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-end">
-        <span className="px-2 py-0.5 text-[10px] font-bold bg-[#0891b2] text-white border border-[#067997] rounded-full uppercase tracking-wider shadow-sm">Beta</span>
+      <div className="p-5 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between gap-2">
+          <img 
+            src={BreakpointLogo} 
+            alt="Breakpoint Intelligence" 
+            className="h-10 w-auto object-contain"
+          />
+          <span className="px-2 py-0.5 text-[10px] font-bold bg-[#0891b2] text-white border border-[#067997] rounded-full uppercase tracking-wider shadow-sm">Beta</span>
+        </div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1 bg-white">
         {navItems.map((item) => {
