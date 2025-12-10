@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings } from "lucide-react";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail } from "lucide-react";
 
 interface Job {
   jobId: string;
@@ -395,10 +395,26 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
   const [isOpen, setIsOpen] = useState(true);
   const completedCount = jobs.filter(j => j.isCompleted).length;
   const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
+  const readyToInvoice = totalValue >= 500;
+
+  const handleSendInvoice = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const jobDetails = jobs.map(j => `• ${j.title}: ${formatPrice(j.price)}`).join('%0D%0A');
+    const subject = encodeURIComponent(`Invoice Ready: ${accountName} - SR Repairs Total ${formatPrice(totalValue)}`);
+    const body = encodeURIComponent(
+      `Invoice Summary for ${accountName}\n\n` +
+      `Total Amount: ${formatPrice(totalValue)}\n` +
+      `Completed: ${completedCount}/${jobs.length} jobs\n\n` +
+      `Job Details:\n` +
+      jobs.map(j => `• ${j.title}: ${formatPrice(j.price)} - ${j.isCompleted ? 'Complete' : 'Pending'}`).join('\n') +
+      `\n\nPlease process this invoice at your earliest convenience.`
+    );
+    window.open(`https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`, '_blank');
+  };
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="border border-orange-500/20 rounded-lg bg-background/20 overflow-hidden">
+      <div className={`border rounded-lg bg-background/20 overflow-hidden ${readyToInvoice ? 'border-green-500/50' : 'border-orange-500/20'}`}>
         <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-orange-500/10 transition-colors">
           <div className="flex items-center gap-2">
             {isOpen ? (
@@ -411,14 +427,31 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
             <Badge variant="outline" className="text-xs border-orange-500/30 text-orange-300">
               {jobs.length} jobs
             </Badge>
+            {readyToInvoice && (
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/50 animate-pulse text-xs">
+                Ready to Invoice
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-muted-foreground">{completedCount}/{jobs.length} done</span>
-            <span className="font-ui font-semibold text-orange-400">{formatPrice(totalValue)}</span>
+            <span className={`font-ui font-semibold ${readyToInvoice ? 'text-green-400' : 'text-orange-400'}`}>
+              {formatPrice(totalValue)}
+            </span>
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-3 pt-0 space-y-2 border-t border-orange-500/10">
+            {readyToInvoice && (
+              <button
+                onClick={handleSendInvoice}
+                className="w-full mb-3 py-2 px-4 bg-green-500/20 hover:bg-green-500/30 border border-green-500/50 rounded-lg text-green-400 font-ui font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                data-testid={`send-invoice-${accountName}`}
+              >
+                <Mail className="w-4 h-4" />
+                Send Invoice ({formatPrice(totalValue)})
+              </button>
+            )}
             {jobs.map((job) => (
               <ExpandableJobCard key={job.jobId} job={job} />
             ))}
