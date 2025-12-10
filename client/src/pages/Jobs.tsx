@@ -10,13 +10,7 @@ import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, Doll
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
-
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import autoTable from "jspdf-autotable";
 
 function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
   const doc = new jsPDF();
@@ -42,7 +36,7 @@ function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
     `$${tech.commission15?.toLocaleString() || '0'}`
   ]);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: 42,
     head: [['Technician', 'Jobs', 'Total Value', 'This Month', 'Quota %', '10% Comm', '15% Comm']],
     body: tableData,
@@ -73,7 +67,7 @@ function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
     ]);
     
     if (jobsData.length > 0) {
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Job Title', 'Customer', 'Price', 'Status', 'Date']],
         body: jobsData,

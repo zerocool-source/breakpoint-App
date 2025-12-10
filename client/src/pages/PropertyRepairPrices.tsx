@@ -9,13 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Building2, DollarSign, Wrench, Search, ChevronDown, ChevronRight, Loader2, TrendingUp, MapPin, Calendar, User, CheckCircle2, Clock, AlertCircle, ArrowUpDown, FileDown } from "lucide-react";
 import { PropertyRepairSummary } from "@shared/schema";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
-
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import autoTable from "jspdf-autotable";
 
 interface PropertyRepairsResponse {
   properties: PropertyRepairSummary[];
@@ -67,7 +61,7 @@ function exportPropertyRepairsPDF(properties: PropertyRepairSummary[], summary: 
     formatDate(p.lastServiceDate)
   ]);
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: 68,
     head: [['Property', 'Repairs', 'Done/Pending', 'Total Spend', 'Avg Cost', 'Last Service']],
     body: tableData,

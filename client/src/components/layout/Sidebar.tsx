@@ -2,7 +2,7 @@ import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Z
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
-import Breakpoint_Icon_Sticker___Artwork from "@assets/Breakpoint Icon Sticker - Artwork.png";
+import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_07_48_50_PM_1765338556188.png";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -21,26 +21,16 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50 backdrop-blur-xl bg-opacity-80">
-      <div className="p-6 flex items-center gap-3">
+      <div className="p-4">
         <div className="relative">
           <img 
-            src={Breakpoint_Icon_Sticker___Artwork} 
+            src={BreakpointLogo} 
             alt="Breakpoint Logo" 
-            className="w-10 h-10 object-contain relative z-10"
+            className="w-full h-auto object-contain"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" 
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer pointer-events-none" 
                style={{ backgroundSize: '200% 100%' }} />
-        </div>
-        <div className="relative overflow-hidden">
-          <div className="flex items-center gap-2">
-            <h1 className="font-display font-bold text-lg tracking-wider text-foreground relative">
-              <span className="relative z-10">BREAKPOINT</span>
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/30 to-transparent animate-shimmer"
-                    style={{ backgroundSize: '200% 100%' }} />
-            </h1>
-            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded uppercase tracking-wider animate-pulse">Beta</span>
-          </div>
-          <p className="text-xs text-muted-foreground font-ui tracking-widest">INTELLIGENCE</p>
+          <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded uppercase tracking-wider animate-pulse">Beta</span>
         </div>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
