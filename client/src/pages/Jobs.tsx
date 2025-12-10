@@ -687,6 +687,7 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
 }
 
 function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const completedCount = jobs.filter(j => j.isCompleted).length;
   const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
   const completionPercent = jobs.length > 0 ? Math.round((completedCount / jobs.length) * 100) : 0;
@@ -706,55 +707,200 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
   }, [jobs]);
 
   return (
-    <Card className="bg-card/50 border-orange-500/30 hover:border-orange-500/50 transition-colors" data-testid={`sr-tech-${techName}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
-              <Settings className="w-5 h-5 text-orange-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-ui text-lg text-foreground">{techName}</p>
-                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">SR</Badge>
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Card className="bg-card/50 border-orange-500/30 hover:border-orange-500/50 transition-colors" data-testid={`sr-tech-${techName}`}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer hover:bg-orange-500/5 transition-colors">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isExpanded ? (
+                  <ChevronDown className="w-5 h-5 text-orange-400" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                )}
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-orange-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-ui text-lg text-foreground">{techName}</p>
+                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">SR</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Service Repairs (&lt;$500) • {jobsByAccount.length} accounts
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Service Repairs (&lt;$500) • {jobsByAccount.length} accounts
-              </p>
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`sr-commission10-${techName}`}>
+                    10%: {formatPrice(commission10)}
+                  </Badge>
+                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`sr-commission15-${techName}`}>
+                    15%: {formatPrice(commission15)}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="font-ui font-bold text-xl text-orange-400">
+                    {formatPrice(totalValue)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {completedCount}/{jobs.length} complete ({completionPercent}%)
+                  </p>
+                </div>
+              </div>
+            </CardTitle>
+            <div className="w-full bg-background/30 rounded-full h-2 mt-3">
+              <div 
+                className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${completionPercent}%` }}
+              />
             </div>
-          </div>
-          <div className="text-right">
-            <p className="font-ui font-bold text-xl text-orange-400">
-              {formatPrice(totalValue)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {completedCount}/{jobs.length} complete ({completionPercent}%)
-            </p>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex gap-2 mb-3">
-          <Badge className="bg-green-500/20 text-green-400 border-green-500/50" data-testid={`sr-commission10-${techName}`}>
-            10%: {formatPrice(commission10)}
-          </Badge>
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50" data-testid={`sr-commission15-${techName}`}>
-            15%: {formatPrice(commission15)}
-          </Badge>
-        </div>
-        <div className="w-full bg-background/30 rounded-full h-2 mb-4">
-          <div 
-            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${completionPercent}%` }}
-          />
-        </div>
-        <div className="space-y-3">
-          {jobsByAccount.map(([accountName, accountJobs]) => (
-            <SRAccountSubfolder key={accountName} accountName={accountName} jobs={accountJobs} />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 border-t border-orange-500/10">
+            <div className="space-y-3 pt-4">
+              {jobsByAccount.map(([accountName, accountJobs]) => (
+                <SRAccountSubfolder key={accountName} accountName={accountName} jobs={accountJobs} />
+              ))}
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
+interface RepairTechData {
+  name: string;
+  jobs: Job[];
+  totalValue: number;
+  completedCount: number;
+  commission10: number;
+  commission15: number;
+  repairTypes: Record<string, { count: number; value: number }>;
+  monthlyValue: number;
+  dailyValues: Record<number, number>;
+  quotaPercent: number;
+  daysInMonth: number;
+}
+
+function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQuota: number }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Card className="bg-card/50 border-purple-500/30 hover:border-purple-500/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-2 cursor-pointer hover:bg-purple-500/5 transition-colors">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isExpanded ? (
+                  <ChevronDown className="w-5 h-5 text-purple-400" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                )}
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <HardHat className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="text-left">
+                  <p className="font-ui text-lg text-foreground">{tech.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {tech.completedCount}/{tech.jobs.length} completed
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
+                    10%: {formatPrice(tech.commission10)}
+                  </Badge>
+                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                    15%: {formatPrice(tech.commission15)}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="font-ui font-bold text-2xl text-purple-400">{formatPrice(tech.totalValue)}</p>
+                </div>
+              </div>
+            </CardTitle>
+            <div className="bg-background/30 rounded-lg p-3 border border-purple-500/20 mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Monthly Quota Progress</span>
+                <span className="text-sm font-ui">
+                  <span className={tech.quotaPercent >= 100 ? "text-green-400 font-bold" : "text-purple-400"}>
+                    {formatPrice(tech.monthlyValue)}
+                  </span>
+                  <span className="text-muted-foreground"> / {formatPrice(monthlyQuota)}</span>
+                </span>
+              </div>
+              <Progress 
+                value={tech.quotaPercent} 
+                className="h-2 bg-purple-500/10"
+              />
+              <div className="flex justify-between mt-1">
+                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-green-400' : tech.quotaPercent >= 70 ? 'text-yellow-400' : 'text-purple-400'}`}>
+                  {tech.quotaPercent}%
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {tech.quotaPercent >= 100 ? '✓ Quota Met!' : `${formatPrice(monthlyQuota - tech.monthlyValue)} to go`}
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 border-t border-purple-500/10">
+            <div className="mt-3 pt-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
+              <div className="flex flex-wrap gap-1 mb-4">
+                {Array.from({ length: tech.daysInMonth }, (_, i) => i + 1).map(day => {
+                  const value = tech.dailyValues[day] || 0;
+                  const hasActivity = value > 0;
+                  const intensity = hasActivity ? Math.min(1, value / 1000) : 0;
+                  return (
+                    <div
+                      key={day}
+                      className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
+                        hasActivity 
+                          ? intensity > 0.7 ? 'bg-green-500 text-white' 
+                          : intensity > 0.3 ? 'bg-green-500/60 text-white' 
+                          : 'bg-green-500/30 text-green-200'
+                          : 'bg-muted/20 text-muted-foreground/50'
+                      }`}
+                      title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Repair Types</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {Object.entries(tech.repairTypes).slice(0, 6).map(([type, data]) => (
+                  <Badge key={type} variant="outline" className="text-xs border-purple-500/30 text-purple-300">
+                    {type.length > 25 ? type.substring(0, 25) + '...' : type}
+                    <span className="ml-1 text-muted-foreground">({data.count}x, {formatPrice(data.value)})</span>
+                  </Badge>
+                ))}
+                {Object.keys(tech.repairTypes).length > 6 && (
+                  <Badge variant="outline" className="text-xs border-muted text-muted-foreground">
+                    +{Object.keys(tech.repairTypes).length - 6} more
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Jobs ({tech.jobs.length})</p>
+              <div className="space-y-2">
+                {tech.jobs.map((job) => (
+                  <ExpandableJobCard key={job.jobId} job={job} />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 
@@ -1420,114 +1566,7 @@ export default function Jobs() {
                         </Card>
                       ) : (
                         filteredRepairTechs.map((tech) => (
-                          <Collapsible key={tech.name} defaultOpen>
-                            <Card className="bg-card/50 border-purple-500/30 hover:border-purple-500/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
-                              <CollapsibleTrigger className="w-full">
-                                <CardHeader className="pb-2">
-                                  <CardTitle className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                        <HardHat className="w-5 h-5 text-purple-400" />
-                                      </div>
-                                      <div className="text-left">
-                                        <p className="font-ui text-lg text-foreground">{tech.name}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                          {tech.completedCount}/{tech.jobs.length} completed
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-ui font-bold text-2xl text-purple-400">{formatPrice(tech.totalValue)}</p>
-                                      <div className="flex gap-2 mt-1">
-                                        <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
-                                          10%: {formatPrice(tech.commission10)}
-                                        </Badge>
-                                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
-                                          15%: {formatPrice(tech.commission15)}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </CardTitle>
-                                </CardHeader>
-                              </CollapsibleTrigger>
-                              <CardContent className="pt-0 pb-3">
-                                <div className="bg-background/30 rounded-lg p-3 border border-purple-500/20">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Monthly Quota Progress</span>
-                                    <span className="text-sm font-ui">
-                                      <span className={tech.quotaPercent >= 100 ? "text-green-400 font-bold" : "text-purple-400"}>
-                                        {formatPrice(tech.monthlyValue)}
-                                      </span>
-                                      <span className="text-muted-foreground"> / {formatPrice(MONTHLY_QUOTA)}</span>
-                                    </span>
-                                  </div>
-                                  <Progress 
-                                    value={tech.quotaPercent} 
-                                    className="h-2 bg-purple-500/10"
-                                  />
-                                  <div className="flex justify-between mt-1">
-                                    <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-green-400' : tech.quotaPercent >= 70 ? 'text-yellow-400' : 'text-purple-400'}`}>
-                                      {tech.quotaPercent}%
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {tech.quotaPercent >= 100 ? '✓ Quota Met!' : `${formatPrice(MONTHLY_QUOTA - tech.monthlyValue)} to go`}
-                                    </span>
-                                  </div>
-                                  <div className="mt-3 pt-3 border-t border-border/30">
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {Array.from({ length: tech.daysInMonth }, (_, i) => i + 1).map(day => {
-                                        const value = tech.dailyValues[day] || 0;
-                                        const hasActivity = value > 0;
-                                        const intensity = hasActivity ? Math.min(1, value / 1000) : 0;
-                                        return (
-                                          <div
-                                            key={day}
-                                            className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
-                                              hasActivity 
-                                                ? intensity > 0.7 ? 'bg-green-500 text-white' 
-                                                : intensity > 0.3 ? 'bg-green-500/60 text-white' 
-                                                : 'bg-green-500/30 text-green-200'
-                                                : 'bg-muted/20 text-muted-foreground/50'
-                                            }`}
-                                            title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}
-                                          >
-                                            {day}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                              <CollapsibleContent>
-                                <CardContent className="pt-0">
-                                  <div className="mt-3 pt-3 border-t border-border/30">
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Repair Types</p>
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                      {Object.entries(tech.repairTypes).slice(0, 6).map(([type, data]) => (
-                                        <Badge key={type} variant="outline" className="text-xs border-purple-500/30 text-purple-300">
-                                          {type.length > 25 ? type.substring(0, 25) + '...' : type}
-                                          <span className="ml-1 text-muted-foreground">({data.count}x, {formatPrice(data.value)})</span>
-                                        </Badge>
-                                      ))}
-                                      {Object.keys(tech.repairTypes).length > 6 && (
-                                        <Badge variant="outline" className="text-xs border-muted text-muted-foreground">
-                                          +{Object.keys(tech.repairTypes).length - 6} more
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Jobs ({tech.jobs.length})</p>
-                                    <div className="space-y-2">
-                                      {tech.jobs.map((job) => (
-                                        <ExpandableJobCard key={job.jobId} job={job} />
-                                      ))}
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </CollapsibleContent>
-                            </Card>
-                          </Collapsible>
+                          <RepairTechCard key={tech.name} tech={tech} monthlyQuota={MONTHLY_QUOTA} />
                         ))
                       )}
                     </div>
