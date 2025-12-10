@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Building2, DollarSign, Wrench, Search, ChevronDown, ChevronRight, Loader2, TrendingUp, MapPin, Calendar, User, CheckCircle2, Clock, AlertCircle, ArrowUpDown, FileDown } from "lucide-react";
+import { Building2, DollarSign, Wrench, Search, ChevronDown, ChevronRight, ChevronLeft, Loader2, TrendingUp, MapPin, Calendar, User, CheckCircle2, Clock, AlertCircle, ArrowUpDown, FileDown, BarChart3 } from "lucide-react";
 import { PropertyRepairSummary } from "@shared/schema";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -19,6 +20,7 @@ interface PropertyRepairsResponse {
     totalSpend: number;
     averageSpendPerProperty: number;
     topSpender: { name: string; spend: number } | null;
+    monthlyTotals: Record<string, number>;
   };
 }
 
@@ -29,6 +31,12 @@ function formatPrice(price: number): string {
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "N/A";
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatMonth(monthKey: string): string {
+  const [year, month] = monthKey.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1);
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 type SortField = "totalSpend" | "totalRepairs" | "propertyName" | "lastServiceDate";
@@ -73,11 +81,84 @@ function exportPropertyRepairsPDF(properties: PropertyRepairSummary[], summary: 
   doc.save(`property-repairs-report-${now.toISOString().split('T')[0]}.pdf`);
 }
 
+function MonthlySpendChart({ monthlyTotals }: { monthlyTotals: Record<string, number> }) {
+  const chartData = useMemo(() => {
+    return Object.entries(monthlyTotals)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, spend]) => ({
+        month: formatMonth(month),
+        spend: Math.round(spend * 100) / 100
+      }));
+  }, [monthlyTotals]);
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <Card className="bg-card/50 border-cyan-500/30">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg font-ui flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-cyan-400" />
+          Monthly Repair Spending (Last 12 Months)
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+            <XAxis dataKey="month" stroke="#888" fontSize={11} />
+            <YAxis stroke="#888" fontSize={11} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+            <Tooltip 
+              formatter={(value: number) => [formatPrice(value), "Spend"]}
+              contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #0ff', borderRadius: '8px' }}
+              labelStyle={{ color: '#0ff' }}
+            />
+            <Bar dataKey="spend" fill="#0ff" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PropertySpendChart({ property }: { property: PropertyRepairSummary }) {
+  const chartData = useMemo(() => {
+    return Object.entries(property.monthlySpend || {})
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([month, spend]) => ({
+        month: formatMonth(month),
+        spend: Math.round(spend * 100) / 100
+      }));
+  }, [property.monthlySpend]);
+
+  if (chartData.length < 2) return null;
+
+  return (
+    <div className="mt-4 p-4 bg-background/30 rounded-lg border border-border/30">
+      <h5 className="text-sm font-ui font-semibold text-purple-400 mb-3">Monthly Spending Trend</h5>
+      <ResponsiveContainer width="100%" height={150}>
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+          <XAxis dataKey="month" stroke="#888" fontSize={10} />
+          <YAxis stroke="#888" fontSize={10} tickFormatter={(v) => `$${v}`} />
+          <Tooltip 
+            formatter={(value: number) => [formatPrice(value), "Spend"]}
+            contentStyle={{ backgroundColor: '#1a1a2e', border: '1px solid #a855f7', borderRadius: '8px' }}
+          />
+          <Line type="monotone" dataKey="spend" stroke="#a855f7" strokeWidth={2} dot={{ fill: '#a855f7' }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export default function PropertyRepairPrices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("totalSpend");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery<PropertyRepairsResponse>({
     queryKey: ["/api/properties/repairs"],
@@ -110,30 +191,49 @@ export default function PropertyRepairPrices() {
     }
   };
 
-  const filteredProperties = data?.properties.filter(p => 
-    p.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.poolNames.some(pool => pool.toLowerCase().includes(searchTerm.toLowerCase()))
-  ) || [];
+  const availableMonths = useMemo(() => {
+    if (!data?.summary.monthlyTotals) return [];
+    return Object.keys(data.summary.monthlyTotals).sort().reverse();
+  }, [data?.summary.monthlyTotals]);
 
-  const sortedProperties = [...filteredProperties].sort((a, b) => {
-    const mult = sortDirection === "asc" ? 1 : -1;
-    switch (sortField) {
-      case "totalSpend":
-        return (a.totalSpend - b.totalSpend) * mult;
-      case "totalRepairs":
-        return (a.totalRepairs - b.totalRepairs) * mult;
-      case "propertyName":
-        return a.propertyName.localeCompare(b.propertyName) * mult;
-      case "lastServiceDate":
-        if (!a.lastServiceDate && !b.lastServiceDate) return 0;
-        if (!a.lastServiceDate) return 1;
-        if (!b.lastServiceDate) return -1;
-        return (new Date(a.lastServiceDate).getTime() - new Date(b.lastServiceDate).getTime()) * mult;
-      default:
-        return 0;
+  const filteredProperties = useMemo(() => {
+    let props = data?.properties || [];
+    
+    if (searchTerm) {
+      props = props.filter(p => 
+        p.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.poolNames.some(pool => pool.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
     }
-  });
+    
+    if (selectedMonth) {
+      props = props.filter(p => p.monthlySpend && p.monthlySpend[selectedMonth] > 0);
+    }
+    
+    return props;
+  }, [data?.properties, searchTerm, selectedMonth]);
+
+  const sortedProperties = useMemo(() => {
+    return [...filteredProperties].sort((a, b) => {
+      const mult = sortDirection === "asc" ? 1 : -1;
+      switch (sortField) {
+        case "totalSpend":
+          return (a.totalSpend - b.totalSpend) * mult;
+        case "totalRepairs":
+          return (a.totalRepairs - b.totalRepairs) * mult;
+        case "propertyName":
+          return a.propertyName.localeCompare(b.propertyName) * mult;
+        case "lastServiceDate":
+          if (!a.lastServiceDate && !b.lastServiceDate) return 0;
+          if (!a.lastServiceDate) return 1;
+          if (!b.lastServiceDate) return -1;
+          return (new Date(a.lastServiceDate).getTime() - new Date(b.lastServiceDate).getTime()) * mult;
+        default:
+          return 0;
+      }
+    });
+  }, [filteredProperties, sortField, sortDirection]);
 
   if (isLoading) {
     return (
@@ -169,7 +269,7 @@ export default function PropertyRepairPrices() {
             Property Repair Prices
           </h1>
           <p className="text-muted-foreground mt-1">
-            Comprehensive repair spending by property
+            Comprehensive repair spending by property with monthly trends
           </p>
         </div>
         <Button
@@ -184,74 +284,99 @@ export default function PropertyRepairPrices() {
       </div>
 
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-card/50 border-cyan-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-cyan-500/20">
-                  <Building2 className="w-5 h-5 text-cyan-400" />
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Card className="bg-card/50 border-cyan-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-cyan-500/20">
+                    <Building2 className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Properties</p>
+                    <p className="text-2xl font-display font-bold text-cyan-400" data-testid="stat-total-properties">
+                      {summary.totalProperties}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Properties</p>
-                  <p className="text-2xl font-display font-bold text-cyan-400" data-testid="stat-total-properties">
-                    {summary.totalProperties}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-card/50 border-purple-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/20">
-                  <Wrench className="w-5 h-5 text-purple-400" />
+            <Card className="bg-card/50 border-purple-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-500/20">
+                    <Wrench className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Repairs</p>
+                    <p className="text-2xl font-display font-bold text-purple-400" data-testid="stat-total-repairs">
+                      {summary.totalRepairs}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Repairs</p>
-                  <p className="text-2xl font-display font-bold text-purple-400" data-testid="stat-total-repairs">
-                    {summary.totalRepairs}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-card/50 border-green-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/20">
-                  <DollarSign className="w-5 h-5 text-green-400" />
+            <Card className="bg-card/50 border-green-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/20">
+                    <DollarSign className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Spend</p>
+                    <p className="text-2xl font-display font-bold text-green-400" data-testid="stat-total-spend">
+                      {formatPrice(summary.totalSpend)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Spend</p>
-                  <p className="text-2xl font-display font-bold text-green-400" data-testid="stat-total-spend">
-                    {formatPrice(summary.totalSpend)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-card/50 border-orange-500/30">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-500/20">
-                  <TrendingUp className="w-5 h-5 text-orange-400" />
+            <Card className="bg-card/50 border-orange-500/30">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/20">
+                    <TrendingUp className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Avg/Property</p>
+                    <p className="text-2xl font-display font-bold text-orange-400" data-testid="stat-avg-spend">
+                      {formatPrice(summary.averageSpendPerProperty)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Avg per Property</p>
-                  <p className="text-2xl font-display font-bold text-orange-400" data-testid="stat-avg-spend">
-                    {formatPrice(summary.averageSpendPerProperty)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+
+            {summary.topSpender && (
+              <Card className="bg-card/50 border-yellow-500/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-yellow-500/20">
+                      <BarChart3 className="w-5 h-5 text-yellow-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Top Spender</p>
+                      <p className="text-sm font-display font-bold text-yellow-400 truncate max-w-[120px]" title={summary.topSpender.name}>
+                        {summary.topSpender.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{formatPrice(summary.topSpender.spend)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {summary.monthlyTotals && Object.keys(summary.monthlyTotals).length > 0 && (
+            <MonthlySpendChart monthlyTotals={summary.monthlyTotals} />
+          )}
+        </>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
@@ -262,6 +387,24 @@ export default function PropertyRepairPrices() {
             data-testid="input-search"
           />
         </div>
+        
+        {availableMonths.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={selectedMonth || ""}
+              onChange={(e) => setSelectedMonth(e.target.value || null)}
+              className="bg-background/50 border border-border rounded-md px-3 py-2 text-sm"
+              data-testid="select-month"
+            >
+              <option value="">All Months</option>
+              {availableMonths.map(month => (
+                <option key={month} value={month}>{formatMonth(month)}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Button
             variant={sortField === "totalSpend" ? "default" : "outline"}
@@ -272,9 +415,7 @@ export default function PropertyRepairPrices() {
           >
             <DollarSign className="w-3 h-3" />
             Spend
-            {sortField === "totalSpend" && (
-              <ArrowUpDown className="w-3 h-3" />
-            )}
+            {sortField === "totalSpend" && <ArrowUpDown className="w-3 h-3" />}
           </Button>
           <Button
             variant={sortField === "totalRepairs" ? "default" : "outline"}
@@ -285,9 +426,7 @@ export default function PropertyRepairPrices() {
           >
             <Wrench className="w-3 h-3" />
             Repairs
-            {sortField === "totalRepairs" && (
-              <ArrowUpDown className="w-3 h-3" />
-            )}
+            {sortField === "totalRepairs" && <ArrowUpDown className="w-3 h-3" />}
           </Button>
           <Button
             variant={sortField === "propertyName" ? "default" : "outline"}
@@ -298,9 +437,7 @@ export default function PropertyRepairPrices() {
           >
             <Building2 className="w-3 h-3" />
             Name
-            {sortField === "propertyName" && (
-              <ArrowUpDown className="w-3 h-3" />
-            )}
+            {sortField === "propertyName" && <ArrowUpDown className="w-3 h-3" />}
           </Button>
         </div>
       </div>
@@ -321,6 +458,11 @@ export default function PropertyRepairPrices() {
                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 font-display font-bold text-sm">
                           {index + 1}
                         </div>
+                        {expandedProperties.has(property.propertyId) ? (
+                          <ChevronDown className="w-5 h-5 text-cyan-400" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                        )}
                         <div>
                           <CardTitle className="text-lg font-ui text-foreground flex items-center gap-2" data-testid={`property-name-${property.propertyId}`}>
                             {property.propertyName}
@@ -362,11 +504,6 @@ export default function PropertyRepairPrices() {
                             </Badge>
                           )}
                         </div>
-                        {expandedProperties.has(property.propertyId) ? (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        )}
                       </div>
                     </div>
                   </CardHeader>
@@ -386,6 +523,9 @@ export default function PropertyRepairPrices() {
                           <span>Pools: {property.poolNames.join(", ")}</span>
                         </div>
                       )}
+                      
+                      <PropertySpendChart property={property} />
+                      
                       <div className="space-y-2 mt-4">
                         <h4 className="text-sm font-ui font-semibold text-cyan-400">Repair History</h4>
                         <div className="grid gap-2">
@@ -440,7 +580,7 @@ export default function PropertyRepairPrices() {
               <CardContent className="p-8 text-center">
                 <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">
-                  {searchTerm ? "No properties match your search" : "No property data available"}
+                  {searchTerm || selectedMonth ? "No properties match your filters" : "No property data available"}
                 </p>
               </CardContent>
             </Card>

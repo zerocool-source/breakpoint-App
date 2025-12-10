@@ -1323,7 +1323,7 @@ function setupRoutes(app: any) {
 
   // ==================== PROPERTY REPAIR PRICES ====================
 
-  // Get repair summaries aggregated by property
+  // Get repair summaries aggregated by property - reuses /api/jobs data pattern
   app.get("/api/properties/repairs", async (req: any, res: any) => {
     try {
       const settings = await storage.getSettings();
@@ -1336,24 +1336,97 @@ function setupRoutes(app: any) {
 
       const client = new PoolBrainClient({ apiKey, companyId: companyId || undefined });
 
-      // Get date range - last 90 days to next 30 days
+      // Get date range - last 365 days to next 30 days for comprehensive data
       const today = new Date();
       const fromDate = new Date(today);
-      fromDate.setDate(fromDate.getDate() - 90);
+      fromDate.setDate(fromDate.getDate() - 365);
       const toDate = new Date(today);
       toDate.setDate(toDate.getDate() + 30);
       const formatDateStr = (d: Date) => d.toISOString().split('T')[0];
 
-      // Fetch jobs, customers, and technicians
-      const [jobsData, customersData, techniciansData] = await Promise.all([
-        client.getOneTimeJobListDetails({ fromDate: formatDateStr(fromDate), toDate: formatDateStr(toDate) }),
-        client.getCustomerDetail(),
-        client.getTechnicianDetail()
+      // Fetch ALL data with pagination - same pattern as /api/jobs
+      const fetchAllBasicJobs = async () => {
+        const allJobs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+        while (hasMore) {
+          try {
+            const jobData = await client.getOneTimeJobList({ fromDate: formatDateStr(fromDate), toDate: formatDateStr(toDate), offset, limit });
+            if (jobData.data && Array.isArray(jobData.data)) {
+              allJobs.push(...jobData.data);
+            }
+            hasMore = jobData.hasMore === true;
+            offset += limit;
+          } catch (e) { break; }
+        }
+        return { data: allJobs };
+      };
+
+      const fetchAllJobDetails = async () => {
+        const allJobs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+        while (hasMore) {
+          try {
+            const jobData = await client.getOneTimeJobListDetails({ fromDate: formatDateStr(fromDate), toDate: formatDateStr(toDate), offset, limit });
+            if (jobData.data && Array.isArray(jobData.data)) {
+              allJobs.push(...jobData.data);
+            }
+            hasMore = jobData.hasMore === true;
+            offset += limit;
+          } catch (e) { break; }
+        }
+        return { data: allJobs };
+      };
+
+      const fetchAllCustomers = async () => {
+        const allCustomers: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+        while (hasMore) {
+          try {
+            const custData = await client.getCustomerDetail({ offset, limit });
+            if (custData.data && Array.isArray(custData.data)) {
+              allCustomers.push(...custData.data);
+            }
+            hasMore = custData.hasMore === true;
+            offset += limit;
+          } catch (e) { break; }
+        }
+        return { data: allCustomers };
+      };
+
+      const fetchAllTechnicians = async () => {
+        const allTechs: any[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const limit = 500;
+        while (hasMore) {
+          try {
+            const techData = await client.getTechnicianDetail({ offset, limit });
+            if (techData.data && Array.isArray(techData.data)) {
+              allTechs.push(...techData.data);
+            }
+            hasMore = techData.hasMore === true;
+            offset += limit;
+          } catch (e) { break; }
+        }
+        return { data: allTechs };
+      };
+
+      const [basicJobsData, jobDetailsData, customersData, techniciansData] = await Promise.all([
+        fetchAllBasicJobs(),
+        fetchAllJobDetails(),
+        fetchAllCustomers(),
+        fetchAllTechnicians()
       ]);
 
       // Build lookup maps
       const customerMap: Record<string, any> = {};
-      if (customersData.data && Array.isArray(customersData.data)) {
+      if (customersData.data) {
         customersData.data.forEach((c: any) => {
           const customerId = c.RecordID;
           if (customerId) customerMap[customerId] = c;
@@ -1361,9 +1434,18 @@ function setupRoutes(app: any) {
       }
 
       const techMap: Record<string, string> = {};
-      if (techniciansData.data && Array.isArray(techniciansData.data)) {
+      if (techniciansData.data) {
         techniciansData.data.forEach((t: any) => {
           techMap[t.RecordID] = t.Name || `${t.FirstName || ''} ${t.LastName || ''}`.trim() || "Unknown";
+        });
+      }
+
+      // Merge basic jobs with details
+      const jobDetailsMap: Record<string, any> = {};
+      if (jobDetailsData.data) {
+        jobDetailsData.data.forEach((jd: any) => {
+          const jobId = jd.RecordID || jd.JobId;
+          if (jobId) jobDetailsMap[jobId] = jd;
         });
       }
 
@@ -1380,11 +1462,15 @@ function setupRoutes(app: any) {
         completedRepairs: number;
         pendingRepairs: number;
         lastServiceDate: string | null;
+        monthlySpend: Record<string, number>;
       }> = {};
 
-      const jobs = jobsData.data || [];
-      jobs.forEach((job: any) => {
-        const customerId = job.CustomerId || job.CustomerID || job.customerId;
+      const basicJobs = basicJobsData.data || [];
+      basicJobs.forEach((job: any) => {
+        const jobId = job.RecordID || job.JobId;
+        const jobDetail = jobDetailsMap[jobId] || {};
+        
+        const customerId = job.CustomerId || job.CustomerID || job.customerId || jobDetail.CustomerId;
         const customer = customerId ? customerMap[customerId] : null;
         const propertyId = customerId || job.CustomerName || "unknown";
         const customerName = customer?.CustomerName || customer?.CompanyName || job.CustomerName || "Unknown Customer";
@@ -1412,37 +1498,39 @@ function setupRoutes(app: any) {
             totalSpend: 0,
             completedRepairs: 0,
             pendingRepairs: 0,
-            lastServiceDate: null
+            lastServiceDate: null,
+            monthlySpend: {}
           };
         }
 
         const prop = propertyMap[propertyId];
         
         // Add pool name
-        const poolName = job.BodyOfWater || job.poolName || "";
+        const poolName = job.BodyOfWater || jobDetail.BodyOfWater || "";
         if (poolName) prop.poolNames.add(poolName);
 
         // Add technician
-        const techId = job.TechId || job.TechnicianId || job.technicianId;
-        const techName = techId ? techMap[techId] : (job.TechnicianName || job.technicianName || null);
-        if (techName && techName !== "Unassigned") prop.technicians.add(techName);
+        const techId = job.TechId || job.TechnicianId || jobDetail.TechId;
+        const techName = techId ? techMap[techId] : null;
+        if (techName && techName !== "Unknown") prop.technicians.add(techName);
 
-        // Get price
+        // Get price from line items
         let price = 0;
-        if (job.LineItems && Array.isArray(job.LineItems)) {
-          job.LineItems.forEach((item: any) => {
+        const lineItems = jobDetail.LineItems || job.LineItems || [];
+        if (Array.isArray(lineItems)) {
+          lineItems.forEach((item: any) => {
             price += parseFloat(item.ItemTotal || item.Price || item.Total || 0) || 0;
           });
         }
-        if (!price) price = parseFloat(job.Total || job.Price || job.TotalPrice || 0) || 0;
+        if (!price) price = parseFloat(jobDetail.Total || job.Total || job.Price || 0) || 0;
 
-        const status = job.JobStatus || job.Status || "Pending";
+        const status = job.JobStatus || job.Status || jobDetail.Status || "Pending";
         const isCompleted = status === "Completed" || status === "Complete" || status === "Invoiced" || job.Completed === true;
-        const scheduledDate = job.JobDate || job.ScheduledDate || job.ServiceDate || job.CreatedDate || null;
+        const scheduledDate = job.JobDate || job.ScheduledDate || jobDetail.ScheduledDate || job.CreatedDate || null;
 
         prop.repairs.push({
-          jobId: String(job.RecordID || job.JobId || ""),
-          title: job.Title || job.JobTitle || "Service Job",
+          jobId: String(jobId),
+          title: job.Title || job.JobTitle || jobDetail.Title || "Service Job",
           price: price,
           isCompleted: isCompleted,
           scheduledDate: scheduledDate,
@@ -1456,39 +1544,53 @@ function setupRoutes(app: any) {
           prop.pendingRepairs++;
         }
 
-        // Track last service date
+        // Track monthly spend
         if (scheduledDate) {
+          const monthKey = new Date(scheduledDate).toISOString().substring(0, 7); // YYYY-MM
+          prop.monthlySpend[monthKey] = (prop.monthlySpend[monthKey] || 0) + price;
+          
           if (!prop.lastServiceDate || new Date(scheduledDate) > new Date(prop.lastServiceDate)) {
             prop.lastServiceDate = scheduledDate;
           }
         }
       });
 
-      // Convert to array
-      const properties = Object.values(propertyMap).map(prop => ({
-        propertyId: prop.propertyId,
-        propertyName: prop.propertyName,
-        customerName: prop.customerName,
-        address: prop.address,
-        poolNames: Array.from(prop.poolNames),
-        totalRepairs: prop.repairs.length,
-        completedRepairs: prop.completedRepairs,
-        pendingRepairs: prop.pendingRepairs,
-        totalSpend: Math.round(prop.totalSpend * 100) / 100,
-        averageRepairCost: prop.repairs.length > 0 ? Math.round((prop.totalSpend / prop.repairs.length) * 100) / 100 : 0,
-        lastServiceDate: prop.lastServiceDate,
-        technicians: Array.from(prop.technicians),
-        repairs: prop.repairs.sort((a, b) => {
-          if (!a.scheduledDate) return 1;
-          if (!b.scheduledDate) return -1;
-          return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
-        })
-      })).sort((a, b) => b.totalSpend - a.totalSpend);
+      // Convert to array with monthly data
+      const properties = Object.values(propertyMap)
+        .filter(p => p.propertyId !== "unknown")
+        .map(prop => ({
+          propertyId: prop.propertyId,
+          propertyName: prop.propertyName,
+          customerName: prop.customerName,
+          address: prop.address,
+          poolNames: Array.from(prop.poolNames),
+          totalRepairs: prop.repairs.length,
+          completedRepairs: prop.completedRepairs,
+          pendingRepairs: prop.pendingRepairs,
+          totalSpend: Math.round(prop.totalSpend * 100) / 100,
+          averageRepairCost: prop.repairs.length > 0 ? Math.round((prop.totalSpend / prop.repairs.length) * 100) / 100 : 0,
+          lastServiceDate: prop.lastServiceDate,
+          technicians: Array.from(prop.technicians),
+          monthlySpend: prop.monthlySpend,
+          repairs: prop.repairs.sort((a, b) => {
+            if (!a.scheduledDate) return 1;
+            if (!b.scheduledDate) return -1;
+            return new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime();
+          })
+        })).sort((a, b) => b.totalSpend - a.totalSpend);
 
-      // Calculate totals
+      // Calculate totals and monthly aggregates
       const totalSpend = properties.reduce((sum, p) => sum + p.totalSpend, 0);
       const totalRepairs = properties.reduce((sum, p) => sum + p.totalRepairs, 0);
       const topSpender = properties[0] || null;
+
+      // Aggregate monthly data across all properties
+      const monthlyTotals: Record<string, number> = {};
+      properties.forEach(p => {
+        Object.entries(p.monthlySpend).forEach(([month, spend]) => {
+          monthlyTotals[month] = (monthlyTotals[month] || 0) + spend;
+        });
+      });
 
       res.json({
         properties,
@@ -1497,7 +1599,8 @@ function setupRoutes(app: any) {
           totalRepairs,
           totalSpend: Math.round(totalSpend * 100) / 100,
           averageSpendPerProperty: properties.length > 0 ? Math.round((totalSpend / properties.length) * 100) / 100 : 0,
-          topSpender: topSpender ? { name: topSpender.propertyName, spend: topSpender.totalSpend } : null
+          topSpender: topSpender ? { name: topSpender.propertyName, spend: topSpender.totalSpend } : null,
+          monthlyTotals
         }
       });
     } catch (error: any) {

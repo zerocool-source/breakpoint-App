@@ -191,6 +191,7 @@ export interface PropertyRepairSummary {
   averageRepairCost: number;
   lastServiceDate: string | null;
   technicians: string[];
+  monthlySpend: Record<string, number>;
   repairs: {
     jobId: string;
     title: string;
