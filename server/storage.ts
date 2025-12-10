@@ -5,10 +5,13 @@ import {
   type Customer, type InsertCustomer,
   type ChatMessage, type InsertChatMessage,
   type CompletedAlert, type InsertCompletedAlert,
-  settings, alerts, workflows, customers, chatMessages, completedAlerts
+  type PayPeriod, type InsertPayPeriod,
+  type PayrollEntry, type InsertPayrollEntry,
+  settings, alerts, workflows, customers, chatMessages, completedAlerts,
+  payPeriods, payrollEntries
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and } from "drizzle-orm";
 
 export interface IStorage {
   // Settings
@@ -41,6 +44,18 @@ export interface IStorage {
   markAlertCompleted(alertId: string, category: string): Promise<CompletedAlert>;
   unmarkAlertCompleted(alertId: string): Promise<void>;
   isAlertCompleted(alertId: string): Promise<boolean>;
+
+  // Pay Periods
+  getPayPeriods(): Promise<PayPeriod[]>;
+  getPayPeriod(id: string): Promise<PayPeriod | undefined>;
+  createPayPeriod(period: InsertPayPeriod): Promise<PayPeriod>;
+  updatePayPeriodStatus(id: string, status: string): Promise<PayPeriod | undefined>;
+
+  // Payroll Entries
+  getPayrollEntries(payPeriodId?: string): Promise<PayrollEntry[]>;
+  getPayrollEntriesByTechnician(technicianId: string, payPeriodId?: string): Promise<PayrollEntry[]>;
+  createPayrollEntry(entry: InsertPayrollEntry): Promise<PayrollEntry>;
+  deletePayrollEntry(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -176,6 +191,63 @@ export class DbStorage implements IStorage {
   async isAlertCompleted(alertId: string): Promise<boolean> {
     const result = await db.select().from(completedAlerts).where(eq(completedAlerts.alertId, alertId)).limit(1);
     return result.length > 0;
+  }
+
+  // Pay Periods
+  async getPayPeriods(): Promise<PayPeriod[]> {
+    return db.select().from(payPeriods).orderBy(desc(payPeriods.endDate));
+  }
+
+  async getPayPeriod(id: string): Promise<PayPeriod | undefined> {
+    const result = await db.select().from(payPeriods).where(eq(payPeriods.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createPayPeriod(period: InsertPayPeriod): Promise<PayPeriod> {
+    const result = await db.insert(payPeriods).values(period).returning();
+    return result[0];
+  }
+
+  async updatePayPeriodStatus(id: string, status: string): Promise<PayPeriod | undefined> {
+    const result = await db
+      .update(payPeriods)
+      .set({ status })
+      .where(eq(payPeriods.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Payroll Entries
+  async getPayrollEntries(payPeriodId?: string): Promise<PayrollEntry[]> {
+    if (payPeriodId) {
+      return db.select().from(payrollEntries)
+        .where(eq(payrollEntries.payPeriodId, payPeriodId))
+        .orderBy(desc(payrollEntries.createdAt));
+    }
+    return db.select().from(payrollEntries).orderBy(desc(payrollEntries.createdAt));
+  }
+
+  async getPayrollEntriesByTechnician(technicianId: string, payPeriodId?: string): Promise<PayrollEntry[]> {
+    if (payPeriodId) {
+      return db.select().from(payrollEntries)
+        .where(and(
+          eq(payrollEntries.technicianId, technicianId),
+          eq(payrollEntries.payPeriodId, payPeriodId)
+        ))
+        .orderBy(desc(payrollEntries.createdAt));
+    }
+    return db.select().from(payrollEntries)
+      .where(eq(payrollEntries.technicianId, technicianId))
+      .orderBy(desc(payrollEntries.createdAt));
+  }
+
+  async createPayrollEntry(entry: InsertPayrollEntry): Promise<PayrollEntry> {
+    const result = await db.insert(payrollEntries).values(entry).returning();
+    return result[0];
+  }
+
+  async deletePayrollEntry(id: string): Promise<void> {
+    await db.delete(payrollEntries).where(eq(payrollEntries.id, id));
   }
 }
 

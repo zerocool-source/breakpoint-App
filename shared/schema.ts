@@ -66,6 +66,32 @@ export const completedAlerts = pgTable("completed_alerts", {
   reviewedBy: text("reviewed_by"), // Optional: who reviewed it
 });
 
+// Pay Periods (bi-weekly cycles)
+export const payPeriods = pgTable("pay_periods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: text("status").notNull().default("open"), // "open", "closed", "paid"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Payroll Entries (service jobs assigned to technician payroll)
+export const payrollEntries = pgTable("payroll_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  payPeriodId: varchar("pay_period_id").notNull(),
+  technicianId: text("technician_id").notNull(),
+  technicianName: text("technician_name").notNull(),
+  jobId: text("job_id").notNull(),
+  jobTitle: text("job_title").notNull(),
+  customerName: text("customer_name"),
+  amount: integer("amount").notNull(), // Amount in cents
+  commissionRate: integer("commission_rate").default(10), // 10% or 15%
+  commissionAmount: integer("commission_amount").notNull(),
+  notes: text("notes"),
+  addedBy: text("added_by"), // Office manager who added it
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
@@ -99,6 +125,16 @@ export const insertCompletedAlertSchema = createInsertSchema(completedAlerts).om
   completedAt: true,
 });
 
+export const insertPayPeriodSchema = createInsertSchema(payPeriods).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPayrollEntrySchema = createInsertSchema(payrollEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
@@ -117,3 +153,9 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 
 export type InsertCompletedAlert = z.infer<typeof insertCompletedAlertSchema>;
 export type CompletedAlert = typeof completedAlerts.$inferSelect;
+
+export type InsertPayPeriod = z.infer<typeof insertPayPeriodSchema>;
+export type PayPeriod = typeof payPeriods.$inferSelect;
+
+export type InsertPayrollEntry = z.infer<typeof insertPayrollEntrySchema>;
+export type PayrollEntry = typeof payrollEntries.$inferSelect;
