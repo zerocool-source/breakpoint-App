@@ -12,6 +12,8 @@ import { PropertyRepairSummary } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 interface PropertyRepairsResponse {
   properties: PropertyRepairSummary[];
@@ -42,6 +44,61 @@ function formatMonth(monthKey: string): string {
 
 type SortField = "totalSpend" | "totalRepairs" | "propertyName" | "lastServiceDate";
 type SortDirection = "asc" | "desc";
+
+function exportPropertyRepairsExcel(properties: PropertyRepairSummary[], summary: PropertyRepairsResponse['summary']) {
+  const now = new Date();
+  
+  const summaryData = [
+    { Metric: "Total Properties", Value: summary.totalProperties },
+    { Metric: "Total Repairs", Value: summary.totalRepairs },
+    { Metric: "Total Spend", Value: summary.totalSpend },
+    { Metric: "Average per Property", Value: summary.averageSpendPerProperty },
+    { Metric: "Top Spender", Value: summary.topSpender?.name || "N/A" },
+    { Metric: "Top Spender Amount", Value: summary.topSpender?.spend || 0 },
+  ];
+  
+  const propertiesData = properties.map(p => ({
+    "Property Name": p.propertyName,
+    "Address": p.address || "N/A",
+    "Total Repairs": p.totalRepairs,
+    "Completed": p.completedRepairs,
+    "Pending": p.pendingRepairs,
+    "Total Spend": p.totalSpend,
+    "Average Cost": p.averageRepairCost,
+    "Last Service": p.lastServiceDate ? new Date(p.lastServiceDate).toLocaleDateString() : "N/A",
+    "Technicians": p.technicians.join(", ") || "N/A",
+    "Pools": p.poolNames.join(", ") || "N/A"
+  }));
+  
+  const repairsData: any[] = [];
+  properties.forEach(p => {
+    p.repairs.forEach(r => {
+      repairsData.push({
+        "Property": p.propertyName,
+        "Job Title": r.title,
+        "Price": r.price,
+        "Status": r.isCompleted ? "Completed" : "Pending",
+        "Date": r.scheduledDate ? new Date(r.scheduledDate).toLocaleDateString() : "N/A",
+        "Technician": r.technician || "Unassigned"
+      });
+    });
+  });
+  
+  const wb = XLSX.utils.book_new();
+  
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+  
+  const wsProperties = XLSX.utils.json_to_sheet(propertiesData);
+  XLSX.utils.book_append_sheet(wb, wsProperties, "Properties");
+  
+  const wsRepairs = XLSX.utils.json_to_sheet(repairsData);
+  XLSX.utils.book_append_sheet(wb, wsRepairs, "All Repairs");
+  
+  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `property-repairs-${now.toISOString().split('T')[0]}.xlsx`);
+}
 
 function exportPropertyRepairsPDF(properties: PropertyRepairSummary[], summary: PropertyRepairsResponse['summary']) {
   const doc = new jsPDF();
@@ -279,15 +336,26 @@ export default function PropertyRepairPrices() {
             Comprehensive repair spending by property with monthly trends
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => exportPropertyRepairsPDF(sortedProperties, summary!)}
-          className="gap-2 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
-          data-testid="btn-export-pdf"
-        >
-          <FileDown className="w-4 h-4" />
-          Export PDF
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => exportPropertyRepairsExcel(sortedProperties, summary!)}
+            className="gap-2 text-green-400 border-green-500/30 hover:bg-green-500/10"
+            data-testid="btn-export-excel"
+          >
+            <FileDown className="w-4 h-4" />
+            Export Excel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => exportPropertyRepairsPDF(sortedProperties, summary!)}
+            className="gap-2 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
+            data-testid="btn-export-pdf"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF
+          </Button>
+        </div>
       </div>
 
       {summary && (

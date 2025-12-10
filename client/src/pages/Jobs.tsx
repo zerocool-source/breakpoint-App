@@ -12,6 +12,55 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+
+function exportJobsExcel(jobs: any[], technicians: any[], summary: any) {
+  const now = new Date();
+  
+  const summaryData = [
+    { Metric: "Total Jobs", Value: summary.totalJobs },
+    { Metric: "Completed Jobs", Value: summary.completedJobs },
+    { Metric: "Pending Jobs", Value: summary.pendingJobs },
+    { Metric: "Total Value", Value: summary.totalValue },
+    { Metric: "Total Technicians", Value: technicians.length },
+  ];
+  
+  const jobsData = jobs.map((j: any) => ({
+    "Job ID": j.jobId,
+    "Title": j.title,
+    "Customer": j.customerName || "N/A",
+    "Pool": j.poolName || "N/A",
+    "Address": j.address || "N/A",
+    "Technician": j.technicianName || "Unassigned",
+    "Price": j.price || 0,
+    "Status": j.isCompleted ? "Completed" : "Pending",
+    "Scheduled Date": j.scheduledDate ? new Date(j.scheduledDate).toLocaleDateString() : "N/A",
+    "Created Date": j.createdDate ? new Date(j.createdDate).toLocaleDateString() : "N/A"
+  }));
+  
+  const techData = technicians.map((t: any) => ({
+    "Technician ID": t.techId,
+    "Name": t.name,
+    "Phone": t.phone || "N/A",
+    "Email": t.email || "N/A"
+  }));
+  
+  const wb = XLSX.utils.book_new();
+  
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+  
+  const wsJobs = XLSX.utils.json_to_sheet(jobsData);
+  XLSX.utils.book_append_sheet(wb, wsJobs, "All Jobs");
+  
+  const wsTechs = XLSX.utils.json_to_sheet(techData);
+  XLSX.utils.book_append_sheet(wb, wsTechs, "Technicians");
+  
+  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `jobs-report-${now.toISOString().split('T')[0]}.xlsx`);
+}
 
 function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
   const doc = new jsPDF();
@@ -952,13 +1001,25 @@ export default function Jobs() {
               Jobs grouped by account, technician, and SR repairs with full details
             </p>
           </div>
-          <button
-            onClick={() => refetch()}
-            className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg font-ui text-sm transition-colors"
-            data-testid="refresh-jobs-btn"
-          >
-            Refresh
-          </button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => data && exportJobsExcel(data.jobs, data.technicians, data.summary)}
+              disabled={!data}
+              className="gap-2 text-green-400 border-green-500/30 hover:bg-green-500/10"
+              data-testid="btn-export-excel"
+            >
+              <FileDown className="w-4 h-4" />
+              Export Excel
+            </Button>
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 rounded-lg font-ui text-sm transition-colors"
+              data-testid="refresh-jobs-btn"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         {isLoading ? (

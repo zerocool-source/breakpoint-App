@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Wrench, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff, Archive, ArchiveRestore, ArrowLeft } from "lucide-react";
+import { Wrench, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff, Archive, ArchiveRestore, ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
 import { Link } from "wouter";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -31,6 +33,50 @@ interface EnrichedAlert {
   techEmail?: string;
   techId?: number;
   rawAlert?: any;
+}
+
+function exportRepairsExcel(alerts: EnrichedAlert[], completedIds: Set<string>) {
+  const now = new Date();
+  
+  const pendingCount = alerts.filter(a => !completedIds.has(String(a.alertId))).length;
+  const completedCount = alerts.filter(a => completedIds.has(String(a.alertId))).length;
+  const urgentCount = alerts.filter(a => a.severity.toUpperCase() === "URGENT").length;
+  
+  const summaryData = [
+    { Metric: "Total Repair Alerts", Value: alerts.length },
+    { Metric: "Pending", Value: pendingCount },
+    { Metric: "Completed", Value: completedCount },
+    { Metric: "Urgent", Value: urgentCount },
+  ];
+  
+  const alertsData = alerts.map(a => ({
+    "Alert ID": a.alertId,
+    "Property": a.customerName,
+    "Pool": a.poolName,
+    "Message": a.message,
+    "Type": a.type,
+    "Severity": a.severity,
+    "Status": completedIds.has(String(a.alertId)) ? "Completed" : "Pending",
+    "Address": a.address || "N/A",
+    "Phone": a.phone || "N/A",
+    "Email": a.email || "N/A",
+    "Contact": a.contact || "N/A",
+    "Technician": a.techName || "Unassigned",
+    "Created": new Date(a.createdAt).toLocaleDateString(),
+    "Notes": a.notes || ""
+  }));
+  
+  const wb = XLSX.utils.book_new();
+  
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+  
+  const wsAlerts = XLSX.utils.json_to_sheet(alertsData);
+  XLSX.utils.book_append_sheet(wb, wsAlerts, "Repair Alerts");
+  
+  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, `repair-alerts-${now.toISOString().split('T')[0]}.xlsx`);
 }
 
 export default function Repairs() {
@@ -222,15 +268,26 @@ export default function Repairs() {
             {incompleteRepairs.length} Pending • {completedRepairs.length} Reviewed • {urgentCount > 0 ? `${urgentCount} Urgent` : "No urgent"}
           </p>
         </div>
-        <Button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="bg-primary text-black hover:bg-primary/80 font-bold gap-2"
-          data-testid="button-refresh-repairs"
-        >
-          <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
-          {isFetching ? "Refreshing..." : "Refresh"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => exportRepairsExcel(repairAlerts, completedIds)}
+            className="gap-2 text-green-400 border-green-500/30 hover:bg-green-500/10"
+            data-testid="btn-export-excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Export Excel
+          </Button>
+          <Button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="bg-primary text-black hover:bg-primary/80 font-bold gap-2"
+            data-testid="button-refresh-repairs"
+          >
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
+            {isFetching ? "Refreshing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Row */}
