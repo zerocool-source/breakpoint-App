@@ -74,11 +74,16 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
 }
 
-function PriceDisplay({ price, testId }: { price: number; testId?: string }) {
+function PriceDisplay({ price, productName, testId }: { price: number; productName?: string; testId?: string }) {
   if (!price || price === 0) {
     return (
-      <span className="text-yellow-400 font-ui text-sm italic" data-testid={testId}>
-        Need to look for price
+      <span className="text-yellow-400 font-ui text-sm" data-testid={testId}>
+        <span className="italic">Need to look for price</span>
+        {productName && (
+          <span className="block text-xs text-yellow-300 mt-0.5">
+            → Look up: {productName}
+          </span>
+        )}
       </span>
     );
   }
@@ -129,7 +134,7 @@ function ExpandableJobCard({ job }: { job: Job }) {
                   {job.status}
                 </Badge>
                 <span className="text-lg" data-testid={`job-price-${job.jobId}`}>
-                  <PriceDisplay price={job.price} />
+                  <PriceDisplay price={job.price} productName={job.title} />
                 </span>
               </div>
             </div>
@@ -185,7 +190,7 @@ function ExpandableJobCard({ job }: { job: Job }) {
                 )}
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Price</p>
-                  <p className="text-lg"><PriceDisplay price={job.price} /></p>
+                  <p className="text-lg"><PriceDisplay price={job.price} productName={job.title} /></p>
                 </div>
               </div>
             </div>
@@ -257,7 +262,7 @@ function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
           {job.isCompleted ? "Complete" : "Pending"}
         </Badge>
         <span className="min-w-[80px] text-right" data-testid={`job-price-${job.jobId}`}>
-          <PriceDisplay price={job.price} />
+          <PriceDisplay price={job.price} productName={job.title} />
         </span>
       </div>
     </div>
