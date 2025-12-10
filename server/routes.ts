@@ -1269,6 +1269,102 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to clear chat history" });
     }
   });
+
+  // ==================== PAYROLL ====================
+
+  // Get all pay periods
+  app.get("/api/payroll/periods", async (req: any, res: any) => {
+    try {
+      const periods = await storage.getPayPeriods();
+      res.json(periods);
+    } catch (error: any) {
+      console.error("Error fetching pay periods:", error);
+      res.status(500).json({ error: "Failed to fetch pay periods" });
+    }
+  });
+
+  // Create a new pay period
+  app.post("/api/payroll/periods", async (req: any, res: any) => {
+    try {
+      const { startDate, endDate, status } = req.body;
+      const period = await storage.createPayPeriod({ 
+        startDate: new Date(startDate), 
+        endDate: new Date(endDate), 
+        status: status || "open" 
+      });
+      res.json(period);
+    } catch (error: any) {
+      console.error("Error creating pay period:", error);
+      res.status(500).json({ error: "Failed to create pay period" });
+    }
+  });
+
+  // Update pay period status
+  app.put("/api/payroll/periods/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const period = await storage.updatePayPeriodStatus(id, status);
+      res.json(period);
+    } catch (error: any) {
+      console.error("Error updating pay period:", error);
+      res.status(500).json({ error: "Failed to update pay period" });
+    }
+  });
+
+  // Get payroll entries (optionally by pay period)
+  app.get("/api/payroll/entries", async (req: any, res: any) => {
+    try {
+      const { payPeriodId, technicianId } = req.query;
+      let entries;
+      if (technicianId) {
+        entries = await storage.getPayrollEntriesByTechnician(technicianId, payPeriodId);
+      } else {
+        entries = await storage.getPayrollEntries(payPeriodId);
+      }
+      res.json(entries);
+    } catch (error: any) {
+      console.error("Error fetching payroll entries:", error);
+      res.status(500).json({ error: "Failed to fetch payroll entries" });
+    }
+  });
+
+  // Add a job to payroll
+  app.post("/api/payroll/entries", async (req: any, res: any) => {
+    try {
+      const { payPeriodId, technicianId, technicianName, jobId, jobTitle, customerName, amount, commissionRate, notes, addedBy } = req.body;
+      const commissionAmount = Math.round(amount * (commissionRate / 100));
+      const entry = await storage.createPayrollEntry({
+        payPeriodId,
+        technicianId,
+        technicianName,
+        jobId,
+        jobTitle,
+        customerName,
+        amount,
+        commissionRate,
+        commissionAmount,
+        notes,
+        addedBy
+      });
+      res.json(entry);
+    } catch (error: any) {
+      console.error("Error creating payroll entry:", error);
+      res.status(500).json({ error: "Failed to create payroll entry" });
+    }
+  });
+
+  // Remove an entry from payroll
+  app.delete("/api/payroll/entries/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePayrollEntry(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting payroll entry:", error);
+      res.status(500).json({ error: "Failed to delete payroll entry" });
+    }
+  });
 }
 
   

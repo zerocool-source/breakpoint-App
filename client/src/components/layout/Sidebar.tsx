@@ -1,4 +1,4 @@
-import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap, CalendarClock } from "lucide-react";
+import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap, CalendarClock, DollarSign } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ export function Sidebar() {
     { icon: Wrench, label: "Repairs", href: "/repairs" },
     { icon: Droplets, label: "Chemicals", href: "/chemicals" },
     { icon: CalendarClock, label: "Jobs", href: "/jobs" },
+    { icon: DollarSign, label: "Payroll", href: "/payroll" },
     { icon: Sparkles, label: "Ace Prime", href: "/intelligence" },
     { icon: MessageSquare, label: "Chat with Ace", href: "/chat" },
     { icon: Zap, label: "Automations", href: "/automations" },

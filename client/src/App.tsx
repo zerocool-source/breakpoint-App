@@ -14,6 +14,7 @@ import Chat from "@/pages/Chat";
 import Repairs from "@/pages/Repairs";
 import Chemicals from "@/pages/Chemicals";
 import Jobs from "@/pages/Jobs";
+import Payroll from "@/pages/Payroll";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/repairs" component={Repairs} />
       <Route path="/chemicals" component={Chemicals} />
       <Route path="/jobs" component={Jobs} />
+      <Route path="/payroll" component={Payroll} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
