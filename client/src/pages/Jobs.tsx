@@ -633,9 +633,11 @@ export default function Jobs() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "job" }),
         });
+        if (!res.ok) throw new Error("Failed to archive job");
         return res.json();
       } else {
         const res = await fetch(`/api/alerts/${jobId}/archive`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to unarchive job");
         return res.json();
       }
     },
@@ -643,17 +645,24 @@ export default function Jobs() {
       await queryClient.cancelQueries({ queryKey: ["archivedAlerts", "job"] });
       const previousData = queryClient.getQueryData(["archivedAlerts", "job"]);
       queryClient.setQueryData(["archivedAlerts", "job"], (old: any) => {
-        const currentIds = old?.archivedIds || [];
+        const currentIds = new Set<string>((old?.archivedIds || []).map(String));
         if (archive) {
-          return { archivedIds: [...currentIds, jobId] };
+          currentIds.add(jobId);
         } else {
-          return { archivedIds: currentIds.filter((id: string) => String(id) !== String(jobId)) };
+          currentIds.delete(jobId);
         }
+        return { archivedIds: Array.from(currentIds) };
       });
       return { previousData };
     },
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["archivedAlerts", "job"], context.previousData);
+      }
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["archivedAlerts", "job"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
     },
   });
 
