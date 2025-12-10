@@ -78,7 +78,7 @@ function PriceDisplay({ price, productName, testId }: { price: number; productNa
   if (!price || price === 0) {
     return (
       <span className="text-yellow-400 font-ui text-sm" data-testid={testId}>
-        <span className="italic">Need to look for price</span>
+        <span className="animate-pulse font-semibold">⚠ Need Estimate</span>
         {productName && (
           <span className="block text-xs text-yellow-300 mt-0.5">
             → Look up: {productName}
@@ -391,12 +391,62 @@ function TechnicianCard({ tech }: { tech: Technician }) {
   );
 }
 
+function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: Job[] }) {
+  const [isOpen, setIsOpen] = useState(true);
+  const completedCount = jobs.filter(j => j.isCompleted).length;
+  const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="border border-orange-500/20 rounded-lg bg-background/20 overflow-hidden">
+        <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-orange-500/10 transition-colors">
+          <div className="flex items-center gap-2">
+            {isOpen ? (
+              <ChevronDown className="w-4 h-4 text-orange-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-orange-300" />
+            )}
+            <Building2 className="w-4 h-4 text-orange-400" />
+            <span className="font-ui font-medium text-foreground">{accountName}</span>
+            <Badge variant="outline" className="text-xs border-orange-500/30 text-orange-300">
+              {jobs.length} jobs
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-muted-foreground">{completedCount}/{jobs.length} done</span>
+            <span className="font-ui font-semibold text-orange-400">{formatPrice(totalValue)}</span>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-3 pt-0 space-y-2 border-t border-orange-500/10">
+            {jobs.map((job) => (
+              <ExpandableJobCard key={job.jobId} job={job} />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
 function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] }) {
   const completedCount = jobs.filter(j => j.isCompleted).length;
   const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
   const completionPercent = jobs.length > 0 ? Math.round((completedCount / jobs.length) * 100) : 0;
   const commission10 = Math.round(totalValue * 0.10 * 100) / 100;
   const commission15 = Math.round(totalValue * 0.15 * 100) / 100;
+
+  const jobsByAccount = useMemo(() => {
+    const grouped: Record<string, Job[]> = {};
+    jobs.forEach(job => {
+      const accountName = job.customerName || "Unknown Account";
+      if (!grouped[accountName]) {
+        grouped[accountName] = [];
+      }
+      grouped[accountName].push(job);
+    });
+    return Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
+  }, [jobs]);
 
   return (
     <Card className="bg-card/50 border-orange-500/30 hover:border-orange-500/50 transition-colors" data-testid={`sr-tech-${techName}`}>
@@ -412,7 +462,7 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
                 <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">SR</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Service Repairs (&lt;$500)
+                Service Repairs (&lt;$500) • {jobsByAccount.length} accounts
               </p>
             </div>
           </div>
@@ -441,9 +491,9 @@ function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] })
             style={{ width: `${completionPercent}%` }}
           />
         </div>
-        <div className="space-y-2">
-          {jobs.map((job) => (
-            <ExpandableJobCard key={job.jobId} job={job} />
+        <div className="space-y-3">
+          {jobsByAccount.map(([accountName, accountJobs]) => (
+            <SRAccountSubfolder key={accountName} accountName={accountName} jobs={accountJobs} />
           ))}
         </div>
       </CardContent>
