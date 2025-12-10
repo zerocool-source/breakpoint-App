@@ -22,7 +22,6 @@ export function Sidebar() {
     { icon: Wrench, label: "Repairs", href: "/repairs", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: Droplets, label: "Chemicals", href: "/chemicals", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: CalendarClock, label: "Jobs", href: "/jobs" },
-    { icon: DollarSign, label: "Payroll", href: "/payroll" },
     { icon: Building2, label: "Property Repairs", href: "/property-repairs" },
     { icon: Sparkles, label: "Ace Prime", href: "/intelligence", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
     { icon: MessageSquare, label: "Chat with Ace", href: "/chat", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
