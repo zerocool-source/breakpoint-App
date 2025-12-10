@@ -16,49 +16,49 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* Antigravity Dark Theme Colors */
-  --color-background: hsl(230 35% 7%); /* Deep Space Blue */
+  /* Bright Blue Pool Theme Colors */
+  --color-background: hsl(205 80% 18%); /* Bright Ocean Blue */
   --color-foreground: hsl(210 40% 98%); /* Ice White */
 
-  --color-card: hsl(230 35% 10%); /* Slightly lighter deep blue */
+  --color-card: hsl(205 70% 22%); /* Lighter pool blue */
   --color-card-foreground: hsl(210 40% 98%);
 
-  --color-popover: hsl(230 35% 10%);
+  --color-popover: hsl(205 70% 22%);
   --color-popover-foreground: hsl(210 40% 98%);
 
-  --color-primary: hsl(190 100% 50%); /* Cyan Neon */
-  --color-primary-foreground: hsl(230 35% 7%);
+  --color-primary: hsl(195 100% 55%); /* Bright Cyan */
+  --color-primary-foreground: hsl(205 80% 12%);
 
-  --color-secondary: hsl(260 100% 65%); /* Electric Purple */
+  --color-secondary: hsl(210 90% 60%); /* Bright Blue */
   --color-secondary-foreground: hsl(210 40% 98%);
 
-  --color-muted: hsl(230 30% 20%);
-  --color-muted-foreground: hsl(215 20% 65%);
+  --color-muted: hsl(205 50% 30%);
+  --color-muted-foreground: hsl(205 30% 75%);
 
-  --color-accent: hsl(190 100% 50%);
-  --color-accent-foreground: hsl(230 35% 7%);
+  --color-accent: hsl(195 100% 55%);
+  --color-accent-foreground: hsl(205 80% 12%);
 
   --color-destructive: hsl(0 100% 60%);
   --color-destructive-foreground: hsl(210 40% 98%);
 
-  --color-border: hsl(230 30% 20%);
-  --color-input: hsl(230 30% 20%);
-  --color-ring: hsl(190 100% 50%);
+  --color-border: hsl(205 50% 35%);
+  --color-input: hsl(205 50% 30%);
+  --color-ring: hsl(195 100% 55%);
 
-  --color-chart-1: hsl(190 100% 50%); /* Cyan */
-  --color-chart-2: hsl(260 100% 65%); /* Purple */
-  --color-chart-3: hsl(320 100% 60%); /* Pink */
-  --color-chart-4: hsl(45 100% 50%);  /* Gold */
-  --color-chart-5: hsl(150 100% 50%); /* Green */
+  --color-chart-1: hsl(195 100% 55%); /* Bright Cyan */
+  --color-chart-2: hsl(210 90% 60%); /* Bright Blue */
+  --color-chart-3: hsl(180 100% 45%); /* Turquoise */
+  --color-chart-4: hsl(45 100% 55%);  /* Gold */
+  --color-chart-5: hsl(150 100% 45%); /* Green */
   
-  --color-sidebar: hsl(230 35% 7%);
+  --color-sidebar: hsl(205 80% 15%);
   --color-sidebar-foreground: hsl(210 40% 98%);
-  --color-sidebar-primary: hsl(190 100% 50%);
-  --color-sidebar-primary-foreground: hsl(230 35% 7%);
-  --color-sidebar-accent: hsl(230 30% 20%);
+  --color-sidebar-primary: hsl(195 100% 55%);
+  --color-sidebar-primary-foreground: hsl(205 80% 12%);
+  --color-sidebar-accent: hsl(205 50% 28%);
   --color-sidebar-accent-foreground: hsl(210 40% 98%);
-  --color-sidebar-border: hsl(230 30% 20%);
-  --color-sidebar-ring: hsl(190 100% 50%);
+  --color-sidebar-border: hsl(205 50% 30%);
+  --color-sidebar-ring: hsl(195 100% 55%);
 }
 
 @layer base {
@@ -68,8 +68,8 @@
   body {
     @apply font-sans antialiased bg-background text-foreground min-h-screen overflow-x-hidden selection:bg-primary/30 selection:text-primary-foreground;
     background-image: 
-      radial-gradient(circle at 50% 0%, hsl(260 100% 65% / 0.15), transparent 40%),
-      radial-gradient(circle at 0% 50%, hsl(190 100% 50% / 0.1), transparent 40%);
+      radial-gradient(circle at 50% 0%, hsl(195 100% 55% / 0.2), transparent 45%),
+      radial-gradient(circle at 0% 50%, hsl(210 90% 60% / 0.15), transparent 45%);
   }
   
   /* Glassmorphism Utilities */
@@ -83,11 +83,11 @@
 
   /* Text Glows */
   .text-glow {
-    text-shadow: 0 0 10px hsl(190 100% 50% / 0.5);
+    text-shadow: 0 0 10px hsl(195 100% 55% / 0.6);
   }
   
-  .text-glow-purple {
-    text-shadow: 0 0 10px hsl(260 100% 65% / 0.5);
+  .text-glow-blue {
+    text-shadow: 0 0 10px hsl(210 90% 60% / 0.6);
   }
 }
 
