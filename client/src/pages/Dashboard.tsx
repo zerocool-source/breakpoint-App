@@ -1,7 +1,6 @@
 import { Activity } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { AICommand } from "@/components/dashboard/AICommand";
 import { EnrichedAlertsFeed } from "@/components/dashboard/EnrichedAlertsFeed";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -63,15 +62,15 @@ export default function Dashboard() {
     <AppLayout>
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-display font-bold text-white mb-2 tracking-tight">COMMAND CENTER</h2>
-          <p className="text-muted-foreground font-ui tracking-wide">
+          <h2 className="text-3xl font-display font-bold text-foreground mb-2 tracking-tight">COMMAND CENTER</h2>
+          <p className="text-muted-foreground font-ui tracking-wide text-lg">
             {alerts.length > 0 ? `${alerts.length} Total Alerts • ${activeAlerts.length} Active` : "System Standby • API Connected"}
           </p>
         </div>
         <Button
           onClick={() => syncMutation.mutate()}
           disabled={syncMutation.isPending}
-          className="bg-primary text-black hover:bg-primary/80 font-bold gap-2"
+          className="bg-primary text-white hover:bg-primary/90 font-bold gap-2 shadow-md"
           data-testid="button-sync-poolbrain"
         >
           <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
@@ -110,16 +109,9 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Expanded Alerts Feed takes up 2 columns */}
-        <div className="lg:col-span-2 h-full">
-            <EnrichedAlertsFeed className="h-full min-h-[400px]" />
-        </div>
-        {/* Ace Prime Command takes up 1 column */}
-        <div className="lg:col-span-1">
-            <AICommand />
-        </div>
+      {/* Main Content */}
+      <div className="mb-8">
+        <EnrichedAlertsFeed className="min-h-[500px]" />
       </div>
     </AppLayout>
   );

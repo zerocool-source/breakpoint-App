@@ -16,49 +16,49 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* Clean Light Theme Colors */
-  --color-background: hsl(0 0% 100%); /* Pure White */
-  --color-foreground: hsl(222 47% 11%); /* Dark Slate */
+  /* Soft Blue Theme - Easy on Eyes */
+  --color-background: hsl(210 40% 96%); /* Soft Blue-Gray */
+  --color-foreground: hsl(215 25% 27%); /* Dark Blue-Gray */
 
-  --color-card: hsl(0 0% 100%); /* White cards */
-  --color-card-foreground: hsl(222 47% 11%);
+  --color-card: hsl(210 50% 98%); /* Very Light Blue-White */
+  --color-card-foreground: hsl(215 25% 27%);
 
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222 47% 11%);
+  --color-popover: hsl(210 50% 98%);
+  --color-popover-foreground: hsl(215 25% 27%);
 
-  --color-primary: hsl(199 89% 48%); /* Ocean Blue */
+  --color-primary: hsl(205 85% 45%); /* Sky Blue */
   --color-primary-foreground: hsl(0 0% 100%);
 
-  --color-secondary: hsl(262 83% 58%); /* Vibrant Purple */
+  --color-secondary: hsl(28 90% 55%); /* Warm Orange */
   --color-secondary-foreground: hsl(0 0% 100%);
 
-  --color-muted: hsl(210 40% 96%);
-  --color-muted-foreground: hsl(215 16% 47%);
+  --color-muted: hsl(210 30% 90%);
+  --color-muted-foreground: hsl(215 20% 50%);
 
-  --color-accent: hsl(199 89% 48%);
+  --color-accent: hsl(205 85% 45%);
   --color-accent-foreground: hsl(0 0% 100%);
 
-  --color-destructive: hsl(0 84% 60%);
+  --color-destructive: hsl(0 72% 51%);
   --color-destructive-foreground: hsl(0 0% 100%);
 
-  --color-border: hsl(214 32% 91%);
-  --color-input: hsl(214 32% 91%);
-  --color-ring: hsl(199 89% 48%);
+  --color-border: hsl(210 30% 85%);
+  --color-input: hsl(210 30% 90%);
+  --color-ring: hsl(205 85% 45%);
 
-  --color-chart-1: hsl(199 89% 48%); /* Blue */
-  --color-chart-2: hsl(262 83% 58%); /* Purple */
-  --color-chart-3: hsl(340 75% 55%); /* Pink */
-  --color-chart-4: hsl(43 96% 56%);  /* Gold */
+  --color-chart-1: hsl(205 85% 45%); /* Blue */
+  --color-chart-2: hsl(28 90% 55%);  /* Orange */
+  --color-chart-3: hsl(180 60% 45%); /* Teal */
+  --color-chart-4: hsl(45 93% 47%);  /* Gold */
   --color-chart-5: hsl(142 71% 45%); /* Green */
   
-  --color-sidebar: hsl(222 47% 11%); /* Dark sidebar for contrast */
-  --color-sidebar-foreground: hsl(210 40% 98%);
-  --color-sidebar-primary: hsl(199 89% 48%);
+  --color-sidebar: hsl(210 50% 98%); /* Light Blue-White sidebar */
+  --color-sidebar-foreground: hsl(215 25% 27%);
+  --color-sidebar-primary: hsl(205 85% 45%);
   --color-sidebar-primary-foreground: hsl(0 0% 100%);
-  --color-sidebar-accent: hsl(217 33% 17%);
-  --color-sidebar-accent-foreground: hsl(210 40% 98%);
-  --color-sidebar-border: hsl(217 33% 17%);
-  --color-sidebar-ring: hsl(199 89% 48%);
+  --color-sidebar-accent: hsl(210 40% 94%);
+  --color-sidebar-accent-foreground: hsl(215 25% 27%);
+  --color-sidebar-border: hsl(210 30% 85%);
+  --color-sidebar-ring: hsl(205 85% 45%);
 }
 
 @layer base {

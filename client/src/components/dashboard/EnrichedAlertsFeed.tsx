@@ -133,11 +133,11 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
 
   const getSeverityColor = (severity: string) => {
     const upper = severity.toUpperCase();
-    if (upper === "URGENT") return "bg-red-500/20 text-red-400 border-red-500/50";
-    if (upper.includes("CRITICAL")) return "bg-destructive/20 text-destructive border-destructive/50";
-    if (upper.includes("HIGH")) return "bg-orange-500/20 text-orange-400 border-orange-500/50";
-    if (upper.includes("MEDIUM")) return "bg-yellow-500/20 text-yellow-400 border-yellow-500/50";
-    return "bg-blue-500/20 text-blue-400 border-blue-500/50";
+    if (upper === "URGENT") return "bg-destructive/15 text-destructive border-destructive/30";
+    if (upper.includes("CRITICAL")) return "bg-destructive/15 text-destructive border-destructive/30";
+    if (upper.includes("HIGH")) return "bg-secondary/15 text-secondary border-secondary/30";
+    if (upper.includes("MEDIUM")) return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    return "bg-primary/15 text-primary border-primary/30";
   };
 
   const activeAlerts = alerts.filter((a: EnrichedAlert) => a.status === "Active");
@@ -155,10 +155,10 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   };
 
   return (
-    <Card className={cn("glass-card border-white/5 flex flex-col", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0">
-        <CardTitle className="font-display text-lg tracking-wide flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-destructive" />
+    <Card className={cn("bg-card border-border shadow-sm flex flex-col", className)}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0 border-b border-border">
+        <CardTitle className="font-display text-xl tracking-wide flex items-center gap-2 text-foreground">
+          <AlertTriangle className="w-5 h-5 text-secondary" />
           LIVE SYSTEM ALERTS
         </CardTitle>
         <Badge variant="outline" className={cn(
@@ -171,26 +171,26 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       
       <CardContent className="flex flex-col flex-1 pt-4 overflow-hidden">
         <Tabs value={selectedTab} onValueChange={(v) => { setSelectedTab(v); setShowAll(false); }} className="flex flex-col flex-1">
-          <TabsList className="grid grid-cols-7 mb-4 bg-white/5 border border-white/10">
-            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+          <TabsList className="grid grid-cols-7 mb-4 bg-muted border border-border">
+            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               All ({categoryCounts.all})
             </TabsTrigger>
-            <TabsTrigger value="algae" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+            <TabsTrigger value="algae" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               Algae ({categoryCounts.algae})
             </TabsTrigger>
-            <TabsTrigger value="repair" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+            <TabsTrigger value="repair" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               Repair ({categoryCounts.repair})
             </TabsTrigger>
-            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               Chem+ ({categoryCounts["chemicals-added"]})
             </TabsTrigger>
-            <TabsTrigger value="time" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+            <TabsTrigger value="time" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               Time ({categoryCounts.time})
             </TabsTrigger>
-            <TabsTrigger value="system" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+            <TabsTrigger value="system" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               System ({categoryCounts.system})
             </TabsTrigger>
-            <TabsTrigger value="other" className="data-[state=active]:bg-primary data-[state=active]:text-black text-[10px]">
+            <TabsTrigger value="other" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
               Other ({categoryCounts.other})
             </TabsTrigger>
           </TabsList>
@@ -212,22 +212,22 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                   {displayedAlerts.map((alert: EnrichedAlert, idx: number) => (
                     <div 
                       key={`alert-${alert.poolId}-${alert.customerName}-${idx}`}
-                      className="group relative p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/20 transition-all"
+                      className="group relative p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted hover:border-primary/30 transition-all"
                       data-testid={`alert-card-${alert.alertId}`}
                     >
                       {alert.status === "Active" && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-destructive to-transparent rounded-l-lg opacity-50 group-hover:opacity-100" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-destructive to-transparent rounded-l-lg opacity-70 group-hover:opacity-100" />
                       )}
                       
                       {/* Header: Pool + Customer */}
                       <div className="mb-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm leading-tight text-white group-hover:text-primary transition-colors truncate" data-testid={`text-pool-${alert.alertId}`}>
+                            <h4 className="font-bold text-sm leading-tight text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-pool-${alert.alertId}`}>
                               {alert.poolName}
                             </h4>
                             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground truncate">
-                              <Building2 className="w-3 h-3 flex-shrink-0" />
+                              <Building2 className="w-3 h-3 flex-shrink-0 text-secondary" />
                               <span data-testid={`text-customer-${alert.alertId}`} className="truncate">{alert.customerName}</span>
                             </div>
                           </div>
@@ -241,36 +241,36 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                       <div className="grid grid-cols-1 gap-1 mb-2 text-xs">
                         {alert.address && (
                           <div className="flex items-start gap-1 text-muted-foreground">
-                            <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-secondary" />
                             <span className="truncate">{alert.address}</span>
                           </div>
                         )}
                         {alert.phone && (
                           <div className="flex items-center gap-1 text-muted-foreground">
-                            <Phone className="w-3 h-3 flex-shrink-0" />
-                            <a href={`tel:${alert.phone}`} className="text-blue-400 hover:text-blue-300 truncate" data-testid={`link-phone-${alert.alertId}`}>
+                            <Phone className="w-3 h-3 flex-shrink-0 text-secondary" />
+                            <a href={`tel:${alert.phone}`} className="text-primary hover:text-primary/80 truncate" data-testid={`link-phone-${alert.alertId}`}>
                               {alert.phone}
                             </a>
                           </div>
                         )}
                         {alert.email && (
                           <div className="flex items-center gap-1 text-muted-foreground">
-                            <Mail className="w-3 h-3 flex-shrink-0" />
-                            <a href={`mailto:${alert.email}`} className="text-blue-400 hover:text-blue-300 truncate" data-testid={`link-email-${alert.alertId}`}>
+                            <Mail className="w-3 h-3 flex-shrink-0 text-secondary" />
+                            <a href={`mailto:${alert.email}`} className="text-primary hover:text-primary/80 truncate" data-testid={`link-email-${alert.alertId}`}>
                               {alert.email}
                             </a>
                           </div>
                         )}
                         {alert.contact && (
                           <div className="flex items-center gap-1 text-muted-foreground">
-                            <User className="w-3 h-3 flex-shrink-0" />
+                            <User className="w-3 h-3 flex-shrink-0 text-secondary" />
                             <span className="truncate">{alert.contact}</span>
                           </div>
                         )}
                       </div>
 
                       {/* Alert Message */}
-                      <p className="text-sm text-gray-300 mb-2 leading-relaxed line-clamp-2" data-testid={`text-message-${alert.alertId}`}>
+                      <p className="text-sm text-foreground/80 mb-2 leading-relaxed line-clamp-2" data-testid={`text-message-${alert.alertId}`}>
                         {alert.message}
                       </p>
 
@@ -282,7 +282,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                               key={picIdx}
                               src={pic} 
                               alt={`Alert picture ${picIdx + 1}`}
-                              className="w-full h-20 object-cover rounded border border-white/10 hover:scale-105 transition-transform cursor-pointer"
+                              className="w-full h-20 object-cover rounded border border-border hover:scale-105 transition-transform cursor-pointer"
                               data-testid={`img-alert-${alert.alertId}-${picIdx}`}
                             />
                           ))}
@@ -291,14 +291,14 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
 
                       {/* Notes if available */}
                       {alert.notes && (
-                        <div className="bg-white/5 rounded px-2 py-1 mb-2 text-xs text-muted-foreground border border-white/5">
+                        <div className="bg-muted rounded px-2 py-1 mb-2 text-xs text-muted-foreground border border-border">
                           <p className="line-clamp-1">{alert.notes}</p>
                         </div>
                       )}
 
                       {/* Technician Info */}
                       {alert.techName && (
-                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
+                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
                           <div className="flex items-center gap-2 px-2 py-1 rounded bg-primary/10 border border-primary/30">
                             <User className="w-3 h-3 text-primary flex-shrink-0" />
                             <span className="text-xs font-medium text-primary" data-testid={`text-tech-${alert.alertId}`}>
@@ -306,7 +306,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                             </span>
                           </div>
                           {alert.techPhone && (
-                            <a href={`tel:${alert.techPhone}`} className="text-xs text-blue-400 hover:text-blue-300">
+                            <a href={`tel:${alert.techPhone}`} className="text-xs text-primary hover:text-primary/80">
                               {alert.techPhone}
                             </a>
                           )}
@@ -314,9 +314,9 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                       )}
 
                       {/* Footer: Type + Status + Expand Button */}
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+                      <div className="flex items-center justify-between pt-2 border-t border-border text-xs">
                         <div className="flex gap-2 items-center">
-                          <span className="bg-white/5 px-2 py-1 rounded text-muted-foreground text-[10px]" data-testid={`text-type-${alert.alertId}`}>
+                          <span className="bg-muted px-2 py-1 rounded text-muted-foreground text-[10px] border border-border" data-testid={`text-type-${alert.alertId}`}>
                             {alert.type}
                           </span>
                           <Button
@@ -345,13 +345,13 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
 
                       {/* Expanded Raw Data Section */}
                       {expandedAlerts.has(alert.alertId) && alert.rawAlert && (
-                        <div className="mt-3 pt-3 border-t border-white/10">
+                        <div className="mt-3 pt-3 border-t border-border">
                           <h5 className="text-xs font-bold text-primary mb-2 flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" />
                             Complete Alert Data
                           </h5>
-                          <div className="bg-black/30 rounded p-2 max-h-96 overflow-y-auto custom-scrollbar">
-                            <pre className="text-[10px] text-gray-300 whitespace-pre-wrap break-words font-mono">
+                          <div className="bg-foreground/5 rounded p-2 max-h-96 overflow-y-auto custom-scrollbar border border-border">
+                            <pre className="text-[10px] text-foreground/70 whitespace-pre-wrap break-words font-mono">
                               {JSON.stringify(alert.rawAlert, null, 2)}
                             </pre>
                           </div>
@@ -366,7 +366,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                       onClick={() => setShowAll(!showAll)}
                       variant="outline"
                       size="sm"
-                      className="w-full text-xs mt-2 bg-white/5 border-white/10 hover:bg-white/10 hover:border-primary/30"
+                      className="w-full text-xs mt-2 bg-muted border-border hover:bg-muted hover:border-primary/30"
                       data-testid="button-toggle-all-alerts"
                     >
                       <ChevronDown className={cn("w-3 h-3 transition-transform", showAll && "rotate-180")} />

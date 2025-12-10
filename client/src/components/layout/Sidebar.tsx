@@ -18,29 +18,29 @@ export function Sidebar() {
 
   const navItems: NavItem[] = [
     { icon: LayoutDashboard, label: "Overview", href: "/" },
-    { icon: Wrench, label: "Repairs", href: "/repairs", badge: "Coming Soon", badgeColor: "bg-amber-500/20 text-amber-400 border-amber-500/30", disabled: true },
-    { icon: Droplets, label: "Chemicals", href: "/chemicals", badge: "Coming Soon", badgeColor: "bg-amber-500/20 text-amber-400 border-amber-500/30", disabled: true },
+    { icon: Wrench, label: "Repairs", href: "/repairs", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
+    { icon: Droplets, label: "Chemicals", href: "/chemicals", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: CalendarClock, label: "Jobs", href: "/jobs" },
     { icon: DollarSign, label: "Payroll", href: "/payroll" },
     { icon: Building2, label: "Property Repairs", href: "/property-repairs" },
-    { icon: Sparkles, label: "Ace Prime", href: "/intelligence", badge: "Coming Soon", badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30", disabled: true },
-    { icon: MessageSquare, label: "Chat with Ace", href: "/chat", badge: "Coming Soon", badgeColor: "bg-purple-500/20 text-purple-400 border-purple-500/30", disabled: true },
-    { icon: Zap, label: "Automations", href: "/automations", badge: "Beta", badgeColor: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+    { icon: Sparkles, label: "Ace Prime", href: "/intelligence", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
+    { icon: MessageSquare, label: "Chat with Ace", href: "/chat", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
+    { icon: Zap, label: "Automations", href: "/automations", badge: "Beta", badgeColor: "bg-primary/10 text-primary border-primary/30" },
   ];
 
   return (
-    <aside className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50">
-      <div className="p-4">
+    <aside className="w-64 h-screen bg-card border-r border-border flex flex-col fixed left-0 top-0 z-50 shadow-sm">
+      <div className="p-5 border-b border-border">
         <div className="relative">
           <img 
             src={BreakpointLogo} 
             alt="Breakpoint Logo" 
             className="w-full h-auto object-contain"
           />
-          <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded uppercase tracking-wider">Beta</span>
+          <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary border border-primary/30 rounded-full uppercase tracking-wider">Beta</span>
         </div>
       </div>
-      <nav className="flex-1 px-4 py-6 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const isActive = location === item.href;
           
@@ -48,12 +48,12 @@ export function Sidebar() {
             return (
               <div
                 key={item.href}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground/40 cursor-not-allowed"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/60 cursor-not-allowed"
               >
-                <item.icon className="w-5 h-5 text-sidebar-foreground/30" />
-                <span className="font-ui tracking-wide text-sm">{item.label}</span>
+                <item.icon className="w-5 h-5 text-muted-foreground/40" />
+                <span className="font-medium text-sm">{item.label}</span>
                 {item.badge && (
-                  <span className={cn("ml-auto px-1.5 py-0.5 text-[9px] font-bold rounded border uppercase", item.badgeColor)}>
+                  <span className={cn("ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase", item.badgeColor)}>
                     {item.badge}
                   </span>
                 )}
@@ -63,18 +63,18 @@ export function Sidebar() {
           
           return (
             <Link key={item.href} href={item.href} className={cn(
-                "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group relative overflow-hidden",
+                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden font-medium",
                 isActive 
-                  ? "text-white bg-primary/20 border border-primary/30" 
-                  : "text-sidebar-foreground/70 hover:text-white hover:bg-white/5"
+                  ? "text-primary bg-primary/10 border border-primary/30 shadow-sm" 
+                  : "text-foreground hover:text-primary hover:bg-muted"
               )}>
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r" />
                 )}
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-sidebar-foreground/60 group-hover:text-primary")} />
-                <span className="font-ui tracking-wide text-sm">{item.label}</span>
+                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-secondary group-hover:text-primary")} />
+                <span className="text-sm">{item.label}</span>
                 {item.badge && (
-                  <span className={cn("ml-auto px-1.5 py-0.5 text-[9px] font-bold rounded border uppercase", item.badgeColor)}>
+                  <span className={cn("ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase", item.badgeColor)}>
                     {item.badge}
                   </span>
                 )}
@@ -82,13 +82,13 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-3 border-t border-border">
         <Link href="/settings" className={cn(
-            "flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sidebar-foreground/70 hover:text-white hover:bg-white/5 transition-colors",
-            location === "/settings" && "text-white bg-primary/20 border border-primary/30"
+            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-foreground hover:text-primary hover:bg-muted transition-colors font-medium",
+            location === "/settings" && "text-primary bg-primary/10 border border-primary/30"
         )}>
-          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-primary" : "text-sidebar-foreground/60")} />
-          <span className="font-ui text-sm">Settings</span>
+          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-primary" : "text-secondary")} />
+          <span className="text-sm">Settings</span>
         </Link>
       </div>
     </aside>
