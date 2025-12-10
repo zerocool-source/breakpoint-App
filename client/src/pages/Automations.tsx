@@ -1,12 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Zap, Plus, ArrowRight, CheckCircle2, AlertTriangle, Droplet, FileText, Copy } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Mail, Zap, Plus, ArrowRight, CheckCircle2, AlertTriangle, Droplet, Copy, Loader2, Send } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -21,46 +19,60 @@ interface Workflow {
   executions: number;
 }
 
+interface EmailPart {
+  subject: string;
+  body: string;
+  orderCount: number;
+  partNumber: number;
+  totalParts: number;
+}
+
+interface EmailData {
+  emailText: string;
+  orderCount: number;
+  orders: any[];
+  emails: EmailPart[];
+  totalParts: number;
+}
+
 export default function Automations() {
   const { toast } = useToast();
+  const [sendingPart, setSendingPart] = useState<number | null>(null);
   const [workflows, setWorkflows] = useState<Workflow[]>([
     { id: "1", name: "Bulk Chemical Outreach", trigger: "Algae or Repair Alert", action: "Draft Outlook Email for Chemical Sales", status: "active", executions: 87 },
     { id: "2", name: "Weekly Report", trigger: "Every Monday 8:00 AM", action: "Email Summary PDF to Clients", status: "paused", executions: 0 },
   ]);
 
-  const { data: emailData, isLoading, refetch } = useQuery({
+  const { data: emailData, isLoading, refetch } = useQuery<EmailData>({
     queryKey: ["chemicalOrderEmail"],
     queryFn: async () => {
       const res = await fetch("/api/alerts/chemical-order-email");
       if (!res.ok) throw new Error("Failed to generate email");
       return res.json();
     },
-    enabled: false, // Only fetch when manually triggered
+    enabled: false,
   });
 
-  const handleCopyEmail = () => {
-    if (emailData?.emailText) {
-      navigator.clipboard.writeText(emailData.emailText);
-      toast({
-        title: "Copied to Clipboard",
-        description: `Chemical order email copied (${emailData.orderCount} properties)`,
-      });
-    }
+  const handleCopyEmail = (text: string, partNumber?: number) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to Clipboard",
+      description: partNumber ? `Part ${partNumber} copied` : `Chemical order email copied`,
+    });
   };
 
-  const handleOpenInOutlook = async () => {
-    if (!emailData?.emailText) return;
-
-    // Try to create draft via Microsoft Graph (full content, no limitations)
+  const handleOpenInOutlook = async (emailPart: EmailPart) => {
+    setSendingPart(emailPart.partNumber);
+    
     try {
       const response = await fetch('/api/outlook/create-draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subject: 'Alpha Chemical Order',
+          subject: emailPart.subject,
           to: 'pmtorder@awspoolsupply.com',
           cc: 'Jesus@awspoolsupply.com',
-          body: emailData.emailText
+          body: emailPart.body
         })
       });
 
@@ -69,46 +81,49 @@ export default function Automations() {
       if (data.success && data.webLink) {
         toast({
           title: "Draft Created in Outlook",
-          description: `Full chemical order for ${emailData.orderCount} properties - opening now`,
+          description: `Part ${emailPart.partNumber} of ${emailPart.totalParts} - opening now`,
         });
         window.open(data.webLink, '_blank');
-        return;
-      }
-
-      // Fallback if Graph not configured
-      if (data.fallback) {
-        await fallbackToDeepLink();
-        return;
+      } else {
+        await fallbackToDeepLink(emailPart);
       }
     } catch (error) {
       console.error('Graph API error, falling back:', error);
-      await fallbackToDeepLink();
+      await fallbackToDeepLink(emailPart);
+    } finally {
+      setSendingPart(null);
     }
   };
 
-  const fallbackToDeepLink = async () => {
-    if (!emailData?.emailText) return;
+  const fallbackToDeepLink = async (emailPart: EmailPart) => {
+    await navigator.clipboard.writeText(emailPart.body);
 
-    // Copy full email to clipboard as backup
-    await navigator.clipboard.writeText(emailData.emailText);
-
-    // Fallback: Use Outlook web deep link (limited)
     const to = 'pmtorder@awspoolsupply.com';
     const cc = 'Jesus@awspoolsupply.com';
-    const subject = 'Alpha Chemical Order';
     
     const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
-    const baseParams = `?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(subject)}`;
+    const baseParams = `?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(emailPart.subject)}`;
     
-    // Deep link has URL length limit - just open compose without body
     const outlookUrl = `${baseUrl}${baseParams}`;
     
     window.open(outlookUrl, '_blank');
     
     toast({
       title: "Opening Outlook",
-      description: `Email copied to clipboard! Paste with Cmd+V`,
+      description: `Part ${emailPart.partNumber} copied - paste with Cmd+V`,
     });
+  };
+
+  const handleSendAllToOutlook = async () => {
+    if (!emailData?.emails || emailData.emails.length === 0) return;
+
+    for (let i = 0; i < emailData.emails.length; i++) {
+      const emailPart = emailData.emails[i];
+      await handleOpenInOutlook(emailPart);
+      if (i < emailData.emails.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
   };
 
   return (
@@ -128,7 +143,6 @@ export default function Automations() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Integration Status */}
         <Card className="lg:col-span-1 glass-card border-white/5">
           <CardHeader>
             <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">CONNECTED SERVICES</CardTitle>
@@ -166,7 +180,6 @@ export default function Automations() {
           </CardContent>
         </Card>
 
-        {/* Active Workflows */}
         <Card className="lg:col-span-2 glass-card border-white/5">
           <CardHeader>
             <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">ACTIVE AUTOMATIONS</CardTitle>
@@ -209,13 +222,12 @@ export default function Automations() {
         </Card>
       </div>
 
-      {/* Builder Preview */}
       <div className="mt-8">
         <Card className="glass-card border-white/5">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="font-display text-sm tracking-widest text-muted-foreground">ALPHA CHEMICAL ORDER TEMPLATE</CardTitle>
-              <CardDescription>Auto-generated bulk chemical orders in Breakpoint style</CardDescription>
+              <CardDescription>Auto-generated bulk chemical orders - automatically split into multiple emails if needed</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button 
@@ -225,44 +237,87 @@ export default function Automations() {
                 className="gap-2"
                 data-testid="button-generate-email"
               >
-                <Mail className="w-4 h-4" />
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                 {isLoading ? "Generating..." : "Generate from Alerts"}
               </Button>
-              {emailData && (
-                <>
-                  <Button 
-                    onClick={handleOpenInOutlook}
-                    className="bg-[#0078D4] text-white hover:bg-[#0078D4]/80 gap-2"
-                    data-testid="button-open-outlook"
-                  >
-                    <Mail className="w-4 h-4" />
-                    Open in Outlook
-                  </Button>
-                  <Button 
-                    onClick={handleCopyEmail}
-                    variant="outline"
-                    className="gap-2"
-                    data-testid="button-copy-email"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copy Email
-                  </Button>
-                </>
+              {emailData && emailData.emails && emailData.emails.length > 0 && (
+                <Button 
+                  onClick={handleSendAllToOutlook}
+                  className="bg-[#0078D4] text-white hover:bg-[#0078D4]/80 gap-2"
+                  data-testid="button-send-all-outlook"
+                >
+                  <Send className="w-4 h-4" />
+                  Send All to Outlook ({emailData.emails.length} {emailData.emails.length === 1 ? 'email' : 'emails'})
+                </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            {emailData ? (
-              <div className="bg-white text-black p-6 rounded-lg font-mono text-xs max-w-3xl mx-auto shadow-2xl overflow-x-auto">
-                <div className="mb-4 flex justify-between items-center border-b pb-2">
-                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                    {emailData.orderCount} Properties
-                  </Badge>
-                  <span className="text-[10px] text-gray-500">Live from Pool Brain Alerts</span>
+            {emailData && emailData.emails && emailData.emails.length > 0 ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-primary/10 border border-primary/30 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                      {emailData.orderCount} Properties Total
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Split into {emailData.emails.length} {emailData.emails.length === 1 ? 'email' : 'emails'} (max 10 properties each)
+                    </span>
+                  </div>
                 </div>
-                <div className="whitespace-pre-wrap" data-testid="email-preview">
-                  {emailData.emailText}
-                </div>
+
+                <ScrollArea className="h-[600px]">
+                  <div className="space-y-6">
+                    {emailData.emails.map((emailPart, index) => (
+                      <Card key={index} className="bg-card/50 border-border/50">
+                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base font-ui flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-[#0078D4]" />
+                              {emailPart.subject}
+                            </CardTitle>
+                            <CardDescription>
+                              {emailPart.orderCount} properties in this email
+                            </CardDescription>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={() => handleOpenInOutlook(emailPart)}
+                              size="sm"
+                              className="bg-[#0078D4] text-white hover:bg-[#0078D4]/80 gap-2"
+                              disabled={sendingPart === emailPart.partNumber}
+                              data-testid={`button-outlook-part-${emailPart.partNumber}`}
+                            >
+                              {sendingPart === emailPart.partNumber ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4" />
+                              )}
+                              Open in Outlook
+                            </Button>
+                            <Button 
+                              onClick={() => handleCopyEmail(emailPart.body, emailPart.partNumber)}
+                              size="sm"
+                              variant="outline"
+                              className="gap-2"
+                              data-testid={`button-copy-part-${emailPart.partNumber}`}
+                            >
+                              <Copy className="w-4 h-4" />
+                              Copy
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="bg-white text-black p-4 rounded-lg font-mono text-xs shadow-lg overflow-x-auto max-h-[300px] overflow-y-auto">
+                            <div className="whitespace-pre-wrap" data-testid={`email-preview-part-${emailPart.partNumber}`}>
+                              {emailPart.body}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             ) : (
               <div className="bg-white text-black p-6 rounded-lg font-mono text-xs max-w-3xl mx-auto shadow-2xl overflow-x-auto">

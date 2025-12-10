@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { storage } from "./storage";
 import { PoolBrainClient } from "./poolbrain-client";
-import { buildChemicalOrderEmail } from "./email-template";
+import { buildChemicalOrderEmail, buildChunkedChemicalEmails } from "./email-template";
 import { OutlookGraphClient } from "./outlook-graph";
 
 export async function registerRoutes(app: any) {
@@ -562,13 +562,24 @@ function setupRoutes(app: any) {
       if (finalOrders.length === 0) {
         return res.json({ 
           emailText: "No chemical alerts found at this time.",
-          orderCount: 0 
+          orderCount: 0,
+          emails: []
         });
       }
 
-      // Generate email
+      // Generate chunked emails if there are many properties
+      const chunkedResult = buildChunkedChemicalEmails({
+        orders: finalOrders as any[],
+        vendorName: "Paramount Orders",
+        vendorEmail: "pmtorder@awspoolsupply.com",
+        repName: "Jesus Diaz",
+        repEmail: "Jesus@awspoolsupply.com",
+        subject: "Alpha Chemical Order"
+      });
+
+      // For backward compatibility, also include the combined email text
       const emailText = buildChemicalOrderEmail({
-        orders: finalOrders,
+        orders: finalOrders as any[],
         vendorName: "Paramount Orders",
         vendorEmail: "pmtorder@awspoolsupply.com",
         repName: "Jesus Diaz",
@@ -579,7 +590,9 @@ function setupRoutes(app: any) {
       res.json({ 
         emailText,
         orderCount: finalOrders.length,
-        orders: finalOrders
+        orders: finalOrders,
+        emails: chunkedResult.emails,
+        totalParts: chunkedResult.emails.length
       });
     } catch (error: any) {
       console.error("Error generating chemical order email:", error);
