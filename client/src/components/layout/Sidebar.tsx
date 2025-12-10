@@ -29,18 +29,18 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-screen bg-gradient-to-b from-card via-card to-muted/30 border-r border-border flex flex-col fixed left-0 top-0 z-50 shadow-lg">
-      <div className="p-5 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
+    <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-50 shadow-sm">
+      <div className="p-5 border-b border-slate-200 bg-slate-50">
         <div className="relative">
           <img 
             src={BreakpointLogo} 
             alt="Breakpoint Logo" 
             className="w-full h-auto object-contain"
           />
-          <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded-full uppercase tracking-wider shadow-sm">Beta</span>
+          <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-[#0891b2] text-white border border-[#067997] rounded-full uppercase tracking-wider shadow-sm">Beta</span>
         </div>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 bg-white">
         {navItems.map((item) => {
           const isActive = location === item.href;
           
@@ -48,12 +48,12 @@ export function Sidebar() {
             return (
               <div
                 key={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/60 cursor-not-allowed"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 cursor-not-allowed"
               >
-                <item.icon className="w-5 h-5 text-muted-foreground/40" />
+                <item.icon className="w-5 h-5 text-slate-300" />
                 <span className="font-medium text-sm">{item.label}</span>
                 {item.badge && (
-                  <span className={cn("ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase", item.badgeColor)}>
+                  <span className="ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase bg-slate-100 text-slate-500 border-slate-300">
                     {item.badge}
                   </span>
                 )}
@@ -65,16 +65,19 @@ export function Sidebar() {
             <Link key={item.href} href={item.href} className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden font-medium",
                 isActive 
-                  ? "text-primary bg-primary/10 border border-primary/30 shadow-sm" 
-                  : "text-foreground hover:text-primary hover:bg-muted"
+                  ? "text-white bg-[#0891b2] shadow-md" 
+                  : "text-slate-700 hover:text-[#0891b2] hover:bg-slate-100"
               )}>
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/30 rounded-r" />
                 )}
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-secondary group-hover:text-primary")} />
+                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-white" : "text-[#0891b2]")} />
                 <span className="text-sm">{item.label}</span>
                 {item.badge && (
-                  <span className={cn("ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase", item.badgeColor)}>
+                  <span className={cn(
+                    "ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase",
+                    isActive ? "bg-white/20 text-white border-white/30" : "bg-[#0891b2]/10 text-[#0891b2] border-[#0891b2]/30"
+                  )}>
                     {item.badge}
                   </span>
                 )}
@@ -82,12 +85,12 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-slate-200 bg-white">
         <Link href="/settings" className={cn(
-            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-foreground hover:text-primary hover:bg-muted transition-colors font-medium",
-            location === "/settings" && "text-primary bg-primary/10 border border-primary/30"
+            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-slate-700 hover:text-[#0891b2] hover:bg-slate-100 transition-colors font-medium",
+            location === "/settings" && "text-white bg-[#0891b2] shadow-md"
         )}>
-          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-primary" : "text-secondary")} />
+          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-white" : "text-[#0891b2]")} />
           <span className="text-sm">Settings</span>
         </Link>
       </div>
