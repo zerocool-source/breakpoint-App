@@ -1,10 +1,12 @@
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings } from "lucide-react";
 
 interface Job {
   jobId: string;
@@ -23,6 +25,7 @@ interface Job {
   address: string;
   price: number;
   items: { productId: string; qty: number; unitCost: number; taxable: number }[];
+  raw?: any;
 }
 
 interface Account {
@@ -69,11 +72,138 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
 }
 
-function JobRow({ job }: { job: Job }) {
+function ExpandableJobCard({ job }: { job: Job }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="bg-card/50 border-border/50 hover:border-primary/30 transition-colors" data-testid={`job-card-${job.jobId}`}>
+        <CollapsibleTrigger className="w-full">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isOpen ? (
+                  <ChevronDown className="w-5 h-5 text-primary" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                )}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                  job.isCompleted ? 'bg-green-500/20' : 'bg-yellow-500/20'
+                }`}>
+                  {job.isCompleted ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-yellow-400" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-foreground" data-testid={`job-title-${job.jobId}`}>
+                    {job.title || "Service Job"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {job.customerName} • {job.technicianName}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className={
+                  job.isCompleted ? "border-green-500/50 text-green-400" : "border-yellow-500/50 text-yellow-400"
+                }>
+                  {job.status}
+                </Badge>
+                <span className="font-ui font-bold text-lg text-primary" data-testid={`job-price-${job.jobId}`}>
+                  {formatPrice(job.price)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 pb-4 px-4 border-t border-border/30 mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Customer</p>
+                  <p className="text-sm font-medium text-foreground">{job.customerName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Technician</p>
+                  <p className="text-sm font-medium text-foreground">{job.technicianName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Pool</p>
+                  <p className="text-sm font-medium text-foreground">{job.poolName || "N/A"}</p>
+                </div>
+                {job.address && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Service Address</p>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {job.address}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Job ID</p>
+                  <p className="text-sm font-medium text-foreground">{job.jobId}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Status</p>
+                  <Badge className={
+                    job.isCompleted ? "bg-green-500/20 text-green-400 border-green-500/50" : "bg-yellow-500/20 text-yellow-400 border-yellow-500/50"
+                  }>
+                    {job.status}
+                  </Badge>
+                </div>
+                {job.scheduledDate && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Scheduled Date</p>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(job.scheduledDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Price</p>
+                  <p className="text-lg font-bold text-primary">{formatPrice(job.price)}</p>
+                </div>
+              </div>
+            </div>
+            {job.description && (
+              <div className="mt-4 pt-4 border-t border-border/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Description / Notes</p>
+                <p className="text-sm text-foreground bg-background/30 p-3 rounded-lg">{job.description}</p>
+              </div>
+            )}
+            {job.items && job.items.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-border/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Line Items</p>
+                <div className="space-y-2">
+                  {job.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm bg-background/30 p-2 rounded">
+                      <span>Product #{item.productId}</span>
+                      <span>Qty: {item.qty} @ {formatPrice(item.unitCost)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
+function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
   return (
     <div 
-      className="flex items-center justify-between py-3 px-4 bg-background/30 rounded-lg border border-border/30 hover:border-primary/30 transition-colors"
+      className="flex items-center justify-between py-3 px-4 bg-background/30 rounded-lg border border-border/30 hover:border-primary/30 transition-colors cursor-pointer"
       data-testid={`job-row-${job.jobId}`}
+      onClick={onClick}
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
@@ -161,7 +291,7 @@ function AccountCard({ account }: { account: Account }) {
         </div>
         <div className="space-y-2">
           {account.jobs.map((job) => (
-            <JobRow key={job.jobId} job={job} />
+            <ExpandableJobCard key={job.jobId} job={job} />
           ))}
         </div>
       </CardContent>
@@ -216,7 +346,7 @@ function TechnicianCard({ tech }: { tech: Technician }) {
             </div>
             <div className="space-y-2">
               {tech.jobs.map((job) => (
-                <JobRow key={job.jobId} job={job} />
+                <ExpandableJobCard key={job.jobId} job={job} />
               ))}
             </div>
           </>
@@ -226,6 +356,56 @@ function TechnicianCard({ tech }: { tech: Technician }) {
             No jobs assigned
           </p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] }) {
+  const completedCount = jobs.filter(j => j.isCompleted).length;
+  const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
+  const completionPercent = jobs.length > 0 ? Math.round((completedCount / jobs.length) * 100) : 0;
+
+  return (
+    <Card className="bg-card/50 border-orange-500/30 hover:border-orange-500/50 transition-colors" data-testid={`sr-tech-${techName}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <Settings className="w-5 h-5 text-orange-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-ui text-lg text-foreground">{techName}</p>
+                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">SR</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Service Repairs (&lt;$500)
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="font-ui font-bold text-xl text-orange-400">
+              {formatPrice(totalValue)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {completedCount}/{jobs.length} complete ({completionPercent}%)
+            </p>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="w-full bg-background/30 rounded-full h-2 mb-4">
+          <div 
+            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${completionPercent}%` }}
+          />
+        </div>
+        <div className="space-y-2">
+          {jobs.map((job) => (
+            <ExpandableJobCard key={job.jobId} job={job} />
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -244,6 +424,47 @@ export default function Jobs() {
     refetchInterval: 60000,
   });
 
+  const srData = useMemo(() => {
+    if (!data?.jobs) return { srJobs: [], srByTechnician: {}, srCount: 0, srValue: 0 };
+
+    const srJobs = data.jobs.filter(job => {
+      const title = job.title?.toUpperCase() || "";
+      const template = job.raw?.Template?.toUpperCase() || "";
+      
+      const isSR = (
+        title.startsWith("SR ") ||
+        title.startsWith("SR-") ||
+        title.startsWith("SR:") ||
+        title.startsWith("\"SR\"") ||
+        title.startsWith("(SR)") ||
+        title.includes(" SR ") ||
+        title.includes(" SR-") ||
+        title.includes("(SR)") ||
+        title.includes("\"SR\"") ||
+        title === "SR" ||
+        /\bSR\d/.test(title) ||
+        title.includes("SERVICE REPAIR") ||
+        template.includes("S.T") ||
+        template.includes("REPAIR")
+      );
+      
+      return isSR && job.price < 500;
+    });
+
+    const srByTechnician: Record<string, Job[]> = {};
+    srJobs.forEach(job => {
+      const techName = job.technicianName || "Unassigned";
+      if (!srByTechnician[techName]) {
+        srByTechnician[techName] = [];
+      }
+      srByTechnician[techName].push(job);
+    });
+
+    const srValue = srJobs.reduce((sum, j) => sum + j.price, 0);
+
+    return { srJobs, srByTechnician, srCount: srJobs.length, srValue };
+  }, [data?.jobs]);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -253,7 +474,7 @@ export default function Jobs() {
               JOBS & SCHEDULING
             </h1>
             <p className="text-muted-foreground font-ui mt-1">
-              Jobs grouped by account and technician with pricing
+              Jobs grouped by account, technician, and SR repairs with full details
             </p>
           </div>
           <button
@@ -281,7 +502,7 @@ export default function Jobs() {
           </Card>
         ) : data ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
@@ -315,6 +536,17 @@ export default function Jobs() {
                   </div>
                 </CardContent>
               </Card>
+              <Card className="bg-card/50 border-orange-500/50">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                    <Settings className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold font-ui text-foreground" data-testid="sr-count">{srData.srCount}</p>
+                    <p className="text-sm text-muted-foreground">SR Jobs</p>
+                  </div>
+                </CardContent>
+              </Card>
               <Card className="bg-card/50 border-border/50">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
@@ -328,8 +560,12 @@ export default function Jobs() {
               </Card>
             </div>
 
-            <Tabs defaultValue="accounts" className="w-full">
+            <Tabs defaultValue="sr" className="w-full">
               <TabsList className="bg-card/50 border border-border/50 flex-wrap">
+                <TabsTrigger value="sr" data-testid="tab-sr" className="data-[state=active]:bg-orange-500/20 data-[state=active]:text-orange-400">
+                  <Settings className="w-4 h-4 mr-2" />
+                  SR Jobs ({srData.srCount})
+                </TabsTrigger>
                 <TabsTrigger value="accounts" data-testid="tab-accounts">
                   <Building2 className="w-4 h-4 mr-2" />
                   By Account ({data.summary.accountCount})
@@ -347,6 +583,40 @@ export default function Jobs() {
                   Pending ({data.summary.pendingCount})
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="sr" className="mt-4">
+                <div className="mb-4 p-4 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Settings className="w-5 h-5 text-orange-400" />
+                    <h3 className="font-ui font-semibold text-orange-400">Service Repairs (SR)</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Small repairs under $500, grouped by technician. Click any job to see full details.
+                  </p>
+                  <div className="flex gap-4 mt-2 text-sm">
+                    <span className="text-orange-400 font-semibold">{srData.srCount} SR Jobs</span>
+                    <span className="text-orange-400 font-semibold">{formatPrice(srData.srValue)} Total</span>
+                    <span className="text-muted-foreground">{Object.keys(srData.srByTechnician).length} Technicians</span>
+                  </div>
+                </div>
+                <ScrollArea className="h-[650px]">
+                  {Object.keys(srData.srByTechnician).length === 0 ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        No SR jobs found
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(srData.srByTechnician)
+                        .sort((a, b) => b[1].length - a[1].length)
+                        .map(([techName, jobs]) => (
+                          <SRTechnicianCard key={techName} techName={techName} jobs={jobs} />
+                        ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
 
               <TabsContent value="accounts" className="mt-4">
                 <ScrollArea className="h-[700px]">
@@ -396,20 +666,7 @@ export default function Jobs() {
                   ) : (
                     <div className="space-y-2">
                       {data.completedJobs.map((job) => (
-                        <Card key={job.jobId} className="bg-card/50 border-border/50">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <CheckCircle2 className="w-5 h-5 text-green-400" />
-                                <div>
-                                  <p className="font-medium text-foreground">{job.title}</p>
-                                  <p className="text-sm text-muted-foreground">{job.customerName} • {job.technicianName}</p>
-                                </div>
-                              </div>
-                              <span className="font-ui font-semibold text-primary">{formatPrice(job.price)}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <ExpandableJobCard key={job.jobId} job={job} />
                       ))}
                     </div>
                   )}
@@ -428,26 +685,7 @@ export default function Jobs() {
                   ) : (
                     <div className="space-y-2">
                       {data.pendingJobs.map((job) => (
-                        <Card key={job.jobId} className="bg-card/50 border-border/50">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Clock className="w-5 h-5 text-yellow-400" />
-                                <div>
-                                  <p className="font-medium text-foreground">{job.title}</p>
-                                  <p className="text-sm text-muted-foreground">{job.customerName} • {job.technicianName}</p>
-                                  {job.scheduledDate && (
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                                      <Calendar className="w-3 h-3" />
-                                      {new Date(job.scheduledDate).toLocaleDateString()}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <span className="font-ui font-semibold text-primary">{formatPrice(job.price)}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        <ExpandableJobCard key={job.jobId} job={job} />
                       ))}
                     </div>
                   )}
