@@ -944,9 +944,17 @@ function setupRoutes(app: any) {
         }
       });
 
-      // Convert to arrays and sort
+      // Convert to arrays and sort, adding commission calculations
       const accounts = Object.values(accountsMap).sort((a, b) => b.totalJobs - a.totalJobs);
-      const technicians = Object.values(technicianJobsMap).sort((a, b) => b.totalJobs - a.totalJobs);
+      const techniciansRaw = Object.values(technicianJobsMap).sort((a, b) => b.totalJobs - a.totalJobs);
+      
+      // Add commission calculations (10% and 50% of total value)
+      const technicians = techniciansRaw.map(tech => ({
+        ...tech,
+        commission10: Math.round(tech.totalValue * 0.10 * 100) / 100,
+        commission50: Math.round(tech.totalValue * 0.50 * 100) / 100
+      }));
+      
       const techsWithJobs = technicians.filter(t => t.totalJobs > 0);
       const techsWithoutJobs = technicians.filter(t => t.totalJobs === 0);
 
