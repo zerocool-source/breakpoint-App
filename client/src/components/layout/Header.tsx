@@ -35,8 +35,8 @@ function DateTicker() {
 
 export function Header() {
   return (
-    <header className="border-b border-border bg-card/90 backdrop-blur-sm sticky top-0 z-40 shadow-sm">
-      <div className="h-10 bg-gradient-to-r from-primary/5 via-card to-primary/5 border-b border-border flex items-center justify-center overflow-hidden">
+    <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-40 shadow-md">
+      <div className="h-10 bg-gradient-to-r from-primary/10 via-card to-secondary/10 border-b border-border flex items-center justify-center overflow-hidden">
         <div className="flex items-center gap-8 animate-marquee whitespace-nowrap">
           <DateTicker />
           <span className="text-xs text-primary font-ui tracking-widest uppercase font-semibold">Breakpoint Intelligence</span>

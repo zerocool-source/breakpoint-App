@@ -155,14 +155,16 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   };
 
   return (
-    <Card className={cn("bg-card border-border shadow-sm flex flex-col", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-shrink-0 border-b border-border">
-        <CardTitle className="font-display text-xl tracking-wide flex items-center gap-2 text-foreground">
-          <AlertTriangle className="w-5 h-5 text-secondary" />
+    <Card className={cn("bg-card/90 backdrop-blur-sm border-border shadow-lg flex flex-col rounded-xl overflow-hidden", className)}>
+      <CardHeader className="flex flex-row items-center justify-between pb-3 flex-shrink-0 border-b border-border bg-gradient-to-r from-primary/5 via-transparent to-secondary/5">
+        <CardTitle className="font-display text-xl tracking-wide flex items-center gap-3 text-foreground">
+          <div className="p-2 rounded-lg bg-secondary/20">
+            <AlertTriangle className="w-5 h-5 text-secondary" />
+          </div>
           LIVE SYSTEM ALERTS
         </CardTitle>
         <Badge variant="outline" className={cn(
-          "border-destructive/30 bg-destructive/10",
+          "border-destructive/40 bg-destructive/15 font-bold px-3 py-1",
           activeAlerts.length > 0 ? "text-destructive animate-pulse" : "text-muted-foreground"
         )}>
           {activeAlerts.length} Active
@@ -212,11 +214,11 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                   {displayedAlerts.map((alert: EnrichedAlert, idx: number) => (
                     <div 
                       key={`alert-${alert.poolId}-${alert.customerName}-${idx}`}
-                      className="group relative p-3 rounded-lg bg-muted/50 border border-border hover:bg-muted hover:border-primary/30 transition-all"
+                      className="group relative p-4 rounded-xl bg-card border border-border shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200"
                       data-testid={`alert-card-${alert.alertId}`}
                     >
                       {alert.status === "Active" && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-destructive to-transparent rounded-l-lg opacity-70 group-hover:opacity-100" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-destructive via-secondary to-transparent rounded-l-xl" />
                       )}
                       
                       {/* Header: Pool + Customer */}

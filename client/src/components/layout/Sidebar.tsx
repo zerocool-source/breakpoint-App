@@ -29,15 +29,15 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-screen bg-card border-r border-border flex flex-col fixed left-0 top-0 z-50 shadow-sm">
-      <div className="p-5 border-b border-border">
+    <aside className="w-64 h-screen bg-gradient-to-b from-card via-card to-muted/30 border-r border-border flex flex-col fixed left-0 top-0 z-50 shadow-lg">
+      <div className="p-5 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
         <div className="relative">
           <img 
             src={BreakpointLogo} 
             alt="Breakpoint Logo" 
             className="w-full h-auto object-contain"
           />
-          <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary border border-primary/30 rounded-full uppercase tracking-wider">Beta</span>
+          <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded-full uppercase tracking-wider shadow-sm">Beta</span>
         </div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">

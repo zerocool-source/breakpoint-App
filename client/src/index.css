@@ -16,49 +16,49 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* Soft Blue Theme - Easy on Eyes */
-  --color-background: hsl(210 40% 96%); /* Soft Blue-Gray */
-  --color-foreground: hsl(215 25% 27%); /* Dark Blue-Gray */
+  /* Baby Blue Theme with Orange Accents */
+  --color-background: hsl(205 60% 92%); /* Baby Blue Background */
+  --color-foreground: hsl(215 30% 22%); /* Dark Blue-Gray Text */
 
-  --color-card: hsl(210 50% 98%); /* Very Light Blue-White */
-  --color-card-foreground: hsl(215 25% 27%);
+  --color-card: hsl(210 60% 97%); /* Very Light Blue Card */
+  --color-card-foreground: hsl(215 30% 22%);
 
-  --color-popover: hsl(210 50% 98%);
-  --color-popover-foreground: hsl(215 25% 27%);
+  --color-popover: hsl(210 60% 97%);
+  --color-popover-foreground: hsl(215 30% 22%);
 
-  --color-primary: hsl(205 85% 45%); /* Sky Blue */
+  --color-primary: hsl(205 78% 45%); /* Rich Sky Blue */
   --color-primary-foreground: hsl(0 0% 100%);
 
-  --color-secondary: hsl(28 90% 55%); /* Warm Orange */
+  --color-secondary: hsl(25 95% 53%); /* Vibrant Orange */
   --color-secondary-foreground: hsl(0 0% 100%);
 
-  --color-muted: hsl(210 30% 90%);
-  --color-muted-foreground: hsl(215 20% 50%);
+  --color-muted: hsl(205 40% 88%); /* Muted Blue */
+  --color-muted-foreground: hsl(215 20% 45%);
 
-  --color-accent: hsl(205 85% 45%);
+  --color-accent: hsl(205 78% 45%);
   --color-accent-foreground: hsl(0 0% 100%);
 
   --color-destructive: hsl(0 72% 51%);
   --color-destructive-foreground: hsl(0 0% 100%);
 
-  --color-border: hsl(210 30% 85%);
-  --color-input: hsl(210 30% 90%);
-  --color-ring: hsl(205 85% 45%);
+  --color-border: hsl(205 35% 82%);
+  --color-input: hsl(205 40% 88%);
+  --color-ring: hsl(205 78% 45%);
 
-  --color-chart-1: hsl(205 85% 45%); /* Blue */
-  --color-chart-2: hsl(28 90% 55%);  /* Orange */
+  --color-chart-1: hsl(205 78% 45%); /* Blue */
+  --color-chart-2: hsl(25 95% 53%);  /* Orange */
   --color-chart-3: hsl(180 60% 45%); /* Teal */
   --color-chart-4: hsl(45 93% 47%);  /* Gold */
   --color-chart-5: hsl(142 71% 45%); /* Green */
   
-  --color-sidebar: hsl(210 50% 98%); /* Light Blue-White sidebar */
-  --color-sidebar-foreground: hsl(215 25% 27%);
-  --color-sidebar-primary: hsl(205 85% 45%);
+  --color-sidebar: hsl(210 55% 96%); /* Light Blue Sidebar */
+  --color-sidebar-foreground: hsl(215 30% 22%);
+  --color-sidebar-primary: hsl(205 78% 45%);
   --color-sidebar-primary-foreground: hsl(0 0% 100%);
-  --color-sidebar-accent: hsl(210 40% 94%);
-  --color-sidebar-accent-foreground: hsl(215 25% 27%);
-  --color-sidebar-border: hsl(210 30% 85%);
-  --color-sidebar-ring: hsl(205 85% 45%);
+  --color-sidebar-accent: hsl(205 45% 90%);
+  --color-sidebar-accent-foreground: hsl(215 30% 22%);
+  --color-sidebar-border: hsl(205 35% 82%);
+  --color-sidebar-ring: hsl(205 78% 45%);
 }
 
 @layer base {
