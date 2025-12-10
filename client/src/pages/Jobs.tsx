@@ -133,6 +133,102 @@ function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
   doc.save(`repair-techs-report-${now.toISOString().split('T')[0]}.pdf`);
 }
 
+function exportSRJobsPDF(srJobs: any[]) {
+  const doc = new jsPDF();
+  const now = new Date();
+  const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  
+  // Group jobs by technician
+  const jobsByTech: Record<string, any[]> = {};
+  srJobs.forEach(job => {
+    const techName = job.technicianName || "Unassigned";
+    if (!jobsByTech[techName]) {
+      jobsByTech[techName] = [];
+    }
+    jobsByTech[techName].push(job);
+  });
+  
+  // Calculate tech stats
+  const techStats = Object.entries(jobsByTech).map(([name, jobs]) => {
+    const totalValue = jobs.reduce((sum, j) => sum + (j.price || 0), 0);
+    const completedCount = jobs.filter(j => j.isCompleted).length;
+    return {
+      name,
+      jobs,
+      totalValue,
+      completedCount,
+      jobCount: jobs.length
+    };
+  }).sort((a, b) => b.totalValue - a.totalValue);
+  
+  // Header
+  doc.setFontSize(20);
+  doc.setTextColor(8, 145, 178);
+  doc.text("SR Jobs - Technician Report", 14, 20);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
+  doc.text(`Total SR Jobs: ${srJobs.length} | Total Value: $${srJobs.reduce((s, j) => s + (j.price || 0), 0).toLocaleString()}`, 14, 35);
+  
+  // Summary table
+  const summaryData = techStats.map(tech => [
+    tech.name,
+    tech.jobCount.toString(),
+    `${tech.completedCount}/${tech.jobCount}`,
+    `$${tech.totalValue.toLocaleString()}`,
+    `$${Math.round(tech.totalValue * 0.10).toLocaleString()}`,
+    `$${Math.round(tech.totalValue * 0.15).toLocaleString()}`
+  ]);
+
+  autoTable(doc, {
+    startY: 42,
+    head: [['Technician', 'Total Jobs', 'Completed', 'Total Value', '10% Comm', '15% Comm']],
+    body: summaryData,
+    theme: 'striped',
+    headStyles: { fillColor: [8, 145, 178], textColor: 255 },
+    styles: { fontSize: 9 }
+  });
+
+  let yPos = (doc as any).lastAutoTable?.finalY + 15 || 100;
+  
+  // Detail pages for each tech
+  techStats.forEach(tech => {
+    if (yPos > 220) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.setFontSize(14);
+    doc.setTextColor(8, 145, 178);
+    doc.text(`${tech.name} - ${tech.jobCount} jobs ($${tech.totalValue.toLocaleString()})`, 14, yPos);
+    yPos += 8;
+    
+    const jobsData = tech.jobs.map((job: any) => [
+      job.title?.substring(0, 35) || 'SR Job',
+      job.customerName?.substring(0, 20) || 'N/A',
+      `$${(job.price || 0).toLocaleString()}`,
+      job.isCompleted ? 'Complete' : 'Pending',
+      job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
+    ]);
+    
+    if (jobsData.length > 0) {
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Job Title', 'Customer', 'Price', 'Status', 'Date']],
+        body: jobsData,
+        theme: 'grid',
+        headStyles: { fillColor: [100, 100, 100], textColor: 255 },
+        styles: { fontSize: 8 },
+        margin: { left: 14, right: 14 }
+      });
+      yPos = (doc as any).lastAutoTable?.finalY + 15 || yPos + 50;
+    }
+  });
+
+  doc.save(`sr-jobs-report-${now.toISOString().split('T')[0]}.pdf`);
+}
+
 interface ArchiveContext {
   archivedIds: Set<string>;
   showArchived: boolean;
@@ -1296,6 +1392,15 @@ export default function Jobs() {
                       <h3 className="font-ui font-semibold text-white">Service Repairs (SR)</h3>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => exportSRJobsPDF(srData.srJobs)}
+                        className="bg-slate-700/80 text-slate-300 border border-slate-500/50 hover:bg-slate-600/80"
+                        data-testid="btn-export-sr-pdf"
+                      >
+                        <FileDown className="w-3 h-3 mr-1" />
+                        Export PDF
+                      </Button>
                       <Button
                         size="sm"
                         onClick={() => setShowArchived(false)}
