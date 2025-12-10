@@ -240,7 +240,8 @@ function ExpandableJobCard({ job }: { job: Job }) {
   const archive = useContext(ArchiveContext);
   
   const isPastDue = (() => {
-    if (job.isCompleted || !job.scheduledDate) return false;
+    const isClosed = job.status?.toLowerCase() === 'closed';
+    if (job.isCompleted || isClosed || !job.scheduledDate) return false;
     const scheduled = new Date(job.scheduledDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
