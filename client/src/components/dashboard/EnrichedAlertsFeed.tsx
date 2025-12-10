@@ -155,17 +155,17 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
   };
 
   return (
-    <Card className={cn("bg-card/90 backdrop-blur-sm border-border shadow-lg flex flex-col rounded-xl overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-3 flex-shrink-0 border-b border-border bg-gradient-to-r from-primary/5 via-transparent to-secondary/5">
-        <CardTitle className="font-display text-xl tracking-wide flex items-center gap-3 text-foreground">
-          <div className="p-2 rounded-lg bg-secondary/20">
-            <AlertTriangle className="w-5 h-5 text-secondary" />
+    <Card className={cn("bg-white backdrop-blur-sm border-[#0891b2]/20 shadow-lg flex flex-col rounded-xl overflow-hidden", className)}>
+      <CardHeader className="flex flex-row items-center justify-between pb-3 flex-shrink-0 border-b border-[#0891b2]/20 bg-gradient-to-r from-[#e8f6ff] via-white to-[#fff8f0]">
+        <CardTitle className="font-display text-xl tracking-wide flex items-center gap-3 text-slate-800">
+          <div className="p-2 rounded-lg bg-[#f5a962]">
+            <AlertTriangle className="w-5 h-5 text-white" />
           </div>
           LIVE SYSTEM ALERTS
         </CardTitle>
-        <Badge variant="outline" className={cn(
-          "border-destructive/40 bg-destructive/15 font-bold px-3 py-1",
-          activeAlerts.length > 0 ? "text-destructive animate-pulse" : "text-muted-foreground"
+        <Badge className={cn(
+          "border-red-500/40 bg-red-500/20 font-bold px-3 py-1",
+          activeAlerts.length > 0 ? "text-red-500 animate-pulse" : "text-slate-400"
         )}>
           {activeAlerts.length} Active
         </Badge>
@@ -173,26 +173,26 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       
       <CardContent className="flex flex-col flex-1 pt-4 overflow-hidden">
         <Tabs value={selectedTab} onValueChange={(v) => { setSelectedTab(v); setShowAll(false); }} className="flex flex-col flex-1">
-          <TabsList className="grid grid-cols-7 mb-4 bg-muted border border-border">
-            <TabsTrigger value="all" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+          <TabsList className="grid grid-cols-7 mb-4 bg-[#f0f9ff] border border-[#0891b2]/20">
+            <TabsTrigger value="all" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               All ({categoryCounts.all})
             </TabsTrigger>
-            <TabsTrigger value="algae" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+            <TabsTrigger value="algae" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               Algae ({categoryCounts.algae})
             </TabsTrigger>
-            <TabsTrigger value="repair" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+            <TabsTrigger value="repair" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               Repair ({categoryCounts.repair})
             </TabsTrigger>
-            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               Chem+ ({categoryCounts["chemicals-added"]})
             </TabsTrigger>
-            <TabsTrigger value="time" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+            <TabsTrigger value="time" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               Time ({categoryCounts.time})
             </TabsTrigger>
-            <TabsTrigger value="system" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+            <TabsTrigger value="system" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               System ({categoryCounts.system})
             </TabsTrigger>
-            <TabsTrigger value="other" className="data-[state=active]:bg-primary data-[state=active]:text-white text-[10px] font-semibold">
+            <TabsTrigger value="other" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-400 text-[10px] font-semibold">
               Other ({categoryCounts.other})
             </TabsTrigger>
           </TabsList>
@@ -214,22 +214,22 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                   {displayedAlerts.map((alert: EnrichedAlert, idx: number) => (
                     <div 
                       key={`alert-${alert.poolId}-${alert.customerName}-${idx}`}
-                      className="group relative p-4 rounded-xl bg-card border border-border shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200"
+                      className="group relative p-4 rounded-xl bg-white border border-[#0891b2]/20 shadow-sm hover:shadow-md hover:border-[#0891b2]/40 transition-all duration-200"
                       data-testid={`alert-card-${alert.alertId}`}
                     >
                       {alert.status === "Active" && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-destructive via-secondary to-transparent rounded-l-xl" />
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-red-500 via-[#f5a962] to-transparent rounded-l-xl" />
                       )}
                       
                       {/* Header: Pool + Customer */}
                       <div className="mb-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-sm leading-tight text-foreground group-hover:text-primary transition-colors truncate" data-testid={`text-pool-${alert.alertId}`}>
+                            <h4 className="font-bold text-sm leading-tight text-slate-800 group-hover:text-[#0891b2] transition-colors truncate" data-testid={`text-pool-${alert.alertId}`}>
                               {alert.poolName}
                             </h4>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground truncate">
-                              <Building2 className="w-3 h-3 flex-shrink-0 text-secondary" />
+                            <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 truncate">
+                              <Building2 className="w-3 h-3 flex-shrink-0 text-[#f5a962]" />
                               <span data-testid={`text-customer-${alert.alertId}`} className="truncate">{alert.customerName}</span>
                             </div>
                           </div>

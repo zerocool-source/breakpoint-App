@@ -29,8 +29,8 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-screen bg-gradient-to-b from-card via-card to-muted/30 border-r border-border flex flex-col fixed left-0 top-0 z-50 shadow-lg">
-      <div className="p-5 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
+    <aside className="w-64 h-screen bg-white border-r border-[#0891b2]/20 flex flex-col fixed left-0 top-0 z-50 shadow-lg">
+      <div className="p-5 border-b border-[#0891b2]/20 bg-gradient-to-r from-[#e8f6ff] to-[#dff1fb]">
         <div className="relative">
           <img 
             src={BreakpointLogo} 
@@ -40,7 +40,7 @@ export function Sidebar() {
           <span className="absolute top-1 right-1 px-2 py-0.5 text-[10px] font-bold bg-primary/20 text-primary border border-primary/30 rounded-full uppercase tracking-wider shadow-sm">Beta</span>
         </div>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 bg-gradient-to-b from-[#f0f9ff] to-white">
         {navItems.map((item) => {
           const isActive = location === item.href;
           
@@ -48,9 +48,9 @@ export function Sidebar() {
             return (
               <div
                 key={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground/60 cursor-not-allowed"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 cursor-not-allowed"
               >
-                <item.icon className="w-5 h-5 text-muted-foreground/40" />
+                <item.icon className="w-5 h-5 text-slate-300" />
                 <span className="font-medium text-sm">{item.label}</span>
                 {item.badge && (
                   <span className={cn("ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase", item.badgeColor)}>
@@ -65,13 +65,13 @@ export function Sidebar() {
             <Link key={item.href} href={item.href} className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden font-medium",
                 isActive 
-                  ? "text-primary bg-primary/10 border border-primary/30 shadow-sm" 
-                  : "text-foreground hover:text-primary hover:bg-muted"
+                  ? "text-white bg-[#0891b2] shadow-md" 
+                  : "text-slate-600 hover:text-[#0891b2] hover:bg-[#e8f6ff]"
               )}>
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/50 rounded-r" />
                 )}
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-secondary group-hover:text-primary")} />
+                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-white" : "text-[#0891b2] group-hover:text-[#0891b2]")} />
                 <span className="text-sm">{item.label}</span>
                 {item.badge && (
                   <span className={cn("ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase", item.badgeColor)}>
@@ -82,12 +82,12 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-[#0891b2]/20 bg-white">
         <Link href="/settings" className={cn(
-            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-foreground hover:text-primary hover:bg-muted transition-colors font-medium",
-            location === "/settings" && "text-primary bg-primary/10 border border-primary/30"
+            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-slate-600 hover:text-[#0891b2] hover:bg-[#e8f6ff] transition-colors font-medium",
+            location === "/settings" && "text-white bg-[#0891b2] shadow-md"
         )}>
-          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-primary" : "text-secondary")} />
+          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-white" : "text-[#0891b2]")} />
           <span className="text-sm">Settings</span>
         </Link>
       </div>
