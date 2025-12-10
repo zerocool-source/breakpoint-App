@@ -672,6 +672,13 @@ export default function Jobs() {
     return { repairTechs, totalJobs, totalValue, topEarner, mostJobs };
   }, [data?.jobs]);
 
+  const [selectedRepairTech, setSelectedRepairTech] = useState<string | null>(null);
+  
+  const filteredRepairTechs = useMemo(() => {
+    if (!selectedRepairTech) return repairTechData.repairTechs;
+    return repairTechData.repairTechs.filter(t => t.name === selectedRepairTech);
+  }, [selectedRepairTech, repairTechData.repairTechs]);
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -964,13 +971,6 @@ export default function Jobs() {
               </TabsContent>
 
               <TabsContent value="repair-techs" className="mt-4">
-                {(() => {
-                  const [selectedTech, setSelectedTech] = React.useState<string | null>(null);
-                  const filteredTechs = selectedTech 
-                    ? repairTechData.repairTechs.filter(t => t.name === selectedTech)
-                    : repairTechData.repairTechs;
-
-                  return (
                 <div className="space-y-4">
                   <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
@@ -985,9 +985,9 @@ export default function Jobs() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setSelectedTech(null)}
+                        onClick={() => setSelectedRepairTech(null)}
                         className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all ${
-                          selectedTech === null 
+                          selectedRepairTech === null 
                             ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
                             : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
                         }`}
@@ -1000,9 +1000,9 @@ export default function Jobs() {
                         return (
                           <button
                             key={name}
-                            onClick={() => setSelectedTech(name)}
+                            onClick={() => setSelectedRepairTech(name)}
                             className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all flex items-center gap-2 ${
-                              selectedTech === name 
+                              selectedRepairTech === name 
                                 ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]' 
                                 : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30'
                             }`}
@@ -1018,7 +1018,7 @@ export default function Jobs() {
                     </div>
                   </div>
 
-                  {!selectedTech && repairTechData.topEarner && (
+                  {!selectedRepairTech && repairTechData.topEarner && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Card className="bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border-yellow-500/50">
                         <CardContent className="p-4">
@@ -1062,7 +1062,7 @@ export default function Jobs() {
                           </CardContent>
                         </Card>
                       ) : (
-                        filteredTechs.map((tech) => (
+                        filteredRepairTechs.map((tech) => (
                           <Collapsible key={tech.name} defaultOpen>
                             <Card className="bg-card/50 border-purple-500/30 hover:border-purple-500/50 transition-colors" data-testid={`repair-tech-${tech.name}`}>
                               <CollapsibleTrigger className="w-full">
@@ -1126,8 +1126,6 @@ export default function Jobs() {
                     </div>
                   </ScrollArea>
                 </div>
-                  );
-                })()}
               </TabsContent>
 
               <TabsContent value="accounts" className="mt-4">
