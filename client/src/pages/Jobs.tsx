@@ -234,6 +234,99 @@ function exportSRJobsPDF(srJobs: any[]) {
   doc.save(`sr-jobs-report-${now.toISOString().split('T')[0]}.pdf`);
 }
 
+function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
+  const doc = new jsPDF();
+  const now = new Date();
+  
+  // Header
+  doc.setFontSize(20);
+  doc.setTextColor(8, 145, 178);
+  doc.text("SR Jobs - Account Invoice Report", 14, 20);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
+  
+  let yPos = 40;
+  
+  // For each technician
+  Object.entries(srByTechnician)
+    .sort((a, b) => b[1].length - a[1].length)
+    .forEach(([techName, jobs]) => {
+      // Group jobs by account/customer
+      const accountsMap: Record<string, { jobs: any[]; totalValue: number; completedCount: number }> = {};
+      jobs.forEach((job: any) => {
+        const accountName = job.customerName || "Unknown";
+        if (!accountsMap[accountName]) {
+          accountsMap[accountName] = { jobs: [], totalValue: 0, completedCount: 0 };
+        }
+        accountsMap[accountName].jobs.push(job);
+        accountsMap[accountName].totalValue += job.price || 0;
+        if (job.isCompleted) accountsMap[accountName].completedCount++;
+      });
+      
+      const accounts = Object.entries(accountsMap)
+        .map(([name, data]) => ({
+          name,
+          ...data,
+          jobCount: data.jobs.length,
+          readyToInvoice: data.completedCount === data.jobs.length && data.jobs.length > 0
+        }))
+        .sort((a, b) => b.totalValue - a.totalValue);
+      
+      const techTotal = jobs.reduce((s: number, j: any) => s + (j.price || 0), 0);
+      const techCompleted = jobs.filter((j: any) => j.isCompleted).length;
+      const readyAccounts = accounts.filter(a => a.readyToInvoice);
+      const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
+      
+      // Check page space
+      if (yPos > 220) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      // Technician header
+      doc.setFontSize(14);
+      doc.setTextColor(8, 145, 178);
+      doc.text(`${techName}`, 14, yPos);
+      doc.setFontSize(10);
+      doc.setTextColor(80);
+      doc.text(`${jobs.length} jobs | ${techCompleted}/${jobs.length} complete | $${techTotal.toLocaleString()} total | $${readyValue.toLocaleString()} ready to invoice`, 14, yPos + 6);
+      yPos += 14;
+      
+      // Accounts table
+      const tableData = accounts.map(acc => [
+        acc.name.substring(0, 30),
+        acc.jobCount.toString(),
+        `${acc.completedCount}/${acc.jobCount}`,
+        acc.readyToInvoice ? 'Ready to Invoice' : 'Pending',
+        `$${acc.totalValue.toLocaleString()}`
+      ]);
+      
+      autoTable(doc, {
+        startY: yPos,
+        head: [['Account', 'Jobs', 'Done', 'Status', 'Total']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [51, 65, 85], textColor: 255 },
+        styles: { fontSize: 8 },
+        didParseCell: (data: any) => {
+          if (data.column.index === 3 && data.cell.raw === 'Ready to Invoice') {
+            data.cell.styles.textColor = [16, 185, 129];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.column.index === 3 && data.cell.raw === 'Pending') {
+            data.cell.styles.textColor = [251, 191, 36];
+          }
+        },
+        margin: { left: 14, right: 14 }
+      });
+      
+      yPos = (doc as any).lastAutoTable?.finalY + 12 || yPos + 50;
+    });
+  
+  doc.save(`sr-accounts-invoice-report-${now.toISOString().split('T')[0]}.pdf`);
+}
+
 interface ArchiveContext {
   archivedIds: Set<string>;
   showArchived: boolean;
@@ -1580,7 +1673,16 @@ export default function Jobs() {
                         data-testid="btn-export-sr-pdf"
                       >
                         <FileDown className="w-3 h-3 mr-1" />
-                        Export PDF
+                        Tech PDF
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => exportSRAccountsPDF(srData.srByTechnician)}
+                        className="bg-emerald-600/80 text-white border border-emerald-400/50 hover:bg-emerald-500/80"
+                        data-testid="btn-export-sr-accounts-pdf"
+                      >
+                        <FileDown className="w-3 h-3 mr-1" />
+                        Accounts PDF
                       </Button>
                       <Button
                         size="sm"
