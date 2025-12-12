@@ -238,6 +238,36 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   const doc = new jsPDF();
   const now = new Date();
   
+  // Collect ALL SR jobs and group by account
+  const allJobs: any[] = [];
+  Object.values(srByTechnician).forEach(jobs => {
+    allJobs.push(...jobs);
+  });
+  
+  // Group by account (customer)
+  const accountsMap: Record<string, { jobs: any[]; totalValue: number; completedCount: number; technicians: Set<string> }> = {};
+  allJobs.forEach((job: any) => {
+    const accountName = job.customerName || "Unknown";
+    if (!accountsMap[accountName]) {
+      accountsMap[accountName] = { jobs: [], totalValue: 0, completedCount: 0, technicians: new Set() };
+    }
+    accountsMap[accountName].jobs.push(job);
+    accountsMap[accountName].totalValue += job.price || 0;
+    if (job.isCompleted) accountsMap[accountName].completedCount++;
+    if (job.technicianName) accountsMap[accountName].technicians.add(job.technicianName);
+  });
+  
+  const accounts = Object.entries(accountsMap)
+    .map(([name, data]) => ({
+      name,
+      ...data,
+      technicianList: Array.from(data.technicians).join(", "),
+      jobCount: data.jobs.length,
+      readyToInvoice: data.completedCount === data.jobs.length && data.jobs.length > 0,
+      over500: data.totalValue >= 500
+    }))
+    .sort((a, b) => b.totalValue - a.totalValue);
+  
   // Header
   doc.setFontSize(20);
   doc.setTextColor(8, 145, 178);
@@ -247,82 +277,91 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   doc.setTextColor(100);
   doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
   
-  let yPos = 40;
+  const totalValue = allJobs.reduce((s, j) => s + (j.price || 0), 0);
+  const readyAccounts = accounts.filter(a => a.readyToInvoice);
+  const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
+  const over500Count = accounts.filter(a => a.over500).length;
   
-  // For each technician
-  Object.entries(srByTechnician)
-    .sort((a, b) => b[1].length - a[1].length)
-    .forEach(([techName, jobs]) => {
-      // Group jobs by account/customer
-      const accountsMap: Record<string, { jobs: any[]; totalValue: number; completedCount: number }> = {};
-      jobs.forEach((job: any) => {
-        const accountName = job.customerName || "Unknown";
-        if (!accountsMap[accountName]) {
-          accountsMap[accountName] = { jobs: [], totalValue: 0, completedCount: 0 };
+  doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | $${totalValue.toLocaleString()} Total`, 14, 35);
+  doc.text(`$${readyValue.toLocaleString()} Ready to Invoice | ${over500Count} accounts over $500`, 14, 42);
+  
+  let yPos = 52;
+  
+  // For each account
+  accounts.forEach(account => {
+    // Check page space - need room for header + at least one row
+    if (yPos > 230) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    // Account header with badges
+    doc.setFontSize(12);
+    doc.setTextColor(8, 145, 178);
+    doc.text(account.name, 14, yPos);
+    
+    // Status badges
+    let badgeX = 14 + doc.getTextWidth(account.name) + 5;
+    
+    if (account.over500) {
+      doc.setFillColor(220, 38, 38);
+      doc.roundedRect(badgeX, yPos - 4, 22, 6, 1, 1, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(255);
+      doc.text("OVER $500", badgeX + 2, yPos);
+      badgeX += 25;
+    }
+    
+    if (account.readyToInvoice) {
+      doc.setFillColor(16, 185, 129);
+      doc.roundedRect(badgeX, yPos - 4, 28, 6, 1, 1, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(255);
+      doc.text("READY TO INVOICE", badgeX + 2, yPos);
+    }
+    
+    yPos += 6;
+    doc.setFontSize(9);
+    doc.setTextColor(80);
+    doc.text(`${account.jobCount} jobs | ${account.completedCount}/${account.jobCount} done | $${account.totalValue.toLocaleString()} | Tech: ${account.technicianList}`, 14, yPos);
+    yPos += 6;
+    
+    // Jobs table with full details
+    const jobsData = account.jobs.map((job: any) => [
+      job.title || 'SR Job',
+      job.technicianName || 'Unassigned',
+      job.address?.substring(0, 25) || 'N/A',
+      `$${(job.price || 0).toLocaleString()}`,
+      job.isCompleted ? 'Complete' : (job.status || 'Pending'),
+      job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
+    ]);
+    
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Repair Title', 'Technician', 'Address', 'Price', 'Status', 'Date']],
+      body: jobsData,
+      theme: 'grid',
+      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 7 },
+      styles: { fontSize: 7, cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 22 }
+      },
+      didParseCell: (data: any) => {
+        if (data.column.index === 4 && data.cell.raw === 'Complete') {
+          data.cell.styles.textColor = [16, 185, 129];
+          data.cell.styles.fontStyle = 'bold';
         }
-        accountsMap[accountName].jobs.push(job);
-        accountsMap[accountName].totalValue += job.price || 0;
-        if (job.isCompleted) accountsMap[accountName].completedCount++;
-      });
-      
-      const accounts = Object.entries(accountsMap)
-        .map(([name, data]) => ({
-          name,
-          ...data,
-          jobCount: data.jobs.length,
-          readyToInvoice: data.completedCount === data.jobs.length && data.jobs.length > 0
-        }))
-        .sort((a, b) => b.totalValue - a.totalValue);
-      
-      const techTotal = jobs.reduce((s: number, j: any) => s + (j.price || 0), 0);
-      const techCompleted = jobs.filter((j: any) => j.isCompleted).length;
-      const readyAccounts = accounts.filter(a => a.readyToInvoice);
-      const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
-      
-      // Check page space
-      if (yPos > 220) {
-        doc.addPage();
-        yPos = 20;
-      }
-      
-      // Technician header
-      doc.setFontSize(14);
-      doc.setTextColor(8, 145, 178);
-      doc.text(`${techName}`, 14, yPos);
-      doc.setFontSize(10);
-      doc.setTextColor(80);
-      doc.text(`${jobs.length} jobs | ${techCompleted}/${jobs.length} complete | $${techTotal.toLocaleString()} total | $${readyValue.toLocaleString()} ready to invoice`, 14, yPos + 6);
-      yPos += 14;
-      
-      // Accounts table
-      const tableData = accounts.map(acc => [
-        acc.name.substring(0, 30),
-        acc.jobCount.toString(),
-        `${acc.completedCount}/${acc.jobCount}`,
-        acc.readyToInvoice ? 'Ready to Invoice' : 'Pending',
-        `$${acc.totalValue.toLocaleString()}`
-      ]);
-      
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Account', 'Jobs', 'Done', 'Status', 'Total']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [51, 65, 85], textColor: 255 },
-        styles: { fontSize: 8 },
-        didParseCell: (data: any) => {
-          if (data.column.index === 3 && data.cell.raw === 'Ready to Invoice') {
-            data.cell.styles.textColor = [16, 185, 129];
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.column.index === 3 && data.cell.raw === 'Pending') {
-            data.cell.styles.textColor = [251, 191, 36];
-          }
-        },
-        margin: { left: 14, right: 14 }
-      });
-      
-      yPos = (doc as any).lastAutoTable?.finalY + 12 || yPos + 50;
+      },
+      margin: { left: 14, right: 14 }
     });
+    
+    yPos = (doc as any).lastAutoTable?.finalY + 10 || yPos + 30;
+  });
   
   doc.save(`sr-accounts-invoice-report-${now.toISOString().split('T')[0]}.pdf`);
 }
