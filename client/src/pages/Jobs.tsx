@@ -1401,6 +1401,83 @@ export default function Jobs() {
     return { repairTechs, totalJobs, totalValue, topEarner, mostJobs };
   }, [data?.jobs]);
 
+  // Job status tracking (Not Started / In Progress)
+  const jobStatusData = useMemo(() => {
+    if (!data?.jobs) return { notStartedCount: 0, inProgressCount: 0, notStartedJobs: [], inProgressJobs: [] };
+    
+    // Define explicit status mappings for clarity
+    const NOT_STARTED_STATUSES = new Set(['not started', 'new', 'open']);
+    const IN_PROGRESS_STATUSES = new Set(['in progress', 'in-progress', 'started', 'working', 'active']);
+    
+    const notStartedJobs = data.jobs.filter(job => {
+      if (job.isCompleted) return false;
+      const status = job.status?.toLowerCase()?.trim() || '';
+      return NOT_STARTED_STATUSES.has(status);
+    });
+    
+    const inProgressJobs = data.jobs.filter(job => {
+      if (job.isCompleted) return false;
+      const status = job.status?.toLowerCase()?.trim() || '';
+      return IN_PROGRESS_STATUSES.has(status) || status.includes('progress');
+    });
+    
+    return {
+      notStartedCount: notStartedJobs.length,
+      inProgressCount: inProgressJobs.length,
+      notStartedJobs,
+      inProgressJobs
+    };
+  }, [data?.jobs]);
+
+  // Quotes tracking by repair tech
+  const quotesData = useMemo(() => {
+    if (!data?.jobs) return { quotesByTech: {}, totalQuotes: 0, openQuotes: 0, closedQuotes: 0, totalValue: 0 };
+    
+    // Filter for quote jobs
+    const quoteJobs = data.jobs.filter(job => {
+      const title = job.title?.toLowerCase() || '';
+      const template = job.raw?.Template?.toLowerCase() || '';
+      return title.includes('quote') || title.includes('estimate') || template.includes('quote') || template.includes('estimate');
+    });
+    
+    const quotesByTech: Record<string, { 
+      name: string; 
+      total: number; 
+      open: number; 
+      closed: number; 
+      value: number;
+      jobs: typeof quoteJobs 
+    }> = {};
+    
+    quoteJobs.forEach(job => {
+      const techName = job.technicianName || 'Unassigned';
+      if (!quotesByTech[techName]) {
+        quotesByTech[techName] = { name: techName, total: 0, open: 0, closed: 0, value: 0, jobs: [] };
+      }
+      quotesByTech[techName].total++;
+      quotesByTech[techName].value += job.price || 0;
+      quotesByTech[techName].jobs.push(job);
+      
+      const isClosed = job.isCompleted || job.status?.toLowerCase() === 'closed' || job.status?.toLowerCase() === 'completed';
+      if (isClosed) {
+        quotesByTech[techName].closed++;
+      } else {
+        quotesByTech[techName].open++;
+      }
+    });
+    
+    const openQuotes = quoteJobs.filter(j => !j.isCompleted && j.status?.toLowerCase() !== 'closed').length;
+    const closedQuotes = quoteJobs.filter(j => j.isCompleted || j.status?.toLowerCase() === 'closed').length;
+    
+    return { 
+      quotesByTech, 
+      totalQuotes: quoteJobs.length, 
+      openQuotes, 
+      closedQuotes,
+      totalValue: quoteJobs.reduce((s, j) => s + (j.price || 0), 0)
+    };
+  }, [data?.jobs]);
+
   const [selectedRepairTech, setSelectedRepairTech] = useState<string | null>(null);
   
   const filteredRepairTechs = useMemo(() => {
@@ -1607,59 +1684,81 @@ export default function Jobs() {
           </Card>
         ) : data ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <Wrench className="w-6 h-6 text-sky-400" />
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
+                    <Wrench className="w-5 h-5 text-sky-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-white" data-testid="total-jobs-count">{data.summary.totalJobs}</p>
-                    <p className="text-sm text-slate-400">Total Jobs</p>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="total-jobs-count">{data.summary.totalJobs}</p>
+                    <p className="text-xs text-slate-400">Total Jobs</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <CheckCircle2 className="w-6 h-6 text-sky-400" />
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-red-500/40 shadow-lg">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-500/30 flex items-center justify-center border border-red-400/50">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-white" data-testid="completed-count">{data.summary.completedCount}</p>
-                    <p className="text-sm text-slate-400">Completed</p>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="not-started-count">{jobStatusData.notStartedCount}</p>
+                    <p className="text-xs text-slate-400">Not Started</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-amber-500/40 shadow-lg">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-amber-500/30 flex items-center justify-center border border-amber-400/50">
-                    <Clock className="w-6 h-6 text-amber-400" />
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/30 flex items-center justify-center border border-amber-400/50">
+                    <Clock className="w-5 h-5 text-amber-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-white" data-testid="pending-count">{data.summary.pendingCount}</p>
-                    <p className="text-sm text-slate-400">Pending</p>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="in-progress-count">{jobStatusData.inProgressCount}</p>
+                    <p className="text-xs text-slate-400">In Progress</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-emerald-500/40 shadow-lg">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center border border-emerald-400/50">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="completed-count">{data.summary.completedCount}</p>
+                    <p className="text-xs text-slate-400">Completed</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <Settings className="w-6 h-6 text-sky-400" />
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
+                    <Settings className="w-5 h-5 text-sky-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-white" data-testid="sr-count">{srData.srCount}</p>
-                    <p className="text-sm text-slate-400">SR Jobs</p>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="sr-count">{srData.srCount}</p>
+                    <p className="text-xs text-slate-400">SR Jobs</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-purple-500/40 shadow-lg">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center border border-purple-400/50">
+                    <FileDown className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="quotes-count">{quotesData.totalQuotes}</p>
+                    <p className="text-xs text-slate-400">Quotes ({quotesData.openQuotes} open)</p>
                   </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <DollarSign className="w-6 h-6 text-sky-400" />
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
+                    <DollarSign className="w-5 h-5 text-sky-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold font-ui text-white" data-testid="total-value">{formatPrice(data.summary.totalValue)}</p>
-                    <p className="text-sm text-slate-400">Total Value</p>
+                    <p className="text-xl font-bold font-ui text-white" data-testid="total-value">{formatPrice(data.summary.totalValue)}</p>
+                    <p className="text-xs text-slate-400">Total Value</p>
                   </div>
                 </CardContent>
               </Card>
@@ -1694,6 +1793,10 @@ export default function Jobs() {
                 <TabsTrigger value="pending" data-testid="tab-pending" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <Clock className="w-4 h-4 mr-2" />
                   Pending ({data.summary.pendingCount})
+                </TabsTrigger>
+                <TabsTrigger value="quotes" data-testid="tab-quotes" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Quotes ({quotesData.totalQuotes})
                 </TabsTrigger>
               </TabsList>
 
@@ -2081,6 +2184,93 @@ export default function Jobs() {
                       {data.pendingJobs.map((job) => (
                         <ExpandableJobCard key={job.jobId} job={job} />
                       ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="quotes" className="mt-4">
+                <div className="mb-4 p-4 bg-gradient-to-r from-purple-900/40 to-slate-900/90 border border-purple-400/40 rounded-lg shadow-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileDown className="w-5 h-5 text-purple-400" />
+                    <h3 className="font-ui font-semibold text-white">Quotes Tracking</h3>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-2">
+                    Track quotes and estimates by repair technician. See who's generating quotes and how many are still open.
+                  </p>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-purple-300 font-semibold">{quotesData.totalQuotes} Total Quotes</span>
+                    <span className="text-amber-300 font-semibold">{quotesData.openQuotes} Open</span>
+                    <span className="text-emerald-300 font-semibold">{quotesData.closedQuotes} Closed</span>
+                    <span className="text-sky-300 font-semibold">{formatPrice(quotesData.totalValue)} Value</span>
+                  </div>
+                </div>
+                
+                <ScrollArea className="h-[600px]">
+                  {Object.keys(quotesData.quotesByTech).length === 0 ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <FileDown className="w-12 h-12 mx-auto mb-4 text-purple-400/50" />
+                        <p>No quotes found</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.values(quotesData.quotesByTech)
+                        .sort((a, b) => b.total - a.total)
+                        .map(tech => (
+                          <Card key={tech.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-purple-400/40 shadow-lg">
+                            <CardHeader className="pb-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center border border-purple-400/50">
+                                    <User className="w-5 h-5 text-purple-400" />
+                                  </div>
+                                  <div>
+                                    <CardTitle className="text-lg font-ui text-white">{tech.name}</CardTitle>
+                                    <p className="text-sm text-slate-400">{tech.total} quotes | {formatPrice(tech.value)} total value</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-400/50">
+                                    {tech.open} Open
+                                  </Badge>
+                                  <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/50">
+                                    {tech.closed} Closed
+                                  </Badge>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                              <div className="space-y-2">
+                                {tech.jobs.slice(0, 5).map((job: any) => (
+                                  <div key={job.jobId} className="flex items-center justify-between p-2 bg-slate-700/50 rounded border border-slate-600/50">
+                                    <div className="flex items-center gap-2">
+                                      {job.isCompleted || job.status?.toLowerCase() === 'closed' ? (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                      ) : (
+                                        <Clock className="w-4 h-4 text-amber-400" />
+                                      )}
+                                      <span className="text-sm text-white">{job.title || 'Quote'}</span>
+                                      <span className="text-xs text-slate-400">- {job.customerName || 'N/A'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-semibold text-purple-300">{formatPrice(job.price || 0)}</span>
+                                      {job.scheduledDate && (
+                                        <span className="text-xs text-slate-400">{new Date(job.scheduledDate).toLocaleDateString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                                {tech.jobs.length > 5 && (
+                                  <p className="text-xs text-slate-400 text-center mt-2">
+                                    + {tech.jobs.length - 5} more quotes
+                                  </p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                     </div>
                   )}
                 </ScrollArea>
