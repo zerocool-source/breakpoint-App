@@ -238,6 +238,9 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   const doc = new jsPDF();
   const now = new Date();
   
+  // Commission rate (10% default - can be adjusted)
+  const COMMISSION_RATE = 0.10;
+  
   // Collect ALL SR jobs and group by account
   const allJobs: any[] = [];
   Object.values(srByTechnician).forEach(jobs => {
@@ -245,16 +248,26 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   });
   
   // Group by account (customer)
-  const accountsMap: Record<string, { jobs: any[]; totalValue: number; completedCount: number; technicians: Set<string> }> = {};
+  const accountsMap: Record<string, { jobs: any[]; totalValue: number; totalCommission: number; completedCount: number; technicians: Set<string>; techCommissions: Record<string, number> }> = {};
   allJobs.forEach((job: any) => {
     const accountName = job.customerName || "Unknown";
+    const jobCommission = (job.price || 0) * COMMISSION_RATE;
+    const techName = job.technicianName || 'Unassigned';
+    
     if (!accountsMap[accountName]) {
-      accountsMap[accountName] = { jobs: [], totalValue: 0, completedCount: 0, technicians: new Set() };
+      accountsMap[accountName] = { jobs: [], totalValue: 0, totalCommission: 0, completedCount: 0, technicians: new Set(), techCommissions: {} };
     }
-    accountsMap[accountName].jobs.push(job);
+    accountsMap[accountName].jobs.push({ ...job, commission: jobCommission });
     accountsMap[accountName].totalValue += job.price || 0;
+    accountsMap[accountName].totalCommission += jobCommission;
     if (job.isCompleted) accountsMap[accountName].completedCount++;
     if (job.technicianName) accountsMap[accountName].technicians.add(job.technicianName);
+    
+    // Track commission per technician
+    if (!accountsMap[accountName].techCommissions[techName]) {
+      accountsMap[accountName].techCommissions[techName] = 0;
+    }
+    accountsMap[accountName].techCommissions[techName] += jobCommission;
   });
   
   const accounts = Object.entries(accountsMap)
@@ -278,14 +291,17 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
   
   const totalValue = allJobs.reduce((s, j) => s + (j.price || 0), 0);
+  const totalCommission = totalValue * COMMISSION_RATE;
   const readyAccounts = accounts.filter(a => a.readyToInvoice);
   const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
   const over500Count = accounts.filter(a => a.over500).length;
   
   doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | $${totalValue.toLocaleString()} Total`, 14, 35);
   doc.text(`$${readyValue.toLocaleString()} Ready to Invoice | ${over500Count} accounts over $500`, 14, 42);
+  doc.setTextColor(16, 185, 129);
+  doc.text(`Total Tech Commissions (${(COMMISSION_RATE * 100).toFixed(0)}%): $${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 49);
   
-  let yPos = 52;
+  let yPos = 59;
   
   // For each account
   accounts.forEach(account => {
@@ -323,38 +339,51 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     yPos += 6;
     doc.setFontSize(9);
     doc.setTextColor(80);
-    doc.text(`${account.jobCount} jobs | ${account.completedCount}/${account.jobCount} done | $${account.totalValue.toLocaleString()} | Tech: ${account.technicianList}`, 14, yPos);
+    doc.text(`${account.jobCount} jobs | ${account.completedCount}/${account.jobCount} done | $${account.totalValue.toLocaleString()} | Commission: $${account.totalCommission.toFixed(2)}`, 14, yPos);
+    yPos += 5;
+    
+    // Show commission breakdown by technician
+    const techCommissionText = Object.entries(account.techCommissions)
+      .map(([tech, comm]) => `${tech}: $${(comm as number).toFixed(2)}`)
+      .join(' | ');
+    doc.setFontSize(8);
+    doc.setTextColor(16, 185, 129);
+    doc.text(`Tech Commissions: ${techCommissionText}`, 14, yPos);
     yPos += 6;
     
-    // Jobs table with full details
+    // Jobs table with full details including commission
     const jobsData = account.jobs.map((job: any) => [
       job.title || 'SR Job',
       job.technicianName || 'Unassigned',
-      job.address?.substring(0, 25) || 'N/A',
       `$${(job.price || 0).toLocaleString()}`,
+      `$${(job.commission || 0).toFixed(2)}`,
       job.isCompleted ? 'Complete' : (job.status || 'Pending'),
       job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
     ]);
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Repair Title', 'Technician', 'Address', 'Price', 'Status', 'Date']],
+      head: [['Repair Title', 'Technician', 'Price', 'Commission', 'Status', 'Date']],
       body: jobsData,
       theme: 'grid',
       headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 7 },
       styles: { fontSize: 7, cellPadding: 2 },
       columnStyles: {
         0: { cellWidth: 50 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 20 },
-        4: { cellWidth: 20 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 22 },
         5: { cellWidth: 22 }
       },
       didParseCell: (data: any) => {
         if (data.column.index === 4 && data.cell.raw === 'Complete') {
           data.cell.styles.textColor = [16, 185, 129];
           data.cell.styles.fontStyle = 'bold';
+        }
+        // Highlight commission column in green
+        if (data.column.index === 3 && data.section === 'body') {
+          data.cell.styles.textColor = [16, 185, 129];
         }
       },
       margin: { left: 14, right: 14 }
