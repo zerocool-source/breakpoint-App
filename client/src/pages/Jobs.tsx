@@ -351,39 +351,54 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     doc.text(`Tech Commissions: ${techCommissionText}`, 14, yPos);
     yPos += 6;
     
-    // Jobs table with full details including commission
-    const jobsData = account.jobs.map((job: any) => [
-      job.title || 'SR Job',
-      job.technicianName || 'Unassigned',
-      `$${(job.price || 0).toLocaleString()}`,
-      `$${(job.commission || 0).toFixed(2)}`,
-      job.isCompleted ? 'Complete' : (job.status || 'Pending'),
-      job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
-    ]);
+    // Jobs table with full details including commission and products/services
+    const jobsData: any[] = [];
+    
+    account.jobs.forEach((job: any) => {
+      // Format products/services list
+      const items = job.items || [];
+      const productsText = items.length > 0 
+        ? items.map((item: any) => `${item.productName || 'Item'} (${item.qty}x $${(item.unitCost || 0).toFixed(2)})`).join('; ')
+        : 'No items';
+      
+      jobsData.push([
+        job.title || 'SR Job',
+        job.technicianName || 'Unassigned',
+        productsText.substring(0, 60) + (productsText.length > 60 ? '...' : ''),
+        `$${(job.price || 0).toLocaleString()}`,
+        `$${(job.commission || 0).toFixed(2)}`,
+        job.isCompleted ? 'Complete' : (job.status || 'Pending')
+      ]);
+    });
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Repair Title', 'Technician', 'Price', 'Commission', 'Status', 'Date']],
+      head: [['Repair Title', 'Technician', 'Products/Services', 'Price', 'Commission', 'Status']],
       body: jobsData,
       theme: 'grid',
       headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 7 },
-      styles: { fontSize: 7, cellPadding: 2 },
+      styles: { fontSize: 6, cellPadding: 2 },
       columnStyles: {
-        0: { cellWidth: 50 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 22 },
-        3: { cellWidth: 22 },
-        4: { cellWidth: 22 },
-        5: { cellWidth: 22 }
+        0: { cellWidth: 40 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 55 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 18 },
+        5: { cellWidth: 18 }
       },
       didParseCell: (data: any) => {
-        if (data.column.index === 4 && data.cell.raw === 'Complete') {
+        if (data.column.index === 5 && data.cell.raw === 'Complete') {
           data.cell.styles.textColor = [16, 185, 129];
           data.cell.styles.fontStyle = 'bold';
         }
         // Highlight commission column in green
-        if (data.column.index === 3 && data.section === 'body') {
+        if (data.column.index === 4 && data.section === 'body') {
           data.cell.styles.textColor = [16, 185, 129];
+        }
+        // Style products column
+        if (data.column.index === 2 && data.section === 'body') {
+          data.cell.styles.textColor = [100, 100, 100];
+          data.cell.styles.fontSize = 5;
         }
       },
       margin: { left: 14, right: 14 }

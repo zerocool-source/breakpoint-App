@@ -803,6 +803,7 @@ function setupRoutes(app: any) {
               totalPrice += qty * unitPrice;
               items.push({
                 productId: item.ProductID || item.productId,
+                productName: item.ProductName || item.productName || item.Name || item.name || item.Description || item.description || item.ItemName || item.itemName || `Product ${item.ProductID || item.productId || 'N/A'}`,
                 qty: qty,
                 unitCost: unitPrice,
                 taxable: taxable
