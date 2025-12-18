@@ -1536,6 +1536,49 @@ export default function Jobs() {
     };
   }, [data?.jobs]);
 
+  // Commission tracking - SR jobs that are completed and earning commissions
+  const COMMISSION_RATE = 0.10;
+  const commissionData = useMemo(() => {
+    if (!data?.jobs) return { 
+      completedSRJobs: [], 
+      totalCommission: 0, 
+      byTechnician: {} as Record<string, { name: string; jobs: any[]; totalValue: number; commission: number }>,
+      completedCount: 0,
+      totalValue: 0
+    };
+    
+    // Filter for SR jobs that are COMPLETED (earning commission)
+    const completedSRJobs = data.jobs.filter(job => {
+      const title = job.title?.toLowerCase() || '';
+      const template = job.raw?.Template?.toLowerCase() || '';
+      const isSR = title.includes('sr') || title.includes('service repair') || template.includes('sr') || template.includes('service repair');
+      return isSR && job.isCompleted === true;
+    });
+    
+    // Group by technician
+    const byTechnician: Record<string, { name: string; jobs: any[]; totalValue: number; commission: number }> = {};
+    completedSRJobs.forEach(job => {
+      const techName = job.technicianName || 'Unassigned';
+      if (!byTechnician[techName]) {
+        byTechnician[techName] = { name: techName, jobs: [], totalValue: 0, commission: 0 };
+      }
+      byTechnician[techName].jobs.push(job);
+      byTechnician[techName].totalValue += job.price || 0;
+      byTechnician[techName].commission += (job.price || 0) * COMMISSION_RATE;
+    });
+    
+    const totalValue = completedSRJobs.reduce((s, j) => s + (j.price || 0), 0);
+    const totalCommission = totalValue * COMMISSION_RATE;
+    
+    return {
+      completedSRJobs,
+      totalCommission,
+      byTechnician,
+      completedCount: completedSRJobs.length,
+      totalValue
+    };
+  }, [data?.jobs]);
+
   const [selectedRepairTech, setSelectedRepairTech] = useState<string | null>(null);
   
   const filteredRepairTechs = useMemo(() => {
@@ -1855,6 +1898,10 @@ export default function Jobs() {
                 <TabsTrigger value="quotes" data-testid="tab-quotes" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <FileDown className="w-4 h-4 mr-2" />
                   Quotes ({quotesData.totalQuotes})
+                </TabsTrigger>
+                <TabsTrigger value="commissions" data-testid="tab-commissions" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Commissions
                 </TabsTrigger>
               </TabsList>
 
@@ -2383,6 +2430,108 @@ export default function Jobs() {
                             ))}
                         </div>
                       </div>
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="commissions" className="mt-4">
+                <div className="mb-4 p-4 bg-gradient-to-r from-emerald-900/40 to-slate-900/90 border border-emerald-400/40 rounded-lg shadow-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-400" />
+                      <h3 className="font-ui font-semibold text-white">Commission Payout - Completed SR Jobs</h3>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          exportSRAccountsPDF(srData.srByTechnician);
+                        }}
+                        className="bg-emerald-600/80 text-white border border-emerald-400/50 hover:bg-emerald-500/80"
+                        data-testid="btn-export-commission-pdf"
+                      >
+                        <FileDown className="w-3 h-3 mr-1" />
+                        Export PDF
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          // Archive all completed SR jobs for monthly reset
+                          commissionData.completedSRJobs.forEach(job => {
+                            archiveJob(job.jobId?.toString() || '');
+                          });
+                        }}
+                        className="bg-red-600/80 text-white border border-red-400/50 hover:bg-red-500/80"
+                        data-testid="btn-archive-paid-jobs"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Archive Paid Jobs ({commissionData.completedCount})
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-300 mb-2">
+                    Only completed SR jobs earn commissions ({(COMMISSION_RATE * 100).toFixed(0)}% rate). Jobs not started or in progress are excluded. Archive paid jobs after monthly payout to reset.
+                  </p>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-emerald-300 font-semibold">{commissionData.completedCount} Completed Jobs</span>
+                    <span className="text-sky-300 font-semibold">{formatPrice(commissionData.totalValue)} Total Value</span>
+                    <span className="text-amber-300 font-semibold">{formatPrice(commissionData.totalCommission)} Total Commission</span>
+                  </div>
+                </div>
+                
+                <ScrollArea className="h-[600px]">
+                  {commissionData.completedCount === 0 ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <DollarSign className="w-12 h-12 mx-auto mb-4 text-emerald-400/50" />
+                        <p>No completed SR jobs earning commissions</p>
+                        <p className="text-sm mt-2">Complete SR jobs to see them here</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Commission by Technician */}
+                      {Object.values(commissionData.byTechnician)
+                        .sort((a, b) => b.commission - a.commission)
+                        .map(tech => (
+                          <Card key={tech.name} className="bg-gradient-to-br from-emerald-900/30 to-slate-900/80 border-emerald-400/40 shadow-lg">
+                            <CardHeader className="pb-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center border border-emerald-400/50">
+                                    <User className="w-5 h-5 text-emerald-400" />
+                                  </div>
+                                  <div>
+                                    <CardTitle className="text-lg font-ui text-white">{tech.name}</CardTitle>
+                                    <p className="text-sm text-slate-400">{tech.jobs.length} completed jobs</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xl font-bold text-emerald-300">{formatPrice(tech.commission)}</p>
+                                  <p className="text-xs text-slate-400">Commission ({(COMMISSION_RATE * 100).toFixed(0)}% of {formatPrice(tech.totalValue)})</p>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-2">
+                              <div className="space-y-2">
+                                {tech.jobs.map((job: any) => (
+                                  <div key={job.jobId} className="flex items-center justify-between p-2 bg-slate-700/50 rounded border border-slate-600/50">
+                                    <div className="flex items-center gap-2">
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-sm text-white">{job.title || 'SR Job'}</span>
+                                      <span className="text-xs text-slate-400">- {job.customerName || 'N/A'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-sm text-slate-400">{formatPrice(job.price || 0)}</span>
+                                      <span className="text-sm font-semibold text-emerald-300">{formatPrice((job.price || 0) * COMMISSION_RATE)}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
                     </div>
                   )}
                 </ScrollArea>
