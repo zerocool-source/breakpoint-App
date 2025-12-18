@@ -1,5 +1,6 @@
 import React, { useState, useMemo, createContext, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1194,7 +1195,9 @@ function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQ
 
 export default function Jobs() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showArchived, setShowArchived] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [createJobOpen, setCreateJobOpen] = useState(false);
   const [newJob, setNewJob] = useState({
     customerId: "",
@@ -2456,16 +2459,39 @@ export default function Jobs() {
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => {
+                        disabled={isArchiving || commissionData.completedCount === 0}
+                        onClick={async () => {
                           // Archive all completed SR jobs for monthly reset
-                          commissionData.completedSRJobs.forEach(job => {
-                            archiveJob(job.jobId?.toString() || '');
-                          });
+                          setIsArchiving(true);
+                          try {
+                            const jobIds = commissionData.completedSRJobs.map(job => job.jobId?.toString() || '').filter(Boolean);
+                            for (const jobId of jobIds) {
+                              await fetch(`/api/alerts/${jobId}/archive`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ archive: true })
+                              });
+                            }
+                            await queryClient.invalidateQueries({ queryKey: ["archivedAlerts", "job"] });
+                            await queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+                            toast({
+                              title: "Jobs Archived",
+                              description: `${jobIds.length} completed SR jobs have been archived for monthly payout reset.`,
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Archive Failed",
+                              description: "Failed to archive some jobs. Please try again.",
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setIsArchiving(false);
+                          }
                         }}
                         className="bg-red-600/80 text-white border border-red-400/50 hover:bg-red-500/80"
                         data-testid="btn-archive-paid-jobs"
                       >
-                        <Trash2 className="w-3 h-3 mr-1" />
+                        {isArchiving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
                         Archive Paid Jobs ({commissionData.completedCount})
                       </Button>
                     </div>
