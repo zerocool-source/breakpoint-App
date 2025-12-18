@@ -1539,46 +1539,64 @@ export default function Jobs() {
     };
   }, [data?.jobs]);
 
-  // Commission tracking - SR jobs that are completed and earning commissions
+  // Commission tracking - SR jobs by service tech (completed/closed earn commissions)
   const COMMISSION_RATE = 0.10;
   const commissionData = useMemo(() => {
     if (!data?.jobs) return { 
-      completedSRJobs: [], 
+      commissionEligibleJobs: [], 
+      allSRJobs: [],
       totalCommission: 0, 
-      byTechnician: {} as Record<string, { name: string; jobs: any[]; totalValue: number; commission: number }>,
+      byTechnician: {} as Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number }>,
       completedCount: 0,
-      totalValue: 0
+      totalValue: 0,
+      allJobsCount: 0
     };
     
-    // Filter for SR jobs that are COMPLETED (earning commission)
-    const completedSRJobs = data.jobs.filter(job => {
+    // Filter for ALL SR jobs
+    const allSRJobs = data.jobs.filter(job => {
       const title = job.title?.toLowerCase() || '';
       const template = job.raw?.Template?.toLowerCase() || '';
-      const isSR = title.includes('sr') || title.includes('service repair') || template.includes('sr') || template.includes('service repair');
-      return isSR && job.isCompleted === true;
+      return title.includes('sr') || title.includes('service repair') || template.includes('sr') || template.includes('service repair');
     });
     
-    // Group by technician
-    const byTechnician: Record<string, { name: string; jobs: any[]; totalValue: number; commission: number }> = {};
-    completedSRJobs.forEach(job => {
+    // Jobs earning commission: completed OR closed status
+    const isJobEligible = (job: any) => {
+      const status = job.status?.toLowerCase()?.trim() || '';
+      return job.isCompleted === true || status === 'closed' || status === 'completed';
+    };
+    
+    const commissionEligibleJobs = allSRJobs.filter(isJobEligible);
+    
+    // Group ALL SR jobs by technician, track completed separately for commission
+    const byTechnician: Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number }> = {};
+    allSRJobs.forEach(job => {
       const techName = job.technicianName || 'Unassigned';
       if (!byTechnician[techName]) {
-        byTechnician[techName] = { name: techName, jobs: [], totalValue: 0, commission: 0 };
+        byTechnician[techName] = { name: techName, allJobs: [], completedJobs: [], totalValue: 0, completedValue: 0, commission: 0 };
       }
-      byTechnician[techName].jobs.push(job);
+      byTechnician[techName].allJobs.push(job);
       byTechnician[techName].totalValue += job.price || 0;
-      byTechnician[techName].commission += (job.price || 0) * COMMISSION_RATE;
+      
+      // Track completed/closed jobs separately for commission
+      if (isJobEligible(job)) {
+        byTechnician[techName].completedJobs.push(job);
+        byTechnician[techName].completedValue += job.price || 0;
+        byTechnician[techName].commission += (job.price || 0) * COMMISSION_RATE;
+      }
     });
     
-    const totalValue = completedSRJobs.reduce((s, j) => s + (j.price || 0), 0);
-    const totalCommission = totalValue * COMMISSION_RATE;
+    const totalValue = allSRJobs.reduce((s, j) => s + (j.price || 0), 0);
+    const completedValue = commissionEligibleJobs.reduce((s, j) => s + (j.price || 0), 0);
+    const totalCommission = completedValue * COMMISSION_RATE;
     
     return {
-      completedSRJobs,
+      commissionEligibleJobs,
+      allSRJobs,
       totalCommission,
       byTechnician,
-      completedCount: completedSRJobs.length,
-      totalValue
+      completedCount: commissionEligibleJobs.length,
+      totalValue,
+      allJobsCount: allSRJobs.length
     };
   }, [data?.jobs]);
 
@@ -2464,7 +2482,7 @@ export default function Jobs() {
                           // Archive all completed SR jobs for monthly reset
                           setIsArchiving(true);
                           try {
-                            const jobIds = commissionData.completedSRJobs.map(job => job.jobId?.toString() || '').filter(Boolean);
+                            const jobIds = commissionData.commissionEligibleJobs.map((job: any) => job.jobId?.toString() || '').filter(Boolean);
                             for (const jobId of jobIds) {
                               await fetch(`/api/alerts/${jobId}/archive`, {
                                 method: 'POST',
@@ -2497,27 +2515,28 @@ export default function Jobs() {
                     </div>
                   </div>
                   <p className="text-sm text-slate-300 mb-2">
-                    Only completed SR jobs earn commissions ({(COMMISSION_RATE * 100).toFixed(0)}% rate). Jobs not started or in progress are excluded. Archive paid jobs after monthly payout to reset.
+                    Only completed/closed SR jobs earn commissions ({(COMMISSION_RATE * 100).toFixed(0)}% rate). Jobs not started or in progress are excluded. Archive paid jobs after monthly payout to reset.
                   </p>
                   <div className="flex gap-4 text-sm">
-                    <span className="text-emerald-300 font-semibold">{commissionData.completedCount} Completed Jobs</span>
+                    <span className="text-slate-300 font-semibold">{commissionData.allJobsCount} Total SR Jobs</span>
+                    <span className="text-emerald-300 font-semibold">{commissionData.completedCount} Completed/Closed</span>
                     <span className="text-sky-300 font-semibold">{formatPrice(commissionData.totalValue)} Total Value</span>
-                    <span className="text-amber-300 font-semibold">{formatPrice(commissionData.totalCommission)} Total Commission</span>
+                    <span className="text-amber-300 font-semibold">{formatPrice(commissionData.totalCommission)} Commission</span>
                   </div>
                 </div>
                 
                 <ScrollArea className="h-[600px]">
-                  {commissionData.completedCount === 0 ? (
+                  {commissionData.allJobsCount === 0 ? (
                     <Card className="bg-card/50 border-border/50">
                       <CardContent className="p-8 text-center text-muted-foreground">
                         <DollarSign className="w-12 h-12 mx-auto mb-4 text-emerald-400/50" />
-                        <p>No completed SR jobs earning commissions</p>
-                        <p className="text-sm mt-2">Complete SR jobs to see them here</p>
+                        <p>No SR jobs found</p>
+                        <p className="text-sm mt-2">SR jobs will appear here grouped by service tech</p>
                       </CardContent>
                     </Card>
                   ) : (
                     <div className="space-y-4">
-                      {/* Commission by Technician */}
+                      {/* All SR Jobs by Technician */}
                       {Object.values(commissionData.byTechnician)
                         .sort((a, b) => b.commission - a.commission)
                         .map(tech => (
@@ -2530,30 +2549,46 @@ export default function Jobs() {
                                   </div>
                                   <div>
                                     <CardTitle className="text-lg font-ui text-white">{tech.name}</CardTitle>
-                                    <p className="text-sm text-slate-400">{tech.jobs.length} completed jobs</p>
+                                    <p className="text-sm text-slate-400">{tech.allJobs?.length || 0} total jobs | {tech.completedJobs?.length || 0} completed/closed</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
                                   <p className="text-xl font-bold text-emerald-300">{formatPrice(tech.commission)}</p>
-                                  <p className="text-xs text-slate-400">Commission ({(COMMISSION_RATE * 100).toFixed(0)}% of {formatPrice(tech.totalValue)})</p>
+                                  <p className="text-xs text-slate-400">Commission ({(COMMISSION_RATE * 100).toFixed(0)}% of {formatPrice(tech.completedValue)})</p>
                                 </div>
                               </div>
                             </CardHeader>
                             <CardContent className="pt-2">
                               <div className="space-y-2">
-                                {tech.jobs.map((job: any) => (
-                                  <div key={job.jobId} className="flex items-center justify-between p-2 bg-slate-700/50 rounded border border-slate-600/50">
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                      <span className="text-sm text-white">{job.title || 'SR Job'}</span>
-                                      <span className="text-xs text-slate-400">- {job.customerName || 'N/A'}</span>
+                                {(tech.allJobs || []).map((job: any) => {
+                                  const isEligible = job.isCompleted === true || job.status?.toLowerCase() === 'closed' || job.status?.toLowerCase() === 'completed';
+                                  return (
+                                    <div key={job.jobId} className={`flex items-center justify-between p-2 rounded border ${isEligible ? 'bg-emerald-900/30 border-emerald-600/50' : 'bg-slate-700/50 border-slate-600/50'}`}>
+                                      <div className="flex items-center gap-2">
+                                        {isEligible ? (
+                                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                        ) : (
+                                          <Clock className="w-4 h-4 text-amber-400" />
+                                        )}
+                                        <span className="text-sm text-white">{job.title || 'SR Job'}</span>
+                                        <span className="text-xs text-slate-400">- {job.customerName || 'N/A'}</span>
+                                        {!isEligible && (
+                                          <Badge className="text-xs bg-amber-500/20 text-amber-300 border border-amber-400/50">
+                                            {job.status || 'Pending'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-sm text-slate-400">{formatPrice(job.price || 0)}</span>
+                                        {isEligible ? (
+                                          <span className="text-sm font-semibold text-emerald-300">{formatPrice((job.price || 0) * COMMISSION_RATE)}</span>
+                                        ) : (
+                                          <span className="text-xs text-slate-500">No commission</span>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-sm text-slate-400">{formatPrice(job.price || 0)}</span>
-                                      <span className="text-sm font-semibold text-emerald-300">{formatPrice((job.price || 0) * COMMISSION_RATE)}</span>
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </CardContent>
                           </Card>
