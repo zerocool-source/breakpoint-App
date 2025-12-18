@@ -240,7 +240,7 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   const now = new Date();
   
   // Commission rate (10% default - can be adjusted)
-  const COMMISSION_RATE = 0.10;
+  const COMMISSION_RATE = 0.15;
   
   // Collect ALL SR jobs and group by account
   const allJobs: any[] = [];
@@ -248,34 +248,44 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     allJobs.push(...jobs);
   });
   
+  // Helper to check if job is eligible for commission (completed OR closed)
+  const isJobEligible = (job: any) => {
+    const status = job.status?.toLowerCase()?.trim() || '';
+    return job.isCompleted === true || 
+           status === 'closed' || 
+           status === 'completed' || 
+           status.includes('closed') || 
+           status.includes('complete');
+  };
+  
   // Group by account (customer)
-  // IMPORTANT: Commission is only counted for COMPLETED jobs
+  // IMPORTANT: Commission is counted for COMPLETED or CLOSED jobs
   const accountsMap: Record<string, { jobs: any[]; totalValue: number; totalCommission: number; completedCount: number; technicians: Set<string>; techCommissions: Record<string, number> }> = {};
   allJobs.forEach((job: any) => {
     const accountName = job.customerName || "Unknown";
-    const isJobCompleted = job.isCompleted === true;
-    // Only calculate commission for completed jobs
-    const jobCommission = isJobCompleted ? (job.price || 0) * COMMISSION_RATE : 0;
+    const eligible = isJobEligible(job);
+    // Only calculate commission for completed/closed jobs
+    const jobCommission = eligible ? (job.price || 0) * COMMISSION_RATE : 0;
     const techName = job.technicianName || 'Unassigned';
     
     if (!accountsMap[accountName]) {
       accountsMap[accountName] = { jobs: [], totalValue: 0, totalCommission: 0, completedCount: 0, technicians: new Set(), techCommissions: {} };
     }
-    // Store commission as 0 for non-completed jobs, actual value for completed
-    accountsMap[accountName].jobs.push({ ...job, commission: jobCommission, earnedCommission: isJobCompleted });
+    // Store commission as 0 for non-eligible jobs, actual value for eligible
+    accountsMap[accountName].jobs.push({ ...job, commission: jobCommission, earnedCommission: eligible });
     accountsMap[accountName].totalValue += job.price || 0;
-    // Only add to total commission if job is completed
-    if (isJobCompleted) {
+    // Only add to total commission if job is eligible
+    if (eligible) {
       accountsMap[accountName].totalCommission += jobCommission;
     }
-    if (isJobCompleted) accountsMap[accountName].completedCount++;
+    if (eligible) accountsMap[accountName].completedCount++;
     if (job.technicianName) accountsMap[accountName].technicians.add(job.technicianName);
     
-    // Track commission per technician - ONLY for completed jobs
+    // Track commission per technician - ONLY for eligible jobs
     if (!accountsMap[accountName].techCommissions[techName]) {
       accountsMap[accountName].techCommissions[techName] = 0;
     }
-    if (isJobCompleted) {
+    if (eligible) {
       accountsMap[accountName].techCommissions[techName] += jobCommission;
     }
   });
@@ -301,9 +311,9 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
   
   const totalValue = allJobs.reduce((s, j) => s + (j.price || 0), 0);
-  // Only count commission from COMPLETED jobs
-  const completedJobs = allJobs.filter(j => j.isCompleted === true);
-  const completedValue = completedJobs.reduce((s, j) => s + (j.price || 0), 0);
+  // Only count commission from COMPLETED or CLOSED jobs
+  const eligibleJobs = allJobs.filter(isJobEligible);
+  const completedValue = eligibleJobs.reduce((s, j) => s + (j.price || 0), 0);
   const totalCommission = completedValue * COMMISSION_RATE;
   const readyAccounts = accounts.filter(a => a.readyToInvoice);
   const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
@@ -312,7 +322,7 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | $${totalValue.toLocaleString()} Total`, 14, 35);
   doc.text(`$${readyValue.toLocaleString()} Ready to Invoice | ${over500Count} accounts over $500`, 14, 42);
   doc.setTextColor(16, 185, 129);
-  doc.text(`Tech Commissions (${(COMMISSION_RATE * 100).toFixed(0)}% on ${completedJobs.length} completed): $${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 49);
+  doc.text(`Tech Commissions (${(COMMISSION_RATE * 100).toFixed(0)}% on ${eligibleJobs.length} completed/closed): $${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 49);
   
   let yPos = 59;
   
@@ -1540,7 +1550,7 @@ export default function Jobs() {
   }, [data?.jobs]);
 
   // Commission tracking - SR jobs by service tech (completed/closed earn commissions)
-  const COMMISSION_RATE = 0.10;
+  const COMMISSION_RATE = 0.15;
   const commissionData = useMemo(() => {
     if (!data?.jobs) return { 
       commissionEligibleJobs: [], 
@@ -1559,10 +1569,14 @@ export default function Jobs() {
       return title.includes('sr') || title.includes('service repair') || template.includes('sr') || template.includes('service repair');
     });
     
-    // Jobs earning commission: completed OR closed status
+    // Jobs earning commission: completed OR closed status (check multiple variations)
     const isJobEligible = (job: any) => {
       const status = job.status?.toLowerCase()?.trim() || '';
-      return job.isCompleted === true || status === 'closed' || status === 'completed';
+      return job.isCompleted === true || 
+             status === 'closed' || 
+             status === 'completed' || 
+             status.includes('closed') || 
+             status.includes('complete');
     };
     
     const commissionEligibleJobs = allSRJobs.filter(isJobEligible);
