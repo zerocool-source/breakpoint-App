@@ -248,26 +248,35 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   });
   
   // Group by account (customer)
+  // IMPORTANT: Commission is only counted for COMPLETED jobs
   const accountsMap: Record<string, { jobs: any[]; totalValue: number; totalCommission: number; completedCount: number; technicians: Set<string>; techCommissions: Record<string, number> }> = {};
   allJobs.forEach((job: any) => {
     const accountName = job.customerName || "Unknown";
-    const jobCommission = (job.price || 0) * COMMISSION_RATE;
+    const isJobCompleted = job.isCompleted === true;
+    // Only calculate commission for completed jobs
+    const jobCommission = isJobCompleted ? (job.price || 0) * COMMISSION_RATE : 0;
     const techName = job.technicianName || 'Unassigned';
     
     if (!accountsMap[accountName]) {
       accountsMap[accountName] = { jobs: [], totalValue: 0, totalCommission: 0, completedCount: 0, technicians: new Set(), techCommissions: {} };
     }
-    accountsMap[accountName].jobs.push({ ...job, commission: jobCommission });
+    // Store commission as 0 for non-completed jobs, actual value for completed
+    accountsMap[accountName].jobs.push({ ...job, commission: jobCommission, earnedCommission: isJobCompleted });
     accountsMap[accountName].totalValue += job.price || 0;
-    accountsMap[accountName].totalCommission += jobCommission;
-    if (job.isCompleted) accountsMap[accountName].completedCount++;
+    // Only add to total commission if job is completed
+    if (isJobCompleted) {
+      accountsMap[accountName].totalCommission += jobCommission;
+    }
+    if (isJobCompleted) accountsMap[accountName].completedCount++;
     if (job.technicianName) accountsMap[accountName].technicians.add(job.technicianName);
     
-    // Track commission per technician
+    // Track commission per technician - ONLY for completed jobs
     if (!accountsMap[accountName].techCommissions[techName]) {
       accountsMap[accountName].techCommissions[techName] = 0;
     }
-    accountsMap[accountName].techCommissions[techName] += jobCommission;
+    if (isJobCompleted) {
+      accountsMap[accountName].techCommissions[techName] += jobCommission;
+    }
   });
   
   const accounts = Object.entries(accountsMap)
@@ -291,7 +300,10 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
   
   const totalValue = allJobs.reduce((s, j) => s + (j.price || 0), 0);
-  const totalCommission = totalValue * COMMISSION_RATE;
+  // Only count commission from COMPLETED jobs
+  const completedJobs = allJobs.filter(j => j.isCompleted === true);
+  const completedValue = completedJobs.reduce((s, j) => s + (j.price || 0), 0);
+  const totalCommission = completedValue * COMMISSION_RATE;
   const readyAccounts = accounts.filter(a => a.readyToInvoice);
   const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
   const over500Count = accounts.filter(a => a.over500).length;
@@ -299,7 +311,7 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | $${totalValue.toLocaleString()} Total`, 14, 35);
   doc.text(`$${readyValue.toLocaleString()} Ready to Invoice | ${over500Count} accounts over $500`, 14, 42);
   doc.setTextColor(16, 185, 129);
-  doc.text(`Total Tech Commissions (${(COMMISSION_RATE * 100).toFixed(0)}%): $${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 49);
+  doc.text(`Tech Commissions (${(COMMISSION_RATE * 100).toFixed(0)}% on ${completedJobs.length} completed): $${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 49);
   
   let yPos = 59;
   
