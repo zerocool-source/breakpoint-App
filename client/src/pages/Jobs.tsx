@@ -919,6 +919,13 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
   const completedCount = jobs.filter(j => j.isCompleted).length;
   const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
   const readyToInvoice = totalValue >= 500;
+  
+  // Get notes from the first job with notes for this account
+  const jobWithNotes = jobs.find(j => (j as any).notes);
+  const jobWithEntry = jobs.find(j => (j as any).entryNotes);
+  const accountNotes = jobWithNotes ? (jobWithNotes as any).notes : '';
+  const entryNotes = jobWithEntry ? (jobWithEntry as any).entryNotes : '';
+  const hasNotes = !!(accountNotes || entryNotes);
 
   const handleSendInvoice = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -950,6 +957,12 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
             <Badge className="text-xs bg-slate-600/50 text-slate-300 border-slate-500/50">
               {jobs.length} jobs
             </Badge>
+            {hasNotes && (
+              <Badge className="bg-amber-500/30 text-amber-300 border-amber-400/50 text-xs">
+                <AlertCircle className="w-3 h-3 mr-1" />
+                Notes
+              </Badge>
+            )}
             {readyToInvoice && (
               <Badge className="bg-sky-500 text-white border-sky-400 animate-pulse text-xs shadow-sm">
                 Ready to Invoice
@@ -965,6 +978,23 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-3 pt-0 space-y-2 border-t border-slate-600/50">
+            {/* Account Notes Section */}
+            {hasNotes && (
+              <div className="mb-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                <p className="text-xs text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Account Notes
+                </p>
+                {accountNotes && (
+                  <p className="text-sm text-white">{accountNotes}</p>
+                )}
+                {entryNotes && (
+                  <p className="text-sm text-slate-300 mt-1">
+                    <span className="text-amber-400">Entry/Access:</span> {entryNotes}
+                  </p>
+                )}
+              </div>
+            )}
             {readyToInvoice && (
               <button
                 onClick={handleSendInvoice}
