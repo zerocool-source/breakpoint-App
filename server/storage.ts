@@ -346,30 +346,40 @@ export class DbStorage implements IStorage {
 
   // Thread Messages
   async getThreadMessages(threadId: string, options?: { type?: string; search?: string; limit?: number }): Promise<ThreadMessage[]> {
-    let query = db.select().from(threadMessages).where(eq(threadMessages.threadId, threadId));
+    const conditions = [eq(threadMessages.threadId, threadId)];
     
     if (options?.type) {
-      query = query.where(and(eq(threadMessages.threadId, threadId), eq(threadMessages.type, options.type))) as any;
+      conditions.push(eq(threadMessages.type, options.type));
     }
     
     if (options?.search) {
-      query = query.where(and(
-        eq(threadMessages.threadId, threadId),
-        ilike(threadMessages.text, `%${options.search}%`)
-      )) as any;
+      conditions.push(ilike(threadMessages.text, `%${options.search}%`));
     }
     
-    query = query.orderBy(desc(threadMessages.createdAt)) as any;
+    const baseQuery = db.select().from(threadMessages)
+      .where(and(...conditions))
+      .orderBy(desc(threadMessages.createdAt));
     
     if (options?.limit) {
-      query = query.limit(options.limit) as any;
+      return baseQuery.limit(options.limit);
     }
     
-    return query;
+    return baseQuery;
   }
 
   async createThreadMessage(message: InsertThreadMessage): Promise<ThreadMessage> {
-    const result = await db.insert(threadMessages).values(message).returning();
+    const result = await db.insert(threadMessages).values({
+      threadId: message.threadId,
+      authorId: message.authorId,
+      authorName: message.authorName,
+      type: message.type || 'update',
+      text: message.text || null,
+      photoUrls: message.photoUrls || [],
+      taggedUserIds: message.taggedUserIds || [],
+      taggedRoles: message.taggedRoles || [],
+      visibility: message.visibility || 'all',
+      pinned: message.pinned || false
+    }).returning();
     
     // Update thread's updatedAt
     await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, message.threadId));
@@ -378,7 +388,16 @@ export class DbStorage implements IStorage {
   }
 
   async updateThreadMessage(id: string, updates: Partial<InsertThreadMessage>): Promise<ThreadMessage | undefined> {
-    const result = await db.update(threadMessages).set(updates).where(eq(threadMessages.id, id)).returning();
+    const updateData: any = {};
+    if (updates.text !== undefined) updateData.text = updates.text;
+    if (updates.type !== undefined) updateData.type = updates.type;
+    if (updates.visibility !== undefined) updateData.visibility = updates.visibility;
+    if (updates.pinned !== undefined) updateData.pinned = updates.pinned;
+    if (updates.photoUrls !== undefined) updateData.photoUrls = updates.photoUrls;
+    if (updates.taggedUserIds !== undefined) updateData.taggedUserIds = updates.taggedUserIds;
+    if (updates.taggedRoles !== undefined) updateData.taggedRoles = updates.taggedRoles;
+    
+    const result = await db.update(threadMessages).set(updateData).where(eq(threadMessages.id, id)).returning();
     return result[0];
   }
 

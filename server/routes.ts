@@ -1914,6 +1914,116 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to delete payroll entry" });
     }
   });
+
+  // ==================== THREADS ====================
+
+  // Get all threads
+  app.get("/api/threads", async (req: any, res: any) => {
+    try {
+      const allThreads = await storage.getThreads();
+      res.json({ threads: allThreads });
+    } catch (error: any) {
+      console.error("Error fetching threads:", error);
+      res.status(500).json({ error: "Failed to fetch threads" });
+    }
+  });
+
+  // Get or create thread for an account
+  app.get("/api/accounts/:accountId/thread", async (req: any, res: any) => {
+    try {
+      const { accountId } = req.params;
+      const { accountName } = req.query;
+      const thread = await storage.getOrCreateThread(accountId, accountName || `Account ${accountId}`);
+      res.json({ thread });
+    } catch (error: any) {
+      console.error("Error getting thread:", error);
+      res.status(500).json({ error: "Failed to get thread" });
+    }
+  });
+
+  // Get messages for a thread
+  app.get("/api/threads/:threadId/messages", async (req: any, res: any) => {
+    try {
+      const { threadId } = req.params;
+      const { type, search, limit } = req.query;
+      const messages = await storage.getThreadMessages(threadId, {
+        type: type || undefined,
+        search: search || undefined,
+        limit: limit ? parseInt(limit) : undefined
+      });
+      res.json({ messages });
+    } catch (error: any) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // Create a new message
+  app.post("/api/threads/:threadId/messages", async (req: any, res: any) => {
+    try {
+      const { threadId } = req.params;
+      const { authorId, authorName, type, text, photoUrls, taggedUserIds, taggedRoles, visibility } = req.body;
+      
+      if (!authorId || !authorName) {
+        return res.status(400).json({ error: "authorId and authorName are required" });
+      }
+      
+      const message = await storage.createThreadMessage({
+        threadId,
+        authorId,
+        authorName,
+        type: type || 'update',
+        text: text || null,
+        photoUrls: photoUrls || [],
+        taggedUserIds: taggedUserIds || [],
+        taggedRoles: taggedRoles || [],
+        visibility: visibility || 'all',
+        pinned: false
+      });
+      res.json({ message });
+    } catch (error: any) {
+      console.error("Error creating message:", error);
+      res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+
+  // Update a message
+  app.patch("/api/messages/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const message = await storage.updateThreadMessage(id, updates);
+      res.json({ message });
+    } catch (error: any) {
+      console.error("Error updating message:", error);
+      res.status(500).json({ error: "Failed to update message" });
+    }
+  });
+
+  // Delete a message
+  app.delete("/api/messages/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteThreadMessage(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting message:", error);
+      res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+
+  // Pin/unpin a message
+  app.post("/api/messages/:id/pin", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { pinned } = req.body;
+      const message = await storage.pinMessage(id, pinned);
+      res.json({ message });
+    } catch (error: any) {
+      console.error("Error pinning message:", error);
+      res.status(500).json({ error: "Failed to pin message" });
+    }
+  });
 }
 
   
