@@ -238,8 +238,8 @@ function exportSRJobsPDF(srJobs: any[]) {
 function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   const doc = new jsPDF({ orientation: 'landscape' });
   const now = new Date();
+  const pageWidth = doc.internal.pageSize.getWidth();
   
-  // Commission rate (10% default - can be adjusted)
   const COMMISSION_RATE = 0.15;
   
   // Collect ALL SR jobs and group by account
@@ -248,7 +248,6 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     allJobs.push(...jobs);
   });
   
-  // Helper to check if job is eligible for commission (completed OR closed)
   const isJobEligible = (job: any) => {
     const status = job.status?.toLowerCase()?.trim() || '';
     return job.isCompleted === true || 
@@ -258,30 +257,24 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
            status.includes('complete');
   };
   
-  // Group by account (customer)
-  // IMPORTANT: Commission is counted for COMPLETED or CLOSED jobs
   const accountsMap: Record<string, { jobs: any[]; totalValue: number; totalCommission: number; completedCount: number; technicians: Set<string>; techCommissions: Record<string, number> }> = {};
   allJobs.forEach((job: any) => {
     const accountName = job.customerName || "Unknown";
     const eligible = isJobEligible(job);
-    // Only calculate commission for completed/closed jobs
     const jobCommission = eligible ? (job.price || 0) * COMMISSION_RATE : 0;
     const techName = job.technicianName || 'Unassigned';
     
     if (!accountsMap[accountName]) {
       accountsMap[accountName] = { jobs: [], totalValue: 0, totalCommission: 0, completedCount: 0, technicians: new Set(), techCommissions: {} };
     }
-    // Store commission as 0 for non-eligible jobs, actual value for eligible
     accountsMap[accountName].jobs.push({ ...job, commission: jobCommission, earnedCommission: eligible });
     accountsMap[accountName].totalValue += job.price || 0;
-    // Only add to total commission if job is eligible
     if (eligible) {
       accountsMap[accountName].totalCommission += jobCommission;
     }
     if (eligible) accountsMap[accountName].completedCount++;
     if (job.technicianName) accountsMap[accountName].technicians.add(job.technicianName);
     
-    // Track commission per technician - ONLY for eligible jobs
     if (!accountsMap[accountName].techCommissions[techName]) {
       accountsMap[accountName].techCommissions[techName] = 0;
     }
@@ -301,17 +294,16 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     }))
     .sort((a, b) => b.totalValue - a.totalValue);
   
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(8, 145, 178);
-  doc.text("SR Jobs - Account Invoice Report", 14, 20);
+  // Compact Header
+  doc.setFontSize(16);
+  doc.setTextColor(51, 65, 85);
+  doc.text("SR JOBS - ACCOUNT INVOICE REPORT", 10, 12);
   
-  doc.setFontSize(12);
+  doc.setFontSize(9);
   doc.setTextColor(100);
-  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
+  doc.text(`${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, pageWidth - 10, 12, { align: 'right' });
   
   const totalValue = allJobs.reduce((s, j) => s + (j.price || 0), 0);
-  // Only count commission from COMPLETED or CLOSED jobs
   const eligibleJobs = allJobs.filter(isJobEligible);
   const completedValue = eligibleJobs.reduce((s, j) => s + (j.price || 0), 0);
   const totalCommission = completedValue * COMMISSION_RATE;
@@ -319,131 +311,118 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
   const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
   const over500Count = accounts.filter(a => a.over500).length;
   
-  doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | $${totalValue.toLocaleString()} Total`, 14, 35);
-  doc.text(`$${readyValue.toLocaleString()} Ready to Invoice | ${over500Count} accounts over $500`, 14, 42);
-  doc.setTextColor(16, 185, 129);
-  doc.text(`Tech Commissions (${(COMMISSION_RATE * 100).toFixed(0)}% on ${eligibleJobs.length} completed/closed): $${totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 14, 49);
+  // Summary line
+  doc.setFontSize(8);
+  doc.setTextColor(60);
+  doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | Total: $${totalValue.toLocaleString()} | Ready: $${readyValue.toLocaleString()} | Over $500: ${over500Count}`, 10, 18);
+  doc.setTextColor(16, 150, 100);
+  doc.text(`Commissions (15% on ${eligibleJobs.length} done): $${totalCommission.toFixed(2)}`, pageWidth - 10, 18, { align: 'right' });
   
-  let yPos = 59;
+  // Thin separator line
+  doc.setDrawColor(200);
+  doc.setLineWidth(0.3);
+  doc.line(10, 21, pageWidth - 10, 21);
   
-  // For each account
+  let yPos = 25;
+  
   accounts.forEach(account => {
-    // Check page space - need room for header + at least one row
-    if (yPos > 230) {
+    if (yPos > 180) {
       doc.addPage();
-      yPos = 20;
+      yPos = 12;
     }
     
-    // Account header with badges
-    doc.setFontSize(12);
-    doc.setTextColor(8, 145, 178);
-    doc.text(account.name, 14, yPos);
+    // Compact account header - one line
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85);
+    doc.setFont('helvetica', 'bold');
+    doc.text(account.name, 10, yPos);
     
-    // Status badges
-    let badgeX = 14 + doc.getTextWidth(account.name) + 5;
+    let badgeX = 10 + doc.getTextWidth(account.name) + 3;
+    doc.setFont('helvetica', 'normal');
     
     if (account.over500) {
       doc.setFillColor(220, 38, 38);
-      doc.roundedRect(badgeX, yPos - 4, 22, 6, 1, 1, 'F');
-      doc.setFontSize(7);
+      doc.roundedRect(badgeX, yPos - 3, 18, 4, 0.5, 0.5, 'F');
+      doc.setFontSize(6);
       doc.setTextColor(255);
-      doc.text("OVER $500", badgeX + 2, yPos);
-      badgeX += 25;
+      doc.text("OVER $500", badgeX + 1.5, yPos - 0.5);
+      badgeX += 20;
     }
     
     if (account.readyToInvoice) {
       doc.setFillColor(16, 185, 129);
-      doc.roundedRect(badgeX, yPos - 4, 28, 6, 1, 1, 'F');
-      doc.setFontSize(7);
+      doc.roundedRect(badgeX, yPos - 3, 22, 4, 0.5, 0.5, 'F');
+      doc.setFontSize(6);
       doc.setTextColor(255);
-      doc.text("READY TO INVOICE", badgeX + 2, yPos);
+      doc.text("READY TO INVOICE", badgeX + 1, yPos - 0.5);
     }
     
-    yPos += 6;
-    doc.setFontSize(9);
-    doc.setTextColor(80);
-    doc.text(`${account.jobCount} jobs | ${account.completedCount}/${account.jobCount} done | $${account.totalValue.toLocaleString()} | Commission: $${account.totalCommission.toFixed(2)}`, 14, yPos);
-    yPos += 5;
-    
-    // Show commission breakdown by technician
-    const techCommissionText = Object.entries(account.techCommissions)
-      .map(([tech, comm]) => `${tech}: $${(comm as number).toFixed(2)}`)
-      .join(' | ');
+    // Account summary - same line, right aligned
     doc.setFontSize(8);
-    doc.setTextColor(16, 185, 129);
-    doc.text(`Tech Commissions: ${techCommissionText}`, 14, yPos);
-    yPos += 6;
+    doc.setTextColor(80);
+    const summaryText = `${account.completedCount}/${account.jobCount} done | $${account.totalValue.toLocaleString()} | Comm: $${account.totalCommission.toFixed(2)}`;
+    doc.text(summaryText, pageWidth - 10, yPos, { align: 'right' });
     
-    // Jobs table with full details including commission and products/services
+    yPos += 4;
+    
+    // Jobs table - tight and clean
     const jobsData: any[] = [];
     
     account.jobs.forEach((job: any) => {
-      // Format products/services list
       const items = job.items || [];
       const productsText = items.length > 0 
-        ? items.map((item: any) => `${item.productName || 'Item'} (${item.qty}x $${(item.unitCost || 0).toFixed(2)})`).join('; ')
-        : 'No items';
+        ? items.map((item: any) => `${item.productName || 'Item'} x${item.qty}`).join(', ')
+        : '-';
       
-      // Get office notes - show full text
       const officeNotes = job.officeNotes || '';
       const instructions = job.instructions || '';
-      const notesText = [
-        officeNotes ? `Notes: ${officeNotes}` : '',
-        instructions ? `Instructions: ${instructions}` : ''
-      ].filter(Boolean).join('\n');
+      const notesText = [officeNotes, instructions].filter(Boolean).join(' | ') || '-';
       
       jobsData.push([
         job.title || 'SR Job',
-        job.technicianName || 'Unassigned',
+        job.technicianName || '-',
         productsText,
-        notesText || '-',
+        notesText,
         `$${(job.price || 0).toLocaleString()}`,
-        `$${(job.commission || 0).toFixed(2)}`,
-        job.isCompleted ? 'Complete' : (job.status || 'Pending')
+        job.earnedCommission ? `$${(job.commission || 0).toFixed(2)}` : '-',
+        job.isCompleted ? 'Done' : (job.status || 'Pending')
       ]);
     });
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Repair Title', 'Tech', 'Products', 'Office Notes / Instructions', 'Price', 'Comm.', 'Status']],
+      head: [['Job', 'Tech', 'Products', 'Notes', 'Price', 'Comm', 'Status']],
       body: jobsData,
-      theme: 'grid',
-      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 8 },
-      styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak', minCellHeight: 10 },
+      theme: 'striped',
+      headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 7, cellPadding: 1.5, fontStyle: 'bold' },
+      styles: { fontSize: 7, cellPadding: 1.5, overflow: 'linebreak', lineColor: [220, 220, 220], lineWidth: 0.1 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 35 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 40 },
-        3: { cellWidth: 100 },
-        4: { cellWidth: 18 },
-        5: { cellWidth: 18 },
-        6: { cellWidth: 20 }
+        0: { cellWidth: 40 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 16, halign: 'right' },
+        5: { cellWidth: 14, halign: 'right' },
+        6: { cellWidth: 16, halign: 'center' }
       },
       didParseCell: (data: any) => {
-        if (data.column.index === 6 && data.cell.raw === 'Complete') {
-          data.cell.styles.textColor = [16, 185, 129];
+        if (data.column.index === 6 && data.cell.raw === 'Done') {
+          data.cell.styles.textColor = [16, 150, 100];
           data.cell.styles.fontStyle = 'bold';
         }
-        // Highlight commission column in green
-        if (data.column.index === 5 && data.section === 'body') {
-          data.cell.styles.textColor = [16, 185, 129];
+        if (data.column.index === 5 && data.section === 'body' && data.cell.raw !== '-') {
+          data.cell.styles.textColor = [16, 150, 100];
         }
-        // Style products column
-        if (data.column.index === 2 && data.section === 'body') {
-          data.cell.styles.textColor = [100, 100, 100];
-          data.cell.styles.fontSize = 6;
-        }
-        // Style office notes column in amber - full text with word wrap
         if (data.column.index === 3 && data.section === 'body' && data.cell.raw !== '-') {
-          data.cell.styles.textColor = [180, 83, 9];
-          data.cell.styles.fontSize = 7;
-          data.cell.styles.fontStyle = 'normal';
+          data.cell.styles.textColor = [160, 80, 10];
+          data.cell.styles.fontSize = 6;
         }
       },
       margin: { left: 10, right: 10 }
     });
     
-    yPos = (doc as any).lastAutoTable?.finalY + 10 || yPos + 30;
+    yPos = (doc as any).lastAutoTable?.finalY + 6 || yPos + 20;
   });
   
   doc.save(`sr-accounts-invoice-report-${now.toISOString().split('T')[0]}.pdf`);
