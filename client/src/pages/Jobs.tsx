@@ -1330,6 +1330,61 @@ export default function Jobs() {
     },
   });
 
+  // Fetch extracted repairs data from office notes
+  interface RepairLineItem {
+    type: 'part' | 'labor';
+    description: string;
+    partNumber?: string;
+    quantity: number;
+    unitPrice: number;
+    extendedPrice: number;
+  }
+  interface ParsedRepair {
+    invoiceNumber?: string;
+    items: RepairLineItem[];
+    totalParts: number;
+    totalLabor: number;
+    totalPrice: number;
+  }
+  interface RepairJob {
+    jobId: number;
+    title: string;
+    status: string;
+    isCompleted: boolean;
+    scheduledDate: string;
+    technicianId: number;
+    technicianName: string;
+    customerId: number;
+    customerName: string;
+    officeNotes: string;
+    instructions: string;
+    parsedRepair: ParsedRepair | null;
+    priceExtraction: { prices: number[]; total: number; hasLabor: boolean };
+    totalRepairValue: number;
+    laborAmount: number;
+    partsAmount: number;
+  }
+  interface RepairsData {
+    repairs: RepairJob[];
+    summary: {
+      totalRepairs: number;
+      completedRepairs: number;
+      totalLabor: number;
+      totalParts: number;
+      totalRepairValue: number;
+      commission15: number;
+    };
+  }
+  const { data: repairsData, isLoading: repairsLoading } = useQuery<RepairsData>({
+    queryKey: ["/api/jobs/repairs"],
+    queryFn: async () => {
+      const res = await fetch("/api/jobs/repairs");
+      if (!res.ok) throw new Error("Failed to fetch repairs");
+      return res.json();
+    },
+    staleTime: 60000,
+  });
+
   const archivedIds = new Set<string>((archivedData.archivedIds || []).map(String));
 
   const archiveMutation = useMutation({
@@ -2022,6 +2077,10 @@ export default function Jobs() {
                 <TabsTrigger value="commissions" data-testid="tab-commissions" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <DollarSign className="w-4 h-4 mr-2" />
                   Commissions
+                </TabsTrigger>
+                <TabsTrigger value="repairs-extracted" data-testid="tab-repairs-extracted" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                  <Wrench className="w-4 h-4 mr-2" />
+                  Repairs ({repairsData?.summary.totalRepairs || 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -2766,6 +2825,130 @@ export default function Jobs() {
                             ))}
                         </div>
                       </div>
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="repairs-extracted" className="mt-4">
+                <div className="mb-4 p-4 bg-gradient-to-r from-orange-900/40 to-slate-900/90 border border-orange-400/40 rounded-lg shadow-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Wrench className="w-5 h-5 text-orange-400" />
+                      <h3 className="font-ui font-semibold text-white">Extracted Repairs from Office Notes</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-300">
+                    Service tech repairs parsed from office notes with parts, labor, and prices.
+                  </p>
+                  {repairsData?.summary && (
+                    <div className="flex gap-4 mt-2 text-sm flex-wrap">
+                      <span className="text-orange-300 font-semibold">{repairsData.summary.totalRepairs} Repairs Found</span>
+                      <span className="text-sky-300 font-semibold">{formatPrice(repairsData.summary.totalParts)} Parts</span>
+                      <span className="text-purple-300 font-semibold">{formatPrice(repairsData.summary.totalLabor)} Labor</span>
+                      <span className="text-emerald-300 font-semibold">{formatPrice(repairsData.summary.totalRepairValue)} Total</span>
+                      <span className="text-amber-300 font-semibold">{formatPrice(repairsData.summary.commission15)} (15% Commission)</span>
+                    </div>
+                  )}
+                </div>
+                
+                <ScrollArea className="h-[600px]">
+                  {repairsLoading ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-orange-400/50" />
+                        <p>Loading repairs data...</p>
+                      </CardContent>
+                    </Card>
+                  ) : !repairsData?.repairs?.length ? (
+                    <Card className="bg-card/50 border-border/50">
+                      <CardContent className="p-8 text-center text-muted-foreground">
+                        <Wrench className="w-12 h-12 mx-auto mb-4 text-orange-400/50" />
+                        <p>No repairs with parts/labor found in office notes</p>
+                        <p className="text-sm mt-2">Repairs will appear here when SR jobs have office notes with invoice details</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {repairsData.repairs.map((repair) => (
+                        <Card key={repair.jobId} className="bg-gradient-to-br from-orange-900/20 to-slate-900/80 border-orange-400/30 shadow-lg">
+                          <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-orange-500/30 flex items-center justify-center border border-orange-400/50">
+                                  <Wrench className="w-5 h-5 text-orange-400" />
+                                </div>
+                                <div>
+                                  <CardTitle className="text-lg font-ui text-white">{repair.title}</CardTitle>
+                                  <p className="text-sm text-slate-400">
+                                    {repair.technicianName} • {repair.customerName}
+                                    {repair.parsedRepair?.invoiceNumber && (
+                                      <span className="ml-2 text-orange-300">Invoice #{repair.parsedRepair.invoiceNumber}</span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-orange-300">{formatPrice(repair.totalRepairValue)}</p>
+                                <div className="flex gap-2 text-xs">
+                                  <Badge className={repair.isCompleted ? "bg-emerald-500/30 text-emerald-300 border-emerald-400/50" : "bg-amber-500/30 text-amber-300 border-amber-400/50"}>
+                                    {repair.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-2">
+                            {repair.parsedRepair?.items && repair.parsedRepair.items.length > 0 ? (
+                              <div className="space-y-2">
+                                <div className="grid grid-cols-5 gap-2 text-xs text-slate-400 uppercase tracking-wider px-2 pb-1 border-b border-slate-600/50">
+                                  <span>Type</span>
+                                  <span className="col-span-2">Description</span>
+                                  <span className="text-center">Qty x Unit</span>
+                                  <span className="text-right">Extended</span>
+                                </div>
+                                {repair.parsedRepair.items.map((item, idx) => (
+                                  <div key={idx} className={`grid grid-cols-5 gap-2 p-2 rounded ${item.type === 'labor' ? 'bg-purple-900/30 border border-purple-600/30' : 'bg-sky-900/20 border border-sky-600/30'}`}>
+                                    <Badge className={item.type === 'labor' ? 'bg-purple-500/30 text-purple-300 border-purple-400/50 w-fit' : 'bg-sky-500/30 text-sky-300 border-sky-400/50 w-fit'}>
+                                      {item.type === 'labor' ? 'Labor' : 'Part'}
+                                    </Badge>
+                                    <div className="col-span-2">
+                                      <span className="text-sm text-white">{item.description}</span>
+                                      {item.partNumber && (
+                                        <span className="text-xs text-slate-400 ml-2">#{item.partNumber}</span>
+                                      )}
+                                    </div>
+                                    <div className="text-center">
+                                      <span className="text-xs text-slate-400">{item.quantity} x </span>
+                                      <span className="text-sm text-slate-300">{formatPrice(item.unitPrice)}</span>
+                                    </div>
+                                    <span className="text-sm text-right font-semibold text-white">{formatPrice(item.extendedPrice)}</span>
+                                  </div>
+                                ))}
+                                <div className="flex justify-between pt-2 border-t border-slate-600/50 text-sm">
+                                  <div className="flex gap-4">
+                                    <span className="text-sky-300">Parts: {formatPrice(repair.partsAmount)}</span>
+                                    <span className="text-purple-300">Labor: {formatPrice(repair.laborAmount)}</span>
+                                  </div>
+                                  <span className="font-bold text-orange-300">Total: {formatPrice(repair.totalRepairValue)}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-slate-700/50 rounded border border-slate-600/50">
+                                <p className="text-xs text-slate-400 mb-1">Raw Office Notes:</p>
+                                <p className="text-sm text-white whitespace-pre-wrap">{repair.officeNotes}</p>
+                                <div className="mt-2 flex gap-2">
+                                  {repair.priceExtraction.prices.map((price, idx) => (
+                                    <Badge key={idx} className="bg-orange-500/30 text-orange-300 border-orange-400/50">
+                                      {formatPrice(price)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   )}
                 </ScrollArea>

@@ -3,7 +3,7 @@
 // Invoice 54253
 // Air Relief Assembly TR Series
 // part #PEN273564Z, PAC-051-0319	
-// 1
+// 2
 // $148.64
 // Labor
 // 0.5
@@ -14,7 +14,8 @@ export interface RepairLineItem {
   description: string;
   partNumber?: string;
   quantity: number;
-  price: number;
+  unitPrice: number;
+  extendedPrice: number;
 }
 
 export interface ParsedRepair {
@@ -37,9 +38,9 @@ export function parseOfficeNotesForRepairs(officeNotes: string): ParsedRepair | 
     totalPrice: 0
   };
 
-  // Split into lines and clean up
+  // Split into lines and clean up - also split on tabs
   const lines = officeNotes
-    .split(/[\n\r]+/)
+    .split(/[\n\r\t]+/)
     .map(line => line.trim())
     .filter(line => line.length > 0);
 
@@ -50,83 +51,111 @@ export function parseOfficeNotesForRepairs(officeNotes: string): ParsedRepair | 
   }
 
   // Parse line by line looking for patterns
-  let currentItem: Partial<RepairLineItem> | null = null;
-  let pendingDescription = '';
-  let pendingPartNumber = '';
+  let currentItem: {
+    type: 'part' | 'labor';
+    description: string;
+    partNumber?: string;
+    quantity: number;
+    unitPrice: number;
+  } | null = null;
+
+  const finalizeItem = () => {
+    if (currentItem && currentItem.unitPrice > 0) {
+      const extendedPrice = Math.round(currentItem.unitPrice * currentItem.quantity * 100) / 100;
+      const item: RepairLineItem = {
+        type: currentItem.type,
+        description: currentItem.description,
+        partNumber: currentItem.partNumber,
+        quantity: currentItem.quantity,
+        unitPrice: currentItem.unitPrice,
+        extendedPrice: extendedPrice
+      };
+      result.items.push(item);
+      
+      if (currentItem.type === 'part') {
+        result.totalParts += extendedPrice;
+      } else {
+        result.totalLabor += extendedPrice;
+      }
+    }
+    currentItem = null;
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const nextLine = lines[i + 1] || '';
-    const prevLine = lines[i - 1] || '';
 
     // Skip invoice line
     if (/^Invoice\s*#?\s*\d+/i.test(line)) {
       continue;
     }
 
-    // Skip "Instructions:" header
-    if (/^Instructions:/i.test(line)) {
+    // Skip common header patterns and whitespace-only
+    if (/^(Instructions:|NAME|QTY|PRICE|TAX)$/i.test(line) || line === '') {
       continue;
     }
 
     // Check if this is a "Labor" line
     if (/^Labor$/i.test(line)) {
-      // Save any pending part
-      if (currentItem && currentItem.type === 'part' && currentItem.price) {
-        result.items.push(currentItem as RepairLineItem);
-        result.totalParts += currentItem.price;
-      }
-      
-      // Start new labor item
+      finalizeItem();
       currentItem = {
         type: 'labor',
         description: 'Labor',
         quantity: 1,
-        price: 0
+        unitPrice: 0
       };
       continue;
     }
 
-    // Check for price pattern: $xxx.xx or just xxx.xx at end
-    const priceMatch = line.match(/\$?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)\s*\.?\s*$/);
+    // Check for price pattern: $xxx.xx 
+    const priceMatch = line.match(/^\$\s*(\d+(?:,\d{3})*(?:\.\d{2})?)$/);
     if (priceMatch && currentItem) {
-      const price = parseFloat(priceMatch[1].replace(',', ''));
+      const price = parseFloat(priceMatch[1].replace(/,/g, ''));
       if (!isNaN(price) && price > 0) {
-        currentItem.price = price;
+        currentItem.unitPrice = price;
         
-        // If this is a labor item, add it
+        // If this is a labor item, finalize it immediately after getting price
         if (currentItem.type === 'labor') {
-          result.items.push(currentItem as RepairLineItem);
-          result.totalLabor += price;
-          currentItem = null;
+          finalizeItem();
         }
         continue;
       }
     }
 
-    // Check for standalone quantity (just a number like "1" or "0.5")
+    // Check for standalone quantity (just a number like "1" or "0.5" or "2")
+    // This should come BEFORE the price in the sequence
     const qtyMatch = line.match(/^(\d+(?:\.\d+)?)$/);
-    if (qtyMatch && currentItem) {
-      currentItem.quantity = parseFloat(qtyMatch[1]);
+    if (qtyMatch) {
+      const qty = parseFloat(qtyMatch[1]);
+      if (currentItem && qty > 0) {
+        currentItem.quantity = qty;
+      }
       continue;
     }
 
     // Check for part number pattern
-    const partMatch = line.match(/part\s*#?\s*([A-Z0-9\-,\s]+)/i);
+    const partMatch = line.match(/^part\s*#?\s*([A-Z0-9\-_,\s]+)$/i);
     if (partMatch) {
-      pendingPartNumber = partMatch[1].trim();
+      const partNumber = partMatch[1].trim();
       if (currentItem) {
-        currentItem.partNumber = pendingPartNumber;
+        currentItem.partNumber = partNumber;
       }
       continue;
     }
 
     // Check if this looks like a product description (not a price, not a qty, not special)
-    if (line.length > 3 && !priceMatch && !qtyMatch && !/^(Invoice|Labor|Instructions)/i.test(line)) {
-      // Save any complete pending item
-      if (currentItem && currentItem.type === 'part' && currentItem.price) {
-        result.items.push(currentItem as RepairLineItem);
-        result.totalParts += currentItem.price;
+    // Must be longer than 3 chars and not match special patterns
+    if (line.length > 3 && 
+        !priceMatch && 
+        !qtyMatch && 
+        !/^(Invoice|Labor|Instructions|NAME|QTY|PRICE|TAX|part\s*#)/i.test(line) &&
+        !/^\$/.test(line)) {
+      
+      // Finalize any complete pending item before starting new one
+      if (currentItem && currentItem.unitPrice > 0) {
+        finalizeItem();
+      } else if (currentItem && currentItem.type === 'part' && currentItem.unitPrice === 0) {
+        // Previous item didn't get a price - discard it and start fresh
+        currentItem = null;
       }
       
       // Start new part item
@@ -134,24 +163,19 @@ export function parseOfficeNotesForRepairs(officeNotes: string): ParsedRepair | 
         type: 'part',
         description: line,
         quantity: 1,
-        price: 0
+        unitPrice: 0
       };
       continue;
     }
   }
 
   // Don't forget last item
-  if (currentItem && currentItem.price) {
-    result.items.push(currentItem as RepairLineItem);
-    if (currentItem.type === 'part') {
-      result.totalParts += currentItem.price;
-    } else {
-      result.totalLabor += currentItem.price;
-    }
-  }
+  finalizeItem();
 
-  // Calculate total
-  result.totalPrice = result.totalParts + result.totalLabor;
+  // Round totals
+  result.totalParts = Math.round(result.totalParts * 100) / 100;
+  result.totalLabor = Math.round(result.totalLabor * 100) / 100;
+  result.totalPrice = Math.round((result.totalParts + result.totalLabor) * 100) / 100;
 
   // Only return if we found something meaningful
   if (result.items.length === 0 && !result.invoiceNumber) {
@@ -174,7 +198,7 @@ export function extractPricesFromNotes(officeNotes: string): { prices: number[],
   let match;
   
   while ((match = priceRegex.exec(officeNotes)) !== null) {
-    const price = parseFloat(match[1].replace(',', ''));
+    const price = parseFloat(match[1].replace(/,/g, ''));
     if (!isNaN(price) && price > 0) {
       prices.push(price);
     }
