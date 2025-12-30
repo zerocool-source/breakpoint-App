@@ -16,6 +16,7 @@ import Chemicals from "@/pages/Chemicals";
 import Jobs from "@/pages/Jobs";
 import Payroll from "@/pages/Payroll";
 import PropertyRepairPrices from "@/pages/PropertyRepairPrices";
+import AccountDetails from "@/pages/AccountDetails";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/jobs" component={Jobs} />
       <Route path="/payroll" component={Payroll} />
       <Route path="/property-repairs" component={PropertyRepairPrices} />
+      <Route path="/accounts/:accountId" component={AccountDetails} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />

@@ -606,7 +606,12 @@ function ExpandableJobCard({ job }: { job: Job }) {
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Customer</p>
-                  <p className="text-sm font-medium text-white">{job.customerName}</p>
+                  <Link href={`/accounts/${job.customerId}`}>
+                    <p className="text-sm font-medium text-sky-400 hover:text-sky-300 cursor-pointer flex items-center gap-1">
+                      {job.customerName}
+                      <MessageCircle className="w-3 h-3" />
+                    </p>
+                  </Link>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Technician</p>
