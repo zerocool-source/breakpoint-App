@@ -411,6 +411,65 @@ export class PoolBrainClient {
   }
 
   /**
+   * Get single one-time job details including Office Notes
+   * Endpoint: GET /v2/one_time_job_list_details with single job filter
+   */
+  async getOneTimeJobDetail(jobId: number | string) {
+    // Try fetching with the job list details endpoint but filter by job
+    const url = new URL(`${this.baseUrl}/v2/one_time_job_list_details`);
+    url.searchParams.append("jobId", String(jobId));
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+  
+  /**
+   * Fetch job audit history which may contain office notes
+   * Endpoint: GET /v2/job_audit_history
+   */
+  async getJobAuditHistory(jobId: number | string) {
+    const url = new URL(`${this.baseUrl}/v2/job_audit_history`);
+    url.searchParams.append("jobId", String(jobId));
+
+    const headers: Record<string, string> = {
+      "ACCESS-KEY": this.apiKey,
+      "Content-Type": "application/json",
+    };
+
+    if (this.companyId) {
+      headers["COMPANY-ID"] = this.companyId;
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Pool Brain API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  /**
    * Create a new one-time job in Pool Brain
    * Endpoint: POST /v2/one_time_job_create
    */

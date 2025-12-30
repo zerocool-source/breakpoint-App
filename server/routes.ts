@@ -605,6 +605,38 @@ function setupRoutes(app: any) {
 
   // ==================== JOBS ====================
   
+  // Debug: Get job audit history to find office notes
+  app.get("/api/jobs/debug/:jobId", async (req: any, res: any) => {
+    try {
+      const { jobId } = req.params;
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Try job audit history which may have more detail
+      const auditData = await client.getJobAuditHistory(jobId);
+      console.log('Job audit history:', JSON.stringify(auditData, null, 2).substring(0, 5000));
+      
+      // Also try getting the single job detail
+      const jobData = await client.getOneTimeJobDetail(jobId);
+      console.log('Single job detail:', JSON.stringify(jobData, null, 2).substring(0, 5000));
+      
+      res.json({ audit: auditData, detail: jobData });
+    } catch (error: any) {
+      console.error("Error fetching job debug info:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
   // Get jobs with scheduling information - grouped by account and technician
   app.get("/api/jobs", async (req: any, res: any) => {
     try {
@@ -863,6 +895,61 @@ function setupRoutes(app: any) {
       }
 
       console.log(`Processed ${jobs.length} jobs, ${jobs.filter(j => j.customerName !== 'Unknown Customer').length} with customer names`);
+      
+      // Fetch audit history for SR jobs to get Instructions and Office Notes
+      const srJobs = jobs.filter(j => j.title?.toLowerCase().includes('"sr"') || j.title?.toLowerCase().startsWith('sr '));
+      // Note: Fetching audit history adds ~10 seconds but provides Instructions and Office Notes
+      
+      // Fetch audit history in parallel batches (limit concurrency)
+      const BATCH_SIZE = 10;
+      const notesMap: Record<string, { instructions: string; officeNotes: string }> = {};
+      
+      for (let i = 0; i < srJobs.length; i += BATCH_SIZE) {
+        const batch = srJobs.slice(i, i + BATCH_SIZE);
+        const auditPromises = batch.map(async (job) => {
+          try {
+            const auditData = await client.getJobAuditHistory(job.jobId);
+            if (auditData.data && Array.isArray(auditData.data)) {
+              // Find the most recent Instructions and Office Notes entries
+              let instructions = '';
+              let officeNotes = '';
+              
+              // Sort by date descending to get most recent values
+              const sorted = auditData.data.sort((a: any, b: any) => 
+                new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime()
+              );
+              
+              for (const entry of sorted) {
+                if (entry.field === 'Changed Instructions' && !instructions) {
+                  instructions = entry.newValue || '';
+                }
+                if (entry.field === 'Changed Office Notes' && !officeNotes) {
+                  officeNotes = entry.newValue || '';
+                }
+                if (instructions && officeNotes) break;
+              }
+              
+              notesMap[job.jobId] = { instructions, officeNotes };
+            }
+          } catch (e) {
+            // Silently ignore audit fetch errors for individual jobs
+          }
+        });
+        await Promise.all(auditPromises);
+      }
+      
+      // Update jobs with notes from audit history
+      jobs.forEach(job => {
+        const notes = notesMap[job.jobId];
+        if (notes) {
+          if (notes.instructions && !job.instructions) {
+            job.instructions = notes.instructions;
+          }
+          if (notes.officeNotes && !job.officeNotes) {
+            job.officeNotes = notes.officeNotes;
+          }
+        }
+      });
 
       // Group jobs by ACCOUNT (customer)
       const accountsMap: Record<string, { 
