@@ -3,6 +3,7 @@ import { storage } from "./storage";
 import { PoolBrainClient } from "./poolbrain-client";
 import { buildChemicalOrderEmail, buildChunkedChemicalEmails } from "./email-template";
 import { OutlookGraphClient } from "./outlook-graph";
+import { parseOfficeNotesForRepairs, extractPricesFromNotes, type ParsedRepair } from "./repair-parser";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -1085,6 +1086,166 @@ function setupRoutes(app: any) {
       console.error("Error fetching jobs:", error);
       res.status(500).json({
         error: "Failed to fetch jobs",
+        message: error.message
+      });
+    }
+  });
+
+  // Get extracted repairs from SR jobs with office notes containing parts/labor/prices
+  app.get("/api/jobs/repairs", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Calculate date range (last 60 days)
+      const toDate = new Date();
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 60);
+
+      const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+      // Fetch jobs and details
+      const [jobsData, jobDetailsData, techniciansData, customersData] = await Promise.all([
+        client.getOneTimeJobList({ fromDate: formatDate(fromDate), toDate: formatDate(toDate), limit: 500 }),
+        client.getOneTimeJobListDetails({ fromDate: formatDate(fromDate), toDate: formatDate(toDate), limit: 500 }),
+        client.getTechnicianDetail({ limit: 100 }),
+        client.getCustomerDetail({ limit: 500 })
+      ]);
+
+      // Build lookup maps
+      const technicianMap: Record<string, any> = {};
+      if (techniciansData.data && Array.isArray(techniciansData.data)) {
+        techniciansData.data.forEach((tech: any) => {
+          if (tech.RecordID) technicianMap[tech.RecordID] = tech;
+        });
+      }
+
+      const customerMap: Record<string, any> = {};
+      if (customersData.data && Array.isArray(customersData.data)) {
+        customersData.data.forEach((cust: any) => {
+          if (cust.RecordID) customerMap[cust.RecordID] = cust;
+        });
+      }
+
+      const jobDetailsMap: Record<string, any> = {};
+      if (jobDetailsData.data && Array.isArray(jobDetailsData.data)) {
+        jobDetailsData.data.forEach((detail: any) => {
+          const jobId = detail.JobID || detail.RecordID;
+          if (jobId) jobDetailsMap[jobId] = detail;
+        });
+      }
+
+      // Filter to SR jobs only (service repairs)
+      const srJobs = (jobsData.data || []).filter((job: any) => {
+        const title = (job.Title || job.JobTitle || '').toLowerCase();
+        return title.includes('"sr"') || 
+               title.includes("'sr'") || 
+               title.startsWith('sr ') || 
+               title.startsWith('sr-') ||
+               title.includes(' sr ') ||
+               title.includes(' sr-') ||
+               /\bsr\b/.test(title);
+      });
+
+      // Fetch audit history for SR jobs to get office notes
+      const BATCH_SIZE = 10;
+      const repairJobs: any[] = [];
+
+      for (let i = 0; i < srJobs.length; i += BATCH_SIZE) {
+        const batch = srJobs.slice(i, i + BATCH_SIZE);
+        const auditPromises = batch.map(async (job: any) => {
+          try {
+            const jobId = job.JobID || job.RecordID;
+            const auditData = await client.getJobAuditHistory(jobId);
+            
+            let officeNotes = '';
+            let instructions = '';
+            
+            if (auditData.data && Array.isArray(auditData.data)) {
+              const sorted = auditData.data.sort((a: any, b: any) => 
+                new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime()
+              );
+              
+              for (const entry of sorted) {
+                if (entry.field === 'Changed Office Notes' && !officeNotes) {
+                  officeNotes = entry.newValue || '';
+                }
+                if (entry.field === 'Changed Instructions' && !instructions) {
+                  instructions = entry.newValue || '';
+                }
+                if (officeNotes && instructions) break;
+              }
+            }
+
+            // Parse office notes for repair data
+            const parsedRepair = parseOfficeNotesForRepairs(officeNotes);
+            const priceExtraction = extractPricesFromNotes(officeNotes);
+
+            // Only include jobs with meaningful repair data
+            if (parsedRepair || priceExtraction.prices.length > 0) {
+              const jobDetail = jobDetailsMap[jobId] || {};
+              const techId = job.TechnicianID || job.AssignedTechnicianID;
+              const customerId = job.CustomerID;
+              const technician = technicianMap[techId];
+              const customer = customerMap[customerId];
+
+              repairJobs.push({
+                jobId,
+                title: job.Title || job.JobTitle || 'Service Job',
+                status: job.JobStatus || job.Status || 'Pending',
+                isCompleted: ['Completed', 'Complete', 'Invoiced', 'Closed'].includes(job.JobStatus || job.Status),
+                scheduledDate: job.JobDate || job.ScheduledDate,
+                technicianId: techId,
+                technicianName: technician?.Name || `${technician?.FirstName || ''} ${technician?.LastName || ''}`.trim() || 'Unassigned',
+                customerId,
+                customerName: customer?.CustomerName || customer?.CompanyName || 'Unknown',
+                officeNotes,
+                instructions,
+                parsedRepair,
+                priceExtraction,
+                totalRepairValue: parsedRepair?.totalPrice || priceExtraction.total || 0,
+                laborAmount: parsedRepair?.totalLabor || 0,
+                partsAmount: parsedRepair?.totalParts || 0
+              });
+            }
+          } catch (e) {
+            // Silently ignore errors for individual jobs
+          }
+        });
+        await Promise.all(auditPromises);
+      }
+
+      // Calculate summary
+      const totalLabor = repairJobs.reduce((sum, j) => sum + (j.laborAmount || 0), 0);
+      const totalParts = repairJobs.reduce((sum, j) => sum + (j.partsAmount || 0), 0);
+      const totalRepairValue = repairJobs.reduce((sum, j) => sum + (j.totalRepairValue || 0), 0);
+      const completedRepairs = repairJobs.filter(j => j.isCompleted);
+
+      res.json({
+        repairs: repairJobs,
+        summary: {
+          totalRepairs: repairJobs.length,
+          completedRepairs: completedRepairs.length,
+          totalLabor,
+          totalParts,
+          totalRepairValue,
+          commission15: Math.round(totalRepairValue * 0.15 * 100) / 100
+        }
+      });
+    } catch (error: any) {
+      console.error("Error fetching repairs:", error);
+      res.status(500).json({
+        error: "Failed to fetch repairs",
         message: error.message
       });
     }
