@@ -236,7 +236,7 @@ function exportSRJobsPDF(srJobs: any[]) {
 }
 
 function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: 'landscape' });
   const now = new Date();
   
   // Commission rate (10% default - can be adjusted)
@@ -405,19 +405,19 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Repair Title', 'Technician', 'Products/Services', 'Office Notes / Instructions', 'Price', 'Comm.', 'Status']],
+      head: [['Repair Title', 'Tech', 'Products', 'Office Notes / Instructions', 'Price', 'Comm.', 'Status']],
       body: jobsData,
       theme: 'grid',
-      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 7 },
-      styles: { fontSize: 6, cellPadding: 2, overflow: 'linebreak' },
+      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 8 },
+      styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak', minCellHeight: 10 },
       columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 50 },
-        4: { cellWidth: 14 },
-        5: { cellWidth: 14 },
-        6: { cellWidth: 14 }
+        0: { cellWidth: 35 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 100 },
+        4: { cellWidth: 18 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 20 }
       },
       didParseCell: (data: any) => {
         if (data.column.index === 6 && data.cell.raw === 'Complete') {
@@ -431,15 +431,16 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
         // Style products column
         if (data.column.index === 2 && data.section === 'body') {
           data.cell.styles.textColor = [100, 100, 100];
-          data.cell.styles.fontSize = 5;
+          data.cell.styles.fontSize = 6;
         }
         // Style office notes column in amber - full text with word wrap
         if (data.column.index === 3 && data.section === 'body' && data.cell.raw !== '-') {
-          data.cell.styles.textColor = [217, 119, 6];
-          data.cell.styles.fontSize = 5;
+          data.cell.styles.textColor = [180, 83, 9];
+          data.cell.styles.fontSize = 7;
+          data.cell.styles.fontStyle = 'normal';
         }
       },
-      margin: { left: 14, right: 14 }
+      margin: { left: 10, right: 10 }
     });
     
     yPos = (doc as any).lastAutoTable?.finalY + 10 || yPos + 30;
@@ -683,16 +684,20 @@ function ExpandableJobCard({ job }: { job: Job }) {
               <div className="mt-4 pt-4 border-t border-slate-600/50">
                 <p className="text-xs text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  Office Notes
+                  Office Notes & Instructions
                 </p>
-                <div className="bg-amber-900/20 border border-amber-500/30 p-3 rounded-lg space-y-2">
+                <div className="bg-amber-900/30 border-2 border-amber-500/50 p-4 rounded-lg space-y-3 min-h-[80px]">
                   {(job as any).officeNotes && (
-                    <p className="text-sm text-white">{(job as any).officeNotes}</p>
+                    <div>
+                      <p className="text-xs text-amber-400 font-semibold uppercase mb-1">Office Notes:</p>
+                      <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{(job as any).officeNotes}</p>
+                    </div>
                   )}
                   {(job as any).instructions && (
-                    <p className="text-sm text-slate-300">
-                      <span className="text-amber-400 font-medium">Instructions:</span> {(job as any).instructions}
-                    </p>
+                    <div>
+                      <p className="text-xs text-amber-400 font-semibold uppercase mb-1">Instructions:</p>
+                      <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{(job as any).instructions}</p>
+                    </div>
                   )}
                 </div>
               </div>
