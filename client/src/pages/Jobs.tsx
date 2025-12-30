@@ -391,20 +391,20 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Job', 'Tech', 'Products', 'Notes', 'Price', 'Comm', 'Status']],
+      head: [['Job Title', 'Tech', 'Products', 'Office Notes', 'Price', 'Comm', 'Status']],
       body: jobsData,
       theme: 'striped',
       headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 7, cellPadding: 1.5, fontStyle: 'bold' },
-      styles: { fontSize: 7, cellPadding: 1.5, overflow: 'linebreak', lineColor: [220, 220, 220], lineWidth: 0.1 },
+      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', lineColor: [220, 220, 220], lineWidth: 0.1 },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 40 },
-        1: { cellWidth: 22 },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 'auto' },
-        4: { cellWidth: 16, halign: 'right' },
-        5: { cellWidth: 14, halign: 'right' },
-        6: { cellWidth: 16, halign: 'center' }
+        0: { cellWidth: 38 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 130 },
+        4: { cellWidth: 18, halign: 'right' },
+        5: { cellWidth: 16, halign: 'right' },
+        6: { cellWidth: 18, halign: 'center' }
       },
       didParseCell: (data: any) => {
         if (data.column.index === 6 && data.cell.raw === 'Done') {
@@ -415,11 +415,12 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
           data.cell.styles.textColor = [16, 150, 100];
         }
         if (data.column.index === 3 && data.section === 'body' && data.cell.raw !== '-') {
-          data.cell.styles.textColor = [160, 80, 10];
+          data.cell.styles.textColor = [140, 70, 10];
           data.cell.styles.fontSize = 6;
         }
       },
-      margin: { left: 10, right: 10 }
+      margin: { left: 5, right: 5 },
+      tableWidth: 'auto'
     });
     
     yPos = (doc as any).lastAutoTable?.finalY + 6 || yPos + 20;
