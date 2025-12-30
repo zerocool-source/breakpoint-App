@@ -896,8 +896,18 @@ function setupRoutes(app: any) {
 
       console.log(`Processed ${jobs.length} jobs, ${jobs.filter(j => j.customerName !== 'Unknown Customer').length} with customer names`);
       
-      // Fetch audit history for SR jobs to get Instructions and Office Notes
-      const srJobs = jobs.filter(j => j.title?.toLowerCase().includes('"sr"') || j.title?.toLowerCase().startsWith('sr '));
+      // Fetch audit history for ALL SR jobs to get Instructions and Office Notes
+      // Match various SR patterns: "SR", 'SR', SR at start, SR anywhere
+      const srJobs = jobs.filter(j => {
+        const title = j.title?.toLowerCase() || '';
+        return title.includes('"sr"') || 
+               title.includes("'sr'") || 
+               title.startsWith('sr ') || 
+               title.startsWith('sr-') ||
+               title.includes(' sr ') ||
+               title.includes(' sr-') ||
+               /\bsr\b/.test(title);
+      });
       // Note: Fetching audit history adds ~10 seconds but provides Instructions and Office Notes
       
       // Fetch audit history in parallel batches (limit concurrency)
