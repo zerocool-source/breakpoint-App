@@ -384,10 +384,16 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
         ? items.map((item: any) => `${item.productName || 'Item'} (${item.qty}x $${(item.unitCost || 0).toFixed(2)})`).join('; ')
         : 'No items';
       
+      // Get office notes
+      const officeNotes = job.officeNotes || '';
+      const instructions = job.instructions || '';
+      const notesText = [officeNotes, instructions].filter(Boolean).join(' | ');
+      
       jobsData.push([
         job.title || 'SR Job',
         job.technicianName || 'Unassigned',
-        productsText.substring(0, 60) + (productsText.length > 60 ? '...' : ''),
+        productsText.substring(0, 50) + (productsText.length > 50 ? '...' : ''),
+        notesText.substring(0, 40) + (notesText.length > 40 ? '...' : '') || '-',
         `$${(job.price || 0).toLocaleString()}`,
         `$${(job.commission || 0).toFixed(2)}`,
         job.isCompleted ? 'Complete' : (job.status || 'Pending')
@@ -396,31 +402,37 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Repair Title', 'Technician', 'Products/Services', 'Price', 'Commission', 'Status']],
+      head: [['Repair Title', 'Technician', 'Products/Services', 'Office Notes', 'Price', 'Comm.', 'Status']],
       body: jobsData,
       theme: 'grid',
       headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 7 },
       styles: { fontSize: 6, cellPadding: 2 },
       columnStyles: {
-        0: { cellWidth: 40 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 55 },
-        3: { cellWidth: 18 },
-        4: { cellWidth: 18 },
-        5: { cellWidth: 18 }
+        0: { cellWidth: 32 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 35 },
+        4: { cellWidth: 15 },
+        5: { cellWidth: 15 },
+        6: { cellWidth: 15 }
       },
       didParseCell: (data: any) => {
-        if (data.column.index === 5 && data.cell.raw === 'Complete') {
+        if (data.column.index === 6 && data.cell.raw === 'Complete') {
           data.cell.styles.textColor = [16, 185, 129];
           data.cell.styles.fontStyle = 'bold';
         }
         // Highlight commission column in green
-        if (data.column.index === 4 && data.section === 'body') {
+        if (data.column.index === 5 && data.section === 'body') {
           data.cell.styles.textColor = [16, 185, 129];
         }
         // Style products column
         if (data.column.index === 2 && data.section === 'body') {
           data.cell.styles.textColor = [100, 100, 100];
+          data.cell.styles.fontSize = 5;
+        }
+        // Style office notes column in amber
+        if (data.column.index === 3 && data.section === 'body' && data.cell.raw !== '-') {
+          data.cell.styles.textColor = [217, 119, 6];
           data.cell.styles.fontSize = 5;
         }
       },
