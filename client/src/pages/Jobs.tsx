@@ -384,16 +384,19 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
         ? items.map((item: any) => `${item.productName || 'Item'} (${item.qty}x $${(item.unitCost || 0).toFixed(2)})`).join('; ')
         : 'No items';
       
-      // Get office notes
+      // Get office notes - show full text
       const officeNotes = job.officeNotes || '';
       const instructions = job.instructions || '';
-      const notesText = [officeNotes, instructions].filter(Boolean).join(' | ');
+      const notesText = [
+        officeNotes ? `Notes: ${officeNotes}` : '',
+        instructions ? `Instructions: ${instructions}` : ''
+      ].filter(Boolean).join('\n');
       
       jobsData.push([
         job.title || 'SR Job',
         job.technicianName || 'Unassigned',
-        productsText.substring(0, 50) + (productsText.length > 50 ? '...' : ''),
-        notesText.substring(0, 40) + (notesText.length > 40 ? '...' : '') || '-',
+        productsText,
+        notesText || '-',
         `$${(job.price || 0).toLocaleString()}`,
         `$${(job.commission || 0).toFixed(2)}`,
         job.isCompleted ? 'Complete' : (job.status || 'Pending')
@@ -402,19 +405,19 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
     
     autoTable(doc, {
       startY: yPos,
-      head: [['Repair Title', 'Technician', 'Products/Services', 'Office Notes', 'Price', 'Comm.', 'Status']],
+      head: [['Repair Title', 'Technician', 'Products/Services', 'Office Notes / Instructions', 'Price', 'Comm.', 'Status']],
       body: jobsData,
       theme: 'grid',
       headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 7 },
-      styles: { fontSize: 6, cellPadding: 2 },
+      styles: { fontSize: 6, cellPadding: 2, overflow: 'linebreak' },
       columnStyles: {
-        0: { cellWidth: 32 },
-        1: { cellWidth: 22 },
-        2: { cellWidth: 40 },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 15 },
-        5: { cellWidth: 15 },
-        6: { cellWidth: 15 }
+        0: { cellWidth: 28 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 50 },
+        4: { cellWidth: 14 },
+        5: { cellWidth: 14 },
+        6: { cellWidth: 14 }
       },
       didParseCell: (data: any) => {
         if (data.column.index === 6 && data.cell.raw === 'Complete') {
@@ -430,7 +433,7 @@ function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
           data.cell.styles.textColor = [100, 100, 100];
           data.cell.styles.fontSize = 5;
         }
-        // Style office notes column in amber
+        // Style office notes column in amber - full text with word wrap
         if (data.column.index === 3 && data.section === 'body' && data.cell.raw !== '-') {
           data.cell.styles.textColor = [217, 119, 6];
           data.cell.styles.fontSize = 5;
