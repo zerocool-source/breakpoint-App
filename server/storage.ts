@@ -8,11 +8,13 @@ import {
   type PayPeriod, type InsertPayPeriod,
   type PayrollEntry, type InsertPayrollEntry,
   type ArchivedAlert, type InsertArchivedAlert,
+  type Thread, type InsertThread,
+  type ThreadMessage, type InsertThreadMessage,
   settings, alerts, workflows, customers, chatMessages, completedAlerts,
-  payPeriods, payrollEntries, archivedAlerts
+  payPeriods, payrollEntries, archivedAlerts, threads, threadMessages
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, inArray, and } from "drizzle-orm";
+import { eq, desc, inArray, and, ilike, or } from "drizzle-orm";
 
 export interface IStorage {
   // Settings
@@ -64,6 +66,18 @@ export interface IStorage {
   archiveAlert(alertId: string, alertType: string): Promise<ArchivedAlert>;
   unarchiveAlert(alertId: string): Promise<void>;
   isAlertArchived(alertId: string): Promise<boolean>;
+
+  // Threads
+  getThreads(): Promise<Thread[]>;
+  getThreadByAccountId(accountId: string): Promise<Thread | undefined>;
+  getOrCreateThread(accountId: string, accountName: string): Promise<Thread>;
+  
+  // Thread Messages
+  getThreadMessages(threadId: string, options?: { type?: string; search?: string; limit?: number }): Promise<ThreadMessage[]>;
+  createThreadMessage(message: InsertThreadMessage): Promise<ThreadMessage>;
+  updateThreadMessage(id: string, updates: Partial<InsertThreadMessage>): Promise<ThreadMessage | undefined>;
+  deleteThreadMessage(id: string): Promise<void>;
+  pinMessage(id: string, pinned: boolean): Promise<ThreadMessage | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -310,6 +324,71 @@ export class DbStorage implements IStorage {
 
   async deleteArchivedAlert(alertId: string): Promise<void> {
     await db.delete(archivedAlerts).where(eq(archivedAlerts.alertId, alertId));
+  }
+
+  // Threads
+  async getThreads(): Promise<Thread[]> {
+    return db.select().from(threads).orderBy(desc(threads.updatedAt));
+  }
+
+  async getThreadByAccountId(accountId: string): Promise<Thread | undefined> {
+    const result = await db.select().from(threads).where(eq(threads.accountId, accountId)).limit(1);
+    return result[0];
+  }
+
+  async getOrCreateThread(accountId: string, accountName: string): Promise<Thread> {
+    const existing = await this.getThreadByAccountId(accountId);
+    if (existing) return existing;
+    
+    const result = await db.insert(threads).values({ accountId, accountName }).returning();
+    return result[0];
+  }
+
+  // Thread Messages
+  async getThreadMessages(threadId: string, options?: { type?: string; search?: string; limit?: number }): Promise<ThreadMessage[]> {
+    let query = db.select().from(threadMessages).where(eq(threadMessages.threadId, threadId));
+    
+    if (options?.type) {
+      query = query.where(and(eq(threadMessages.threadId, threadId), eq(threadMessages.type, options.type))) as any;
+    }
+    
+    if (options?.search) {
+      query = query.where(and(
+        eq(threadMessages.threadId, threadId),
+        ilike(threadMessages.text, `%${options.search}%`)
+      )) as any;
+    }
+    
+    query = query.orderBy(desc(threadMessages.createdAt)) as any;
+    
+    if (options?.limit) {
+      query = query.limit(options.limit) as any;
+    }
+    
+    return query;
+  }
+
+  async createThreadMessage(message: InsertThreadMessage): Promise<ThreadMessage> {
+    const result = await db.insert(threadMessages).values(message).returning();
+    
+    // Update thread's updatedAt
+    await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, message.threadId));
+    
+    return result[0];
+  }
+
+  async updateThreadMessage(id: string, updates: Partial<InsertThreadMessage>): Promise<ThreadMessage | undefined> {
+    const result = await db.update(threadMessages).set(updates).where(eq(threadMessages.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteThreadMessage(id: string): Promise<void> {
+    await db.delete(threadMessages).where(eq(threadMessages.id, id));
+  }
+
+  async pinMessage(id: string, pinned: boolean): Promise<ThreadMessage | undefined> {
+    const result = await db.update(threadMessages).set({ pinned }).where(eq(threadMessages.id, id)).returning();
+    return result[0];
   }
 }
 

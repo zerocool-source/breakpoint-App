@@ -177,6 +177,74 @@ export type PayrollEntry = typeof payrollEntries.$inferSelect;
 export type InsertArchivedAlert = z.infer<typeof insertArchivedAlertSchema>;
 export type ArchivedAlert = typeof archivedAlerts.$inferSelect;
 
+// Account Threads (one per account for communication)
+export const threads = pgTable("threads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accountId: text("account_id").notNull().unique(),
+  accountName: text("account_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Message types for structured communication
+export const messageTypeEnum = ["update", "assist", "issue", "repair", "chemical", "task", "photo"] as const;
+export type MessageType = typeof messageTypeEnum[number];
+
+// Visibility levels
+export const visibilityEnum = ["all", "office_only", "supervisors_only"] as const;
+export type Visibility = typeof visibilityEnum[number];
+
+// Thread Messages
+export const threadMessages = pgTable("thread_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  threadId: varchar("thread_id").notNull(),
+  authorId: text("author_id").notNull(),
+  authorName: text("author_name").notNull(),
+  type: text("type").notNull().default("update"),
+  text: text("text"),
+  photoUrls: json("photo_urls").$type<string[]>().default([]),
+  taggedUserIds: json("tagged_user_ids").$type<string[]>().default([]),
+  taggedRoles: json("tagged_roles").$type<string[]>().default([]),
+  visibility: text("visibility").default("all"),
+  pinned: boolean("pinned").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Read Receipts (optional but useful)
+export const messageReadReceipts = pgTable("message_read_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull(),
+  userId: text("user_id").notNull(),
+  readAt: timestamp("read_at").defaultNow(),
+});
+
+// Insert Schemas for Threads
+export const insertThreadSchema = createInsertSchema(threads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertThreadMessageSchema = createInsertSchema(threadMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMessageReadReceiptSchema = createInsertSchema(messageReadReceipts).omit({
+  id: true,
+  readAt: true,
+});
+
+// Types for Threads
+export type InsertThread = z.infer<typeof insertThreadSchema>;
+export type Thread = typeof threads.$inferSelect;
+
+export type InsertThreadMessage = z.infer<typeof insertThreadMessageSchema>;
+export type ThreadMessage = typeof threadMessages.$inferSelect;
+
+export type InsertMessageReadReceipt = z.infer<typeof insertMessageReadReceiptSchema>;
+export type MessageReadReceipt = typeof messageReadReceipts.$inferSelect;
+
 // Property Repair Summary (computed, not stored)
 export interface PropertyRepairSummary {
   propertyId: string;
