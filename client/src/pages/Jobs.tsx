@@ -1556,7 +1556,8 @@ export default function Jobs() {
       commissionEligibleJobs: [], 
       allSRJobs: [],
       totalCommission: 0, 
-      byTechnician: {} as Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number }>,
+      byTechnician: {} as Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number; accounts: Record<string, { name: string; notes: string; jobs: any[] }> }>,
+      byAccount: {} as Record<string, { name: string; notes: string; entryNotes: string; jobs: any[]; technicians: Set<string>; totalValue: number; completedValue: number; commission: number }>,
       completedCount: 0,
       totalValue: 0,
       allJobsCount: 0
@@ -1582,14 +1583,29 @@ export default function Jobs() {
     const commissionEligibleJobs = allSRJobs.filter(isJobEligible);
     
     // Group ALL SR jobs by technician, track completed separately for commission
-    const byTechnician: Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number }> = {};
+    const byTechnician: Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number; accounts: Record<string, { name: string; notes: string; jobs: any[] }> }> = {};
+    
+    // Group by account with notes
+    const byAccount: Record<string, { name: string; notes: string; entryNotes: string; jobs: any[]; technicians: Set<string>; totalValue: number; completedValue: number; commission: number }> = {};
+    
     allSRJobs.forEach(job => {
       const techName = job.technicianName || 'Unassigned';
+      const accountName = job.customerName || 'Unknown';
+      const jobNotes = (job as any).notes || '';
+      const entryNotes = (job as any).entryNotes || '';
+      
+      // Group by technician
       if (!byTechnician[techName]) {
-        byTechnician[techName] = { name: techName, allJobs: [], completedJobs: [], totalValue: 0, completedValue: 0, commission: 0 };
+        byTechnician[techName] = { name: techName, allJobs: [], completedJobs: [], totalValue: 0, completedValue: 0, commission: 0, accounts: {} };
       }
       byTechnician[techName].allJobs.push(job);
       byTechnician[techName].totalValue += job.price || 0;
+      
+      // Track accounts within technician
+      if (!byTechnician[techName].accounts[accountName]) {
+        byTechnician[techName].accounts[accountName] = { name: accountName, notes: jobNotes, jobs: [] };
+      }
+      byTechnician[techName].accounts[accountName].jobs.push(job);
       
       // Track completed/closed jobs separately for commission
       if (isJobEligible(job)) {
@@ -1597,6 +1613,21 @@ export default function Jobs() {
         byTechnician[techName].completedValue += job.price || 0;
         byTechnician[techName].commission += (job.price || 0) * COMMISSION_RATE;
       }
+      
+      // Group by account
+      if (!byAccount[accountName]) {
+        byAccount[accountName] = { name: accountName, notes: jobNotes, entryNotes: entryNotes, jobs: [], technicians: new Set(), totalValue: 0, completedValue: 0, commission: 0 };
+      }
+      byAccount[accountName].jobs.push(job);
+      byAccount[accountName].technicians.add(techName);
+      byAccount[accountName].totalValue += job.price || 0;
+      if (isJobEligible(job)) {
+        byAccount[accountName].completedValue += job.price || 0;
+        byAccount[accountName].commission += (job.price || 0) * COMMISSION_RATE;
+      }
+      // Update notes if we find more
+      if (jobNotes && !byAccount[accountName].notes) byAccount[accountName].notes = jobNotes;
+      if (entryNotes && !byAccount[accountName].entryNotes) byAccount[accountName].entryNotes = entryNotes;
     });
     
     const totalValue = allSRJobs.reduce((s, j) => s + (j.price || 0), 0);
@@ -1608,6 +1639,7 @@ export default function Jobs() {
       allSRJobs,
       totalCommission,
       byTechnician,
+      byAccount,
       completedCount: commissionEligibleJobs.length,
       totalValue,
       allJobsCount: allSRJobs.length
@@ -2607,6 +2639,80 @@ export default function Jobs() {
                             </CardContent>
                           </Card>
                         ))}
+                      
+                      {/* Accounts with Notes Section */}
+                      <div className="mt-6 pt-4 border-t border-slate-600/50">
+                        <h4 className="text-lg font-ui font-semibold text-sky-300 mb-3 flex items-center gap-2">
+                          <Building2 className="w-5 h-5" />
+                          Accounts with SR Jobs & Notes
+                        </h4>
+                        <div className="space-y-3">
+                          {Object.values(commissionData.byAccount)
+                            .sort((a, b) => b.totalValue - a.totalValue)
+                            .map(account => (
+                              <Card key={account.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
+                                <CardHeader className="pb-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
+                                        <Building2 className="w-5 h-5 text-sky-400" />
+                                      </div>
+                                      <div>
+                                        <CardTitle className="text-lg font-ui text-white">{account.name}</CardTitle>
+                                        <p className="text-sm text-slate-400">
+                                          {account.jobs.length} SR jobs | {Array.from(account.technicians).join(', ')}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-lg font-bold text-sky-300">{formatPrice(account.totalValue)}</p>
+                                      <p className="text-xs text-emerald-400">Commission: {formatPrice(account.commission)}</p>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="pt-2">
+                                  {/* Account Notes */}
+                                  {(account.notes || account.entryNotes) && (
+                                    <div className="mb-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                                      <p className="text-xs text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        Account Notes
+                                      </p>
+                                      {account.notes && (
+                                        <p className="text-sm text-white">{account.notes}</p>
+                                      )}
+                                      {account.entryNotes && (
+                                        <p className="text-sm text-slate-300 mt-1">
+                                          <span className="text-amber-400">Entry:</span> {account.entryNotes}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                  {/* Jobs for this account */}
+                                  <div className="space-y-1">
+                                    {account.jobs.map((job: any) => {
+                                      const isEligible = job.isCompleted === true || job.status?.toLowerCase()?.includes('closed') || job.status?.toLowerCase()?.includes('complete');
+                                      return (
+                                        <div key={job.jobId} className={`flex items-center justify-between p-2 rounded text-sm ${isEligible ? 'bg-emerald-900/20 border border-emerald-600/30' : 'bg-slate-700/30 border border-slate-600/30'}`}>
+                                          <div className="flex items-center gap-2">
+                                            {isEligible ? (
+                                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                            ) : (
+                                              <Clock className="w-3 h-3 text-amber-400" />
+                                            )}
+                                            <span className="text-white">{job.title || 'SR Job'}</span>
+                                            <span className="text-xs text-slate-400">({job.technicianName || 'Unassigned'})</span>
+                                          </div>
+                                          <span className={isEligible ? 'text-emerald-300' : 'text-slate-400'}>{formatPrice(job.price || 0)}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </ScrollArea>
