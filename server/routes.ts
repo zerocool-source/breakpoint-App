@@ -855,6 +855,8 @@ function setupRoutes(app: any) {
             price: totalPrice,
             items: items,
             chemicalReadings: jobDetail.chemicalReadings || null,
+            officeNotes: jobDetail.OfficeNotes || jobDetail.officeNotes || job.OfficeNotes || job.officeNotes || "",
+            instructions: jobDetail.Instructions || jobDetail.instructions || job.Instructions || job.instructions || "",
             raw: { ...job, details: jobDetail }
           });
         });

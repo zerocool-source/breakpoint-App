@@ -664,6 +664,24 @@ function ExpandableJobCard({ job }: { job: Job }) {
                 <p className="text-sm text-slate-200 bg-slate-700/50 p-3 rounded-lg">{job.description}</p>
               </div>
             )}
+            {((job as any).officeNotes || (job as any).instructions) && (
+              <div className="mt-4 pt-4 border-t border-slate-600/50">
+                <p className="text-xs text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Office Notes
+                </p>
+                <div className="bg-amber-900/20 border border-amber-500/30 p-3 rounded-lg space-y-2">
+                  {(job as any).officeNotes && (
+                    <p className="text-sm text-white">{(job as any).officeNotes}</p>
+                  )}
+                  {(job as any).instructions && (
+                    <p className="text-sm text-slate-300">
+                      <span className="text-amber-400 font-medium">Instructions:</span> {(job as any).instructions}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             {job.items && job.items.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-600/50">
                 <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Line Items</p>
@@ -920,12 +938,12 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
   const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
   const readyToInvoice = totalValue >= 500;
   
-  // Get notes from the first job with notes for this account
-  const jobWithNotes = jobs.find(j => (j as any).notes);
-  const jobWithEntry = jobs.find(j => (j as any).entryNotes);
-  const accountNotes = jobWithNotes ? (jobWithNotes as any).notes : '';
-  const entryNotes = jobWithEntry ? (jobWithEntry as any).entryNotes : '';
-  const hasNotes = !!(accountNotes || entryNotes);
+  // Get Office Notes and Instructions from jobs
+  const jobWithOfficeNotes = jobs.find(j => (j as any).officeNotes);
+  const jobWithInstructions = jobs.find(j => (j as any).instructions);
+  const officeNotes = jobWithOfficeNotes ? (jobWithOfficeNotes as any).officeNotes : '';
+  const instructions = jobWithInstructions ? (jobWithInstructions as any).instructions : '';
+  const hasNotes = !!(officeNotes || instructions);
 
   const handleSendInvoice = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -978,19 +996,19 @@ function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: 
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-3 pt-0 space-y-2 border-t border-slate-600/50">
-            {/* Account Notes Section */}
+            {/* Office Notes Section */}
             {hasNotes && (
               <div className="mb-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
                 <p className="text-xs text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  Account Notes
+                  Office Notes
                 </p>
-                {accountNotes && (
-                  <p className="text-sm text-white">{accountNotes}</p>
+                {officeNotes && (
+                  <p className="text-sm text-white">{officeNotes}</p>
                 )}
-                {entryNotes && (
+                {instructions && (
                   <p className="text-sm text-slate-300 mt-1">
-                    <span className="text-amber-400">Entry/Access:</span> {entryNotes}
+                    <span className="text-amber-400">Instructions:</span> {instructions}
                   </p>
                 )}
               </div>
