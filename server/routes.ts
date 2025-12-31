@@ -2230,17 +2230,37 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Fetch pools and customers
-      const [poolsData, customersData] = await Promise.all([
+      // Fetch pools list, customer pool details, and customer details
+      const [poolsListData, poolsData, customersData, customerListData] = await Promise.all([
+        client.getPoolsList({ limit: 1000 }),
         client.getCustomerPoolDetails({ limit: 1000 }),
-        client.getCustomerDetail({ limit: 1000 })
+        client.getCustomerDetail({ limit: 1000 }),
+        client.getCustomerList({ limit: 1000 })
       ]);
 
-      // Build customer map
+      // Build customer map from customer_detail (using RecordID)
       const customerMap: Record<string, any> = {};
       if (customersData.data && Array.isArray(customersData.data)) {
         customersData.data.forEach((c: any) => {
-          customerMap[c.RecordID] = c;
+          customerMap[String(c.RecordID)] = c;
+        });
+      }
+      
+      // Also add from customer_list if available
+      if (customerListData.data && Array.isArray(customerListData.data)) {
+        customerListData.data.forEach((c: any) => {
+          const id = String(c.RecordID || c.CustomerID);
+          if (id && !customerMap[id]) {
+            customerMap[id] = c;
+          }
+        });
+      }
+
+      // Build pools list map (has CustomerName directly)
+      const poolsListMap: Record<string, any> = {};
+      if (poolsListData.data && Array.isArray(poolsListData.data)) {
+        poolsListData.data.forEach((p: any) => {
+          poolsListMap[String(p.RecordID || p.PoolID)] = p;
         });
       }
 
@@ -2252,14 +2272,34 @@ function setupRoutes(app: any) {
         const poolId = pool.RecordID || pool.PoolID;
         if (!poolId) continue;
 
-        const customerId = pool.CustomerID;
+        const customerId = String(pool.CustomerID);
         const customer = customerMap[customerId];
+        const poolListEntry = poolsListMap[String(poolId)];
+        
+        // Try to get customer name from multiple sources
+        const customerName = 
+          customer?.Name || 
+          customer?.CustomerName ||
+          poolListEntry?.CustomerName ||
+          pool.CustomerName || 
+          null;
+        
+        const poolName = 
+          pool.PoolName || 
+          poolListEntry?.PoolName || 
+          `Pool ${poolId}`;
+          
+        const address = 
+          pool.PoolAddress || 
+          poolListEntry?.Address ||
+          customer?.Address || 
+          null;
         
         const channel = await storage.upsertPropertyChannel({
           propertyId: String(poolId),
-          propertyName: pool.PoolName || `Pool ${poolId}`,
-          customerName: customer?.Name || pool.CustomerName || null,
-          address: pool.PoolAddress || customer?.Address || null,
+          propertyName: poolName,
+          customerName: customerName,
+          address: address,
           description: null,
         });
         channels.push(channel);
