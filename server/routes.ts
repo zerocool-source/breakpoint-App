@@ -2231,12 +2231,20 @@ function setupRoutes(app: any) {
       });
 
       // Fetch pools list, customer pool details, and customer details
+      // Some endpoints may fail, so we handle them individually
       const [poolsListData, poolsData, customersData, customerListData] = await Promise.all([
-        client.getPoolsList({ limit: 1000 }),
-        client.getCustomerPoolDetails({ limit: 1000 }),
-        client.getCustomerDetail({ limit: 1000 }),
-        client.getCustomerList({ limit: 1000 })
+        client.getPoolsList({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerList({ limit: 1000 }).catch(() => ({ data: [] }))
       ]);
+      
+      console.log("Sync data counts:", {
+        poolsList: poolsListData.data?.length || 0,
+        poolsDetails: poolsData.data?.length || 0,
+        customerDetails: customersData.data?.length || 0,
+        customerList: customerListData.data?.length || 0
+      });
 
       // Build customer map from customer_detail (using RecordID)
       const customerMap: Record<string, any> = {};
@@ -2268,6 +2276,18 @@ function setupRoutes(app: any) {
       const pools = poolsData.data || [];
       const channels = [];
       
+      // Log first pool to see available fields
+      if (pools.length > 0) {
+        console.log("Sample pool data fields:", Object.keys(pools[0]));
+        console.log("Sample pool data:", JSON.stringify(pools[0], null, 2));
+      }
+      if (poolsListData.data?.length > 0) {
+        console.log("Sample pools_list data fields:", Object.keys(poolsListData.data[0]));
+      }
+      if (customersData.data?.length > 0) {
+        console.log("Sample customer_detail data fields:", Object.keys(customersData.data[0]));
+      }
+      
       for (const pool of pools) {
         const poolId = pool.RecordID || pool.PoolID;
         if (!poolId) continue;
@@ -2277,12 +2297,19 @@ function setupRoutes(app: any) {
         const poolListEntry = poolsListMap[String(poolId)];
         
         // Try to get customer name from multiple sources
-        const customerName = 
+        let customerName = 
           customer?.Name || 
           customer?.CustomerName ||
+          customer?.CompanyName ||
           poolListEntry?.CustomerName ||
           pool.CustomerName || 
+          pool.Customer ||
           null;
+        
+        // Try FirstName + LastName if no name found
+        if (!customerName && customer?.FirstName) {
+          customerName = `${customer.FirstName} ${customer.LastName || ''}`.trim();
+        }
         
         const poolName = 
           pool.PoolName || 
