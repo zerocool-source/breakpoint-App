@@ -416,20 +416,17 @@ export default function Channels() {
                     }}
                     className={`w-full text-left p-3 rounded-lg transition-all ${
                       selectedChannel?.id === channel.id 
-                        ? 'bg-sky-600/30 border border-sky-500/50' 
-                        : 'hover:bg-slate-800/50'
+                        ? 'bg-cyan-600/20 border border-cyan-500/50' 
+                        : 'hover:bg-slate-700/50'
                     }`}
                     data-testid={`channel-${channel.id}`}
                   >
                     <div className="flex items-start gap-2">
-                      <Hash className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                      <Hash className="w-4 h-4 mt-0.5 text-cyan-500 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-white text-sm truncate">{channel.propertyName}</p>
-                        {channel.customerName && (
-                          <p className="text-xs text-slate-400 truncate">{channel.customerName}</p>
-                        )}
+                        <p className="font-medium text-white text-sm truncate">{channel.customerName || channel.propertyName}</p>
                         {channel.address && (
-                          <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-slate-400 truncate flex items-center gap-1 mt-0.5">
                             <MapPin className="w-3 h-3" />
                             {channel.address}
                           </p>
@@ -451,11 +448,11 @@ export default function Channels() {
               <div className="p-4 border-b border-slate-700/50 bg-slate-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Hash className="w-5 h-5 text-sky-400" />
+                    <Hash className="w-5 h-5 text-cyan-500" />
                     <div>
-                      <h3 className="font-bold text-white">{selectedChannel.propertyName}</h3>
+                      <h3 className="font-bold text-white">{selectedChannel.customerName || selectedChannel.propertyName}</h3>
                       <p className="text-xs text-slate-400">
-                        {selectedChannel.customerName} {selectedChannel.address ? `• ${selectedChannel.address}` : ''}
+                        {selectedChannel.address || ''}
                       </p>
                     </div>
                   </div>
