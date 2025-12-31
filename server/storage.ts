@@ -407,19 +407,18 @@ export class DbStorage implements IStorage {
   }
 
   async createThreadMessage(message: InsertThreadMessage): Promise<ThreadMessage> {
-    const insertData = {
+    const result = await db.insert(threadMessages).values({
       threadId: message.threadId,
       authorId: message.authorId,
       authorName: message.authorName,
-      type: message.type || 'update',
-      text: message.text || null,
-      photoUrls: message.photoUrls || [],
-      taggedUserIds: message.taggedUserIds || [],
-      taggedRoles: message.taggedRoles || [],
-      visibility: message.visibility || 'all',
-      pinned: message.pinned || false
-    };
-    const result = await db.insert(threadMessages).values(insertData as any).returning();
+      type: message.type ?? 'update',
+      text: message.text ?? null,
+      photoUrls: message.photoUrls ?? [],
+      taggedUserIds: message.taggedUserIds ?? [],
+      taggedRoles: message.taggedRoles ?? [],
+      visibility: message.visibility ?? 'all',
+      pinned: message.pinned ?? false
+    }).returning();
     
     // Update thread's updatedAt
     await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, message.threadId));
@@ -555,18 +554,17 @@ export class DbStorage implements IStorage {
   }
 
   async createChannelMessage(message: InsertChannelMessage): Promise<ChannelMessage> {
-    const insertData = {
+    const result = await db.insert(channelMessages).values({
       channelId: message.channelId,
       authorId: message.authorId,
       authorName: message.authorName,
       content: message.content,
-      parentMessageId: message.parentMessageId || null,
-      messageType: message.messageType || 'text',
-      attachments: message.attachments || [],
-      mentions: message.mentions || [],
-      isPinned: message.isPinned || false
-    };
-    const result = await db.insert(channelMessages).values(insertData as any).returning();
+      parentMessageId: message.parentMessageId ?? null,
+      messageType: message.messageType ?? 'text',
+      attachments: message.attachments ?? [],
+      mentions: message.mentions ?? [],
+      isPinned: message.isPinned ?? false
+    }).returning();
     
     // Update channel's updatedAt
     await db.update(propertyChannels)
