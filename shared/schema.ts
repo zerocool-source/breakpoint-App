@@ -245,6 +245,107 @@ export type ThreadMessage = typeof threadMessages.$inferSelect;
 export type InsertMessageReadReceipt = z.infer<typeof insertMessageReadReceiptSchema>;
 export type MessageReadReceipt = typeof messageReadReceipts.$inferSelect;
 
+// Property Channels (Slack-style messaging for each property/pool)
+export const propertyChannels = pgTable("property_channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: text("property_id").notNull().unique(), // Pool Brain pool/property ID
+  propertyName: text("property_name").notNull(),
+  customerName: text("customer_name"),
+  address: text("address"),
+  description: text("description"), // Channel topic/description
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Channel Members (who has access to the channel)
+export const channelMembers = pgTable("channel_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull(),
+  userId: text("user_id").notNull(), // Technician ID or user ID
+  userName: text("user_name").notNull(),
+  role: text("role").default("member"), // "owner", "admin", "member"
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Channel Messages
+export const channelMessages = pgTable("channel_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull(),
+  parentMessageId: varchar("parent_message_id"), // For threaded replies
+  authorId: text("author_id").notNull(),
+  authorName: text("author_name").notNull(),
+  content: text("content").notNull(),
+  messageType: text("message_type").default("text"), // "text", "system", "file"
+  attachments: json("attachments").$type<{ name: string; url: string; type: string }[]>().default([]),
+  mentions: json("mentions").$type<string[]>().default([]), // User IDs mentioned
+  isEdited: boolean("is_edited").default(false),
+  isPinned: boolean("is_pinned").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Channel Reactions (emoji reactions on messages)
+export const channelReactions = pgTable("channel_reactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull(),
+  userId: text("user_id").notNull(),
+  emoji: text("emoji").notNull(), // e.g., "👍", "🔥", "✅"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Channel Read Receipts (track unread messages)
+export const channelReads = pgTable("channel_reads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  channelId: varchar("channel_id").notNull(),
+  userId: text("user_id").notNull(),
+  lastReadAt: timestamp("last_read_at").defaultNow(),
+  lastReadMessageId: varchar("last_read_message_id"),
+});
+
+// Insert Schemas for Property Channels
+export const insertPropertyChannelSchema = createInsertSchema(propertyChannels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertChannelMemberSchema = createInsertSchema(channelMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export const insertChannelMessageSchema = createInsertSchema(channelMessages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  isEdited: true,
+});
+
+export const insertChannelReactionSchema = createInsertSchema(channelReactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertChannelReadSchema = createInsertSchema(channelReads).omit({
+  id: true,
+});
+
+// Types for Property Channels
+export type InsertPropertyChannel = z.infer<typeof insertPropertyChannelSchema>;
+export type PropertyChannel = typeof propertyChannels.$inferSelect;
+
+export type InsertChannelMember = z.infer<typeof insertChannelMemberSchema>;
+export type ChannelMember = typeof channelMembers.$inferSelect;
+
+export type InsertChannelMessage = z.infer<typeof insertChannelMessageSchema>;
+export type ChannelMessage = typeof channelMessages.$inferSelect;
+
+export type InsertChannelReaction = z.infer<typeof insertChannelReactionSchema>;
+export type ChannelReaction = typeof channelReactions.$inferSelect;
+
+export type InsertChannelRead = z.infer<typeof insertChannelReadSchema>;
+export type ChannelRead = typeof channelReads.$inferSelect;
+
 // Property Repair Summary (computed, not stored)
 export interface PropertyRepairSummary {
   propertyId: string;

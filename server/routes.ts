@@ -2185,6 +2185,329 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to pin message" });
     }
   });
+
+  // ==================== PROPERTY CHANNELS ====================
+
+  // Get all property channels
+  app.get("/api/channels", async (req: any, res: any) => {
+    try {
+      const channels = await storage.getPropertyChannels();
+      res.json({ channels });
+    } catch (error: any) {
+      console.error("Error fetching channels:", error);
+      res.status(500).json({ error: "Failed to fetch channels" });
+    }
+  });
+
+  // Get single channel by ID
+  app.get("/api/channels/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const channel = await storage.getPropertyChannel(id);
+      if (!channel) {
+        return res.status(404).json({ error: "Channel not found" });
+      }
+      res.json({ channel });
+    } catch (error: any) {
+      console.error("Error fetching channel:", error);
+      res.status(500).json({ error: "Failed to fetch channel" });
+    }
+  });
+
+  // Sync channels from Pool Brain properties
+  app.post("/api/channels/sync", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch pools and customers
+      const [poolsData, customersData] = await Promise.all([
+        client.getCustomerPoolDetails({ limit: 1000 }),
+        client.getCustomerDetail({ limit: 1000 })
+      ]);
+
+      // Build customer map
+      const customerMap: Record<string, any> = {};
+      if (customersData.data && Array.isArray(customersData.data)) {
+        customersData.data.forEach((c: any) => {
+          customerMap[c.RecordID] = c;
+        });
+      }
+
+      // Create/update channels for each pool
+      const pools = poolsData.data || [];
+      const channels = [];
+      
+      for (const pool of pools) {
+        const poolId = pool.RecordID || pool.PoolID;
+        if (!poolId) continue;
+
+        const customerId = pool.CustomerID;
+        const customer = customerMap[customerId];
+        
+        const channel = await storage.upsertPropertyChannel({
+          propertyId: String(poolId),
+          propertyName: pool.PoolName || `Pool ${poolId}`,
+          customerName: customer?.Name || pool.CustomerName || null,
+          address: pool.PoolAddress || customer?.Address || null,
+          description: null,
+        });
+        channels.push(channel);
+      }
+
+      res.json({ success: true, syncedCount: channels.length, channels });
+    } catch (error: any) {
+      console.error("Error syncing channels:", error);
+      res.status(500).json({ error: "Failed to sync channels" });
+    }
+  });
+
+  // Get channel members
+  app.get("/api/channels/:channelId/members", async (req: any, res: any) => {
+    try {
+      const { channelId } = req.params;
+      const members = await storage.getChannelMembers(channelId);
+      res.json({ members });
+    } catch (error: any) {
+      console.error("Error fetching channel members:", error);
+      res.status(500).json({ error: "Failed to fetch channel members" });
+    }
+  });
+
+  // Add channel member
+  app.post("/api/channels/:channelId/members", async (req: any, res: any) => {
+    try {
+      const { channelId } = req.params;
+      const { userId, userName, role } = req.body;
+      
+      if (!userId || !userName) {
+        return res.status(400).json({ error: "userId and userName are required" });
+      }
+      
+      const member = await storage.addChannelMember({
+        channelId,
+        userId,
+        userName,
+        role: role || 'member'
+      });
+      res.json({ member });
+    } catch (error: any) {
+      console.error("Error adding channel member:", error);
+      res.status(500).json({ error: "Failed to add channel member" });
+    }
+  });
+
+  // Remove channel member
+  app.delete("/api/channels/:channelId/members/:userId", async (req: any, res: any) => {
+    try {
+      const { channelId, userId } = req.params;
+      await storage.removeChannelMember(channelId, userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing channel member:", error);
+      res.status(500).json({ error: "Failed to remove channel member" });
+    }
+  });
+
+  // Get channel messages
+  app.get("/api/channels/:channelId/messages", async (req: any, res: any) => {
+    try {
+      const { channelId } = req.params;
+      const { limit, before, parentMessageId } = req.query;
+      
+      const messages = await storage.getChannelMessages(channelId, {
+        limit: limit ? parseInt(limit) : undefined,
+        before: before || undefined,
+        parentMessageId: parentMessageId === 'null' ? null : parentMessageId || undefined
+      });
+      
+      // Get reactions for each message
+      const messagesWithReactions = await Promise.all(
+        messages.map(async (msg) => {
+          const reactions = await storage.getMessageReactions(msg.id);
+          const replyCount = parentMessageId ? 0 : (await storage.getThreadReplies(msg.id)).length;
+          return { ...msg, reactions, replyCount };
+        })
+      );
+      
+      res.json({ messages: messagesWithReactions });
+    } catch (error: any) {
+      console.error("Error fetching channel messages:", error);
+      res.status(500).json({ error: "Failed to fetch channel messages" });
+    }
+  });
+
+  // Create channel message
+  app.post("/api/channels/:channelId/messages", async (req: any, res: any) => {
+    try {
+      const { channelId } = req.params;
+      const { authorId, authorName, content, parentMessageId, messageType, attachments, mentions } = req.body;
+      
+      if (!authorId || !authorName || !content) {
+        return res.status(400).json({ error: "authorId, authorName, and content are required" });
+      }
+      
+      const message = await storage.createChannelMessage({
+        channelId,
+        authorId,
+        authorName,
+        content,
+        parentMessageId: parentMessageId || null,
+        messageType: messageType || 'text',
+        attachments: attachments || [],
+        mentions: mentions || [],
+        isPinned: false
+      });
+      
+      res.json({ message });
+    } catch (error: any) {
+      console.error("Error creating channel message:", error);
+      res.status(500).json({ error: "Failed to create channel message" });
+    }
+  });
+
+  // Update channel message
+  app.patch("/api/channels/messages/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: "content is required" });
+      }
+      
+      const message = await storage.updateChannelMessage(id, content);
+      res.json({ message });
+    } catch (error: any) {
+      console.error("Error updating channel message:", error);
+      res.status(500).json({ error: "Failed to update channel message" });
+    }
+  });
+
+  // Delete channel message
+  app.delete("/api/channels/messages/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteChannelMessage(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting channel message:", error);
+      res.status(500).json({ error: "Failed to delete channel message" });
+    }
+  });
+
+  // Pin/unpin channel message
+  app.post("/api/channels/messages/:id/pin", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { isPinned } = req.body;
+      const message = await storage.pinChannelMessage(id, isPinned);
+      res.json({ message });
+    } catch (error: any) {
+      console.error("Error pinning channel message:", error);
+      res.status(500).json({ error: "Failed to pin channel message" });
+    }
+  });
+
+  // Get thread replies
+  app.get("/api/channels/messages/:messageId/replies", async (req: any, res: any) => {
+    try {
+      const { messageId } = req.params;
+      const replies = await storage.getThreadReplies(messageId);
+      
+      const repliesWithReactions = await Promise.all(
+        replies.map(async (msg) => {
+          const reactions = await storage.getMessageReactions(msg.id);
+          return { ...msg, reactions };
+        })
+      );
+      
+      res.json({ replies: repliesWithReactions });
+    } catch (error: any) {
+      console.error("Error fetching thread replies:", error);
+      res.status(500).json({ error: "Failed to fetch thread replies" });
+    }
+  });
+
+  // Add reaction
+  app.post("/api/channels/messages/:messageId/reactions", async (req: any, res: any) => {
+    try {
+      const { messageId } = req.params;
+      const { userId, emoji } = req.body;
+      
+      if (!userId || !emoji) {
+        return res.status(400).json({ error: "userId and emoji are required" });
+      }
+      
+      const reaction = await storage.addReaction({
+        messageId,
+        userId,
+        emoji
+      });
+      res.json({ reaction });
+    } catch (error: any) {
+      console.error("Error adding reaction:", error);
+      res.status(500).json({ error: "Failed to add reaction" });
+    }
+  });
+
+  // Remove reaction
+  app.delete("/api/channels/messages/:messageId/reactions", async (req: any, res: any) => {
+    try {
+      const { messageId } = req.params;
+      const { userId, emoji } = req.body;
+      
+      if (!userId || !emoji) {
+        return res.status(400).json({ error: "userId and emoji are required" });
+      }
+      
+      await storage.removeReaction(messageId, userId, emoji);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing reaction:", error);
+      res.status(500).json({ error: "Failed to remove reaction" });
+    }
+  });
+
+  // Mark channel as read
+  app.post("/api/channels/:channelId/read", async (req: any, res: any) => {
+    try {
+      const { channelId } = req.params;
+      const { userId, messageId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+      
+      const read = await storage.updateChannelRead(channelId, userId, messageId);
+      res.json({ read });
+    } catch (error: any) {
+      console.error("Error marking channel as read:", error);
+      res.status(500).json({ error: "Failed to mark channel as read" });
+    }
+  });
+
+  // Get unread counts for user
+  app.get("/api/channels/unread/:userId", async (req: any, res: any) => {
+    try {
+      const { userId } = req.params;
+      const unreadCounts = await storage.getUnreadCounts(userId);
+      res.json({ unreadCounts });
+    } catch (error: any) {
+      console.error("Error fetching unread counts:", error);
+      res.status(500).json({ error: "Failed to fetch unread counts" });
+    }
+  });
 }
 
   
