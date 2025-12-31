@@ -17,6 +17,7 @@ import Jobs from "@/pages/Jobs";
 import Payroll from "@/pages/Payroll";
 import PropertyRepairPrices from "@/pages/PropertyRepairPrices";
 import AccountDetails from "@/pages/AccountDetails";
+import Channels from "@/pages/Channels";
 import NotFound from "@/pages/not-found";
 
 function Router() {
