@@ -15,9 +15,11 @@ import {
   type ChannelMessage, type InsertChannelMessage,
   type ChannelReaction, type InsertChannelReaction,
   type ChannelRead, type InsertChannelRead,
+  type Estimate, type InsertEstimate,
   settings, alerts, workflows, customers, chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
-  propertyChannels, channelMembers, channelMessages, channelReactions, channelReads
+  propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
+  estimates
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or } from "drizzle-orm";
@@ -117,6 +119,15 @@ export interface IStorage {
   getChannelRead(channelId: string, userId: string): Promise<ChannelRead | undefined>;
   updateChannelRead(channelId: string, userId: string, messageId?: string): Promise<ChannelRead>;
   getUnreadCounts(userId: string): Promise<{ channelId: string; unreadCount: number }[]>;
+
+  // Estimates
+  getEstimates(status?: string): Promise<Estimate[]>;
+  getEstimate(id: string): Promise<Estimate | undefined>;
+  getEstimatesByProperty(propertyId: string): Promise<Estimate[]>;
+  createEstimate(estimate: InsertEstimate): Promise<Estimate>;
+  updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
+  updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined>;
+  deleteEstimate(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -678,6 +689,67 @@ export class DbStorage implements IStorage {
     }
     
     return unreadCounts;
+  }
+
+  // Estimates
+  async getEstimates(status?: string): Promise<Estimate[]> {
+    if (status) {
+      return db.select().from(estimates)
+        .where(eq(estimates.status, status))
+        .orderBy(desc(estimates.createdAt));
+    }
+    return db.select().from(estimates).orderBy(desc(estimates.createdAt));
+  }
+
+  async getEstimate(id: string): Promise<Estimate | undefined> {
+    const result = await db.select().from(estimates).where(eq(estimates.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getEstimatesByProperty(propertyId: string): Promise<Estimate[]> {
+    return db.select().from(estimates)
+      .where(eq(estimates.propertyId, propertyId))
+      .orderBy(desc(estimates.createdAt));
+  }
+
+  async createEstimate(estimate: InsertEstimate): Promise<Estimate> {
+    const result = await db.insert(estimates).values(estimate as any).returning();
+    return result[0];
+  }
+
+  async updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined> {
+    const result = await db.update(estimates)
+      .set(updates as any)
+      .where(eq(estimates.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined> {
+    const updateData: any = { status, ...extras };
+    
+    // Set appropriate timestamp based on status
+    if (status === 'pending_approval') {
+      updateData.sentForApprovalAt = new Date();
+    } else if (status === 'approved') {
+      updateData.approvedAt = new Date();
+    } else if (status === 'rejected') {
+      updateData.rejectedAt = new Date();
+    } else if (status === 'completed') {
+      updateData.completedAt = new Date();
+    } else if (status === 'invoiced') {
+      updateData.invoicedAt = new Date();
+    }
+    
+    const result = await db.update(estimates)
+      .set(updateData)
+      .where(eq(estimates.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEstimate(id: string): Promise<void> {
+    await db.delete(estimates).where(eq(estimates.id, id));
   }
 }
 

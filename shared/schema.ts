@@ -346,6 +346,70 @@ export type ChannelReaction = typeof channelReactions.$inferSelect;
 export type InsertChannelRead = z.infer<typeof insertChannelReadSchema>;
 export type ChannelRead = typeof channelReads.$inferSelect;
 
+// Estimates (Repair estimates requiring HOA approval)
+export const estimateStatusEnum = ["draft", "pending_approval", "approved", "rejected", "scheduled", "completed", "invoiced"] as const;
+export type EstimateStatus = typeof estimateStatusEnum[number];
+
+export const estimates = pgTable("estimates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  address: text("address"),
+  
+  // Estimate details
+  title: text("title").notNull(),
+  description: text("description"),
+  items: json("items").$type<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    type: "part" | "labor";
+  }[]>().default([]),
+  
+  // Totals
+  partsTotal: integer("parts_total").default(0),
+  laborTotal: integer("labor_total").default(0),
+  totalAmount: integer("total_amount").default(0),
+  
+  // Status tracking
+  status: text("status").notNull().default("draft"),
+  
+  // People involved
+  createdByTechId: text("created_by_tech_id"),
+  createdByTechName: text("created_by_tech_name"),
+  approvedByManagerId: text("approved_by_manager_id"),
+  approvedByManagerName: text("approved_by_manager_name"),
+  
+  // Dates
+  createdAt: timestamp("created_at").defaultNow(),
+  sentForApprovalAt: timestamp("sent_for_approval_at"),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  scheduledDate: timestamp("scheduled_date"),
+  completedAt: timestamp("completed_at"),
+  invoicedAt: timestamp("invoiced_at"),
+  
+  // Notes
+  techNotes: text("tech_notes"),
+  managerNotes: text("manager_notes"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Link to job once scheduled
+  jobId: text("job_id"),
+  invoiceId: text("invoice_id"),
+});
+
+export const insertEstimateSchema = createInsertSchema(estimates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
+export type Estimate = typeof estimates.$inferSelect;
+
 // Property Repair Summary (computed, not stored)
 export interface PropertyRepairSummary {
   propertyId: string;
