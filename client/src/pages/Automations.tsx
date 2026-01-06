@@ -72,12 +72,21 @@ export default function Automations() {
       const to = 'pmtorder@awspoolsupply.com';
       const cc = 'Jesus@awspoolsupply.com';
       
-      // Use Outlook web compose link - works reliably
+      // Try to include body in the URL (may be truncated if too long)
+      // Outlook web compose supports body parameter
       const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
+      
+      // URL encode the body - truncate if too long (URL limit ~2000 chars)
+      const maxBodyLength = 1500;
+      const truncatedBody = emailPart.body.length > maxBodyLength 
+        ? emailPart.body.substring(0, maxBodyLength) + '\n\n[... Paste full email from clipboard ...]'
+        : emailPart.body;
+      
       const params = new URLSearchParams({
         to: to,
         cc: cc,
-        subject: emailPart.subject
+        subject: emailPart.subject,
+        body: truncatedBody
       });
       
       const outlookUrl = `${baseUrl}?${params.toString()}`;
@@ -86,7 +95,9 @@ export default function Automations() {
       
       toast({
         title: "Opening Outlook",
-        description: `Part ${emailPart.partNumber} of ${emailPart.totalParts} - email body copied, paste with Ctrl+V`,
+        description: emailPart.body.length > maxBodyLength 
+          ? `Part ${emailPart.partNumber} - full email copied to clipboard, paste to complete`
+          : `Part ${emailPart.partNumber} of ${emailPart.totalParts} - ready to send!`,
       });
     } catch (error) {
       console.error('Error opening Outlook:', error);
