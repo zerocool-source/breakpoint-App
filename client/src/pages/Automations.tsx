@@ -66,53 +66,38 @@ export default function Automations() {
     setSendingPart(emailPart.partNumber);
     
     try {
-      const response = await fetch('/api/outlook/create-draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject: emailPart.subject,
-          to: 'pmtorder@awspoolsupply.com',
-          cc: 'Jesus@awspoolsupply.com',
-          body: emailPart.body
-        })
+      // Copy the email body to clipboard first
+      await navigator.clipboard.writeText(emailPart.body);
+
+      const to = 'pmtorder@awspoolsupply.com';
+      const cc = 'Jesus@awspoolsupply.com';
+      
+      // Use Outlook web compose link - works reliably
+      const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
+      const params = new URLSearchParams({
+        to: to,
+        cc: cc,
+        subject: emailPart.subject
       });
-
-      const data = await response.json();
-
-      if (data.success && data.webLink) {
-        toast({
-          title: "Draft Created in Outlook",
-          description: `Part ${emailPart.partNumber} of ${emailPart.totalParts} - opening now`,
-        });
-        window.open(data.webLink, '_blank');
-      } else {
-        await fallbackToDeepLink(emailPart);
-      }
+      
+      const outlookUrl = `${baseUrl}?${params.toString()}`;
+      
+      window.open(outlookUrl, '_blank');
+      
+      toast({
+        title: "Opening Outlook",
+        description: `Part ${emailPart.partNumber} of ${emailPart.totalParts} - email body copied, paste with Ctrl+V`,
+      });
     } catch (error) {
-      console.error('Graph API error, falling back:', error);
-      await fallbackToDeepLink(emailPart);
+      console.error('Error opening Outlook:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open Outlook",
+        variant: "destructive"
+      });
     } finally {
       setSendingPart(null);
     }
-  };
-
-  const fallbackToDeepLink = async (emailPart: EmailPart) => {
-    await navigator.clipboard.writeText(emailPart.body);
-
-    const to = 'pmtorder@awspoolsupply.com';
-    const cc = 'Jesus@awspoolsupply.com';
-    
-    const baseUrl = 'https://outlook.office.com/mail/deeplink/compose';
-    const baseParams = `?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(emailPart.subject)}`;
-    
-    const outlookUrl = `${baseUrl}${baseParams}`;
-    
-    window.open(outlookUrl, '_blank');
-    
-    toast({
-      title: "Opening Outlook",
-      description: `Part ${emailPart.partNumber} copied - paste with Cmd+V`,
-    });
   };
 
   const handleSendAllToOutlook = async () => {
