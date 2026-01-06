@@ -1,4 +1,4 @@
-import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap, CalendarClock, DollarSign, Building2, Hash } from "lucide-react";
+import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap, CalendarClock, DollarSign, Building2, Hash, FileText } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_11_02_17_PM_1765350238464.png";
@@ -22,6 +22,7 @@ export function Sidebar() {
     { icon: Wrench, label: "Repairs", href: "/repairs", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: Droplets, label: "Chemicals", href: "/chemicals", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
     { icon: CalendarClock, label: "Jobs", href: "/jobs" },
+    { icon: FileText, label: "Estimates", href: "/estimates" },
     { icon: Building2, label: "Property Repairs", href: "/property-repairs" },
     { icon: Hash, label: "Channels", href: "/channels" },
     { icon: Sparkles, label: "Ace Prime", href: "/intelligence", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },

@@ -18,6 +18,7 @@ import Payroll from "@/pages/Payroll";
 import PropertyRepairPrices from "@/pages/PropertyRepairPrices";
 import AccountDetails from "@/pages/AccountDetails";
 import Channels from "@/pages/Channels";
+import Estimates from "@/pages/Estimates";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/property-repairs" component={PropertyRepairPrices} />
       <Route path="/accounts/:accountId" component={AccountDetails} />
       <Route path="/channels" component={Channels} />
+      <Route path="/estimates" component={Estimates} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
