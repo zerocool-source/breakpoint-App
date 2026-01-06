@@ -82,14 +82,9 @@ export default function Automations() {
         ? emailPart.body.substring(0, maxBodyLength) + '\n\n[... Paste full email from clipboard ...]'
         : emailPart.body;
       
-      const params = new URLSearchParams({
-        to: to,
-        cc: cc,
-        subject: emailPart.subject,
-        body: truncatedBody
-      });
-      
-      const outlookUrl = `${baseUrl}?${params.toString()}`;
+      // Use encodeURIComponent instead of URLSearchParams to get %20 for spaces
+      // URLSearchParams uses + for spaces which Outlook displays literally
+      const outlookUrl = `${baseUrl}?to=${encodeURIComponent(to)}&cc=${encodeURIComponent(cc)}&subject=${encodeURIComponent(emailPart.subject)}&body=${encodeURIComponent(truncatedBody)}`;
       
       window.open(outlookUrl, '_blank');
       
