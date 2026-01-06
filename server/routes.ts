@@ -448,7 +448,7 @@ function setupRoutes(app: any) {
         });
       }
 
-      // Process alerts and filter for chemical-related ones
+      // Process alerts and filter for CHEMICAL ORDERING alerts
       const chemicalOrders: any[] = [];
       
       if (alertsData.data && Array.isArray(alertsData.data)) {
@@ -458,26 +458,42 @@ function setupRoutes(app: any) {
           let customerId = pbAlert.CustomerID || poolToCustomerMap[waterBodyId];
           const customer = customerId ? customerMap[customerId] : undefined;
 
-          // Parse alert message
+          // Check for CHEMICAL ORDERING alert type
+          let isChemicalOrderingAlert = false;
+          let techNote = "";
           let message = "";
           const messages: string[] = [];
           
           if (pbAlert.AlertCategories && Array.isArray(pbAlert.AlertCategories)) {
             pbAlert.AlertCategories.forEach((cat: any) => {
+              // Check for CHEMICAL ORDERING category
+              const catName = (cat.CategoryName || cat.AlertCategory || cat.Name || "").toUpperCase();
+              if (catName.includes("CHEMICAL ORDERING") || catName.includes("CHEMICAL ORDER")) {
+                isChemicalOrderingAlert = true;
+              }
+              
               if (cat.IssueReport && Array.isArray(cat.IssueReport)) {
                 cat.IssueReport.forEach((report: any) => {
                   const reportText = report.IssueReports || report.AlertName || "";
                   if (reportText) messages.push(reportText);
+                  
+                  // Check if this report is CHEMICAL ORDERING
+                  const reportName = (report.AlertName || "").toUpperCase();
+                  if (reportName.includes("CHEMICAL ORDERING") || reportName.includes("CHEMICAL ORDER")) {
+                    isChemicalOrderingAlert = true;
+                  }
                 });
               }
             });
           }
           
-          message = messages.join(" | ");
+          // Get Tech Note from the alert
+          techNote = pbAlert.TechNote || pbAlert.techNote || pbAlert.TechNotes || pbAlert.Notes || pbAlert.notes || "";
+          message = techNote || messages.join(" | ");
 
-          // Check if this is a chemical/algae/repair alert
+          // Also check message content for chemical keywords as fallback
           const msgLower = message.toLowerCase();
-          const isChemicalAlert = 
+          const hasChemicalKeywords = 
             msgLower.includes("chlorine") ||
             msgLower.includes("acid") ||
             msgLower.includes("algae") ||
@@ -486,9 +502,15 @@ function setupRoutes(app: any) {
             msgLower.includes("carboy") ||
             msgLower.includes("chemical") ||
             msgLower.includes("bleach") ||
-            msgLower.includes("requesting");
+            msgLower.includes("bicarb") ||
+            msgLower.includes("gal") ||
+            msgLower.includes("bags") ||
+            msgLower.includes("neutralizer");
 
-          if (isChemicalAlert && message) {
+          // Include if it's a CHEMICAL ORDERING alert OR has chemical keywords
+          const shouldInclude = isChemicalOrderingAlert || (hasChemicalKeywords && message);
+
+          if (shouldInclude && message) {
             // ONLY use PRIMARY addresses OR when PRIMARY and BILLING are shared (same location)
             let address = "";
             let primaryAddr: any = null;
