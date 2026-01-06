@@ -2597,6 +2597,106 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to fetch unread counts" });
     }
   });
+
+  // ==================== ESTIMATES ====================
+
+  // Get all estimates (optionally filter by status)
+  app.get("/api/estimates", async (req: any, res: any) => {
+    try {
+      const { status } = req.query;
+      const estimates = await storage.getEstimates(status);
+      res.json({ estimates });
+    } catch (error: any) {
+      console.error("Error fetching estimates:", error);
+      res.status(500).json({ error: "Failed to fetch estimates" });
+    }
+  });
+
+  // Get single estimate
+  app.get("/api/estimates/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const estimate = await storage.getEstimate(id);
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error fetching estimate:", error);
+      res.status(500).json({ error: "Failed to fetch estimate" });
+    }
+  });
+
+  // Get estimates by property
+  app.get("/api/estimates/property/:propertyId", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const estimates = await storage.getEstimatesByProperty(propertyId);
+      res.json({ estimates });
+    } catch (error: any) {
+      console.error("Error fetching property estimates:", error);
+      res.status(500).json({ error: "Failed to fetch property estimates" });
+    }
+  });
+
+  // Create new estimate
+  app.post("/api/estimates", async (req: any, res: any) => {
+    try {
+      const estimate = await storage.createEstimate(req.body);
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error creating estimate:", error);
+      res.status(500).json({ error: "Failed to create estimate" });
+    }
+  });
+
+  // Update estimate
+  app.put("/api/estimates/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const estimate = await storage.updateEstimate(id, req.body);
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error updating estimate:", error);
+      res.status(500).json({ error: "Failed to update estimate" });
+    }
+  });
+
+  // Update estimate status
+  app.patch("/api/estimates/:id/status", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { status, ...extras } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+      
+      const estimate = await storage.updateEstimateStatus(id, status, extras);
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error updating estimate status:", error);
+      res.status(500).json({ error: "Failed to update estimate status" });
+    }
+  });
+
+  // Delete estimate
+  app.delete("/api/estimates/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteEstimate(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting estimate:", error);
+      res.status(500).json({ error: "Failed to delete estimate" });
+    }
+  });
 }
 
   
