@@ -3168,6 +3168,38 @@ function setupRoutes(app: any) {
 
   // ==================== ROUTES (Scheduling) ====================
 
+  // Assign occurrence to route
+  app.post("/api/occurrences/:id/assign", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { routeId, technicianId } = req.body;
+      
+      if (!routeId) {
+        return res.status(400).json({ error: "routeId is required" });
+      }
+      
+      // Verify occurrence exists
+      const occurrence = await storage.getServiceOccurrence(id);
+      if (!occurrence) {
+        return res.status(404).json({ error: "Occurrence not found" });
+      }
+      
+      // Verify route exists
+      const route = await storage.getRoute(routeId);
+      if (!route) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+      
+      // Assign the occurrence to the route
+      const updated = await storage.assignOccurrenceToRoute(id, routeId, technicianId || route.technicianId);
+      
+      res.json({ occurrence: updated });
+    } catch (error: any) {
+      console.error("Error assigning occurrence to route:", error);
+      res.status(500).json({ error: "Failed to assign occurrence to route" });
+    }
+  });
+
   // Get unscheduled service occurrences by date range
   app.get("/api/unscheduled", async (req: any, res: any) => {
     try {

@@ -307,6 +307,23 @@ export default function Scheduling() {
     },
   });
 
+  const assignToRouteMutation = useMutation({
+    mutationFn: async ({ occurrenceId, routeId }: { occurrenceId: string; routeId: string }) => {
+      const response = await fetch(`/api/occurrences/${occurrenceId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ routeId }),
+      });
+      if (!response.ok) throw new Error("Failed to assign to route");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["unscheduled", dateRange.start, dateRange.end] });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+      toast({ title: "Assigned to Route", description: "Visit has been scheduled." });
+    },
+  });
+
   const importFromPoolBrainMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/routes/import-from-poolbrain", {
@@ -532,17 +549,57 @@ export default function Scheduling() {
                         {occurrences.map((occ) => (
                           <div 
                             key={occ.id} 
-                            className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-slate-50"
+                            className="flex items-center gap-2 text-sm py-2 px-2 rounded hover:bg-slate-50"
                             data-testid={`unscheduled-visit-${occ.id}`}
                           >
-                            <MapPin className="h-3 w-3 text-amber-500" />
-                            <span className="font-medium">{occ.customerName || occ.propertyName}</span>
-                            {occ.propertyName && occ.customerName && (
-                              <span className="text-slate-500">– {occ.propertyName}</span>
-                            )}
-                            {occ.address && (
-                              <span className="text-slate-400 text-xs ml-auto">{occ.address}</span>
-                            )}
+                            <MapPin className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium">{occ.customerName || occ.propertyName}</span>
+                              {occ.propertyName && occ.customerName && (
+                                <span className="text-slate-500 ml-1">– {occ.propertyName}</span>
+                              )}
+                              {occ.address && (
+                                <span className="text-slate-400 text-xs block">{occ.address}</span>
+                              )}
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-xs h-7 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                  data-testid={`assign-route-btn-${occ.id}`}
+                                >
+                                  Assign to Route
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {allRoutes.length === 0 ? (
+                                  <DropdownMenuItem disabled>
+                                    No routes available
+                                  </DropdownMenuItem>
+                                ) : (
+                                  allRoutes.map((route) => (
+                                    <DropdownMenuItem
+                                      key={route.id}
+                                      onClick={() => assignToRouteMutation.mutate({ 
+                                        occurrenceId: occ.id, 
+                                        routeId: route.id 
+                                      })}
+                                    >
+                                      <div 
+                                        className="w-3 h-3 rounded-full mr-2" 
+                                        style={{ backgroundColor: route.color }} 
+                                      />
+                                      {route.name}
+                                      <span className="text-slate-400 ml-2 text-xs">
+                                        {DAYS.find(d => d.value === route.dayOfWeek)?.short}
+                                      </span>
+                                    </DropdownMenuItem>
+                                  ))
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         ))}
                       </div>

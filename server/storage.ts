@@ -91,9 +91,11 @@ export interface IStorage {
   getServiceOccurrencesByProperty(propertyId: string): Promise<ServiceOccurrence[]>;
   getServiceOccurrencesBySchedule(scheduleId: string): Promise<ServiceOccurrence[]>;
   getUnscheduledOccurrences(startDate: Date, endDate: Date): Promise<ServiceOccurrence[]>;
+  getServiceOccurrence(id: string): Promise<ServiceOccurrence | undefined>;
   createServiceOccurrence(occurrence: InsertServiceOccurrence): Promise<ServiceOccurrence>;
   bulkCreateServiceOccurrences(occurrences: InsertServiceOccurrence[]): Promise<ServiceOccurrence[]>;
   updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined>;
+  assignOccurrenceToRoute(id: string, routeId: string, technicianId?: string): Promise<ServiceOccurrence | undefined>;
 
   // Pools
   getPoolsByCustomer(customerId: string): Promise<Pool[]>;
@@ -477,6 +479,23 @@ export class DbStorage implements IStorage {
   async updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined> {
     const result = await db.update(serviceOccurrences)
       .set({ status })
+      .where(eq(serviceOccurrences.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getServiceOccurrence(id: string): Promise<ServiceOccurrence | undefined> {
+    const result = await db.select().from(serviceOccurrences).where(eq(serviceOccurrences.id, id)).limit(1);
+    return result[0];
+  }
+
+  async assignOccurrenceToRoute(id: string, routeId: string, technicianId?: string): Promise<ServiceOccurrence | undefined> {
+    const result = await db.update(serviceOccurrences)
+      .set({ 
+        status: "scheduled", 
+        routeId,
+        technicianId: technicianId || null
+      })
       .where(eq(serviceOccurrences.id, id))
       .returning();
     return result[0];
