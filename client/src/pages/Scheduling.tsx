@@ -441,6 +441,62 @@ export default function Scheduling() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Collapsible Unscheduled Queue */}
+            {unscheduledOccurrences.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mr-2" />
+                    Unscheduled
+                    <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{unscheduledOccurrences.length}</span>
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="absolute right-4 top-20 z-50 w-80 bg-white rounded-lg shadow-xl border border-amber-200 p-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2">
+                    {Object.entries(unscheduledByDay).sort().map(([dateKey, occurrences]) => {
+                      const date = new Date(dateKey + "T00:00:00");
+                      const dayName = DAYS[date.getDay()].short;
+                      const formattedDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+                      return (
+                        <div key={dateKey} className="border-b border-slate-100 pb-2 last:border-0">
+                          <div className="text-xs font-medium text-slate-600 mb-1">{formattedDate} {dayName}</div>
+                          {occurrences.map((occ) => (
+                            <div key={occ.id} className="flex items-center gap-2 text-xs py-1 hover:bg-slate-50 rounded px-1">
+                              <MapPin className="h-3 w-3 text-amber-500" />
+                              <span className="flex-1 truncate font-medium">{occ.customerName || occ.propertyName}</span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-5 px-1 text-blue-600">
+                                    <ChevronDown className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  {allRoutes.length === 0 ? (
+                                    <DropdownMenuItem disabled>No routes</DropdownMenuItem>
+                                  ) : (
+                                    allRoutes.map((route) => (
+                                      <DropdownMenuItem
+                                        key={route.id}
+                                        onClick={() => assignToRouteMutation.mutate({ occurrenceId: occ.id, routeId: route.id })}
+                                      >
+                                        <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: route.color }} />
+                                        {route.name}
+                                      </DropdownMenuItem>
+                                    ))
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+            
             <div className="flex items-center bg-white rounded-lg border p-1">
               <Button
                 variant={viewMode === "list" ? "default" : "ghost"}
@@ -524,303 +580,132 @@ export default function Scheduling() {
           </div>
         </div>
 
-        {/* Unscheduled Queue Section */}
-        {Object.keys(unscheduledByDay).length > 0 && (
-          <Card className="bg-amber-50 border-amber-200 max-w-md">
-            <CardContent className="p-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                <h3 className="font-semibold text-amber-800 text-sm">Unscheduled</h3>
-                <span className="text-xs text-amber-600">({unscheduledOccurrences.length})</span>
-              </div>
-              <div className="space-y-1">
-                {Object.entries(unscheduledByDay).sort().map(([dateKey, occurrences]) => {
-                  const date = new Date(dateKey + "T00:00:00");
-                  const dayName = DAYS[date.getDay()].short;
-                  const formattedDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
-                  
-                  return (
-                    <div key={dateKey} className="bg-white rounded p-2 border border-amber-100">
-                      <div className="flex items-center gap-1 mb-1 text-xs text-slate-600">
-                        <span className="font-medium">{formattedDate}</span>
-                        <span>{dayName}</span>
-                      </div>
-                      <div className="space-y-1">
-                        {occurrences.map((occ) => (
-                          <div 
-                            key={occ.id} 
-                            className="flex items-center gap-2 text-xs py-1 px-1 rounded hover:bg-slate-50"
-                            data-testid={`unscheduled-visit-${occ.id}`}
-                          >
-                            <MapPin className="h-3 w-3 text-amber-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0 truncate">
-                              <span className="font-medium">{occ.customerName || occ.propertyName}</span>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost" 
-                                  className="text-xs h-6 px-2 text-blue-600 hover:bg-blue-50"
-                                  data-testid={`assign-route-btn-${occ.id}`}
-                                >
-                                  <ChevronDown className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {allRoutes.length === 0 ? (
-                                  <DropdownMenuItem disabled>
-                                    No routes available
-                                  </DropdownMenuItem>
-                                ) : (
-                                  allRoutes.map((route) => (
-                                    <DropdownMenuItem
-                                      key={route.id}
-                                      onClick={() => assignToRouteMutation.mutate({ 
-                                        occurrenceId: occ.id, 
-                                        routeId: route.id 
-                                      })}
-                                    >
-                                      <div 
-                                        className="w-3 h-3 rounded-full mr-2" 
-                                        style={{ backgroundColor: route.color }} 
-                                      />
-                                      {route.name}
-                                      <span className="text-slate-400 ml-2 text-xs">
-                                        {DAYS.find(d => d.value === route.dayOfWeek)?.short}
-                                      </span>
-                                    </DropdownMenuItem>
-                                  ))
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {viewMode === "list" ? (
-          <ScrollArea className="h-[calc(100vh-220px)]">
-            <div className="space-y-3 pr-4">
+          <ScrollArea className="h-[calc(100vh-180px)]">
+            {/* Day Columns Layout */}
+            <div className="flex gap-3 pb-4">
+              {workDays.map((day) => {
+                const dayInfo = DAYS.find(d => d.value === day)!;
+                const dateStr = getDateForDay(day);
+                const dayRoutesForColumn = routesByDay[day] || [];
+                
+                return (
+                  <div key={day} className="flex-shrink-0 w-64">
+                    {/* Day Header */}
+                    <div className="bg-blue-600 text-white rounded-t-lg px-3 py-2 text-center">
+                      <div className="text-sm font-semibold">{dateStr} {dayInfo.label}</div>
+                    </div>
+                    
+                    {/* Technician Route Cards */}
+                    <div className="bg-slate-100 rounded-b-lg p-2 min-h-[200px] space-y-2">
+                      {dayRoutesForColumn.length === 0 ? (
+                        <div className="text-center py-4 text-slate-400 text-xs">
+                          No routes
+                        </div>
+                      ) : (
+                        dayRoutesForColumn.map((route) => {
+                          const isExpanded = expandedRoutes.has(route.id);
+                          const initials = getInitials(route.technicianName || route.name);
+                          const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
+                          const stopCount = route.stops.length;
+                          const miles = route.estimatedMiles || 0;
+                          const driveTime = route.estimatedDriveTime || 0;
 
-              {dayRoutes.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <Truck className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No routes for {DAYS.find(d => d.value === selectedDay)?.label}</p>
-                  <p className="text-sm mt-1">Click "Import from Pool Brain" or "Add Route" to get started</p>
-                </div>
-              ) : (
-                dayRoutes.map((route) => {
-                  const isExpanded = expandedRoutes.has(route.id);
-                  const initials = getInitials(route.technicianName || route.name);
-                  const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
-                  const stopCount = route.stops.length;
-                  const miles = route.estimatedMiles || 0;
-                  const driveTime = route.estimatedDriveTime || 0;
-                  const dayShort = DAYS.find(d => d.value === route.dayOfWeek)?.short || "---";
-
-                  return (
-                    <Card key={route.id} className="overflow-hidden max-w-md" data-testid={`route-card-${route.id}`}>
-                      <div 
-                        className="h-1"
-                        style={{ backgroundColor: route.color }}
-                      />
-                      
-                      <div 
-                        className="px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors"
-                        onClick={() => toggleRouteExpanded(route.id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-slate-400" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-slate-400" />
-                            )}
-                            <div 
-                              className="w-9 h-9 rounded-md flex items-center justify-center text-white font-bold text-sm"
-                              style={{ backgroundColor: route.color }}
+                          return (
+                            <Card 
+                              key={route.id} 
+                              className="overflow-hidden bg-white cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => toggleRouteExpanded(route.id)}
+                              data-testid={`route-card-${route.id}`}
                             >
-                              {initials}
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-slate-900 text-sm">{route.name}</h3>
-                            <p className="text-xs text-slate-500">{route.technicianName || "Unassigned"}</p>
-                          </div>
-
-                          <div className="flex items-center gap-1 text-amber-500">
-                            <MapPin className="h-3 w-3" />
-                            <span className="font-bold text-slate-700 text-sm">{stopCount}</span>
-                          </div>
-
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedRoute(route);
-                                  setNewRoute({
-                                    name: route.name,
-                                    color: route.color,
-                                    technicianName: route.technicianName || "",
-                                    dayOfWeek: route.dayOfWeek,
-                                    date: new Date().toISOString().split("T")[0],
-                                  });
-                                  setShowEditRouteDialog(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedRoute(route);
-                                  setShowCreateStopDialog(true);
-                                }}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Stop
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (confirm("Delete this route?")) {
-                                    deleteRouteMutation.mutate(route.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500 ml-11">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime(totalTime)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Navigation className="h-3 w-3" />
-                            {miles.toFixed(2)}mi
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Timer className="h-3 w-3" />
-                            {formatTime(driveTime)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isExpanded && (
-                        <div className="border-t bg-slate-50">
-                          <div className="p-3 border-b bg-blue-600 flex items-center justify-between">
-                            <Button size="sm" variant="secondary" className="text-blue-600">
-                              Optimize Route
-                            </Button>
-                          </div>
-
-                          <div className="p-3 bg-white border-b">
-                            <div className="flex items-center gap-2 mb-3">
-                              <h4 className="font-semibold text-slate-800">Route Stops</h4>
-                              <div className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center">?</div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                <Input 
-                                  placeholder="customer name or address"
-                                  className="pl-9 h-9"
-                                  data-testid={`route-${route.id}-stop-search`}
-                                />
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-slate-600">Select all</span>
-                                <Checkbox data-testid={`route-${route.id}-select-all`} />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="divide-y border-l-4" style={{ borderLeftColor: route.color }}>
-                            {route.stops.map((stop, idx) => (
-                              <div 
-                                key={stop.id} 
-                                className="p-3 bg-white hover:bg-slate-50 flex items-start gap-3"
-                                data-testid={`route-stop-${stop.id}`}
-                              >
-                                <div className="flex items-center gap-2 mt-1">
-                                  <GripVertical className="h-5 w-5 text-slate-300 cursor-grab" />
-                                  <div className="flex flex-col items-center">
-                                    <MapPin className="h-4 w-4 text-slate-500" />
-                                    <span className="text-xs font-bold text-slate-600 mt-0.5">{idx + 1}</span>
+                              <div className="p-2">
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-xs"
+                                    style={{ backgroundColor: route.color }}
+                                  >
+                                    {initials}
                                   </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-semibold text-slate-900 text-xs truncate">{route.name}</h3>
+                                    <p className="text-[10px] text-slate-500">{route.technicianName || "Unassigned"}</p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 text-amber-500" />
+                                    <span className="font-bold text-slate-700 text-xs">{stopCount}</span>
+                                  </div>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedRoute(route);
+                                          setNewRoute({
+                                            name: route.name,
+                                            color: route.color,
+                                            technicianName: route.technicianName || "",
+                                            dayOfWeek: route.dayOfWeek,
+                                            date: new Date().toISOString().split("T")[0],
+                                          });
+                                          setShowEditRouteDialog(true);
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedRoute(route);
+                                          setShowCreateStopDialog(true);
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Stop
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (confirm("Delete this route?")) {
+                                            deleteRouteMutation.mutate(route.id);
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
-                                
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-blue-600 hover:underline cursor-pointer">
-                                    {stop.customerName || stop.propertyName}
-                                  </p>
-                                  <p className="text-sm text-slate-600">
-                                    {stop.address}
-                                  </p>
-                                  <p className="text-sm text-slate-500">
-                                    {stop.city && `${stop.city}, `}{stop.state} {stop.zip}
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm font-bold text-blue-700">
-                                    {dayShort}
+                                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                                  <span className="flex items-center gap-0.5">
+                                    <Clock className="h-2.5 w-2.5" />
+                                    {formatTime(totalTime)}
                                   </span>
-                                  <Checkbox data-testid={`stop-${stop.id}-select`} />
+                                  <span className="flex items-center gap-0.5">
+                                    <Navigation className="h-2.5 w-2.5" />
+                                    {miles.toFixed(1)}mi
+                                  </span>
+                                  <span className="flex items-center gap-0.5">
+                                    <Timer className="h-2.5 w-2.5" />
+                                    {formatTime(driveTime)}
+                                  </span>
                                 </div>
                               </div>
-                            ))}
-                          </div>
-
-                          {route.stops.length === 0 && (
-                            <div className="p-6 text-center text-slate-400 bg-white">
-                              <p>No stops on this route</p>
-                              <Button
-                                variant="link"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedRoute(route);
-                                  setShowCreateStopDialog(true);
-                                }}
-                              >
-                                Add first stop
-                              </Button>
-                            </div>
-                          )}
-
-                          <div className="border-t bg-white p-3">
-                            <div className="border rounded-lg p-3 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
-                              <span className="text-slate-700 font-medium">Unscheduled</span>
-                              <span className="text-slate-500">0 Route Stops</span>
-                            </div>
-                          </div>
-                        </div>
+                            </Card>
+                          );
+                        })
                       )}
-                    </Card>
-                  );
-                })
-              )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </ScrollArea>
         ) : (
