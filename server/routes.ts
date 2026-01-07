@@ -3295,8 +3295,12 @@ function setupRoutes(app: any) {
               routeId: route.id,
               propertyId: property?.id || customerId,
               propertyName: property?.addressLine1 || customer.name,
+              customerId: customer.externalId || customer.id,
               customerName: customer.name,
-              address: property ? `${property.addressLine1 || ""}, ${property.city || ""} ${property.state || ""} ${property.zip || ""}`.trim() : customer.address,
+              address: property ? `${property.addressLine1 || ""}, ${property.city || ""} ${property.state || ""} ${property.zip || ""}`.trim() : customer.address || "",
+              city: property?.city || "",
+              state: property?.state || "",
+              zip: property?.zip || "",
               sortOrder: i + 1,
               estimatedTime: 30,
             });

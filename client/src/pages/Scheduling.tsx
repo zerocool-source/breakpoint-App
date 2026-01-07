@@ -15,7 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   Plus, MapPin, Clock, Truck, 
   Trash2, Edit, GripVertical, Lock, Unlock, MoreVertical, 
-  Download, Loader2, Map, List,
+  Download, Loader2, Map, List, Search,
   Navigation, Timer, ChevronDown, ChevronRight, Play
 } from "lucide-react";
 import {
@@ -33,8 +33,12 @@ interface RouteStop {
   routeId: string;
   propertyId: string;
   propertyName: string;
+  customerId: string | null;
   customerName: string | null;
   address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   poolName: string | null;
   jobType: string | null;
   status: string | null;
@@ -626,6 +630,7 @@ export default function Scheduling() {
                                     color: route.color,
                                     technicianName: route.technicianName || "",
                                     dayOfWeek: route.dayOfWeek,
+                                    date: new Date().toISOString().split("T")[0],
                                   });
                                   setShowEditRouteDialog(true);
                                 }}
