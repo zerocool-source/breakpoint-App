@@ -526,51 +526,45 @@ export default function Scheduling() {
 
         {/* Unscheduled Queue Section */}
         {Object.keys(unscheduledByDay).length > 0 && (
-          <Card className="bg-amber-50 border-amber-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
-                <h3 className="font-semibold text-amber-800">Unscheduled Queue</h3>
-                <span className="text-sm text-amber-600">({unscheduledOccurrences.length} visits)</span>
+          <Card className="bg-amber-50 border-amber-200 max-w-md">
+            <CardContent className="p-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                <h3 className="font-semibold text-amber-800 text-sm">Unscheduled</h3>
+                <span className="text-xs text-amber-600">({unscheduledOccurrences.length})</span>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-1">
                 {Object.entries(unscheduledByDay).sort().map(([dateKey, occurrences]) => {
                   const date = new Date(dateKey + "T00:00:00");
                   const dayName = DAYS[date.getDay()].short;
                   const formattedDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
                   
                   return (
-                    <div key={dateKey} className="bg-white rounded-lg p-3 border border-amber-100">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-slate-700">{formattedDate}</span>
-                        <span className="text-slate-500">{dayName}</span>
+                    <div key={dateKey} className="bg-white rounded p-2 border border-amber-100">
+                      <div className="flex items-center gap-1 mb-1 text-xs text-slate-600">
+                        <span className="font-medium">{formattedDate}</span>
+                        <span>{dayName}</span>
                       </div>
                       <div className="space-y-1">
                         {occurrences.map((occ) => (
                           <div 
                             key={occ.id} 
-                            className="flex items-center gap-2 text-sm py-2 px-2 rounded hover:bg-slate-50"
+                            className="flex items-center gap-2 text-xs py-1 px-1 rounded hover:bg-slate-50"
                             data-testid={`unscheduled-visit-${occ.id}`}
                           >
                             <MapPin className="h-3 w-3 text-amber-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 truncate">
                               <span className="font-medium">{occ.customerName || occ.propertyName}</span>
-                              {occ.propertyName && occ.customerName && (
-                                <span className="text-slate-500 ml-1">– {occ.propertyName}</span>
-                              )}
-                              {occ.address && (
-                                <span className="text-slate-400 text-xs block">{occ.address}</span>
-                              )}
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button 
                                   size="sm" 
-                                  variant="outline" 
-                                  className="text-xs h-7 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                  variant="ghost" 
+                                  className="text-xs h-6 px-2 text-blue-600 hover:bg-blue-50"
                                   data-testid={`assign-route-btn-${occ.id}`}
                                 >
-                                  Assign to Route
+                                  <ChevronDown className="h-3 w-3" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
