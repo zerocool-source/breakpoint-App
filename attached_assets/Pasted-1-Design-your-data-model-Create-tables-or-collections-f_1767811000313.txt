@@ -1,0 +1,130 @@
+1. Design your data model
+
+Create tables or collections for the core entities:
+
+Customer: id, name, status (e.g., Active, Inactive), tags (array), notes.
+
+Property (Location): id, customerId (foreign key), label (e.g., Billing, Primary), street, city, state, zip, routeScheduleId (nullable until a schedule is set), defaultServiceLevel (optional).
+
+Contact: id, customerId, name, email, phone, type (e.g. Primary, Billing).
+
+Tag: (if you want tags reusable across customers) id, name, color.
+
+You can adjust or extend fields later (e.g., add service-level preferences, billing details).
+
+Tip: Using an ORM like Prisma in a Node/Express backend makes it easy to define relations and migrations.
+
+2. Set up the database and API
+
+Backend scaffolding
+If you’re starting from scratch, spin up an Express.js server in Replit. Define endpoints for CRUD operations:
+
+POST /customers – create new customer
+
+GET /customers – list all customers
+
+GET /customers/:id – fetch one customer (including their properties/contacts)
+
+PUT /customers/:id – update customer
+
+DELETE /customers/:id – remove customer (or archive)
+
+Similar endpoints for /properties, /contacts, and /tags.
+
+Database schema
+Use SQLite (or Postgres) for persistence. Create tables based on the data model above. With Prisma, your schema might look like:
+
+model Customer {
+  id      Int      @id @default(autoincrement())
+  name    String
+  status  String   @default("Active")
+  notes   String?
+  tags    Tag[]    @relation("CustomerTags", fields: [id], references: [id])
+  properties Property[]
+  contacts  Contact[]
+}
+
+model Property {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  label      String
+  street     String
+  city       String
+  state      String
+  zip        String
+  routeScheduleId Int?
+  defaultServiceLevel String?
+  customer   Customer @relation(fields: [customerId], references: [id])
+}
+
+model Contact {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  name       String
+  email      String
+  phone      String?
+  type       String
+  customer   Customer @relation(fields: [customerId], references: [id])
+}
+
+model Tag {
+  id      Int      @id @default(autoincrement())
+  name    String   @unique
+  color   String?
+  customers Customer[] @relation("CustomerTags")
+}
+
+
+This schema sets up relations so each customer can have multiple properties, contacts, and tags.
+
+3. Build the frontend (React)
+
+Customer list page
+
+Fetch and display all customers in a table or card view.
+
+Include a search bar to filter by name, address, or tag.
+
+Add a button (e.g., “New Customer”) to open a modal or route to a form for creating a customer.
+
+Customer detail / edit page
+
+Display primary info (name, status, tags) with edit functionality.
+
+Show tabs for Properties, Contacts, Billing, etc.
+
+In the Properties tab, list all addresses for this customer with labels (Billing, Primary). Include “Add Address” to open a form.
+
+In the Contacts tab, list contacts with roles. Include “Add Contact.”
+
+Include route schedule status in the header (gray/green icon) so users know whether a property is scheduled (this will be implemented once scheduling is built).
+
+Forms & validation
+
+Create separate components for adding/editing customers, addresses, contacts.
+
+Validate required fields (e.g., name, address fields) and provide feedback (e.g., highlight missing fields in red).
+
+Tag management
+
+Allow users to add/remove tags on a customer. Show selected tags visually (colored labels).
+
+Optionally build a simple tag management page to create new tags (name and color), so all tags remain consistent across customers.
+
+4. Connect the dots
+
+Calling your API
+
+Use fetch or a library like Axios in React to call your backend endpoints.
+
+Update the UI based on API responses and handle loading/error states gracefully.
+
+Component hierarchy
+
+Keep state for the customer list and details pages at an appropriate level (e.g., using React Context or a state management library like Redux or Zustand if the app grows).
+
+Reuse form components across create/edit flows.
+
+Consider initial seed data
+
+To see how things work early on, seed a few customers and properties in your database. It will make it easier to develop the UI.

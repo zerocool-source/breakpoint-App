@@ -1380,6 +1380,127 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Create new customer
+  app.post("/api/customers", async (req: any, res: any) => {
+    try {
+      const customerData = req.body;
+      const customer = await storage.createCustomer(customerData);
+      res.json({ success: true, customer });
+    } catch (error: any) {
+      console.error("Error creating customer:", error);
+      res.status(500).json({ error: "Failed to create customer", message: error.message });
+    }
+  });
+
+  // Update customer
+  app.patch("/api/customers/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const customer = await storage.updateCustomer(id, updates);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      res.json({ success: true, customer });
+    } catch (error: any) {
+      console.error("Error updating customer:", error);
+      res.status(500).json({ error: "Failed to update customer", message: error.message });
+    }
+  });
+
+  // Delete customer
+  app.delete("/api/customers/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCustomer(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting customer:", error);
+      res.status(500).json({ error: "Failed to delete customer", message: error.message });
+    }
+  });
+
+  // Get customer properties (addresses)
+  app.get("/api/customers/:customerId/properties", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const addresses = await storage.getCustomerAddresses(customerId);
+      const properties = addresses.map(addr => ({
+        id: addr.id,
+        customerId: addr.customerId,
+        label: addr.addressType || "Primary",
+        street: addr.addressLine1 || "",
+        city: addr.city,
+        state: addr.state,
+        zip: addr.zip,
+        routeScheduleId: null,
+        serviceLevel: null,
+      }));
+      res.json({ properties });
+    } catch (error: any) {
+      console.error("Error fetching customer properties:", error);
+      res.status(500).json({ error: "Failed to fetch properties", message: error.message });
+    }
+  });
+
+  // Add customer property
+  app.post("/api/customers/:customerId/properties", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const { label, street, city, state, zip, serviceLevel } = req.body;
+      const address = await storage.createCustomerAddress({
+        customerId,
+        addressType: label || "Primary",
+        addressLine1: street,
+        city,
+        state,
+        zip,
+      });
+      res.json({ success: true, property: address });
+    } catch (error: any) {
+      console.error("Error creating customer property:", error);
+      res.status(500).json({ error: "Failed to create property", message: error.message });
+    }
+  });
+
+  // Get customer contacts
+  app.get("/api/customers/:customerId/contacts", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const contacts = await storage.getCustomerContacts(customerId);
+      res.json({ contacts: contacts.map((c: any) => ({
+        id: c.id,
+        customerId: c.customerId,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        type: c.contactType || "Primary",
+      })) });
+    } catch (error: any) {
+      console.error("Error fetching customer contacts:", error);
+      res.status(500).json({ error: "Failed to fetch contacts", message: error.message });
+    }
+  });
+
+  // Add customer contact
+  app.post("/api/customers/:customerId/contacts", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const { name, email, phone, type } = req.body;
+      const contact = await storage.createCustomerContact({
+        customerId,
+        name,
+        email,
+        phone,
+        contactType: type || "Primary",
+      });
+      res.json({ success: true, contact });
+    } catch (error: any) {
+      console.error("Error creating customer contact:", error);
+      res.status(500).json({ error: "Failed to create contact", message: error.message });
+    }
+  });
+
   // Get customer detail with pools from Pool Brain
   app.get("/api/customers/:customerId/detail", async (req: any, res: any) => {
     try {

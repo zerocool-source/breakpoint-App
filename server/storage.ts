@@ -25,7 +25,7 @@ import {
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
   type UnscheduledStop, type InsertUnscheduledStop,
-  settings, alerts, workflows, technicians, customers, customerAddresses, pools, routeSchedules, routeAssignments,
+  settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, routeSchedules, routeAssignments,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
@@ -72,6 +72,11 @@ export interface IStorage {
   getCustomerAddresses(customerId: string): Promise<CustomerAddress[]>;
   createCustomerAddress(address: InsertCustomerAddress): Promise<CustomerAddress>;
   upsertCustomerAddress(customerId: string, externalId: string, address: InsertCustomerAddress): Promise<CustomerAddress>;
+  deleteCustomer(id: string): Promise<void>;
+
+  // Customer Contacts
+  getCustomerContacts(customerId: string): Promise<any[]>;
+  createCustomerContact(contact: any): Promise<any>;
 
   // Pools
   getPoolsByCustomer(customerId: string): Promise<Pool[]>;
@@ -370,6 +375,20 @@ export class DbStorage implements IStorage {
       return result[0];
     }
     return this.createCustomerAddress({ ...address, customerId, externalId });
+  }
+
+  async deleteCustomer(id: string): Promise<void> {
+    await db.delete(customers).where(eq(customers.id, id));
+  }
+
+  // Customer Contacts
+  async getCustomerContacts(customerId: string): Promise<any[]> {
+    return db.select().from(customerContacts).where(eq(customerContacts.customerId, customerId));
+  }
+
+  async createCustomerContact(contact: any): Promise<any> {
+    const result = await db.insert(customerContacts).values(contact).returning();
+    return result[0];
   }
 
   // Pools
