@@ -107,6 +107,7 @@ export interface IStorage {
   updatePool(id: string, updates: Partial<InsertPool>): Promise<Pool | undefined>;
   upsertPool(externalId: string, pool: InsertPool): Promise<Pool>;
   clearPoolsByCustomer(customerId: string): Promise<void>;
+  deletePool(id: string): Promise<void>;
 
   // Equipment
   getEquipmentByCustomer(customerId: string): Promise<Equipment[]>;
@@ -553,6 +554,10 @@ export class DbStorage implements IStorage {
 
   async clearPoolsByCustomer(customerId: string): Promise<void> {
     await db.delete(pools).where(eq(pools.customerId, customerId));
+  }
+
+  async deletePool(id: string): Promise<void> {
+    await db.delete(pools).where(eq(pools.id, id));
   }
 
   // Equipment

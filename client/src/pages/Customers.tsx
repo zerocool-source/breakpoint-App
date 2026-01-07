@@ -27,7 +27,7 @@ import {
 import {
   Search, Plus, Users, Building2, User, MapPin, Phone, Mail,
   MoreVertical, X, ChevronLeft, ChevronRight, Tag, Edit, Trash2,
-  Home, FileText, Check, Loader2, Calendar, Clock, Wrench
+  Home, FileText, Check, Loader2, Calendar, Clock, Wrench, Droplets
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +71,7 @@ interface Contact {
 interface Equipment {
   id: string;
   customerId: string;
+  poolId: string | null;
   propertyId: string | null;
   category: string;
   equipmentType: string;
@@ -81,6 +82,27 @@ interface Equipment {
   warrantyExpiry: string | null;
   notes: string | null;
 }
+
+interface Pool {
+  id: string;
+  customerId: string;
+  name: string;
+  poolType: string | null;
+  waterType: string | null;
+  gallons: number | null;
+  serviceLevel: string | null;
+  notes: string | null;
+}
+
+const POOL_TYPES = [
+  { value: "Pool", label: "Pool", color: "bg-blue-600" },
+  { value: "Spa", label: "Spa", color: "bg-purple-600" },
+  { value: "Fountain", label: "Fountain", color: "bg-cyan-600" },
+  { value: "Pond", label: "Pond", color: "bg-green-600" },
+  { value: "Other", label: "Other", color: "bg-slate-600" },
+];
+
+const WATER_TYPES = ["Chlorine", "Salt", "Bromine", "Mineral", "Ozone", "Other"];
 
 const EQUIPMENT_CATEGORIES = [
   { value: "filter", label: "Filter", icon: "🔲" },
@@ -586,16 +608,19 @@ function AddEquipmentModal({
   onClose,
   onSave,
   customerId,
+  pools = [],
 }: {
   open: boolean;
   onClose: () => void;
   onSave: (data: Partial<Equipment>) => void;
   customerId: string;
+  pools?: Pool[];
 }) {
   const [formData, setFormData] = useState({
     category: "pump",
     selectedType: "",
     customType: "",
+    poolId: "",
     brand: "",
     model: "",
     serialNumber: "",
@@ -612,6 +637,7 @@ function AddEquipmentModal({
     onSave({ 
       category: formData.category,
       equipmentType: finalEquipmentType,
+      poolId: formData.poolId || null,
       brand: formData.brand || null,
       model: formData.model || null,
       serialNumber: formData.serialNumber || null,
@@ -620,7 +646,7 @@ function AddEquipmentModal({
       warrantyExpiry: formData.warrantyExpiry || null,
       notes: formData.notes || null,
     });
-    setFormData({ category: "pump", selectedType: "", customType: "", brand: "", model: "", serialNumber: "", installDate: "", warrantyExpiry: "", notes: "" });
+    setFormData({ category: "pump", selectedType: "", customType: "", poolId: "", brand: "", model: "", serialNumber: "", installDate: "", warrantyExpiry: "", notes: "" });
     onClose();
   };
 
@@ -678,6 +704,27 @@ function AddEquipmentModal({
                 onChange={(e) => setFormData({ ...formData, customType: e.target.value })}
                 placeholder="Enter custom equipment type"
               />
+            </div>
+          )}
+          {pools.length > 0 && (
+            <div className="space-y-2">
+              <Label>Body of Water</Label>
+              <Select
+                value={formData.poolId}
+                onValueChange={(value) => setFormData({ ...formData, poolId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Link to pool/spa (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {pools.map((pool) => (
+                    <SelectItem key={pool.id} value={String(pool.id)}>
+                      {pool.name} ({pool.poolType})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
@@ -749,6 +796,134 @@ function AddEquipmentModal({
   );
 }
 
+function AddPoolModal({
+  open,
+  onClose,
+  onSave,
+  customerId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: Partial<Pool>) => void;
+  customerId: string;
+}) {
+  const [formData, setFormData] = useState({
+    name: "",
+    poolType: "Pool",
+    waterType: "Chlorine",
+    gallons: "",
+    serviceLevel: "",
+    notes: "",
+  });
+
+  const handleSubmit = () => {
+    if (!formData.name.trim()) return;
+    onSave({
+      name: formData.name,
+      poolType: formData.poolType,
+      waterType: formData.waterType,
+      gallons: formData.gallons ? parseInt(formData.gallons) : null,
+      serviceLevel: formData.serviceLevel || null,
+      notes: formData.notes || null,
+      customerId,
+    });
+    setFormData({ name: "", poolType: "Pool", waterType: "Chlorine", gallons: "", serviceLevel: "", notes: "" });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[450px]">
+        <DialogHeader>
+          <DialogTitle>Add Body of Water</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Name *</Label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Main Pool, Spa, Front Fountain"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={formData.poolType}
+                onValueChange={(value) => setFormData({ ...formData, poolType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {POOL_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>{type.value}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Water Type</Label>
+              <Select
+                value={formData.waterType}
+                onValueChange={(value) => setFormData({ ...formData, waterType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WATER_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Gallons</Label>
+              <Input
+                type="number"
+                value={formData.gallons}
+                onChange={(e) => setFormData({ ...formData, gallons: e.target.value })}
+                placeholder="e.g. 15000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Service Level</Label>
+              <Input
+                value={formData.serviceLevel}
+                onChange={(e) => setFormData({ ...formData, serviceLevel: e.target.value })}
+                placeholder="e.g. Weekly, Premium"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Notes</Label>
+            <Textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Additional notes about this body of water"
+              className="min-h-[60px]"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!formData.name.trim()}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Add Body of Water
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CustomerDetailPanel({
   customer,
   onClose,
@@ -764,6 +939,8 @@ function CustomerDetailPanel({
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddEquipment, setShowAddEquipment] = useState(false);
+  const [showAddPool, setShowAddPool] = useState(false);
+  const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [scheduleActive, setScheduleActive] = useState(false);
   const [visitDays, setVisitDays] = useState<string[]>([]);
@@ -802,15 +979,31 @@ function CustomerDetailPanel({
     },
   });
 
+  const { data: poolsData } = useQuery<{ pools: Pool[] }>({
+    queryKey: ["/api/customers", customer.id, "pools"],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${customer.id}/pools`);
+      if (!res.ok) return { pools: [] };
+      return res.json();
+    },
+  });
+
   const properties = propertiesData?.properties || [];
   const contacts = contactsData?.contacts || [];
   const equipmentList = equipmentData?.equipment || [];
+  const poolsList = poolsData?.pools || [];
 
   useEffect(() => {
     if (properties.length > 0 && !selectedPropertyId) {
       setSelectedPropertyId(properties[0].id);
     }
   }, [properties, selectedPropertyId]);
+
+  useEffect(() => {
+    if (poolsList.length > 0 && !selectedPoolId) {
+      setSelectedPoolId(poolsList[0].id);
+    }
+  }, [poolsList, selectedPoolId]);
 
   const { data: routeScheduleData } = useQuery<{ schedule: any }>({
     queryKey: ["/api/properties", selectedPropertyId, "route-schedule"],
@@ -916,6 +1109,36 @@ function CustomerDetailPanel({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "equipment"] });
+    },
+  });
+
+  const addPoolMutation = useMutation({
+    mutationFn: async (data: Partial<Pool>) => {
+      const res = await fetch(`/api/customers/${customer.id}/pools`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "pools"] });
+      setShowAddPool(false);
+    },
+  });
+
+  const deletePoolMutation = useMutation({
+    mutationFn: async (poolId: string) => {
+      const res = await fetch(`/api/pools/${poolId}`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "pools"] });
+      if (selectedPoolId) {
+        setSelectedPoolId(null);
+      }
     },
   });
 
@@ -1036,6 +1259,10 @@ function CustomerDetailPanel({
           <TabsTrigger value="route" className="gap-1">
             <Calendar className="h-4 w-4" />
             Route
+          </TabsTrigger>
+          <TabsTrigger value="water" className="gap-1">
+            <Droplets className="h-4 w-4" />
+            Bodies of Water ({poolsList.length})
           </TabsTrigger>
           <TabsTrigger value="equipment" className="gap-1">
             <Wrench className="h-4 w-4" />
@@ -1367,6 +1594,168 @@ function CustomerDetailPanel({
           )}
         </TabsContent>
 
+        <TabsContent value="water" className="flex-1 m-0 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-700">Bodies of Water</h3>
+            <Button size="sm" onClick={() => setShowAddPool(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Body of Water
+            </Button>
+          </div>
+          
+          {poolsList.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <Droplets className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No bodies of water recorded</p>
+              <Button variant="link" size="sm" onClick={() => setShowAddPool(true)}>
+                Add first pool, spa, or fountain
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-4 bg-slate-100 p-2 rounded-lg overflow-x-auto">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => {
+                    const idx = poolsList.findIndex(p => p.id === selectedPoolId);
+                    if (idx > 0) setSelectedPoolId(poolsList[idx - 1].id);
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex gap-2 flex-1 overflow-x-auto">
+                  {poolsList.map((pool) => {
+                    const typeConfig = POOL_TYPES.find(t => t.value === pool.poolType) || POOL_TYPES[0];
+                    return (
+                      <button
+                        key={pool.id}
+                        onClick={() => setSelectedPoolId(pool.id)}
+                        className={cn(
+                          "px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors",
+                          selectedPoolId === pool.id
+                            ? `${typeConfig.color} text-white`
+                            : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+                        )}
+                      >
+                        {pool.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => {
+                    const idx = poolsList.findIndex(p => p.id === selectedPoolId);
+                    if (idx < poolsList.length - 1) setSelectedPoolId(poolsList[idx + 1].id);
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {selectedPoolId && (() => {
+                const selectedPool = poolsList.find(p => p.id === selectedPoolId);
+                if (!selectedPool) return null;
+                const typeConfig = POOL_TYPES.find(t => t.value === selectedPool.poolType) || POOL_TYPES[0];
+                const poolEquipment = equipmentList.filter(e => e.poolId === selectedPoolId);
+                
+                return (
+                  <ScrollArea className="h-[calc(100vh-550px)]">
+                    <Card className="mb-4">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge className={cn("text-white", typeConfig.color)}>
+                                {selectedPool.poolType || "Pool"}
+                              </Badge>
+                              {selectedPool.waterType && (
+                                <Badge variant="outline">{selectedPool.waterType}</Badge>
+                              )}
+                            </div>
+                            <h4 className="font-semibold text-lg">{selectedPool.name}</h4>
+                            {selectedPool.gallons && (
+                              <p className="text-sm text-slate-500">{selectedPool.gallons.toLocaleString()} gallons</p>
+                            )}
+                            {selectedPool.serviceLevel && (
+                              <p className="text-sm text-slate-500">Service: {selectedPool.serviceLevel}</p>
+                            )}
+                            {selectedPool.notes && (
+                              <p className="text-sm text-slate-400 mt-2">{selectedPool.notes}</p>
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  if (confirm("Delete this body of water and all associated equipment?")) {
+                                    deletePoolMutation.mutate(selectedPool.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <div className="mb-3 flex items-center justify-between">
+                      <h4 className="font-medium text-slate-700">Equipment for {selectedPool.name}</h4>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => {
+                          setActiveTab("equipment");
+                          setShowAddEquipment(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    </div>
+                    {poolEquipment.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">No equipment linked to this body of water</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {poolEquipment.map((equip) => {
+                          const cat = EQUIPMENT_CATEGORIES.find(c => c.value === equip.category);
+                          return (
+                            <Card key={equip.id} className="border-l-4 border-l-blue-400">
+                              <CardContent className="p-2">
+                                <div className="flex items-center gap-2">
+                                  <span>{cat?.icon || "⚙️"}</span>
+                                  <div>
+                                    <p className="text-sm font-medium">{equip.equipmentType}</p>
+                                    {equip.brand && <p className="text-xs text-slate-500">{equip.brand}</p>}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
+                );
+              })()}
+            </>
+          )}
+        </TabsContent>
+
         <TabsContent value="equipment" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-700">Equipment</h3>
@@ -1410,6 +1799,11 @@ function CustomerDetailPanel({
                                 {equip.warrantyExpiry && (
                                   <p className="text-xs text-slate-400">
                                     Warranty: {new Date(equip.warrantyExpiry).toLocaleDateString()}
+                                  </p>
+                                )}
+                                {equip.poolId && (
+                                  <p className="text-xs text-blue-500">
+                                    {poolsList.find(p => p.id === equip.poolId)?.name || "Linked"}
                                   </p>
                                 )}
                               </div>
@@ -1465,6 +1859,14 @@ function CustomerDetailPanel({
         open={showAddEquipment}
         onClose={() => setShowAddEquipment(false)}
         onSave={(data) => addEquipmentMutation.mutate(data)}
+        customerId={customer.id}
+        pools={poolsList}
+      />
+
+      <AddPoolModal
+        open={showAddPool}
+        onClose={() => setShowAddPool(false)}
+        onSave={(data) => addPoolMutation.mutate(data)}
         customerId={customer.id}
       />
     </div>

@@ -113,10 +113,11 @@ export const pools = pgTable("pools", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Equipment (pool equipment linked to properties/customers)
+// Equipment (pool equipment linked to bodies of water)
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerId: varchar("customer_id").notNull(),
+  poolId: varchar("pool_id"), // Links to body of water (pool, spa, fountain, etc.)
   propertyId: varchar("property_id"),
   category: text("category").notNull(), // "filter", "pump", "heater", "controller", "chlorinator", "cleaner", "other"
   equipmentType: text("equipment_type").notNull(), // "Sand", "DE", "Cartridge", "Variable Speed", "In-Line Chlorinator", etc.

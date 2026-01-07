@@ -1677,6 +1677,53 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Create pool/body of water for a customer
+  app.post("/api/customers/:customerId/pools", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const { name, poolType, waterType, gallons, serviceLevel, notes } = req.body;
+      const pool = await storage.createPool({
+        customerId,
+        name: name || "Pool",
+        poolType: poolType || "Pool",
+        waterType: waterType || null,
+        gallons: gallons ? parseInt(gallons) : null,
+        serviceLevel: serviceLevel || null,
+        notes: notes || null,
+      });
+      res.json({ success: true, pool });
+    } catch (error: any) {
+      console.error("Error creating pool:", error);
+      res.status(500).json({ error: "Failed to create pool", message: error.message });
+    }
+  });
+
+  // Update pool/body of water
+  app.put("/api/pools/:poolId", async (req: any, res: any) => {
+    try {
+      const { poolId } = req.params;
+      const updates = req.body;
+      if (updates.gallons) updates.gallons = parseInt(updates.gallons);
+      const pool = await storage.updatePool(poolId, updates);
+      res.json({ success: true, pool });
+    } catch (error: any) {
+      console.error("Error updating pool:", error);
+      res.status(500).json({ error: "Failed to update pool", message: error.message });
+    }
+  });
+
+  // Delete pool/body of water
+  app.delete("/api/pools/:poolId", async (req: any, res: any) => {
+    try {
+      const { poolId } = req.params;
+      await storage.deletePool(poolId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting pool:", error);
+      res.status(500).json({ error: "Failed to delete pool", message: error.message });
+    }
+  });
+
   // Route Schedule endpoints
   app.get("/api/properties/:propertyId/route-schedule", async (req: any, res: any) => {
     try {
