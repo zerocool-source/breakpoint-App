@@ -641,6 +641,10 @@ function CustomerDetailPanel({
             <Edit className="h-4 w-4 mr-1" />
             Edit
           </Button>
+          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={onDelete}>
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
