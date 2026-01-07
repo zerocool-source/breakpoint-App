@@ -2916,6 +2916,167 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to assign unscheduled stop" });
     }
   });
+
+  // ==================== POOL BRAIN ROUTE IMPORT ====================
+
+  // Get technician route details from Pool Brain API
+  app.get("/api/poolbrain/technician-routes", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const [routeData, technicianData, poolData, customerData] = await Promise.all([
+        client.getTechnicianRouteDetail({ limit: 1000 }),
+        client.getTechnicianDetail({ limit: 100 }),
+        client.getPoolsList({ limit: 1000 }),
+        client.getCustomerDetail({ limit: 1000 }),
+      ]);
+
+      res.json({
+        routes: routeData,
+        technicians: technicianData,
+        pools: poolData,
+        customers: customerData,
+      });
+    } catch (error: any) {
+      console.error("Error fetching Pool Brain routes:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch routes from Pool Brain" });
+    }
+  });
+
+  // Import routes from Pool Brain into scheduling system
+  app.post("/api/routes/import-from-poolbrain", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const [routeData, technicianData, poolData, customerData] = await Promise.all([
+        client.getTechnicianRouteDetail({ limit: 1000 }),
+        client.getTechnicianDetail({ limit: 100 }),
+        client.getPoolsList({ limit: 1000 }),
+        client.getCustomerDetail({ limit: 1000 }),
+      ]);
+
+      const technicians = technicianData?.technicians || technicianData?.data || [];
+      const routes = routeData?.routes || routeData?.data || routeData || [];
+      const pools = poolData?.pools || poolData?.data || [];
+      const customers = customerData?.customers || customerData?.data || [];
+
+      const poolMap = new Map<number, any>();
+      for (const pool of pools) {
+        poolMap.set(pool.PoolID || pool.poolId || pool.id, pool);
+      }
+
+      const customerMap = new Map<number, any>();
+      for (const customer of customers) {
+        customerMap.set(customer.CustomerID || customer.customerId || customer.id, customer);
+      }
+
+      const techMap = new Map<number, any>();
+      for (const tech of technicians) {
+        techMap.set(tech.TechnicianID || tech.technicianId || tech.id, tech);
+      }
+
+      const ROUTE_COLORS = ["#0891b2", "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#ca8a04"];
+      const dayMapping: Record<string, number> = {
+        "monday": 1, "tuesday": 2, "wednesday": 3, "thursday": 4, "friday": 5, "saturday": 6, "sunday": 0,
+        "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6, "sun": 0,
+      };
+
+      let createdRoutes = 0;
+      let createdStops = 0;
+
+      const routeGroups = new Map<string, any[]>();
+
+      for (const routeEntry of routes) {
+        const techId = routeEntry.TechnicianID || routeEntry.technicianId;
+        const dayName = (routeEntry.Day || routeEntry.day || routeEntry.DayOfWeek || "monday").toLowerCase();
+        const dayOfWeek = dayMapping[dayName] ?? 1;
+        
+        const groupKey = `${techId}-${dayOfWeek}`;
+        if (!routeGroups.has(groupKey)) {
+          routeGroups.set(groupKey, []);
+        }
+        routeGroups.get(groupKey)?.push(routeEntry);
+      }
+
+      let colorIndex = 0;
+      for (const [groupKey, stops] of Array.from(routeGroups.entries())) {
+        const [techIdStr, dayOfWeekStr] = groupKey.split("-");
+        const techId = parseInt(techIdStr);
+        const dayOfWeek = parseInt(dayOfWeekStr);
+        
+        const tech = techMap.get(techId);
+        const techName = tech ? `${tech.FirstName || tech.firstName || ""} ${tech.LastName || tech.lastName || ""}`.trim() : `Tech ${techId}`;
+
+        const route = await storage.createRoute({
+          name: `${techName} - ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dayOfWeek]}`,
+          dayOfWeek,
+          color: ROUTE_COLORS[colorIndex % ROUTE_COLORS.length],
+          technicianId: String(techId),
+          technicianName: techName,
+        });
+        createdRoutes++;
+        colorIndex++;
+
+        let sortOrder = 0;
+        for (const stopEntry of stops) {
+          const poolId = stopEntry.PoolID || stopEntry.poolId;
+          const pool = poolMap.get(poolId);
+          const customerId = pool?.CustomerID || pool?.customerId || stopEntry.CustomerID || stopEntry.customerId;
+          const customer = customerMap.get(customerId);
+
+          const propertyName = pool?.PoolName || pool?.poolName || pool?.Name || pool?.name || `Pool ${poolId}`;
+          const customerName = customer ? `${customer.FirstName || customer.firstName || ""} ${customer.LastName || customer.lastName || ""}`.trim() : null;
+          const address = customer?.Address || customer?.address || pool?.Address || pool?.address || null;
+
+          await storage.createRouteStop({
+            routeId: route.id,
+            propertyId: String(poolId),
+            propertyName,
+            customerName,
+            address,
+            poolName: propertyName,
+            sortOrder,
+            estimatedTime: stopEntry.EstimatedTime || stopEntry.estimatedTime || 30,
+            frequency: stopEntry.Frequency || stopEntry.frequency || "weekly",
+          });
+          createdStops++;
+          sortOrder++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Imported ${createdRoutes} routes with ${createdStops} stops from Pool Brain`,
+        createdRoutes,
+        createdStops,
+      });
+    } catch (error: any) {
+      console.error("Error importing routes from Pool Brain:", error);
+      res.status(500).json({ error: error.message || "Failed to import routes from Pool Brain" });
+    }
+  });
 }
 
   

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Calendar, Plus, MapPin, Clock, User, Truck, Building2, 
   ChevronLeft, ChevronRight, Trash2, Edit, GripVertical,
-  Lock, Unlock, MoreVertical, CheckCircle2, AlertCircle
+  Lock, Unlock, MoreVertical, CheckCircle2, AlertCircle, Download, Loader2
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -227,6 +227,34 @@ export default function Scheduling() {
     },
   });
 
+  const importFromPoolBrainMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/routes/import-from-poolbrain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to import routes");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["routes"] });
+      toast({ 
+        title: "Routes Imported", 
+        description: data.message || `Imported ${data.createdRoutes} routes with ${data.createdStops} stops.` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Import Failed", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const routes: Route[] = routesData?.routes || [];
 
   const handleDragStart = (e: React.DragEvent, stop: RouteStop, sourceRouteId: string) => {
@@ -261,14 +289,29 @@ export default function Scheduling() {
             </h1>
             <p className="text-slate-600">Manage service routes and daily schedules</p>
           </div>
-          <Button
-            onClick={() => setShowCreateRouteDialog(true)}
-            className="bg-cyan-600 hover:bg-cyan-700"
-            data-testid="button-create-route"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Route
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => importFromPoolBrainMutation.mutate()}
+              disabled={importFromPoolBrainMutation.isPending}
+              data-testid="button-import-poolbrain"
+            >
+              {importFromPoolBrainMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Import from Pool Brain
+            </Button>
+            <Button
+              onClick={() => setShowCreateRouteDialog(true)}
+              className="bg-cyan-600 hover:bg-cyan-700"
+              data-testid="button-create-route"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Route
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
