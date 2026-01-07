@@ -581,16 +581,16 @@ export default function Scheduling() {
         </div>
 
         {viewMode === "list" ? (
-          <ScrollArea className="h-[calc(100vh-180px)]">
+          <div className="h-[calc(100vh-180px)] overflow-auto">
             {/* Day Columns Layout */}
-            <div className="flex gap-3 pb-4">
+            <div className="flex gap-2 pb-4 min-w-0">
               {workDays.map((day) => {
                 const dayInfo = DAYS.find(d => d.value === day)!;
                 const dateStr = getDateForDay(day);
                 const dayRoutesForColumn = routesByDay[day] || [];
                 
                 return (
-                  <div key={day} className="flex-shrink-0 w-64">
+                  <div key={day} className="flex-1 min-w-[180px]">
                     {/* Day Header */}
                     <div className="bg-blue-600 text-white rounded-t-lg px-3 py-2 text-center">
                       <div className="text-sm font-semibold">{dateStr} {dayInfo.label}</div>
@@ -707,7 +707,7 @@ export default function Scheduling() {
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         ) : (
           <div className="flex gap-4 h-[calc(100vh-220px)]">
             <div className="w-72 flex-shrink-0 space-y-2 overflow-auto">
