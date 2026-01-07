@@ -21,6 +21,7 @@ import Channels from "@/pages/Channels";
 import Estimates from "@/pages/Estimates";
 import Scheduling from "@/pages/Scheduling";
 import Customers from "@/pages/Customers";
+import ServiceTechs from "@/pages/ServiceTechs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/estimates" component={Estimates} />
       <Route path="/scheduling" component={Scheduling} />
       <Route path="/customers" component={Customers} />
+      <Route path="/tech-services" component={ServiceTechs} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />

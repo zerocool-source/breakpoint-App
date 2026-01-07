@@ -1607,6 +1607,39 @@ function setupRoutes(app: any) {
     }
   });
 
+  app.get("/api/technicians/poolbrain", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const techsData = await client.getTechnicianDetail({ limit: 500 });
+      const technicians = (techsData.data || []).map((t: any) => ({
+        TechnicianID: t.RecordID || t.TechnicianID,
+        FirstName: t.FirstName || "",
+        LastName: t.LastName || "",
+        Phone: t.Phone || t.CellPhone || "",
+        Email: t.Email || "",
+        Active: t.Active !== false && t.Active !== 0,
+        CompanyID: t.CompanyID,
+      }));
+
+      res.json({ technicians });
+    } catch (error: any) {
+      console.error("Error fetching technicians from Pool Brain:", error);
+      res.status(500).json({ error: "Failed to fetch technicians", message: error.message });
+    }
+  });
+
   // ==================== CHAT ====================
 
   app.get("/api/chat/history", async (req: any, res: any) => {
