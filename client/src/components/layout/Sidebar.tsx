@@ -1,101 +1,322 @@
-import { Droplets, LayoutDashboard, MessageSquare, Settings, Sparkles, Wrench, Zap, CalendarClock, DollarSign, Building2, Hash, FileText, Route, Users } from "lucide-react";
+import { useState } from "react";
+import { 
+  LayoutDashboard, 
+  Building2, 
+  Users, 
+  Calendar, 
+  Briefcase, 
+  FileBarChart, 
+  FileText, 
+  MessageSquare, 
+  Truck, 
+  Zap,
+  ChevronRight,
+  Settings,
+  Wrench,
+  Droplets,
+  Eye,
+  DollarSign,
+  Hash,
+  Mail,
+  Receipt
+} from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_11_02_17_PM_1765350238464.png";
 
-
+interface NavSubItem {
+  label: string;
+  href: string;
+  icon?: any;
+}
 
 interface NavItem {
   icon: any;
   label: string;
-  href: string;
+  href?: string;
+  children?: NavSubItem[];
   badge?: string;
-  badgeColor?: string;
   disabled?: boolean;
+}
+
+function NavItemComponent({ 
+  item, 
+  isExpanded, 
+  onToggle, 
+  location 
+}: { 
+  item: NavItem; 
+  isExpanded: boolean; 
+  onToggle: () => void;
+  location: string;
+}) {
+  const hasChildren = item.children && item.children.length > 0;
+  const isActive = item.href ? location === item.href : false;
+  const hasActiveChild = item.children?.some(child => location === child.href);
+
+  if (item.disabled) {
+    return (
+      <div className="flex items-center gap-2 px-2 py-1.5 text-slate-400 cursor-not-allowed text-sm">
+        <div className="w-4 h-4 flex items-center justify-center">
+          <div className="w-3 h-3 border border-slate-300 rounded-sm bg-slate-50" />
+        </div>
+        <item.icon className="w-4 h-4 text-slate-300" />
+        <span>{item.label}</span>
+        {item.badge && (
+          <span className="ml-auto px-1.5 py-0.5 text-[8px] font-medium rounded bg-slate-100 text-slate-500 uppercase">
+            {item.badge}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (!hasChildren && item.href) {
+    return (
+      <Link 
+        href={item.href}
+        className={cn(
+          "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors",
+          isActive 
+            ? "bg-blue-600 text-white" 
+            : "text-slate-700 hover:bg-slate-100"
+        )}
+      >
+        <div className="w-4 h-4 flex items-center justify-center">
+          <div className={cn(
+            "w-3 h-3 border rounded-sm",
+            isActive ? "border-white/50 bg-white/20" : "border-slate-400 bg-white"
+          )} />
+        </div>
+        <item.icon className={cn("w-4 h-4", isActive ? "text-white" : "text-blue-600")} />
+        <span>{item.label}</span>
+        {item.badge && (
+          <span className={cn(
+            "ml-auto px-1.5 py-0.5 text-[8px] font-medium rounded uppercase",
+            isActive ? "bg-white/20 text-white" : "bg-blue-100 text-blue-600"
+          )}>
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className={cn(
+          "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors w-full text-left",
+          hasActiveChild 
+            ? "bg-blue-50 text-blue-700" 
+            : "text-slate-700 hover:bg-slate-100"
+        )}
+      >
+        <div className="w-4 h-4 flex items-center justify-center">
+          <div className={cn(
+            "w-3 h-3 border rounded-sm",
+            hasActiveChild ? "border-blue-400 bg-blue-100" : "border-slate-400 bg-white"
+          )} />
+        </div>
+        <item.icon className={cn("w-4 h-4", hasActiveChild ? "text-blue-600" : "text-blue-600")} />
+        <span className="flex-1">{item.label}</span>
+        <ChevronRight className={cn(
+          "w-3 h-3 transition-transform text-slate-400",
+          isExpanded && "rotate-90"
+        )} />
+      </button>
+      
+      {isExpanded && item.children && (
+        <div className="ml-6 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2">
+          {item.children.map((child) => {
+            const isChildActive = location === child.href;
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                className={cn(
+                  "flex items-center gap-2 px-2 py-1 rounded text-sm transition-colors",
+                  isChildActive 
+                    ? "bg-blue-600 text-white" 
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
+              >
+                <ChevronRight className={cn("w-3 h-3", isChildActive ? "text-white/70" : "text-slate-400")} />
+                <span>{child.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Sidebar() {
   const [location] = useLocation();
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats"]));
 
-  const navItems: NavItem[] = [
-    { icon: LayoutDashboard, label: "Overview", href: "/", badge: "Alpha", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
-    { icon: Wrench, label: "Repairs", href: "/repairs", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
-    { icon: Droplets, label: "Chemicals", href: "/chemicals", badge: "Coming Soon", badgeColor: "bg-secondary/10 text-secondary border-secondary/30", disabled: true },
-    { icon: Users, label: "Customers", href: "/customers" },
-    { icon: CalendarClock, label: "Jobs", href: "/jobs" },
-    { icon: FileText, label: "Estimates", href: "/estimates" },
-    { icon: Route, label: "Scheduling", href: "/scheduling" },
-    { icon: Building2, label: "Property Repairs", href: "/property-repairs" },
-    { icon: Hash, label: "Channels", href: "/channels" },
-    { icon: Sparkles, label: "Ace Prime", href: "/intelligence", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
-    { icon: MessageSquare, label: "Chat with Ace", href: "/chat", badge: "Coming Soon", badgeColor: "bg-primary/10 text-primary border-primary/30", disabled: true },
-    { icon: Zap, label: "Automations", href: "/automations", badge: "Beta", badgeColor: "bg-primary/10 text-primary border-primary/30" },
+  const toggleExpand = (key: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const navItems: (NavItem & { key: string })[] = [
+    { 
+      key: "overview",
+      icon: LayoutDashboard, 
+      label: "Overview", 
+      href: "/",
+      badge: "Alpha",
+      disabled: true
+    },
+    { 
+      key: "properties",
+      icon: Building2, 
+      label: "Properties", 
+      children: [
+        { label: "Repairs", href: "/property-repairs" },
+        { label: "Chemicals", href: "/chemicals" },
+        { label: "Visits", href: "/visits" },
+      ]
+    },
+    { 
+      key: "technicians",
+      icon: Users, 
+      label: "Technicians", 
+      children: [
+        { label: "Repairs", href: "/tech-repairs" },
+        { label: "Chemicals", href: "/tech-chemicals" },
+      ]
+    },
+    { 
+      key: "scheduling",
+      icon: Calendar, 
+      label: "Scheduling", 
+      href: "/scheduling"
+    },
+    { 
+      key: "jobs",
+      icon: Briefcase, 
+      label: "Jobs", 
+      children: [
+        { label: "Repairs", href: "/jobs" },
+        { label: "Chemicals", href: "/job-chemicals" },
+      ]
+    },
+    { 
+      key: "reports",
+      icon: FileBarChart, 
+      label: "Reports", 
+      children: [
+        { label: "Repairs", href: "/report-repairs" },
+        { label: "Chemicals", href: "/report-chemicals" },
+        { label: "Commissions", href: "/commissions" },
+      ]
+    },
+    { 
+      key: "estimates",
+      icon: FileText, 
+      label: "Estimates", 
+      href: "/estimates"
+    },
+    { 
+      key: "chats",
+      icon: MessageSquare, 
+      label: "Chats Hub", 
+      children: [
+        { label: "Channels", href: "/channels" },
+      ]
+    },
+    { 
+      key: "vendors",
+      icon: Truck, 
+      label: "Vendors", 
+      children: [
+        { label: "Invoice Vendors", href: "/invoice-vendors" },
+        { label: "Email Hub", href: "/email-hub" },
+      ]
+    },
+    { 
+      key: "automations",
+      icon: Zap, 
+      label: "Automations", 
+      href: "/automations",
+      badge: "Beta"
+    },
   ];
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-50 shadow-sm">
-      <div className="p-5 border-b border-slate-200 bg-slate-50">
-        <div className="flex flex-col items-center gap-2">
+    <aside className="w-56 h-screen bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 flex flex-col fixed left-0 top-0 z-50">
+      <div className="p-4 border-b border-slate-200 bg-white">
+        <div className="flex flex-col items-center gap-1">
           <img 
             src={BreakpointLogo} 
             alt="Breakpoint Intelligence" 
-            className="h-44 w-auto object-contain"
+            className="h-32 w-auto object-contain"
           />
-          <span className="px-2 py-0.5 text-[10px] font-bold bg-[#0891b2] text-white border border-[#067997] rounded-full uppercase tracking-wider shadow-sm">Beta</span>
+          <span className="px-2 py-0.5 text-[9px] font-bold bg-blue-600 text-white rounded-full uppercase tracking-wider">
+            Beta
+          </span>
         </div>
       </div>
-      <nav className="flex-1 px-3 py-4 space-y-1 bg-white">
-        {navItems.map((item) => {
-          const isActive = location === item.href;
-          
-          if (item.disabled) {
-            return (
-              <div
-                key={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 cursor-not-allowed"
-              >
-                <item.icon className="w-5 h-5 text-slate-300" />
-                <span className="font-medium text-sm">{item.label}</span>
-                {item.badge && (
-                  <span className="ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase bg-slate-100 text-slate-500 border-slate-300">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-            );
-          }
-          
-          return (
-            <Link key={item.href} href={item.href} className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative overflow-hidden font-medium",
-                isActive 
-                  ? "text-white bg-[#0891b2] shadow-md" 
-                  : "text-slate-700 hover:text-[#0891b2] hover:bg-slate-100"
-              )}>
-                {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/30 rounded-r" />
-                )}
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? "text-white" : "text-[#0891b2]")} />
-                <span className="text-sm">{item.label}</span>
-                {item.badge && (
-                  <span className={cn(
-                    "ml-auto px-2 py-0.5 text-[9px] font-bold rounded-full border uppercase",
-                    isActive ? "bg-white/20 text-white border-white/30" : "bg-[#0891b2]/10 text-[#0891b2] border-[#0891b2]/30"
-                  )}>
-                    {item.badge}
-                  </span>
-                )}
-            </Link>
-          );
-        })}
+      
+      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+        {navItems.map((item) => (
+          <NavItemComponent
+            key={item.key}
+            item={item}
+            isExpanded={expandedItems.has(item.key)}
+            onToggle={() => toggleExpand(item.key)}
+            location={location}
+          />
+        ))}
       </nav>
-      <div className="p-3 border-t border-slate-200 bg-white">
-        <Link href="/settings" className={cn(
-            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-slate-700 hover:text-[#0891b2] hover:bg-slate-100 transition-colors font-medium",
-            location === "/settings" && "text-white bg-[#0891b2] shadow-md"
-        )}>
-          <Settings className={cn("w-5 h-5", location === "/settings" ? "text-white" : "text-[#0891b2]")} />
-          <span className="text-sm">Settings</span>
+
+      <div className="p-2 border-t border-slate-200 bg-white">
+        <Link 
+          href="/customers"
+          className={cn(
+            "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors mb-1",
+            location === "/customers" 
+              ? "bg-blue-600 text-white" 
+              : "text-slate-700 hover:bg-slate-100"
+          )}
+        >
+          <div className="w-4 h-4 flex items-center justify-center">
+            <div className={cn(
+              "w-3 h-3 border rounded-sm",
+              location === "/customers" ? "border-white/50 bg-white/20" : "border-slate-400 bg-white"
+            )} />
+          </div>
+          <Users className={cn("w-4 h-4", location === "/customers" ? "text-white" : "text-blue-600")} />
+          <span>Customers</span>
+        </Link>
+        <Link 
+          href="/settings"
+          className={cn(
+            "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors",
+            location === "/settings" 
+              ? "bg-blue-600 text-white" 
+              : "text-slate-700 hover:bg-slate-100"
+          )}
+        >
+          <div className="w-4 h-4 flex items-center justify-center">
+            <div className={cn(
+              "w-3 h-3 border rounded-sm",
+              location === "/settings" ? "border-white/50 bg-white/20" : "border-slate-400 bg-white"
+            )} />
+          </div>
+          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-white" : "text-blue-600")} />
+          <span>Settings</span>
         </Link>
       </div>
     </aside>
