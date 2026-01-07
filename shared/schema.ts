@@ -114,6 +114,40 @@ export const routeAssignments = pgTable("route_assignments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Customer Contacts
+export const customerContacts = pgTable("customer_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  contactType: text("contact_type").default("primary"), // primary, billing, emergency
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Pool Equipment Settings
+export const poolEquipment = pgTable("pool_equipment", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull(),
+  equipmentType: text("equipment_type").notNull(), // filter, pump, chlorinator, heater
+  equipmentValue: text("equipment_value"), // Sand Filter, Cartridge, Variable Speed, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Service Tasks (per pool workflow)
+export const serviceTasks = pgTable("service_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // whenArriving, beforePictures, chemicalReadings, chemicalDosing, inProgress
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  isCompleted: boolean("is_completed").default(false),
+  icons: text("icons"), // comma-separated: camera,calendar
+  hiddenConditions: text("hidden_conditions"), // JSON string of conditions
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Chat History (for Ace Prime conversations)
 export const chatMessages = pgTable("chat_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -212,6 +246,21 @@ export const insertRouteAssignmentSchema = createInsertSchema(routeAssignments).
   createdAt: true,
 });
 
+export const insertCustomerContactSchema = createInsertSchema(customerContacts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPoolEquipmentSchema = createInsertSchema(poolEquipment).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertServiceTaskSchema = createInsertSchema(serviceTasks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   id: true,
   timestamp: true,
@@ -261,6 +310,15 @@ export type RouteSchedule = typeof routeSchedules.$inferSelect;
 
 export type InsertRouteAssignment = z.infer<typeof insertRouteAssignmentSchema>;
 export type RouteAssignment = typeof routeAssignments.$inferSelect;
+
+export type InsertCustomerContact = z.infer<typeof insertCustomerContactSchema>;
+export type CustomerContact = typeof customerContacts.$inferSelect;
+
+export type InsertPoolEquipment = z.infer<typeof insertPoolEquipmentSchema>;
+export type PoolEquipment = typeof poolEquipment.$inferSelect;
+
+export type InsertServiceTask = z.infer<typeof insertServiceTaskSchema>;
+export type ServiceTask = typeof serviceTasks.$inferSelect;
 
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
