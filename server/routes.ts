@@ -3168,6 +3168,69 @@ function setupRoutes(app: any) {
 
   // ==================== ROUTES (Scheduling) ====================
 
+  // Get unscheduled service occurrences by date range
+  app.get("/api/unscheduled", async (req: any, res: any) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ error: "start and end date parameters are required (YYYY-MM-DD)" });
+      }
+      
+      const startDate = new Date(start + "T00:00:00.000Z");
+      const endDate = new Date(end + "T23:59:59.999Z");
+      
+      const occurrences = await storage.getUnscheduledOccurrences(startDate, endDate);
+      
+      // Enrich with property/customer data
+      const enrichedOccurrences = await Promise.all(
+        occurrences.map(async (occ) => {
+          // Try to get route schedule info for property name
+          const schedule = await storage.getRouteScheduleByProperty(occ.propertyId);
+          
+          return {
+            ...occ,
+            propertyName: schedule?.propertyName || occ.propertyId,
+            customerName: schedule?.customerName || "",
+            address: schedule?.address || "",
+          };
+        })
+      );
+      
+      res.json({ occurrences: enrichedOccurrences });
+    } catch (error: any) {
+      console.error("Error getting unscheduled occurrences:", error);
+      res.status(500).json({ error: "Failed to get unscheduled occurrences" });
+    }
+  });
+
+  // Get routes by date range
+  app.get("/api/routes/by-date", async (req: any, res: any) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ error: "start and end date parameters are required (YYYY-MM-DD)" });
+      }
+      
+      const startDate = new Date(start + "T00:00:00.000Z");
+      const endDate = new Date(end + "T23:59:59.999Z");
+      
+      const routesList = await storage.getRoutesByDateRange(startDate, endDate);
+      
+      // Fetch stops for each route
+      const routesWithStops = await Promise.all(
+        routesList.map(async (route) => {
+          const stops = await storage.getRouteStops(route.id);
+          return { ...route, stops };
+        })
+      );
+      
+      res.json({ routes: routesWithStops });
+    } catch (error: any) {
+      console.error("Error getting routes by date:", error);
+      res.status(500).json({ error: "Failed to get routes by date" });
+    }
+  });
+
   // Get all routes (optionally filter by day of week)
   app.get("/api/routes", async (req: any, res: any) => {
     try {
@@ -3208,8 +3271,15 @@ function setupRoutes(app: any) {
   // Create new route
   app.post("/api/routes", async (req: any, res: any) => {
     try {
-      const { customerIds, ...routeData } = req.body;
-      const route = await storage.createRoute(routeData);
+      const { customerIds, date, ...routeData } = req.body;
+      
+      // Convert date string to Date object if provided
+      const routeToCreate = {
+        ...routeData,
+        date: date ? new Date(date + "T00:00:00.000Z") : null,
+      };
+      
+      const route = await storage.createRoute(routeToCreate);
       
       // If customers were selected, create stops for each
       if (customerIds && Array.isArray(customerIds) && customerIds.length > 0) {
@@ -3245,7 +3315,15 @@ function setupRoutes(app: any) {
   app.put("/api/routes/:id", async (req: any, res: any) => {
     try {
       const { id } = req.params;
-      const route = await storage.updateRoute(id, req.body);
+      const { date, ...updates } = req.body;
+      
+      // Convert date string to Date object if provided
+      const routeUpdates = {
+        ...updates,
+        ...(date !== undefined ? { date: date ? new Date(date + "T00:00:00.000Z") : null } : {}),
+      };
+      
+      const route = await storage.updateRoute(id, routeUpdates);
       if (!route) {
         return res.status(404).json({ error: "Route not found" });
       }

@@ -70,6 +70,16 @@ interface Customer {
   poolCount: number | null;
 }
 
+interface UnscheduledOccurrence {
+  id: string;
+  propertyId: string;
+  date: string;
+  status: string;
+  propertyName: string;
+  customerName: string;
+  address: string;
+}
+
 const DAYS = [
   { value: 0, label: "Sunday", short: "SUN" },
   { value: 1, label: "Monday", short: "MON" },
@@ -154,6 +164,7 @@ export default function Scheduling() {
     color: ROUTE_COLORS[0],
     technicianName: "",
     dayOfWeek: 1,
+    date: new Date().toISOString().split("T")[0],
   });
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
@@ -185,6 +196,37 @@ export default function Scheduling() {
 
   const customers = customersData?.customers || [];
 
+  // Get the date range for the next 7 days
+  const getDateRange = () => {
+    const today = new Date();
+    const start = today.toISOString().split("T")[0];
+    const end = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    return { start, end };
+  };
+
+  const dateRange = useMemo(() => getDateRange(), []);
+
+  const { data: unscheduledData } = useQuery<{ occurrences: UnscheduledOccurrence[] }>({
+    queryKey: ["unscheduled", dateRange.start, dateRange.end],
+    queryFn: async () => {
+      const response = await fetch(`/api/unscheduled?start=${dateRange.start}&end=${dateRange.end}`);
+      if (!response.ok) return { occurrences: [] };
+      return response.json();
+    },
+  });
+
+  const unscheduledOccurrences = unscheduledData?.occurrences || [];
+
+  const unscheduledByDay = useMemo(() => {
+    const grouped: Record<string, UnscheduledOccurrence[]> = {};
+    for (const occ of unscheduledOccurrences) {
+      const dateKey = new Date(occ.date).toISOString().split("T")[0];
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(occ);
+    }
+    return grouped;
+  }, [unscheduledOccurrences]);
+
   const createRouteMutation = useMutation({
     mutationFn: async (route: any) => {
       const response = await fetch("/api/routes", {
@@ -199,7 +241,7 @@ export default function Scheduling() {
       queryClient.invalidateQueries({ queryKey: ["all-routes"] });
       toast({ title: "Route Created", description: "New route has been added." });
       setShowCreateRouteDialog(false);
-      setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "", dayOfWeek: 1 });
+      setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "", dayOfWeek: 1, date: new Date().toISOString().split("T")[0] });
       setSelectedCustomerIds([]);
     },
   });
@@ -460,6 +502,53 @@ export default function Scheduling() {
             })}
           </div>
         </div>
+
+        {/* Unscheduled Queue Section */}
+        {Object.keys(unscheduledByDay).length > 0 && (
+          <Card className="bg-amber-50 border-amber-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 bg-amber-500 rounded-full animate-pulse" />
+                <h3 className="font-semibold text-amber-800">Unscheduled Queue</h3>
+                <span className="text-sm text-amber-600">({unscheduledOccurrences.length} visits)</span>
+              </div>
+              <div className="space-y-3">
+                {Object.entries(unscheduledByDay).sort().map(([dateKey, occurrences]) => {
+                  const date = new Date(dateKey + "T00:00:00");
+                  const dayName = DAYS[date.getDay()].short;
+                  const formattedDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+                  
+                  return (
+                    <div key={dateKey} className="bg-white rounded-lg p-3 border border-amber-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium text-slate-700">{formattedDate}</span>
+                        <span className="text-slate-500">{dayName}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {occurrences.map((occ) => (
+                          <div 
+                            key={occ.id} 
+                            className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-slate-50"
+                            data-testid={`unscheduled-visit-${occ.id}`}
+                          >
+                            <MapPin className="h-3 w-3 text-amber-500" />
+                            <span className="font-medium">{occ.customerName || occ.propertyName}</span>
+                            {occ.propertyName && occ.customerName && (
+                              <span className="text-slate-500">– {occ.propertyName}</span>
+                            )}
+                            {occ.address && (
+                              <span className="text-slate-400 text-xs ml-auto">{occ.address}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {viewMode === "list" ? (
           <ScrollArea className="h-[calc(100vh-220px)]">
@@ -794,6 +883,21 @@ export default function Scheduling() {
                   value={newRoute.technicianName}
                   onChange={(e) => setNewRoute({ ...newRoute, technicianName: e.target.value })}
                   placeholder="e.g., Alan Bateman"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Route Date</Label>
+                <Input
+                  type="date"
+                  value={newRoute.date}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value + "T00:00:00");
+                    setNewRoute({ 
+                      ...newRoute, 
+                      date: e.target.value,
+                      dayOfWeek: date.getDay()
+                    });
+                  }}
                 />
               </div>
               <div className="space-y-2">

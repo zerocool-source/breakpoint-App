@@ -33,7 +33,7 @@ import {
   estimates, routes, routeStops, routeMoves, unscheduledStops
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, inArray, and, ilike, or } from "drizzle-orm";
+import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // Settings
@@ -90,6 +90,7 @@ export interface IStorage {
   // Service Occurrences
   getServiceOccurrencesByProperty(propertyId: string): Promise<ServiceOccurrence[]>;
   getServiceOccurrencesBySchedule(scheduleId: string): Promise<ServiceOccurrence[]>;
+  getUnscheduledOccurrences(startDate: Date, endDate: Date): Promise<ServiceOccurrence[]>;
   createServiceOccurrence(occurrence: InsertServiceOccurrence): Promise<ServiceOccurrence>;
   bulkCreateServiceOccurrences(occurrences: InsertServiceOccurrence[]): Promise<ServiceOccurrence[]>;
   updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined>;
@@ -191,6 +192,7 @@ export interface IStorage {
 
   // Routes
   getRoutes(dayOfWeek?: number): Promise<Route[]>;
+  getRoutesByDateRange(startDate: Date, endDate: Date): Promise<Route[]>;
   getRoute(id: string): Promise<Route | undefined>;
   createRoute(route: InsertRoute): Promise<Route>;
   updateRoute(id: string, updates: Partial<InsertRoute>): Promise<Route | undefined>;
@@ -449,6 +451,16 @@ export class DbStorage implements IStorage {
 
   async getServiceOccurrencesBySchedule(scheduleId: string): Promise<ServiceOccurrence[]> {
     return db.select().from(serviceOccurrences).where(eq(serviceOccurrences.sourceScheduleId, scheduleId));
+  }
+
+  async getUnscheduledOccurrences(startDate: Date, endDate: Date): Promise<ServiceOccurrence[]> {
+    return db.select().from(serviceOccurrences).where(
+      and(
+        eq(serviceOccurrences.status, "unscheduled"),
+        gte(serviceOccurrences.date, startDate),
+        lte(serviceOccurrences.date, endDate)
+      )
+    ).orderBy(serviceOccurrences.date);
   }
 
   async createServiceOccurrence(occurrence: InsertServiceOccurrence): Promise<ServiceOccurrence> {
@@ -1070,6 +1082,15 @@ export class DbStorage implements IStorage {
         .orderBy(routes.sortOrder);
     }
     return db.select().from(routes).orderBy(routes.dayOfWeek, routes.sortOrder);
+  }
+
+  async getRoutesByDateRange(startDate: Date, endDate: Date): Promise<Route[]> {
+    return db.select().from(routes).where(
+      and(
+        gte(routes.date, startDate),
+        lte(routes.date, endDate)
+      )
+    ).orderBy(routes.date, routes.sortOrder);
   }
 
   async getRoute(id: string): Promise<Route | undefined> {

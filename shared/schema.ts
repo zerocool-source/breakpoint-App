@@ -620,6 +620,7 @@ export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   externalId: text("external_id"), // Pool Brain route ID
   name: text("name").notNull(),
+  date: timestamp("date"), // Specific date for this route (for date-based scheduling)
   dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, etc.
   color: text("color").notNull().default("#0891b2"),
   technicianId: text("technician_id"),
