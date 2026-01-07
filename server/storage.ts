@@ -16,10 +16,14 @@ import {
   type ChannelReaction, type InsertChannelReaction,
   type ChannelRead, type InsertChannelRead,
   type Estimate, type InsertEstimate,
+  type Route, type InsertRoute,
+  type RouteStop, type InsertRouteStop,
+  type RouteMove, type InsertRouteMove,
+  type UnscheduledStop, type InsertUnscheduledStop,
   settings, alerts, workflows, customers, chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
-  estimates
+  estimates, routes, routeStops, routeMoves, unscheduledStops
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or } from "drizzle-orm";
@@ -128,6 +132,34 @@ export interface IStorage {
   updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined>;
   deleteEstimate(id: string): Promise<void>;
+
+  // Routes
+  getRoutes(dayOfWeek?: number): Promise<Route[]>;
+  getRoute(id: string): Promise<Route | undefined>;
+  createRoute(route: InsertRoute): Promise<Route>;
+  updateRoute(id: string, updates: Partial<InsertRoute>): Promise<Route | undefined>;
+  deleteRoute(id: string): Promise<void>;
+  reorderRoutes(routeIds: string[]): Promise<void>;
+
+  // Route Stops
+  getRouteStops(routeId: string): Promise<RouteStop[]>;
+  getRouteStop(id: string): Promise<RouteStop | undefined>;
+  createRouteStop(stop: InsertRouteStop): Promise<RouteStop>;
+  updateRouteStop(id: string, updates: Partial<InsertRouteStop>): Promise<RouteStop | undefined>;
+  deleteRouteStop(id: string): Promise<void>;
+  reorderRouteStops(stopIds: string[]): Promise<void>;
+  moveStopToRoute(stopId: string, newRouteId: string, isPermanent: boolean, moveDate?: Date): Promise<RouteStop | undefined>;
+
+  // Unscheduled Stops
+  getUnscheduledStops(): Promise<UnscheduledStop[]>;
+  createUnscheduledStop(stop: InsertUnscheduledStop): Promise<UnscheduledStop>;
+  deleteUnscheduledStop(id: string): Promise<void>;
+  moveUnscheduledToRoute(stopId: string, routeId: string): Promise<RouteStop>;
+
+  // Route Moves
+  getRouteMoves(date?: Date): Promise<RouteMove[]>;
+  createRouteMove(move: InsertRouteMove): Promise<RouteMove>;
+  deleteRouteMove(id: string): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -750,6 +782,153 @@ export class DbStorage implements IStorage {
 
   async deleteEstimate(id: string): Promise<void> {
     await db.delete(estimates).where(eq(estimates.id, id));
+  }
+
+  // Routes
+  async getRoutes(dayOfWeek?: number): Promise<Route[]> {
+    if (dayOfWeek !== undefined) {
+      return db.select().from(routes)
+        .where(eq(routes.dayOfWeek, dayOfWeek))
+        .orderBy(routes.sortOrder);
+    }
+    return db.select().from(routes).orderBy(routes.dayOfWeek, routes.sortOrder);
+  }
+
+  async getRoute(id: string): Promise<Route | undefined> {
+    const result = await db.select().from(routes).where(eq(routes.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createRoute(route: InsertRoute): Promise<Route> {
+    const result = await db.insert(routes).values(route as any).returning();
+    return result[0];
+  }
+
+  async updateRoute(id: string, updates: Partial<InsertRoute>): Promise<Route | undefined> {
+    const result = await db.update(routes)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(routes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteRoute(id: string): Promise<void> {
+    await db.delete(routeStops).where(eq(routeStops.routeId, id));
+    await db.delete(routes).where(eq(routes.id, id));
+  }
+
+  async reorderRoutes(routeIds: string[]): Promise<void> {
+    for (let i = 0; i < routeIds.length; i++) {
+      await db.update(routes).set({ sortOrder: i }).where(eq(routes.id, routeIds[i]));
+    }
+  }
+
+  // Route Stops
+  async getRouteStops(routeId: string): Promise<RouteStop[]> {
+    return db.select().from(routeStops)
+      .where(eq(routeStops.routeId, routeId))
+      .orderBy(routeStops.sortOrder);
+  }
+
+  async getRouteStop(id: string): Promise<RouteStop | undefined> {
+    const result = await db.select().from(routeStops).where(eq(routeStops.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createRouteStop(stop: InsertRouteStop): Promise<RouteStop> {
+    const result = await db.insert(routeStops).values(stop as any).returning();
+    return result[0];
+  }
+
+  async updateRouteStop(id: string, updates: Partial<InsertRouteStop>): Promise<RouteStop | undefined> {
+    const result = await db.update(routeStops)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(routeStops.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteRouteStop(id: string): Promise<void> {
+    await db.delete(routeStops).where(eq(routeStops.id, id));
+  }
+
+  async reorderRouteStops(stopIds: string[]): Promise<void> {
+    for (let i = 0; i < stopIds.length; i++) {
+      await db.update(routeStops).set({ sortOrder: i }).where(eq(routeStops.id, stopIds[i]));
+    }
+  }
+
+  async moveStopToRoute(stopId: string, newRouteId: string, isPermanent: boolean, moveDate?: Date): Promise<RouteStop | undefined> {
+    const stop = await this.getRouteStop(stopId);
+    if (!stop) return undefined;
+
+    if (isPermanent) {
+      return this.updateRouteStop(stopId, { routeId: newRouteId });
+    } else {
+      await db.insert(routeMoves).values({
+        stopId,
+        originalRouteId: stop.routeId,
+        temporaryRouteId: newRouteId,
+        moveDate: moveDate || new Date(),
+        isPermanent: false,
+      } as any);
+      return stop;
+    }
+  }
+
+  // Unscheduled Stops
+  async getUnscheduledStops(): Promise<UnscheduledStop[]> {
+    return db.select().from(unscheduledStops).orderBy(desc(unscheduledStops.createdAt));
+  }
+
+  async createUnscheduledStop(stop: InsertUnscheduledStop): Promise<UnscheduledStop> {
+    const result = await db.insert(unscheduledStops).values(stop as any).returning();
+    return result[0];
+  }
+
+  async deleteUnscheduledStop(id: string): Promise<void> {
+    await db.delete(unscheduledStops).where(eq(unscheduledStops.id, id));
+  }
+
+  async moveUnscheduledToRoute(stopId: string, routeId: string): Promise<RouteStop> {
+    const stop = await db.select().from(unscheduledStops).where(eq(unscheduledStops.id, stopId)).limit(1);
+    if (!stop[0]) throw new Error("Unscheduled stop not found");
+
+    const newStop = await this.createRouteStop({
+      routeId,
+      propertyId: stop[0].propertyId,
+      propertyName: stop[0].propertyName,
+      customerName: stop[0].customerName,
+      address: stop[0].address,
+      poolName: stop[0].poolName,
+      jobType: stop[0].jobType || "route_stop",
+      notes: stop[0].notes,
+      estimatedTime: stop[0].estimatedTime || 30,
+    });
+
+    await this.deleteUnscheduledStop(stopId);
+    return newStop;
+  }
+
+  // Route Moves
+  async getRouteMoves(date?: Date): Promise<RouteMove[]> {
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      return db.select().from(routeMoves);
+    }
+    return db.select().from(routeMoves);
+  }
+
+  async createRouteMove(move: InsertRouteMove): Promise<RouteMove> {
+    const result = await db.insert(routeMoves).values(move as any).returning();
+    return result[0];
+  }
+
+  async deleteRouteMove(id: string): Promise<void> {
+    await db.delete(routeMoves).where(eq(routeMoves.id, id));
   }
 }
 

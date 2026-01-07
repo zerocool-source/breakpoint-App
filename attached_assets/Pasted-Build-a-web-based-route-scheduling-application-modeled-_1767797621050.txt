@@ -1,0 +1,201 @@
+Build a web-based route scheduling application modeled after PoolBrain’s scheduling system for a pool service company.
+
+Core Purpose
+
+The app is used by office staff to schedule service technicians onto daily and weekly routes, assign pools/jobs to those routes, and manage temporary vs permanent schedule changes.
+
+Required Views
+
+Scheduling Board
+
+Supports 1-Day, 2-Day, and Week view
+
+Each column represents a day
+
+Each column contains route cards
+
+Route Cards
+
+Each route card must include:
+
+Route name
+
+Assigned technician (with ability to change)
+
+Route color
+
+Count of stops/jobs
+
+Estimated drive time
+
+Estimated miles
+
+Estimated on-site time
+
+Expand/collapse to show individual stops
+
+Drag handle to reorder stops
+
+Route Creation
+
+“New Route” button opens a modal:
+
+Select day of week
+
+Enter route name (not technician name)
+
+Pick route color using a color picker + hex input
+
+Route appears under the selected day
+
+Technician can be assigned or changed later
+
+Technician Assignment
+
+Routes are independent of technicians
+
+Technician is assigned to a route via an icon on the route card
+
+Technician can be reassigned without deleting the route
+
+Removing a technician does not delete the route or stops
+
+Unscheduled Queue
+
+A right-side Unscheduled panel
+
+Displays all jobs/stops not assigned to a route
+
+Items can be:
+
+Dragged into a route
+
+Moved via a “Move” action
+
+Show count of unscheduled items
+
+Moving Stops (Critical)
+
+Support two types of moves:
+
+One-Time Move (default)
+
+Applies only to a selected date
+
+Stop appears temporarily on a different route
+
+Original route retains ownership
+
+Visual indicators:
+
+Grayed out on original route
+
+Highlighted on temporary route
+
+Permanent Move
+
+Stop is permanently reassigned to a new route/day
+
+Applies to all future schedules
+
+All moves to/from Unscheduled are permanent
+
+Drag & Drop Behavior
+
+Drag stops:
+
+Within a route (reorder)
+
+Between routes
+
+From Unscheduled → Route
+
+Route → Unscheduled
+
+Drag routes to reorder them visually
+
+Route Optimization
+
+“Optimize Route” button:
+
+Uses map distance logic to reorder stops
+
+Supports optional custom start and end locations
+
+Requires minimum of 3 stops
+
+Route can be locked to prevent tech-side changes
+
+Scheduling Logic
+
+Support recurring schedules:
+
+Weekly
+
+Every X weeks
+
+Multiple visits per week
+
+Changing frequency updates future schedules automatically
+
+Filtering & Status
+
+Filter by:
+
+Technician
+
+Job type (route stop vs one-time job)
+
+Job status (not started, in progress, completed, no access)
+
+Status icons update in real time
+
+Permissions
+
+Office users:
+
+Full scheduling access
+
+Technician users (configurable):
+
+View own routes or all routes
+
+Reorder stops (if unlocked)
+
+Mark stops as completed, skipped, or no access
+
+UI / UX
+
+Clean dashboard layout
+
+Color-coded routes
+
+Fast drag-and-drop interactions
+
+Responsive for desktop and tablet
+
+Clear visual indicators for temporary moves
+
+Tech Stack Preference
+
+Frontend: React
+
+State management for drag-and-drop scheduling
+
+Backend-ready structure (API endpoints abstracted)
+
+Map integration placeholder for route optimization
+
+Output
+
+Generate:
+
+Frontend UI
+
+Route and scheduling data models
+
+Drag-and-drop logic
+
+Clear component structure
+
+Comments explaining key scheduling logic

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, json, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -409,6 +409,104 @@ export const insertEstimateSchema = createInsertSchema(estimates).omit({
 
 export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 export type Estimate = typeof estimates.$inferSelect;
+
+// Routes (Service routes for technicians)
+export const routes = pgTable("routes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, etc.
+  color: text("color").notNull().default("#0891b2"),
+  technicianId: text("technician_id"),
+  technicianName: text("technician_name"),
+  isLocked: boolean("is_locked").default(false),
+  estimatedDriveTime: integer("estimated_drive_time").default(0), // minutes
+  estimatedMiles: real("estimated_miles").default(0),
+  estimatedOnSiteTime: integer("estimated_on_site_time").default(0), // minutes
+  startLocation: text("start_location"),
+  endLocation: text("end_location"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRouteSchema = createInsertSchema(routes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRoute = z.infer<typeof insertRouteSchema>;
+export type Route = typeof routes.$inferSelect;
+
+// Route Stops (Jobs/pools assigned to routes)
+export const routeStops = pgTable("route_stops", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  routeId: text("route_id").notNull(),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  customerName: text("customer_name"),
+  address: text("address"),
+  poolName: text("pool_name"),
+  jobType: text("job_type").default("route_stop"), // route_stop, one_time
+  status: text("status").default("not_started"), // not_started, in_progress, completed, no_access, skipped
+  sortOrder: integer("sort_order").default(0),
+  estimatedTime: integer("estimated_time").default(30), // minutes
+  notes: text("notes"),
+  frequency: text("frequency").default("weekly"), // weekly, biweekly, monthly
+  frequencyWeeks: integer("frequency_weeks").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRouteStopSchema = createInsertSchema(routeStops).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRouteStop = z.infer<typeof insertRouteStopSchema>;
+export type RouteStop = typeof routeStops.$inferSelect;
+
+// Temporary Route Moves (One-time schedule changes)
+export const routeMoves = pgTable("route_moves", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stopId: text("stop_id").notNull(),
+  originalRouteId: text("original_route_id").notNull(),
+  temporaryRouteId: text("temporary_route_id").notNull(),
+  moveDate: timestamp("move_date").notNull(),
+  isPermanent: boolean("is_permanent").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRouteMoveSchema = createInsertSchema(routeMoves).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRouteMove = z.infer<typeof insertRouteMoveSchema>;
+export type RouteMove = typeof routeMoves.$inferSelect;
+
+// Unscheduled Stops (Jobs not assigned to any route)
+export const unscheduledStops = pgTable("unscheduled_stops", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  customerName: text("customer_name"),
+  address: text("address"),
+  poolName: text("pool_name"),
+  jobType: text("job_type").default("route_stop"),
+  notes: text("notes"),
+  estimatedTime: integer("estimated_time").default(30),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUnscheduledStopSchema = createInsertSchema(unscheduledStops).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUnscheduledStop = z.infer<typeof insertUnscheduledStopSchema>;
+export type UnscheduledStop = typeof unscheduledStops.$inferSelect;
 
 // Property Repair Summary (computed, not stored)
 export interface PropertyRepairSummary {
