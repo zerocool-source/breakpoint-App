@@ -2,19 +2,19 @@ import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Calendar, Plus, MapPin, Clock, User, Truck, Building2, 
+  Plus, MapPin, Clock, Truck, 
   Trash2, Edit, GripVertical, Lock, Unlock, MoreVertical, 
-  CheckCircle2, AlertCircle, Download, Loader2, Map, List,
-  Navigation, Timer, Route as RouteIcon
+  Download, Loader2, Map, List,
+  Navigation, Timer, ChevronDown, ChevronRight, Play
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -60,13 +60,13 @@ interface Route {
 }
 
 const DAYS = [
-  { value: 0, label: "Sunday", short: "Sun" },
-  { value: 1, label: "Monday", short: "Mon" },
-  { value: 2, label: "Tuesday", short: "Tue" },
-  { value: 3, label: "Wednesday", short: "Wed" },
-  { value: 4, label: "Thursday", short: "Thu" },
-  { value: 5, label: "Friday", short: "Fri" },
-  { value: 6, label: "Saturday", short: "Sat" },
+  { value: 0, label: "Sunday", short: "SUN" },
+  { value: 1, label: "Monday", short: "MON" },
+  { value: 2, label: "Tuesday", short: "TUE" },
+  { value: 3, label: "Wednesday", short: "WED" },
+  { value: 4, label: "Thursday", short: "THU" },
+  { value: 5, label: "Friday", short: "FRI" },
+  { value: 6, label: "Saturday", short: "SAT" },
 ];
 
 const ROUTE_COLORS = [
@@ -125,11 +125,12 @@ export default function Scheduling() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [selectedDay, setSelectedDay] = useState(new Date().getDay() || 1);
+  const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [showCreateRouteDialog, setShowCreateRouteDialog] = useState(false);
   const [showCreateStopDialog, setShowCreateStopDialog] = useState(false);
   const [showEditRouteDialog, setShowEditRouteDialog] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
-  const [selectedMapDay, setSelectedMapDay] = useState(new Date().getDay());
 
   const [newRoute, setNewRoute] = useState({
     name: "",
@@ -267,10 +268,19 @@ export default function Scheduling() {
     return grouped;
   }, [allRoutes]);
 
+  const dayRoutes = routesByDay[selectedDay] || [];
   const workDays = [1, 2, 3, 4, 5, 6];
-
-  const mapRoutes = routesByDay[selectedMapDay] || [];
   const defaultCenter: [number, number] = [33.75, -117.15];
+
+  const toggleRouteExpanded = (routeId: string) => {
+    const newExpanded = new Set(expandedRoutes);
+    if (newExpanded.has(routeId)) {
+      newExpanded.delete(routeId);
+    } else {
+      newExpanded.add(routeId);
+    }
+    setExpandedRoutes(newExpanded);
+  };
 
   return (
     <AppLayout>
@@ -314,7 +324,7 @@ export default function Scheduling() {
               ) : (
                 <Download className="h-4 w-4 mr-1" />
               )}
-              Import
+              Import from Pool Brain
             </Button>
             <Button
               size="sm"
@@ -327,296 +337,321 @@ export default function Scheduling() {
           </div>
         </div>
 
+        <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border w-fit">
+          {workDays.map((day) => {
+            const dayInfo = DAYS.find(d => d.value === day)!;
+            const dateStr = getDateForDay(day);
+            const routeCount = (routesByDay[day] || []).length;
+            return (
+              <Button
+                key={day}
+                variant={selectedDay === day ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSelectedDay(day)}
+                className={`flex-col h-auto py-2 px-3 ${selectedDay === day ? "bg-blue-600" : ""}`}
+              >
+                <span className="text-xs opacity-75">{dateStr}</span>
+                <span className="font-semibold">{dayInfo.short}</span>
+                {routeCount > 0 && (
+                  <span className="text-[10px] mt-0.5 opacity-75">{routeCount} routes</span>
+                )}
+              </Button>
+            );
+          })}
+        </div>
+
         {viewMode === "list" ? (
-          <ScrollArea className="w-full">
-            <div className="flex gap-3 pb-4 min-w-max">
-              {workDays.map((day) => {
-                const dayRoutes = routesByDay[day] || [];
-                const dayInfo = DAYS.find(d => d.value === day)!;
-                const dateStr = getDateForDay(day);
+          <ScrollArea className="h-[calc(100vh-220px)]">
+            <div className="space-y-3 pr-4">
+              {dayRoutes.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">
+                  <Truck className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No routes for {DAYS.find(d => d.value === selectedDay)?.label}</p>
+                  <p className="text-sm mt-1">Click "Import from Pool Brain" or "Add Route" to get started</p>
+                </div>
+              ) : (
+                dayRoutes.map((route) => {
+                  const isExpanded = expandedRoutes.has(route.id);
+                  const initials = getInitials(route.technicianName || route.name);
+                  const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
+                  const stopCount = route.stops.length;
+                  const miles = route.estimatedMiles || 0;
+                  const driveTime = route.estimatedDriveTime || 0;
+                  const dayShort = DAYS.find(d => d.value === route.dayOfWeek)?.short || "---";
 
-                return (
-                  <div key={day} className="w-72 flex-shrink-0">
-                    <div className="bg-blue-600 text-white px-3 py-2 rounded-t-lg font-semibold text-center">
-                      {dateStr} {dayInfo.label}
-                    </div>
-                    <div className="bg-slate-100 rounded-b-lg p-2 space-y-2 min-h-[400px]">
-                      {dayRoutes.length === 0 ? (
-                        <div className="text-center py-8 text-slate-400">
-                          <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No routes</p>
-                        </div>
-                      ) : (
-                        dayRoutes.map((route, routeIndex) => {
-                          const initials = getInitials(route.technicianName || route.name);
-                          const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
-                          const stopCount = route.stops.length;
-                          const miles = route.estimatedMiles || 0;
-
-                          return (
-                            <Card
-                              key={route.id}
-                              className="border-0 shadow-sm overflow-hidden"
-                              data-testid={`route-card-${route.id}`}
+                  return (
+                    <Card key={route.id} className="overflow-hidden" data-testid={`route-card-${route.id}`}>
+                      <div 
+                        className="h-2"
+                        style={{ backgroundColor: route.color }}
+                      />
+                      
+                      <div 
+                        className="p-4 cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={() => toggleRouteExpanded(route.id)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3">
+                            {isExpanded ? (
+                              <ChevronDown className="h-5 w-5 text-slate-400" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5 text-slate-400" />
+                            )}
+                            <div 
+                              className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                              style={{ backgroundColor: route.color }}
                             >
+                              {initials}
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-slate-900">{route.name}</h3>
+                            <p className="text-sm text-slate-500">{route.technicianName || "Unassigned"}</p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 text-amber-500">
+                              <MapPin className="h-4 w-4" />
+                            </div>
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-700">
+                              {stopCount}
+                            </div>
+                          </div>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRoute(route);
+                                  setNewRoute({
+                                    name: route.name,
+                                    color: route.color,
+                                    technicianName: route.technicianName || "",
+                                    dayOfWeek: route.dayOfWeek,
+                                  });
+                                  setShowEditRouteDialog(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRoute(route);
+                                  setShowCreateStopDialog(true);
+                                }}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Stop
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Delete this route?")) {
+                                    deleteRouteMutation.mutate(route.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        <div className="flex items-center gap-6 mt-3 text-sm text-slate-500 ml-16">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(totalTime)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Navigation className="h-4 w-4" />
+                            {miles.toFixed(2)}mi
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Timer className="h-4 w-4" />
+                            {formatTime(driveTime)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="border-t bg-slate-50">
+                          <div className="p-3 border-b bg-blue-600">
+                            <Button size="sm" variant="secondary" className="text-blue-600">
+                              Optimize Route
+                            </Button>
+                          </div>
+
+                          <div className="p-3 border-b bg-white flex items-center gap-3">
+                            <Play className="h-5 w-5 text-slate-400" />
+                            <div>
+                              <p className="font-medium text-slate-700">Start Location</p>
+                              <p className="text-sm text-slate-500">Office / Home base</p>
+                            </div>
+                            <div className="ml-auto flex items-center gap-2">
+                              <span className="text-sm text-slate-500">All</span>
+                              <Checkbox />
+                            </div>
+                          </div>
+
+                          <div className="divide-y">
+                            {route.stops.map((stop, idx) => (
                               <div 
-                                className="h-1.5"
-                                style={{ backgroundColor: route.color }}
-                              />
-                              <CardContent className="p-3">
-                                <div className="flex items-start gap-3">
+                                key={stop.id} 
+                                className="p-3 bg-white hover:bg-slate-50 flex items-start gap-3"
+                                data-testid={`route-stop-${stop.id}`}
+                              >
+                                <div className="flex items-center gap-2 mt-1">
+                                  <GripVertical className="h-4 w-4 text-slate-300 cursor-grab" />
                                   <div 
-                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
                                     style={{ backgroundColor: route.color }}
                                   >
-                                    {initials}
+                                    {idx + 1}
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between">
-                                      <h3 className="font-semibold text-sm text-slate-900 truncate">
-                                        {route.name}
-                                      </h3>
-                                      <div className="flex items-center gap-1">
-                                        {route.isLocked && (
-                                          <Lock className="h-3 w-3 text-slate-400" />
-                                        )}
-                                        <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5">
-                                          <MapPin className="h-3 w-3 text-slate-600" />
-                                          <span className="text-xs font-semibold text-slate-700">
-                                            {stopCount}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-slate-500 truncate">
-                                      {route.technicianName || "Unassigned"}
-                                    </p>
-                                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                                      <span className="flex items-center gap-1">
-                                        <Clock className="h-3 w-3" />
-                                        {formatTime(totalTime)}
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <Navigation className="h-3 w-3" />
-                                        {miles.toFixed(1)}mi
-                                      </span>
-                                      <span className="flex items-center gap-1">
-                                        <Timer className="h-3 w-3" />
-                                        {formatTime(route.estimatedDriveTime || 0)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          setSelectedRoute(route);
-                                          setNewRoute({
-                                            name: route.name,
-                                            color: route.color,
-                                            technicianName: route.technicianName || "",
-                                            dayOfWeek: route.dayOfWeek,
-                                          });
-                                          setShowEditRouteDialog(true);
-                                        }}
-                                      >
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          setSelectedRoute(route);
-                                          setShowCreateStopDialog(true);
-                                        }}
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Stop
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => updateRouteMutation.mutate({
-                                          id: route.id,
-                                          updates: { isLocked: !route.isLocked }
-                                        })}
-                                      >
-                                        {route.isLocked ? (
-                                          <><Unlock className="h-4 w-4 mr-2" />Unlock</>
-                                        ) : (
-                                          <><Lock className="h-4 w-4 mr-2" />Lock</>
-                                        )}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="text-red-600"
-                                        onClick={() => {
-                                          if (confirm("Delete this route?")) {
-                                            deleteRouteMutation.mutate(route.id);
-                                          }
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-blue-600 hover:underline cursor-pointer">
+                                    {stop.customerName || stop.propertyName}
+                                  </p>
+                                  <p className="text-sm text-slate-600">
+                                    {stop.poolName || stop.propertyName}
+                                    {stop.address && ` - ${stop.address}`}
+                                  </p>
                                 </div>
 
-                                {route.stops.length > 0 && (
-                                  <div className="mt-3 space-y-1.5">
-                                    {route.stops.slice(0, 3).map((stop, idx) => (
-                                      <div
-                                        key={stop.id}
-                                        className="flex items-center gap-2 text-xs bg-slate-50 rounded px-2 py-1.5"
-                                      >
-                                        <span 
-                                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                                          style={{ backgroundColor: route.color }}
-                                        >
-                                          {idx + 1}
-                                        </span>
-                                        <span className="truncate flex-1 text-slate-700">
-                                          {stop.propertyName}
-                                        </span>
-                                        <span className="text-slate-400">
-                                          {stop.estimatedTime || 30}m
-                                        </span>
-                                      </div>
-                                    ))}
-                                    {route.stops.length > 3 && (
-                                      <p className="text-xs text-slate-400 text-center">
-                                        +{route.stops.length - 3} more stops
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          );
-                        })
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                    {dayShort}
+                                  </span>
+                                  <Checkbox />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {route.stops.length === 0 && (
+                            <div className="p-6 text-center text-slate-400">
+                              <p>No stops on this route</p>
+                              <Button
+                                variant="link"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRoute(route);
+                                  setShowCreateStopDialog(true);
+                                }}
+                              >
+                                Add first stop
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-slate-500 border-2 border-dashed border-slate-300"
-                        onClick={() => {
-                          setNewRoute({ ...newRoute, dayOfWeek: day });
-                          setShowCreateRouteDialog(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Route
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </ScrollArea>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border w-fit">
-              {workDays.map((day) => {
-                const dayInfo = DAYS.find(d => d.value === day)!;
-                return (
-                  <Button
-                    key={day}
-                    variant={selectedMapDay === day ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setSelectedMapDay(day)}
-                    className={selectedMapDay === day ? "bg-blue-600" : ""}
-                  >
-                    {dayInfo.short}
-                  </Button>
-                );
-              })}
+          <div className="flex gap-4 h-[calc(100vh-220px)]">
+            <div className="w-72 flex-shrink-0 space-y-2 overflow-auto">
+              <h3 className="font-semibold text-slate-700 sticky top-0 bg-white py-2">
+                {DAYS.find(d => d.value === selectedDay)?.label} Routes ({dayRoutes.length})
+              </h3>
+              {dayRoutes.map((route) => (
+                <Card 
+                  key={route.id} 
+                  className="border-l-4 cursor-pointer hover:shadow-md transition-shadow" 
+                  style={{ borderLeftColor: route.color }}
+                  onClick={() => toggleRouteExpanded(route.id)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                        style={{ backgroundColor: route.color }}
+                      >
+                        {getInitials(route.technicianName || route.name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{route.name}</p>
+                        <p className="text-xs text-slate-500">{route.stops.length} stops</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            <div className="flex gap-4">
-              <div className="w-64 flex-shrink-0 space-y-2">
-                <h3 className="font-semibold text-slate-700">
-                  {DAYS.find(d => d.value === selectedMapDay)?.label} Routes
-                </h3>
-                {mapRoutes.map((route) => (
-                  <Card key={route.id} className="border-l-4" style={{ borderLeftColor: route.color }}>
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
-                          style={{ backgroundColor: route.color }}
+            <div className="flex-1 rounded-lg overflow-hidden border shadow-sm">
+              <MapContainer
+                center={defaultCenter}
+                zoom={10}
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {dayRoutes.map((route, routeIndex) => {
+                  const routeCoords: [number, number][] = route.stops.map((stop, stopIndex) => {
+                    const baseLat = 33.7 + (routeIndex * 0.15);
+                    const baseLng = -117.3 - (routeIndex * 0.15);
+                    const lat = stop.lat || (baseLat + (stopIndex * 0.02));
+                    const lng = stop.lng || (baseLng + (stopIndex * 0.025));
+                    return [lat, lng] as [number, number];
+                  });
+
+                  return (
+                    <React.Fragment key={route.id}>
+                      {routeCoords.length > 1 && (
+                        <Polyline
+                          positions={routeCoords}
+                          pathOptions={{ 
+                            color: route.color, 
+                            weight: 3,
+                            opacity: 0.7
+                          }}
+                        />
+                      )}
+                      {route.stops.map((stop, stopIndex) => (
+                        <Marker
+                          key={stop.id}
+                          position={routeCoords[stopIndex]}
+                          icon={createMarkerIcon(route.color, stopIndex + 1)}
                         >
-                          {getInitials(route.technicianName || route.name)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{route.name}</p>
-                          <p className="text-xs text-slate-500">{route.stops.length} stops</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="flex-1 h-[600px] rounded-lg overflow-hidden border shadow-sm">
-                <MapContainer
-                  center={defaultCenter}
-                  zoom={10}
-                  style={{ height: "100%", width: "100%" }}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {mapRoutes.map((route, routeIndex) => {
-                    const routeCoords: [number, number][] = route.stops.map((stop, stopIndex) => {
-                      const baseLat = 33.7 + (routeIndex * 0.15);
-                      const baseLng = -117.3 - (routeIndex * 0.15);
-                      const lat = stop.lat || (baseLat + (stopIndex * 0.02));
-                      const lng = stop.lng || (baseLng + (stopIndex * 0.025));
-                      return [lat, lng] as [number, number];
-                    });
-
-                    return (
-                      <React.Fragment key={route.id}>
-                        {routeCoords.length > 1 && (
-                          <Polyline
-                            positions={routeCoords}
-                            pathOptions={{ 
-                              color: route.color, 
-                              weight: 3,
-                              opacity: 0.7
-                            }}
-                          />
-                        )}
-                        {route.stops.map((stop, stopIndex) => (
-                          <Marker
-                            key={stop.id}
-                            position={routeCoords[stopIndex]}
-                            icon={createMarkerIcon(route.color, stopIndex + 1)}
-                          >
-                            <Popup>
-                              <div className="p-1">
-                                <p className="font-semibold">{stop.propertyName}</p>
-                                {stop.customerName && (
-                                  <p className="text-sm text-slate-600">{stop.customerName}</p>
-                                )}
-                                {stop.address && (
-                                  <p className="text-xs text-slate-500">{stop.address}</p>
-                                )}
-                                <p className="text-xs mt-1">
-                                  Stop #{stopIndex + 1} on {route.name}
-                                </p>
-                              </div>
-                            </Popup>
-                          </Marker>
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-                </MapContainer>
-              </div>
+                          <Popup>
+                            <div className="p-1">
+                              <p className="font-semibold">{stop.customerName || stop.propertyName}</p>
+                              {stop.poolName && (
+                                <p className="text-sm text-slate-600">{stop.poolName}</p>
+                              )}
+                              {stop.address && (
+                                <p className="text-xs text-slate-500">{stop.address}</p>
+                              )}
+                              <p className="text-xs mt-1">
+                                Stop #{stopIndex + 1} on {route.name}
+                              </p>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </MapContainer>
             </div>
           </div>
         )}
@@ -753,19 +788,19 @@ export default function Scheduling() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Property Name *</Label>
-                <Input
-                  value={newStop.propertyName}
-                  onChange={(e) => setNewStop({ ...newStop, propertyName: e.target.value })}
-                  placeholder="e.g., Sunset Villas Pool"
-                />
-              </div>
-              <div className="space-y-2">
                 <Label>Customer / HOA Name</Label>
                 <Input
                   value={newStop.customerName}
                   onChange={(e) => setNewStop({ ...newStop, customerName: e.target.value })}
-                  placeholder="e.g., Sunset Villas HOA"
+                  placeholder="e.g., SUNDANCE NORTH HOA"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Pool Name *</Label>
+                <Input
+                  value={newStop.poolName}
+                  onChange={(e) => setNewStop({ ...newStop, poolName: e.target.value, propertyName: e.target.value })}
+                  placeholder="e.g., Tioga - Main Pool"
                 />
               </div>
               <div className="space-y-2">
@@ -773,7 +808,7 @@ export default function Scheduling() {
                 <Input
                   value={newStop.address}
                   onChange={(e) => setNewStop({ ...newStop, address: e.target.value })}
-                  placeholder="e.g., 123 Palm Dr, Phoenix, AZ"
+                  placeholder="e.g., 1380 Mary Lane, Beaumont, CA 92223"
                 />
               </div>
               <div className="space-y-2">
@@ -791,7 +826,7 @@ export default function Scheduling() {
               </Button>
               <Button
                 onClick={() => selectedRoute && createStopMutation.mutate({ routeId: selectedRoute.id, stop: newStop })}
-                disabled={!newStop.propertyName}
+                disabled={!newStop.poolName}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Add Stop
