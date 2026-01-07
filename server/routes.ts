@@ -1463,6 +1463,18 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Delete customer property
+  app.delete("/api/customers/:customerId/properties/:propertyId", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      await storage.deleteCustomerAddress(propertyId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting customer property:", error);
+      res.status(500).json({ error: "Failed to delete property", message: error.message });
+    }
+  });
+
   // Get customer contacts
   app.get("/api/customers/:customerId/contacts", async (req: any, res: any) => {
     try {
@@ -1498,6 +1510,18 @@ function setupRoutes(app: any) {
     } catch (error: any) {
       console.error("Error creating customer contact:", error);
       res.status(500).json({ error: "Failed to create contact", message: error.message });
+    }
+  });
+
+  // Delete customer contact
+  app.delete("/api/customers/:customerId/contacts/:contactId", async (req: any, res: any) => {
+    try {
+      const { contactId } = req.params;
+      await storage.deleteCustomerContact(contactId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting customer contact:", error);
+      res.status(500).json({ error: "Failed to delete contact", message: error.message });
     }
   });
 

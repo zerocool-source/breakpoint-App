@@ -615,6 +615,30 @@ function CustomerDetailPanel({
     },
   });
 
+  const deletePropertyMutation = useMutation({
+    mutationFn: async (propertyId: string) => {
+      const res = await fetch(`/api/customers/${customer.id}/properties/${propertyId}`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "properties"] });
+    },
+  });
+
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const res = await fetch(`/api/customers/${customer.id}/contacts/${contactId}`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "contacts"] });
+    },
+  });
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b bg-white flex items-center justify-between">
@@ -747,7 +771,14 @@ function CustomerDetailPanel({
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this property?")) {
+                                  deletePropertyMutation.mutate(prop.id);
+                                }
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -813,7 +844,14 @@ function CustomerDetailPanel({
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this contact?")) {
+                                  deleteContactMutation.mutate(contact.id);
+                                }
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>

@@ -74,9 +74,12 @@ export interface IStorage {
   upsertCustomerAddress(customerId: string, externalId: string, address: InsertCustomerAddress): Promise<CustomerAddress>;
   deleteCustomer(id: string): Promise<void>;
 
+  deleteCustomerAddress(id: string): Promise<void>;
+
   // Customer Contacts
   getCustomerContacts(customerId: string): Promise<any[]>;
   createCustomerContact(contact: any): Promise<any>;
+  deleteCustomerContact(id: string): Promise<void>;
 
   // Pools
   getPoolsByCustomer(customerId: string): Promise<Pool[]>;
@@ -381,6 +384,10 @@ export class DbStorage implements IStorage {
     await db.delete(customers).where(eq(customers.id, id));
   }
 
+  async deleteCustomerAddress(id: string): Promise<void> {
+    await db.delete(customerAddresses).where(eq(customerAddresses.id, id));
+  }
+
   // Customer Contacts
   async getCustomerContacts(customerId: string): Promise<any[]> {
     return db.select().from(customerContacts).where(eq(customerContacts.customerId, customerId));
@@ -389,6 +396,10 @@ export class DbStorage implements IStorage {
   async createCustomerContact(contact: any): Promise<any> {
     const result = await db.insert(customerContacts).values(contact).returning();
     return result[0];
+  }
+
+  async deleteCustomerContact(id: string): Promise<void> {
+    await db.delete(customerContacts).where(eq(customerContacts.id, id));
   }
 
   // Pools
