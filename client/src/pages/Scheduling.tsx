@@ -698,6 +698,65 @@ export default function Scheduling() {
                                   </span>
                                 </div>
                               </div>
+                              
+                              {/* Expanded Stops List */}
+                              {isExpanded && (
+                                <div className="border-t bg-slate-50">
+                                  <div className="divide-y">
+                                    {route.stops.length === 0 ? (
+                                      <div className="p-3 text-center text-slate-400 text-xs">
+                                        No stops assigned
+                                      </div>
+                                    ) : (
+                                      route.stops.map((stop, idx) => (
+                                        <div 
+                                          key={stop.id}
+                                          className="p-2 bg-white hover:bg-slate-50 flex items-start gap-2"
+                                          data-testid={`stop-${stop.id}`}
+                                        >
+                                          <div 
+                                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 mt-0.5"
+                                            style={{ backgroundColor: route.color }}
+                                          >
+                                            {idx + 1}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-blue-600 text-xs truncate">
+                                              {stop.customerName || stop.propertyName}
+                                            </p>
+                                            <p className="text-[10px] text-slate-500 truncate">
+                                              {stop.address}
+                                            </p>
+                                            {stop.city && (
+                                              <p className="text-[10px] text-slate-400">
+                                                {stop.city}, {stop.state} {stop.zip}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <div className="text-[10px] text-slate-500 flex-shrink-0">
+                                            {dayInfo.short.toUpperCase()}
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                  <div className="p-2 border-t">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="w-full text-xs h-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedRoute(route);
+                                        setShowCreateStopDialog(true);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Add Stop
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </Card>
                           );
                         })
