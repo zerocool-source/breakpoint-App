@@ -194,19 +194,25 @@ export default function ServiceTechs() {
     },
   });
 
-  const filteredTechnicians = technicians.filter((tech) => {
-    const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.toLowerCase();
-    const phone = (tech.phone || "").toLowerCase();
-    const email = (tech.email || "").toLowerCase();
-    const matchesSearch = 
-      fullName.includes(searchQuery.toLowerCase()) ||
-      phone.includes(searchQuery.toLowerCase()) ||
-      email.includes(searchQuery.toLowerCase());
-    
-    if (filterStatus === "active") return matchesSearch && tech.active;
-    if (filterStatus === "inactive") return matchesSearch && !tech.active;
-    return matchesSearch;
-  });
+  const filteredTechnicians = technicians
+    .filter((tech) => {
+      const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.toLowerCase();
+      const phone = (tech.phone || "").toLowerCase();
+      const email = (tech.email || "").toLowerCase();
+      const matchesSearch = 
+        fullName.includes(searchQuery.toLowerCase()) ||
+        phone.includes(searchQuery.toLowerCase()) ||
+        email.includes(searchQuery.toLowerCase());
+      
+      if (filterStatus === "active") return matchesSearch && tech.active;
+      if (filterStatus === "inactive") return matchesSearch && !tech.active;
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
   return (
     <AppLayout>
