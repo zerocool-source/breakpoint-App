@@ -561,6 +561,12 @@ function CustomerDetailPanel({
   const [activeTab, setActiveTab] = useState("properties");
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [scheduleActive, setScheduleActive] = useState(false);
+  const [visitDays, setVisitDays] = useState<string[]>([]);
+  const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "custom">("weekly");
+  const [frequencyInterval, setFrequencyInterval] = useState(1);
+  const [routeNotes, setRouteNotes] = useState("");
   const queryClient = useQueryClient();
 
   const status = STATUS_OPTIONS.find(s => s.value === customer.status) || STATUS_OPTIONS[0];
@@ -586,6 +592,40 @@ function CustomerDetailPanel({
 
   const properties = propertiesData?.properties || [];
   const contacts = contactsData?.contacts || [];
+
+  useEffect(() => {
+    if (properties.length > 0 && !selectedPropertyId) {
+      setSelectedPropertyId(properties[0].id);
+    }
+  }, [properties, selectedPropertyId]);
+
+  const { data: routeScheduleData } = useQuery<{ schedule: any }>({
+    queryKey: ["/api/properties", selectedPropertyId, "route-schedule"],
+    queryFn: async () => {
+      if (!selectedPropertyId) return { schedule: null };
+      const res = await fetch(`/api/properties/${selectedPropertyId}/route-schedule`);
+      if (!res.ok) return { schedule: null };
+      return res.json();
+    },
+    enabled: !!selectedPropertyId,
+  });
+
+  useEffect(() => {
+    if (routeScheduleData?.schedule) {
+      const s = routeScheduleData.schedule;
+      setScheduleActive(s.isActive || false);
+      setVisitDays(s.visitDays || []);
+      setFrequency(s.frequency || "weekly");
+      setFrequencyInterval(s.frequencyInterval || 1);
+      setRouteNotes(s.routeNotes || "");
+    } else {
+      setScheduleActive(false);
+      setVisitDays([]);
+      setFrequency("weekly");
+      setFrequencyInterval(1);
+      setRouteNotes("");
+    }
+  }, [routeScheduleData]);
 
   const addPropertyMutation = useMutation({
     mutationFn: async (data: Partial<Property>) => {
@@ -638,6 +678,39 @@ function CustomerDetailPanel({
       queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "contacts"] });
     },
   });
+
+  const saveRouteScheduleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!selectedPropertyId) throw new Error("No property selected");
+      const res = await fetch(`/api/properties/${selectedPropertyId}/route-schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties", selectedPropertyId, "route-schedule"] });
+    },
+  });
+
+  const handleSaveRouteSchedule = () => {
+    saveRouteScheduleMutation.mutate({
+      isActive: scheduleActive,
+      visitDays,
+      frequency,
+      frequencyInterval: frequency === "custom" ? frequencyInterval : (frequency === "biweekly" ? 2 : 1),
+      routeNotes,
+    });
+  };
+
+  const toggleVisitDay = (day: string) => {
+    setVisitDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -888,64 +961,140 @@ function CustomerDetailPanel({
             <h3 className="font-semibold text-slate-700">Route Schedule</h3>
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Activate Route Schedule</span>
-              <Switch />
+              <Switch 
+                checked={scheduleActive} 
+                onCheckedChange={(checked) => {
+                  setScheduleActive(checked);
+                }}
+              />
             </div>
           </div>
-          <ScrollArea className="h-[calc(100vh-450px)]">
+
+          {properties.length > 1 && (
+            <div className="mb-4">
+              <Label className="text-sm text-slate-600 mb-2 block">Select Property</Label>
+              <Select value={selectedPropertyId || ""} onValueChange={setSelectedPropertyId}>
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue placeholder="Select a property" />
+                </SelectTrigger>
+                <SelectContent>
+                  {properties.map((prop) => (
+                    <SelectItem key={prop.id} value={prop.id}>
+                      {prop.street || prop.label || "Property"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {properties.length === 0 ? (
+            <Card className="bg-white">
+              <CardContent className="p-8 text-center">
+                <p className="text-slate-500">Add a property first to configure route scheduling</p>
+              </CardContent>
+            </Card>
+          ) : (
+          <ScrollArea className="h-[calc(100vh-500px)]">
             <div className="space-y-4">
               <Card className="bg-white">
                 <CardContent className="p-4">
-                  <h4 className="font-medium text-slate-700 mb-3">Weekly Schedule</h4>
+                  <h4 className="font-medium text-slate-700 mb-3">Visit Days</h4>
+                  <p className="text-xs text-slate-500 mb-3">Select days when this property should be serviced</p>
                   <div className="grid grid-cols-2 gap-3">
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-                      <div key={day} className="flex items-center gap-3 p-3 border rounded-lg bg-slate-50">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
-                          {day.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-slate-600">{day}</p>
-                          <p className="text-xs text-slate-400">Not scheduled</p>
-                        </div>
-                      </div>
-                    ))}
+                    {[
+                      { key: "monday", label: "Monday" },
+                      { key: "tuesday", label: "Tuesday" },
+                      { key: "wednesday", label: "Wednesday" },
+                      { key: "thursday", label: "Thursday" },
+                      { key: "friday", label: "Friday" },
+                      { key: "saturday", label: "Saturday" },
+                      { key: "sunday", label: "Sunday" }
+                    ].map(({ key, label }) => {
+                      const isSelected = visitDays.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => toggleVisitDay(key)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 border rounded-lg transition-colors",
+                            isSelected 
+                              ? "bg-blue-50 border-blue-300" 
+                              : "bg-slate-50 border-slate-200 hover:border-blue-200"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center font-medium text-sm",
+                            isSelected 
+                              ? "bg-blue-600 text-white" 
+                              : "bg-slate-200 text-slate-600"
+                          )}>
+                            {label.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className={cn(
+                              "text-sm font-medium",
+                              isSelected ? "text-blue-700" : "text-slate-600"
+                            )}>{label}</p>
+                            <p className="text-xs text-slate-400">
+                              {isSelected ? "Scheduled" : "Not scheduled"}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="bg-white">
                 <CardContent className="p-4">
-                  <h4 className="font-medium text-slate-700 mb-3">How Often</h4>
+                  <h4 className="font-medium text-slate-700 mb-3">Frequency</h4>
                   <div className="space-y-2">
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="frequency" defaultChecked className="text-blue-600" />
-                      <span className="text-sm">Once a week</span>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="frequency" 
+                        checked={frequency === "weekly"}
+                        onChange={() => setFrequency("weekly")}
+                        className="text-blue-600" 
+                      />
+                      <span className="text-sm">Every week</span>
                     </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="frequency" className="text-blue-600" />
-                      <span className="text-sm">Every other week</span>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="frequency" 
+                        checked={frequency === "biweekly"}
+                        onChange={() => setFrequency("biweekly")}
+                        className="text-blue-600" 
+                      />
+                      <span className="text-sm">Every other week (biweekly)</span>
                     </label>
-                    <label className="flex items-center gap-2">
-                      <input type="radio" name="frequency" className="text-blue-600" />
-                      <span className="text-sm">Every (x) weeks</span>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="frequency" 
+                        checked={frequency === "custom"}
+                        onChange={() => setFrequency("custom")}
+                        className="text-blue-600" 
+                      />
+                      <span className="text-sm">Custom interval</span>
                     </label>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white">
-                <CardContent className="p-4">
-                  <h4 className="font-medium text-slate-700 mb-3">Multiple Visits Per Week</h4>
-                  <div className="flex gap-2">
-                    {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
-                      <Button 
-                        key={day} 
-                        variant="outline" 
-                        size="sm"
-                        className="text-xs px-2 py-1"
-                      >
-                        {day}
-                      </Button>
-                    ))}
+                    {frequency === "custom" && (
+                      <div className="flex items-center gap-2 ml-6 mt-2">
+                        <span className="text-sm text-slate-600">Every</span>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          max="12" 
+                          value={frequencyInterval}
+                          onChange={(e) => setFrequencyInterval(parseInt(e.target.value) || 1)}
+                          className="w-16 h-8 text-center"
+                        />
+                        <span className="text-sm text-slate-600">weeks</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -954,13 +1103,24 @@ function CustomerDetailPanel({
                 <CardContent className="p-4">
                   <h4 className="font-medium text-slate-700 mb-3">Route Notes</h4>
                   <Textarea 
-                    placeholder="Add notes about route schedule..."
+                    placeholder="Add notes about route schedule (gate codes, special instructions, etc.)"
                     className="min-h-[100px]"
+                    value={routeNotes}
+                    onChange={(e) => setRouteNotes(e.target.value)}
                   />
                 </CardContent>
               </Card>
+
+              <Button 
+                onClick={handleSaveRouteSchedule}
+                disabled={saveRouteScheduleMutation.isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {saveRouteScheduleMutation.isPending ? "Saving..." : "Save Route Schedule"}
+              </Button>
             </div>
           </ScrollArea>
+          )}
         </TabsContent>
       </Tabs>
 

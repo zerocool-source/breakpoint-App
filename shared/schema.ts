@@ -120,10 +120,10 @@ export const routeSchedules = pgTable("route_schedules", {
   poolId: varchar("pool_id"), // Optional legacy field
   isActive: boolean("is_active").default(false),
   frequency: text("frequency").default("weekly"), // "weekly", "biweekly", "custom"
-  customWeeks: integer("custom_weeks"),
-  visitDays: text("visit_days"), // comma-separated: "1,3,5" for Mon,Wed,Fri
+  frequencyInterval: integer("frequency_interval").default(1), // Number of weeks between visits
+  visitDays: text("visit_days").array(), // Array of day names: ["monday", "wednesday", "friday"]
+  routeNotes: text("route_notes"),
   endDate: timestamp("end_date"),
-  notes: text("notes"),
   lastGeneratedThrough: timestamp("last_generated_through"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
