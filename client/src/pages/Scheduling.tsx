@@ -13,6 +13,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
   Plus, MapPin, Clock, Truck, 
   Trash2, Edit, GripVertical, Lock, Unlock, MoreVertical, 
   Download, Loader2, Map, List, Search,
@@ -124,6 +135,15 @@ function getDateForDay(dayOfWeek: number): string {
   return `${String(targetDate.getMonth() + 1).padStart(2, "0")}/${String(targetDate.getDate()).padStart(2, "0")}`;
 }
 
+function getFullDateForDay(dayOfWeek: number): string {
+  const today = new Date();
+  const currentDay = today.getDay();
+  const diff = dayOfWeek - currentDay;
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + diff);
+  return targetDate.toISOString().split("T")[0];
+}
+
 function createMarkerIcon(color: string, number: number) {
   return L.divIcon({
     className: "custom-marker",
@@ -146,6 +166,50 @@ function createMarkerIcon(color: string, number: number) {
   });
 }
 
+function DraggableUnscheduledItem({ occurrence, dayOfWeek }: { occurrence: UnscheduledOccurrence; dayOfWeek: number }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `unscheduled-${occurrence.id}`,
+    data: { occurrence, dayOfWeek },
+  });
+
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.5 : 1 }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-white border border-amber-200 cursor-grab hover:border-amber-400 hover:shadow-sm transition-all"
+      data-testid={`draggable-unscheduled-${occurrence.id}`}
+    >
+      <GripVertical className="h-3 w-3 text-amber-400 flex-shrink-0" />
+      <MapPin className="h-3 w-3 text-amber-500 flex-shrink-0" />
+      <div className="flex-1 min-w-0 truncate">
+        <span className="font-medium">{occurrence.customerName || occurrence.propertyName}</span>
+      </div>
+    </div>
+  );
+}
+
+function DroppableRouteCard({ route, children, dayOfWeek }: { route: Route; children: React.ReactNode; dayOfWeek: number }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `route-${route.id}`,
+    data: { route, dayOfWeek },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition-all ${isOver ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function Scheduling() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -158,6 +222,13 @@ export default function Scheduling() {
   const [showCreateStopDialog, setShowCreateStopDialog] = useState(false);
   const [showEditRouteDialog, setShowEditRouteDialog] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [activeDragItem, setActiveDragItem] = useState<UnscheduledOccurrence | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
   
   const urlParams = new URLSearchParams(window.location.search);
   const filterCustomerId = urlParams.get("customerId");
@@ -345,6 +416,37 @@ export default function Scheduling() {
       toast({ title: "Import Failed", description: error.message, variant: "destructive" });
     },
   });
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { occurrence } = event.active.data.current as { occurrence: UnscheduledOccurrence };
+    setActiveDragItem(occurrence);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragItem(null);
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    const activeData = active.data.current as { occurrence: UnscheduledOccurrence; dayOfWeek: number };
+    const overData = over.data.current as { route: Route; dayOfWeek: number };
+    
+    if (!activeData || !overData) return;
+    
+    if (activeData.dayOfWeek !== overData.dayOfWeek) {
+      toast({
+        title: "Cannot Assign",
+        description: "You can only assign to routes on the same day.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    assignToRouteMutation.mutate({
+      occurrenceId: activeData.occurrence.id,
+      routeId: overData.route.id,
+    });
+  };
 
   const allRoutes: Route[] = allRoutesData?.routes || [];
 
@@ -581,43 +683,58 @@ export default function Scheduling() {
         </div>
 
         {viewMode === "list" ? (
-          <div className="h-[calc(100vh-180px)] overflow-auto">
-            {/* Day Columns Layout */}
-            <div className="flex gap-2 pb-4 min-w-0">
-              {workDays.map((day) => {
-                const dayInfo = DAYS.find(d => d.value === day)!;
-                const dateStr = getDateForDay(day);
-                const dayRoutesForColumn = routesByDay[day] || [];
-                
-                return (
-                  <div key={day} className="flex-1 min-w-[180px]">
-                    {/* Day Header */}
-                    <div className="bg-blue-600 text-white rounded-t-lg px-3 py-2 text-center">
-                      <div className="text-sm font-semibold">{dateStr} {dayInfo.label}</div>
-                    </div>
-                    
-                    {/* Technician Route Cards */}
-                    <div className="bg-slate-100 rounded-b-lg p-2 min-h-[200px] space-y-2">
-                      {dayRoutesForColumn.length === 0 ? (
-                        <div className="text-center py-4 text-slate-400 text-xs">
-                          No routes
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <div className="h-[calc(100vh-180px)] overflow-auto">
+              {/* Day Columns Layout */}
+              <div className="flex gap-2 pb-4 min-w-0">
+                {workDays.map((day) => {
+                  const dayInfo = DAYS.find(d => d.value === day)!;
+                  const dateStr = getDateForDay(day);
+                  const dayRoutesForColumn = routesByDay[day] || [];
+                  const dayUnscheduled = unscheduledByDay[getFullDateForDay(day)] || [];
+                  
+                  return (
+                    <div key={day} className="flex-1 min-w-[180px]">
+                      {/* Day Header */}
+                      <div className="bg-blue-600 text-white rounded-t-lg px-3 py-2 text-center">
+                        <div className="text-sm font-semibold">{dateStr} {dayInfo.label}</div>
+                      </div>
+                      
+                      {/* Unscheduled for this day */}
+                      {dayUnscheduled.length > 0 && (
+                        <div className="bg-amber-50 border-x border-amber-200 p-2 space-y-1">
+                          <div className="flex items-center gap-1 text-[10px] text-amber-700 font-medium mb-1">
+                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                            Unscheduled ({dayUnscheduled.length})
+                          </div>
+                          {dayUnscheduled.map((occ) => (
+                            <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={day} />
+                          ))}
                         </div>
-                      ) : (
-                        dayRoutesForColumn.map((route) => {
-                          const isExpanded = expandedRoutes.has(route.id);
-                          const initials = getInitials(route.technicianName || route.name);
-                          const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
-                          const stopCount = route.stops.length;
-                          const miles = route.estimatedMiles || 0;
-                          const driveTime = route.estimatedDriveTime || 0;
+                      )}
+                      
+                      {/* Technician Route Cards */}
+                      <div className={`bg-slate-100 ${dayUnscheduled.length > 0 ? "" : "rounded-b-lg"} p-2 min-h-[200px] space-y-2`}>
+                        {dayRoutesForColumn.length === 0 ? (
+                          <div className="text-center py-4 text-slate-400 text-xs">
+                            No routes
+                          </div>
+                        ) : (
+                          dayRoutesForColumn.map((route) => {
+                            const isExpanded = expandedRoutes.has(route.id);
+                            const initials = getInitials(route.technicianName || route.name);
+                            const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
+                            const stopCount = route.stops.length;
+                            const miles = route.estimatedMiles || 0;
+                            const driveTime = route.estimatedDriveTime || 0;
 
-                          return (
-                            <Card 
-                              key={route.id} 
-                              className="overflow-hidden bg-white cursor-pointer hover:shadow-md transition-shadow"
-                              onClick={() => toggleRouteExpanded(route.id)}
-                              data-testid={`route-card-${route.id}`}
-                            >
+                            return (
+                              <DroppableRouteCard key={route.id} route={route} dayOfWeek={day}>
+                                <Card 
+                                  className="overflow-hidden bg-white cursor-pointer hover:shadow-md transition-shadow"
+                                  onClick={() => toggleRouteExpanded(route.id)}
+                                  data-testid={`route-card-${route.id}`}
+                                >
                               <div className="p-2">
                                 <div className="flex items-center gap-2">
                                   <div 
@@ -757,16 +874,18 @@ export default function Scheduling() {
                                   </div>
                                 </div>
                               )}
-                            </Card>
-                          );
-                        })
-                      )}
+                                </Card>
+                              </DroppableRouteCard>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </DndContext>
         ) : (
           <div className="flex gap-4 h-[calc(100vh-220px)]">
             <div className="w-72 flex-shrink-0 space-y-2 overflow-auto">
