@@ -632,7 +632,7 @@ export default function Scheduling() {
                   const dayShort = DAYS.find(d => d.value === route.dayOfWeek)?.short || "---";
 
                   return (
-                    <Card key={route.id} className="overflow-hidden" data-testid={`route-card-${route.id}`}>
+                    <Card key={route.id} className="overflow-hidden max-w-2xl" data-testid={`route-card-${route.id}`}>
                       <div 
                         className="h-1"
                         style={{ backgroundColor: route.color }}
