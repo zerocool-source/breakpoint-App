@@ -524,7 +524,8 @@ export default function Scheduling() {
 
   return (
     <AppLayout>
-      <div className="p-4 space-y-4 h-full">
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="p-4 space-y-4 h-full">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900" data-testid="page-title">
@@ -563,34 +564,12 @@ export default function Scheduling() {
                       return (
                         <div key={dateKey} className="border-b border-slate-100 pb-2 last:border-0">
                           <div className="text-xs font-medium text-slate-600 mb-1">{formattedDate} {dayName}</div>
-                          {occurrences.map((occ) => (
-                            <div key={occ.id} className="flex items-center gap-2 text-xs py-1 hover:bg-slate-50 rounded px-1">
-                              <MapPin className="h-3 w-3 text-amber-500" />
-                              <span className="flex-1 truncate font-medium">{occ.customerName || occ.propertyName}</span>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-5 px-1 text-blue-600">
-                                    <ChevronDown className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  {allRoutes.length === 0 ? (
-                                    <DropdownMenuItem disabled>No routes</DropdownMenuItem>
-                                  ) : (
-                                    allRoutes.map((route) => (
-                                      <DropdownMenuItem
-                                        key={route.id}
-                                        onClick={() => assignToRouteMutation.mutate({ occurrenceId: occ.id, routeId: route.id })}
-                                      >
-                                        <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: route.color }} />
-                                        {route.name}
-                                      </DropdownMenuItem>
-                                    ))
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          ))}
+                          {occurrences.map((occ) => {
+                            const occDayOfWeek = new Date(occ.date + "T00:00:00").getDay();
+                            return (
+                              <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={occDayOfWeek} />
+                            );
+                          })}
                         </div>
                       );
                     })}
@@ -683,7 +662,6 @@ export default function Scheduling() {
         </div>
 
         {viewMode === "list" ? (
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="h-[calc(100vh-180px)] overflow-auto">
               {/* Day Columns Layout */}
               <div className="flex gap-2 pb-4 min-w-0">
@@ -885,7 +863,6 @@ export default function Scheduling() {
                 })}
               </div>
             </div>
-          </DndContext>
         ) : (
           <div className="flex gap-4 h-[calc(100vh-220px)]">
             <div className="w-72 flex-shrink-0 space-y-2 overflow-auto">
@@ -1220,7 +1197,18 @@ export default function Scheduling() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeDragItem && (
+            <div className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-white border-2 border-amber-400 shadow-lg cursor-grabbing">
+              <GripVertical className="h-3 w-3 text-amber-400 flex-shrink-0" />
+              <MapPin className="h-3 w-3 text-amber-500 flex-shrink-0" />
+              <span className="font-medium">{activeDragItem.customerName || activeDragItem.propertyName}</span>
+            </div>
+          )}
+        </DragOverlay>
       </div>
+      </DndContext>
     </AppLayout>
   );
 }
