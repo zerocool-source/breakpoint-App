@@ -1243,32 +1243,58 @@ function CustomerDetailPanel({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start rounded-none border-b bg-white px-4">
-          <TabsTrigger value="properties" className="gap-1">
-            <Home className="h-4 w-4" />
-            Properties ({properties.length})
-          </TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-1">
-            <Users className="h-4 w-4" />
-            Contacts ({contacts.length})
-          </TabsTrigger>
-          <TabsTrigger value="notes" className="gap-1">
-            <FileText className="h-4 w-4" />
-            Notes
-          </TabsTrigger>
-          <TabsTrigger value="route" className="gap-1">
-            <Calendar className="h-4 w-4" />
-            Route
-          </TabsTrigger>
-          <TabsTrigger value="water" className="gap-1">
-            <Droplets className="h-4 w-4" />
-            Bodies of Water ({poolsList.length})
-          </TabsTrigger>
-          <TabsTrigger value="equipment" className="gap-1">
-            <Wrench className="h-4 w-4" />
-            Equipment ({equipmentList.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center border-b bg-white">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-8 shrink-0 rounded-none border-r"
+            onClick={() => {
+              const container = document.getElementById('customer-tabs-scroll');
+              if (container) container.scrollBy({ left: -150, behavior: 'smooth' });
+            }}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div id="customer-tabs-scroll" className="flex-1 overflow-x-auto scrollbar-hide">
+            <TabsList className="w-max justify-start rounded-none bg-transparent px-2">
+              <TabsTrigger value="properties" className="gap-1 whitespace-nowrap">
+                <Home className="h-4 w-4" />
+                Properties ({properties.length})
+              </TabsTrigger>
+              <TabsTrigger value="contacts" className="gap-1 whitespace-nowrap">
+                <Users className="h-4 w-4" />
+                Contacts ({contacts.length})
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="gap-1 whitespace-nowrap">
+                <FileText className="h-4 w-4" />
+                Notes
+              </TabsTrigger>
+              <TabsTrigger value="route" className="gap-1 whitespace-nowrap">
+                <Calendar className="h-4 w-4" />
+                Route
+              </TabsTrigger>
+              <TabsTrigger value="water" className="gap-1 whitespace-nowrap">
+                <Droplets className="h-4 w-4" />
+                Bodies of Water ({poolsList.length})
+              </TabsTrigger>
+              <TabsTrigger value="equipment" className="gap-1 whitespace-nowrap">
+                <Wrench className="h-4 w-4" />
+                Equipment ({equipmentList.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-8 shrink-0 rounded-none border-l"
+            onClick={() => {
+              const container = document.getElementById('customer-tabs-scroll');
+              if (container) container.scrollBy({ left: 150, behavior: 'smooth' });
+            }}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
 
         <TabsContent value="properties" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
