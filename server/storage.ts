@@ -84,6 +84,7 @@ export interface IStorage {
 
   // Route Schedules
   getRouteScheduleByProperty(propertyId: string): Promise<RouteSchedule | undefined>;
+  getActiveRouteSchedules(): Promise<RouteSchedule[]>;
   upsertRouteSchedule(propertyId: string, schedule: Partial<InsertRouteSchedule>): Promise<RouteSchedule>;
   updateRouteSchedule(id: string, updates: Partial<InsertRouteSchedule>): Promise<RouteSchedule | undefined>;
 
@@ -423,6 +424,10 @@ export class DbStorage implements IStorage {
   async getRouteScheduleByProperty(propertyId: string): Promise<RouteSchedule | undefined> {
     const result = await db.select().from(routeSchedules).where(eq(routeSchedules.propertyId, propertyId)).limit(1);
     return result[0];
+  }
+
+  async getActiveRouteSchedules(): Promise<RouteSchedule[]> {
+    return db.select().from(routeSchedules).where(eq(routeSchedules.isActive, true));
   }
 
   async upsertRouteSchedule(propertyId: string, schedule: Partial<InsertRouteSchedule>): Promise<RouteSchedule> {

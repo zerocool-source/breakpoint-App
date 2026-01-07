@@ -3211,22 +3211,75 @@ function setupRoutes(app: any) {
       const startDate = new Date(start + "T00:00:00.000Z");
       const endDate = new Date(end + "T23:59:59.999Z");
       
+      // Auto-generate occurrences from active route schedules
+      const activeSchedules = await storage.getActiveRouteSchedules();
+      const dayNameToIndex: { [key: string]: number } = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6
+      };
+      
+      // Get all addresses to enrich with customer/property data
+      const allCustomers = await storage.getCustomers();
+      const addressMap = new Map<string, { propertyName: string; customerName: string; address: string }>();
+      
+      for (const customer of allCustomers) {
+        const addresses = await storage.getCustomerAddresses(customer.id);
+        for (const addr of addresses) {
+          addressMap.set(addr.id, {
+            propertyName: addr.street || "Property",
+            customerName: customer.name,
+            address: `${addr.street || ""}, ${addr.city || ""}, ${addr.state || ""} ${addr.zip || ""}`.trim()
+          });
+        }
+      }
+      
+      // Generate occurrences for each active schedule
+      for (const schedule of activeSchedules) {
+        if (!schedule.visitDays || schedule.visitDays.length === 0) continue;
+        
+        const existingOccurrences = await storage.getServiceOccurrencesByProperty(schedule.propertyId);
+        const existingDates = new Set(existingOccurrences.map(o => o.date.toISOString().split("T")[0]));
+        
+        // Iterate through each day in the date range
+        const current = new Date(startDate);
+        const occurrencesToCreate: any[] = [];
+        
+        while (current <= endDate) {
+          const dayIndex = current.getDay();
+          const dayName = Object.keys(dayNameToIndex).find(k => dayNameToIndex[k] === dayIndex);
+          
+          if (dayName && schedule.visitDays.includes(dayName)) {
+            const dateStr = current.toISOString().split("T")[0];
+            if (!existingDates.has(dateStr)) {
+              occurrencesToCreate.push({
+                propertyId: schedule.propertyId,
+                date: new Date(dateStr + "T00:00:00.000Z"),
+                status: "unscheduled",
+                sourceScheduleId: schedule.id,
+              });
+              existingDates.add(dateStr);
+            }
+          }
+          current.setDate(current.getDate() + 1);
+        }
+        
+        if (occurrencesToCreate.length > 0) {
+          await storage.bulkCreateServiceOccurrences(occurrencesToCreate);
+        }
+      }
+      
+      // Now get all unscheduled occurrences
       const occurrences = await storage.getUnscheduledOccurrences(startDate, endDate);
       
       // Enrich with property/customer data
-      const enrichedOccurrences = await Promise.all(
-        occurrences.map(async (occ) => {
-          // Try to get route schedule info for property name
-          const schedule = await storage.getRouteScheduleByProperty(occ.propertyId);
-          
-          return {
-            ...occ,
-            propertyName: schedule?.propertyName || occ.propertyId,
-            customerName: schedule?.customerName || "",
-            address: schedule?.address || "",
-          };
-        })
-      );
+      const enrichedOccurrences = occurrences.map((occ) => {
+        const addrInfo = addressMap.get(occ.propertyId);
+        return {
+          ...occ,
+          propertyName: addrInfo?.propertyName || occ.propertyId,
+          customerName: addrInfo?.customerName || "",
+          address: addrInfo?.address || "",
+        };
+      });
       
       res.json({ occurrences: enrichedOccurrences });
     } catch (error: any) {
