@@ -192,8 +192,8 @@ export function Sidebar() {
       icon: Users, 
       label: "Technicians", 
       children: [
-        { label: "Repairs", href: "/tech-repairs" },
-        { label: "Chemicals", href: "/tech-chemicals" },
+        { label: "Repair Tech", href: "/tech-repairs" },
+        { label: "Service Techs", href: "/tech-services" },
       ]
     },
     { 
