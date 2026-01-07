@@ -108,20 +108,20 @@ function CustomerDetail({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+    <div className="fixed inset-0 z-50 bg-white flex flex-col" data-testid="customer-detail-view">
       <div className="flex items-center justify-between px-6 py-4 border-b bg-slate-50">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-back-to-list">
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-blue-700">Customer</h1>
-              <Badge className={`${statusBadge.bgColor} ${statusBadge.color}`}>
+              <Badge className={`${statusBadge.bgColor} ${statusBadge.color}`} data-testid="badge-customer-status">
                 {statusBadge.label}
               </Badge>
             </div>
-            <h2 className="text-xl font-semibold text-slate-800">{customer.name}</h2>
+            <h2 className="text-xl font-semibold text-slate-800" data-testid="text-customer-name">{customer.name}</h2>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -139,16 +139,16 @@ function CustomerDetail({
         <div className="w-96 border-r bg-white flex flex-col">
           <Tabs value={leftTab} onValueChange={setLeftTab} className="flex-1 flex flex-col">
             <TabsList className="flex justify-start gap-1 px-4 pt-4 bg-transparent">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+              <TabsTrigger value="profile" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700" data-testid="tab-profile">
                 <User className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="addresses" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+              <TabsTrigger value="addresses" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700" data-testid="tab-addresses">
                 <MapPin className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="billing" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+              <TabsTrigger value="billing" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700" data-testid="tab-billing">
                 <DollarSign className="h-4 w-4" />
               </TabsTrigger>
-              <TabsTrigger value="notes" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
+              <TabsTrigger value="notes" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700" data-testid="tab-notes">
                 <FileText className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
@@ -158,6 +158,7 @@ function CustomerDetail({
                 size="sm" 
                 className="text-green-600 border-green-600"
                 onClick={() => setShowRouteSchedule(true)}
+                data-testid="button-route-schedule"
               >
                 <Calendar className="h-4 w-4 mr-1" />
                 Route

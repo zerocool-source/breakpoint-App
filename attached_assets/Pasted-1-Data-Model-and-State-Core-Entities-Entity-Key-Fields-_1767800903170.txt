@@ -1,0 +1,182 @@
+1. Data Model and State
+Core Entities
+Entity	Key Fields	Notes
+Customer	id, name, status (Active, Inactive), tags (array), routeStopEmail (string), addresses (array of Address), contacts (array of Contact), bodies (array of BodyOfWater)	Captures everything about the client and their service needs
+Address	id, label (billing, primary), street, city, state, zip	Stored inside the customer
+Contact	id, name, email, phone, type (primary, billing, etc.)	Stored inside the customer
+BodyOfWater	id, name (e.g., “Main Pool”), color, type (pool, spa, fountain), gallons, serviceLevel, tasks (array of Task), equipment (array of EquipmentSetting)	Represents each pool/spa/fountain tab
+Task	id, name, category (whenArriving, beforePictures, chemicalReadings, chemicalDosing, inProgress), description, icons (optional list like camera, calendar), hiddenConditions (equipment types that hide the task)	Tasks can be dragged into different categories and reordered
+EquipmentSetting	type (filter, pump, chlorinator, heater, etc.), value (e.g., "Sand Filter", "Cartridge")	Determines which tasks appear or hide in the workflow
+State Structure (React)
+
+A simplified shape in React might look like:
+
+const [customer, setCustomer] = useState({
+  id: 'cust-1',
+  name: 'Altis Master Association',
+  status: 'Active',
+  tags: ['Summer 6 Days', 'Winter 5 Days'],
+  routeStopEmail: 'contact@customer.com',
+  addresses: [...],
+  contacts: [...],
+  bodies: [
+    {
+      id: 'body-1',
+      name: 'Main Pool',
+      color: '#004080',
+      type: 'pool',
+      gallons: 15000,
+      serviceLevel: 'Pool Tech Services',
+      tasks: [...],
+      equipment: [
+        { type: 'filter', value: 'Sand' },
+        { type: 'pump', value: 'Variable Speed' },
+        // ...
+      ],
+    },
+    // Additional bodies of water...
+  ],
+});
+
+
+You could manage this state globally via Context or Redux if multiple components need access.
+
+2. Component Structure
+
+CustomerSidebar
+
+Shows addresses, contacts, tags, and routeStopEmail.
+
+Allows adding/editing addresses and contacts.
+
+Clicking an address highlights it and loads the corresponding body-of-water tabs.
+
+BodyTabs
+
+Renders each BodyOfWater as a tab with its color.
+
+Includes an “Add” button to create a new body (prompts for name, type, color).
+
+Selecting a tab sets the active body index in state.
+
+ServiceConfigPanel
+
+Contains three fields:
+
+Service Level: a <select> bound to activeBody.serviceLevel.
+
+Type: a <select> bound to activeBody.type.
+
+Gallons: a <number input> bound to activeBody.gallons.
+
+Changing these values may reset or update the tasks list depending on your business logic.
+
+WorkflowBuilder
+
+Divided into sections (When Arriving, Before Pictures, Chemical Readings, Chemical Dosing, Job in Progress).
+
+Each section is a drop zone; tasks can be dragged and reordered within or between them.
+
+Tasks render a checkbox (completion status), icons (camera, calendar), and a handle (for drag).
+
+Hidden tasks: When rendering each task, check task.hiddenConditions against the activeBody.equipment and skip if matched.
+
+TaskLibraryModal
+
+Triggered by “Add Item.”
+
+Displays a searchable list of predefined tasks (maybe loaded from a static JSON or API).
+
+When a task is selected, it is inserted into the active section with default properties.
+
+EquipmentSelector
+
+Icons representing filter, pump, chlorinator, heater, etc.
+
+Clicking an icon opens a dropdown to select the equipment type (e.g., “Sand Filter,” “Cartridge”).
+
+Updates activeBody.equipment and triggers a recalculation of visible tasks.
+
+RouteLink
+
+A small button with a calendar icon that routes the user to the scheduling board (could be another page in your app).
+
+3. Drag‑and‑Drop Logic
+
+Use a library like react-beautiful-dnd or @dnd-kit:
+
+Wrap the entire WorkflowBuilder in a <DndContext>.
+
+Each section becomes a <Droppable> area with an identifier matching its category.
+
+Each Task becomes a <Draggable> with a unique id.
+
+On onDragEnd, update the tasks arrays accordingly:
+
+If the item’s destination differs from the source, change task.category to the new section.
+
+Update the order indexes within the tasks array.
+
+4. Task Library & Hidden Conditions
+
+Maintain a master list of tasks keyed by service level or globally available.
+
+Each task can include a hiddenConditions property:
+
+{
+  id: 'task-cleaned-filter',
+  name: 'Cleaned Filter',
+  category: 'inProgress',
+  hiddenConditions: [
+    { type: 'filter', values: ['Sand'] },  // hide if filter type is Sand
+  ],
+}
+
+
+When rendering tasks, filter by checking if any hiddenConditions match the activeBody.equipment settings.
+
+5. API and Persistence
+
+Local or remote storage: For a simple demo, store the entire customer object in local state. If you want persistence:
+
+Create endpoints like GET /customers/:id, PUT /customers/:id, POST /customers, and DELETE /customers/:id.
+
+Save updates to tasks, equipment, and settings to your backend.
+
+Authentication: If you expand this later, implement user login and restrict editing to authorized roles.
+
+6. Next‑level Features
+
+Validation: When saving tasks, ensure required categories are not empty.
+
+Undo/Redo: Keep a history stack for user actions so they can undo accidental moves.
+
+Templates: Allow users to save entire workflows as templates and apply them to new customers.
+
+Progress tracking: Add a status property to tasks (e.g., notStarted, inProgress, completed, skipped) and reflect progress with icons or color changes.
+
+Expanded Replit App Builder Prompt
+
+To tie all these details into Replit, you can phrase your prompt like this (builds on the prior outline):
+
+Create a full-stack React app that manages pool‑service tasks for customers. Requirements:
+
+1. Data models: Customer (with name, status, tags, routeStopEmail, addresses, contacts, bodies); BodyOfWater (name, type, color, gallons, serviceLevel, tasks, equipment); Task (id, name, category, description, icons, hiddenConditions); EquipmentSetting (type, value). Use JSON stubs as initial data.
+
+2. Sidebar for customer details: displays addresses, contacts, tags; allows adding/editing; shows routeStopEmail.
+
+3. Route link: a button with a calendar icon that navigates to a separate scheduling board page (not implemented here).
+
+4. Tab navigation for bodies of water: color‑coded tabs; add/remove tabs; switching tabs loads service configuration and workflow for that body.
+
+5. Service configuration panel: select “Service Level,” “Type,” input “Gallons.” Changes update the workflow.
+
+6. Workflow builder with drag-and-drop: five sections (whenArriving, beforePictures, chemicalReadings, chemicalDosing, inProgress). Use react-beautiful-dnd to drag tasks between sections. Each task shows a checkbox, optional icons (camera, calendar), and can be reordered. Provide an “Add Item” modal to choose tasks from a master library.
+
+7. Equipment picker: icons for filter, pump, chlorinator, heater; clicking an icon shows a dropdown; selected equipment hides tasks that have matching hiddenConditions.
+
+8. State management: store the current customer and its bodies of water in a top-level state; update functions for tasks, service settings, equipment.
+
+9. Backend stub: define a simple Node/Express server with endpoints to fetch and save customer data. Use fetch/axios on the frontend.
+
+Include clear component decomposition, modular CSS, and comments explaining how to extend fun

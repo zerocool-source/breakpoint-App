@@ -1398,8 +1398,9 @@ function setupRoutes(app: any) {
       });
 
       // Fetch pools for this customer
-      const poolsData = await client.getCustomerPoolDetails({ customer_id: customerId, limit: 100 });
-      const rawPools = poolsData.data || [];
+      const poolsData = await client.getCustomerPoolDetails({ limit: 500 });
+      const allPools = poolsData.data || [];
+      const rawPools = allPools.filter((p: any) => String(p.CustomerID || p.customerId) === customerId);
 
       const poolsList = rawPools.map((p: any) => ({
         id: p.RecordID || p.PoolID,
@@ -1419,8 +1420,8 @@ function setupRoutes(app: any) {
       let addresses: any[] = [];
       let notes = "";
       try {
-        const customerData = await client.getCustomerDetail({ customer_id: customerId, limit: 1 });
-        const cust = customerData.data?.[0];
+        const customerData = await client.getCustomerDetail({ limit: 1000 });
+        const cust = (customerData.data || []).find((c: any) => String(c.RecordID || c.CustomerID) === customerId);
         if (cust) {
           notes = cust.Notes || "";
           // Extract addresses if available
