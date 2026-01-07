@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -124,6 +125,7 @@ function createMarkerIcon(color: string, number: number) {
 export default function Scheduling() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [selectedDay, setSelectedDay] = useState(new Date().getDay() || 1);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
@@ -131,6 +133,10 @@ export default function Scheduling() {
   const [showCreateStopDialog, setShowCreateStopDialog] = useState(false);
   const [showEditRouteDialog, setShowEditRouteDialog] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const filterCustomerId = urlParams.get("customerId");
+  const filterCustomerName = urlParams.get("customerName");
 
   const [newRoute, setNewRoute] = useState({
     name: "",
@@ -268,9 +274,54 @@ export default function Scheduling() {
     return grouped;
   }, [allRoutes]);
 
-  const dayRoutes = routesByDay[selectedDay] || [];
+  const filteredRoutesAllDays = useMemo(() => {
+    if (!filterCustomerName && !filterCustomerId) return null;
+    
+    const matchingRoutesByDay: Record<number, Route[]> = {};
+    let firstMatchDay: number | null = null;
+    
+    for (let day = 0; day <= 6; day++) {
+      const routes = routesByDay[day] || [];
+      const filteredRoutes = routes.map(route => ({
+        ...route,
+        stops: route.stops.filter(stop => {
+          if (filterCustomerName) {
+            return stop.customerName?.toLowerCase() === filterCustomerName.toLowerCase();
+          }
+          return false;
+        }),
+      })).filter(route => route.stops.length > 0);
+      
+      if (filteredRoutes.length > 0) {
+        matchingRoutesByDay[day] = filteredRoutes;
+        if (firstMatchDay === null) firstMatchDay = day;
+      }
+    }
+    
+    return { matchingRoutesByDay, firstMatchDay };
+  }, [routesByDay, filterCustomerName, filterCustomerId]);
+
+  useEffect(() => {
+    if (filteredRoutesAllDays?.firstMatchDay !== null && filteredRoutesAllDays?.firstMatchDay !== undefined) {
+      setSelectedDay(filteredRoutesAllDays.firstMatchDay);
+    }
+  }, [filteredRoutesAllDays?.firstMatchDay]);
+
+  const dayRoutes = useMemo(() => {
+    if (filterCustomerName && filteredRoutesAllDays) {
+      return filteredRoutesAllDays.matchingRoutesByDay[selectedDay] || [];
+    }
+    return routesByDay[selectedDay] || [];
+  }, [routesByDay, selectedDay, filterCustomerName, filteredRoutesAllDays]);
+  
   const workDays = [1, 2, 3, 4, 5, 6];
   const defaultCenter: [number, number] = [33.75, -117.15];
+  
+  useEffect(() => {
+    if (filterCustomerName && dayRoutes.length > 0) {
+      setExpandedRoutes(new Set(dayRoutes.map(r => r.id)));
+    }
+  }, [filterCustomerName, dayRoutes.length]);
 
   const toggleRouteExpanded = (routeId: string) => {
     const newExpanded = new Set(expandedRoutes);
@@ -291,6 +342,16 @@ export default function Scheduling() {
               Route Scheduling
             </h1>
             <p className="text-slate-600 text-sm">Manage technician routes and schedules</p>
+            {filterCustomerName && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                  <span>Filtering: {filterCustomerName}</span>
+                  <Link href="/scheduling">
+                    <button className="hover:text-blue-600">✕</button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-white rounded-lg border p-1">

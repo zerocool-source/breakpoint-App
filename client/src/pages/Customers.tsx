@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,7 +242,6 @@ function CustomerDetail({
 }) {
   const [leftTab, setLeftTab] = useState("profile");
   const [activePoolIndex, setActivePoolIndex] = useState(0);
-  const [showRouteSchedule, setShowRouteSchedule] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddPool, setShowAddPool] = useState(false);
   const [newPoolName, setNewPoolName] = useState("");
@@ -427,16 +427,17 @@ function CustomerDetail({
                   <FileText className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-green-600 border-green-600"
-                onClick={() => setShowRouteSchedule(true)}
-                data-testid="button-route-schedule"
-              >
-                <Calendar className="h-4 w-4 mr-1" />
-                Route
-              </Button>
+              <Link href={`/scheduling?customerId=${encodeURIComponent(customer.externalId || customer.id)}&customerName=${encodeURIComponent(customer.name)}`}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-green-600 border-green-600"
+                  data-testid="button-route-schedule"
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Route
+                </Button>
+              </Link>
             </div>
 
             <ScrollArea className="flex-1">
@@ -771,96 +772,6 @@ function CustomerDetail({
           )}
         </div>
       </div>
-
-      <Dialog open={showRouteSchedule} onOpenChange={setShowRouteSchedule}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-center text-blue-600 text-xl">Route Schedule</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="flex items-center justify-center gap-3">
-              <span className="font-medium">Activate Route Schedule</span>
-              <Switch defaultChecked data-testid="switch-route-active" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, idx) => (
-                <div key={day} className="flex items-center gap-2 p-3 border rounded-lg" data-testid={`route-day-${day.toLowerCase()}`}>
-                  <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center text-cyan-700 font-bold text-sm">
-                    KP
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-600">(Beaumont/North) {day}</p>
-                    <p className="text-xs text-slate-500">Kyle Pollock</p>
-                  </div>
-                  <span className="text-xs text-slate-400">{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"][idx]}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <Label className="font-medium">How Often?</Label>
-                <div className="space-y-2 mt-2">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="frequency" defaultChecked className="text-blue-600" data-testid="radio-weekly" />
-                    <span className="text-sm">Once a week</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="frequency" className="text-blue-600" data-testid="radio-biweekly" />
-                    <span className="text-sm">Every other week</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="frequency" className="text-blue-600" data-testid="radio-custom" />
-                    <span className="text-sm">Every (x) weeks</span>
-                  </label>
-                </div>
-              </div>
-              <div>
-                <Label className="font-medium">Ends On:</Label>
-                <div className="space-y-2 mt-2">
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="ends" defaultChecked className="text-blue-600" data-testid="radio-never" />
-                    <span className="text-sm">Never</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input type="radio" name="ends" className="text-blue-600" data-testid="radio-date" />
-                    <span className="text-sm">Date</span>
-                    <Calendar className="h-4 w-4 text-slate-400" />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label className="font-medium">Multiple visits per week</Label>
-              <div className="flex gap-1 mt-2">
-                {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((d, i) => (
-                  <button
-                    key={d}
-                    className={`px-3 py-1 rounded text-xs font-medium ${
-                      i < 5 ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-500"
-                    }`}
-                    data-testid={`day-chip-${d.toLowerCase()}`}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label className="font-medium">Notes</Label>
-              <Textarea placeholder="Add notes..." className="mt-2" data-testid="textarea-route-notes" />
-              <p className="text-xs text-slate-400 mt-1">Character limit: 6000</p>
-            </div>
-
-            <div className="text-center pt-4 border-t">
-              <h4 className="font-semibold text-lg">Billing Schedule</h4>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
         <DialogContent className="max-w-md">
