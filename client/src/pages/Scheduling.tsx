@@ -376,19 +376,6 @@ export default function Scheduling() {
               </Button>
             </div>
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => importFromPoolBrainMutation.mutate()}
-              disabled={importFromPoolBrainMutation.isPending}
-            >
-              {importFromPoolBrainMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-1" />
-              )}
-              Import from Pool Brain
-            </Button>
-            <Button
               size="sm"
               onClick={() => setShowCreateRouteDialog(true)}
               className="bg-blue-600 hover:bg-blue-700"
