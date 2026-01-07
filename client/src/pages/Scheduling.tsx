@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -9,11 +9,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Calendar, Plus, MapPin, Clock, User, Truck, Building2, 
-  ChevronLeft, ChevronRight, Trash2, Edit, GripVertical,
-  Lock, Unlock, MoreVertical, CheckCircle2, AlertCircle, Download, Loader2
+  Trash2, Edit, GripVertical, Lock, Unlock, MoreVertical, 
+  CheckCircle2, AlertCircle, Download, Loader2, Map, List,
+  Navigation, Timer, Route as RouteIcon
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -21,6 +22,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface RouteStop {
   id: string;
@@ -36,6 +40,8 @@ interface RouteStop {
   estimatedTime: number | null;
   notes: string | null;
   frequency: string | null;
+  lat?: number;
+  lng?: number;
 }
 
 interface Route {
@@ -54,6 +60,7 @@ interface Route {
 }
 
 const DAYS = [
+  { value: 0, label: "Sunday", short: "Sun" },
   { value: 1, label: "Monday", short: "Mon" },
   { value: 2, label: "Tuesday", short: "Tue" },
   { value: 3, label: "Wednesday", short: "Wed" },
@@ -63,31 +70,72 @@ const DAYS = [
 ];
 
 const ROUTE_COLORS = [
-  "#0891b2", "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#ca8a04"
+  "#0891b2", "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#ca8a04",
+  "#000000", "#6366f1", "#ec4899", "#f97316", "#84cc16"
 ];
 
-const stopStatusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  not_started: { label: "Not Started", color: "bg-slate-100 text-slate-600", icon: Clock },
-  in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700", icon: Clock },
-  completed: { label: "Completed", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  no_access: { label: "No Access", color: "bg-amber-100 text-amber-700", icon: AlertCircle },
-  skipped: { label: "Skipped", color: "bg-red-100 text-red-700", icon: AlertCircle },
-};
+function getInitials(name: string): string {
+  if (!name) return "??";
+  const parts = name.split(" ").filter(p => p.length > 0);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+function formatTime(minutes: number): string {
+  if (minutes < 60) return `${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins > 0 ? `${hours}hr ${mins}min` : `${hours}hr`;
+}
+
+function getDateForDay(dayOfWeek: number): string {
+  const today = new Date();
+  const currentDay = today.getDay();
+  const diff = dayOfWeek - currentDay;
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + diff);
+  return `${String(targetDate.getMonth() + 1).padStart(2, "0")}/${String(targetDate.getDate()).padStart(2, "0")}`;
+}
+
+function createMarkerIcon(color: string, number: number) {
+  return L.divIcon({
+    className: "custom-marker",
+    html: `<div style="
+      background-color: ${color};
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    ">${number}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
 
 export default function Scheduling() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedDay, setSelectedDay] = useState(new Date().getDay() || 1);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [showCreateRouteDialog, setShowCreateRouteDialog] = useState(false);
   const [showCreateStopDialog, setShowCreateStopDialog] = useState(false);
   const [showEditRouteDialog, setShowEditRouteDialog] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
-  const [draggedStop, setDraggedStop] = useState<{ stop: RouteStop; sourceRouteId: string } | null>(null);
+  const [selectedMapDay, setSelectedMapDay] = useState(new Date().getDay());
 
   const [newRoute, setNewRoute] = useState({
     name: "",
     color: ROUTE_COLORS[0],
     technicianName: "",
+    dayOfWeek: 1,
   });
 
   const [newStop, setNewStop] = useState({
@@ -98,20 +146,11 @@ export default function Scheduling() {
     estimatedTime: 30,
   });
 
-  const { data: routesData, isLoading } = useQuery({
-    queryKey: ["routes", selectedDay],
+  const { data: allRoutesData, isLoading } = useQuery({
+    queryKey: ["all-routes"],
     queryFn: async () => {
-      const response = await fetch(`/api/routes?dayOfWeek=${selectedDay}`);
+      const response = await fetch("/api/routes");
       if (!response.ok) throw new Error("Failed to fetch routes");
-      return response.json();
-    },
-  });
-
-  const { data: unscheduledData } = useQuery({
-    queryKey: ["unscheduled-stops"],
-    queryFn: async () => {
-      const response = await fetch("/api/unscheduled-stops");
-      if (!response.ok) throw new Error("Failed to fetch unscheduled stops");
       return response.json();
     },
   });
@@ -121,19 +160,16 @@ export default function Scheduling() {
       const response = await fetch("/api/routes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...route, dayOfWeek: selectedDay }),
+        body: JSON.stringify(route),
       });
       if (!response.ok) throw new Error("Failed to create route");
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
       toast({ title: "Route Created", description: "New route has been added." });
       setShowCreateRouteDialog(false);
-      setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create route.", variant: "destructive" });
+      setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "", dayOfWeek: 1 });
     },
   });
 
@@ -148,8 +184,7 @@ export default function Scheduling() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      toast({ title: "Route Updated", description: "Route has been updated." });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
       setShowEditRouteDialog(false);
     },
   });
@@ -161,8 +196,8 @@ export default function Scheduling() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      toast({ title: "Route Deleted", description: "Route and its stops have been removed." });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+      toast({ title: "Route Deleted" });
     },
   });
 
@@ -177,25 +212,10 @@ export default function Scheduling() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      toast({ title: "Stop Added", description: "New stop has been added to the route." });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+      toast({ title: "Stop Added" });
       setShowCreateStopDialog(false);
       setNewStop({ propertyName: "", customerName: "", address: "", poolName: "", estimatedTime: 30 });
-    },
-  });
-
-  const updateStopMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const response = await fetch(`/api/route-stops/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
-      });
-      if (!response.ok) throw new Error("Failed to update stop");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
     },
   });
 
@@ -206,24 +226,7 @@ export default function Scheduling() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      toast({ title: "Stop Removed", description: "Stop has been removed from the route." });
-    },
-  });
-
-  const moveStopMutation = useMutation({
-    mutationFn: async ({ stopId, newRouteId }: { stopId: string; newRouteId: string }) => {
-      const response = await fetch(`/api/route-stops/${stopId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ routeId: newRouteId }),
-      });
-      if (!response.ok) throw new Error("Failed to move stop");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      toast({ title: "Stop Moved", description: "Stop has been moved to the new route." });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
     },
   });
 
@@ -240,319 +243,367 @@ export default function Scheduling() {
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["routes"] });
-      toast({ 
-        title: "Routes Imported", 
-        description: data.message || `Imported ${data.createdRoutes} routes with ${data.createdStops} stops.` 
-      });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+      toast({ title: "Routes Imported", description: data.message });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Import Failed", 
-        description: error.message, 
-        variant: "destructive" 
-      });
+      toast({ title: "Import Failed", description: error.message, variant: "destructive" });
     },
   });
 
-  const routes: Route[] = routesData?.routes || [];
+  const allRoutes: Route[] = allRoutesData?.routes || [];
 
-  const handleDragStart = (e: React.DragEvent, stop: RouteStop, sourceRouteId: string) => {
-    setDraggedStop({ stop, sourceRouteId });
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent, targetRouteId: string) => {
-    e.preventDefault();
-    if (draggedStop && draggedStop.sourceRouteId !== targetRouteId) {
-      moveStopMutation.mutate({ stopId: draggedStop.stop.id, newRouteId: targetRouteId });
+  const routesByDay = useMemo(() => {
+    const grouped: Record<number, Route[]> = {};
+    for (let i = 0; i <= 6; i++) {
+      grouped[i] = [];
     }
-    setDraggedStop(null);
-  };
+    for (const route of allRoutes) {
+      if (grouped[route.dayOfWeek]) {
+        grouped[route.dayOfWeek].push(route);
+      }
+    }
+    return grouped;
+  }, [allRoutes]);
 
-  const totalStops = routes.reduce((acc, r) => acc + r.stops.length, 0);
-  const completedStops = routes.reduce((acc, r) => acc + r.stops.filter(s => s.status === "completed").length, 0);
-  const totalTime = routes.reduce((acc, r) => acc + r.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0), 0);
+  const workDays = [1, 2, 3, 4, 5, 6];
+
+  const mapRoutes = routesByDay[selectedMapDay] || [];
+  const defaultCenter: [number, number] = [33.75, -117.15];
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4 h-full">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900" data-testid="page-title">
               Route Scheduling
             </h1>
-            <p className="text-slate-600">Manage service routes and daily schedules</p>
+            <p className="text-slate-600 text-sm">Manage technician routes and schedules</p>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white rounded-lg border p-1">
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className={viewMode === "list" ? "bg-blue-600" : ""}
+              >
+                <List className="h-4 w-4 mr-1" />
+                List
+              </Button>
+              <Button
+                variant={viewMode === "map" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("map")}
+                className={viewMode === "map" ? "bg-blue-600" : ""}
+              >
+                <Map className="h-4 w-4 mr-1" />
+                Map
+              </Button>
+            </div>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => importFromPoolBrainMutation.mutate()}
               disabled={importFromPoolBrainMutation.isPending}
-              data-testid="button-import-poolbrain"
             >
               {importFromPoolBrainMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
               ) : (
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 mr-1" />
               )}
-              Import from Pool Brain
+              Import
             </Button>
             <Button
+              size="sm"
               onClick={() => setShowCreateRouteDialog(true)}
-              className="bg-cyan-600 hover:bg-cyan-700"
-              data-testid="button-create-route"
+              className="bg-blue-600 hover:bg-blue-700"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-1" />
               Add Route
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border">
-            {DAYS.map((day) => (
-              <Button
-                key={day.value}
-                variant={selectedDay === day.value ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setSelectedDay(day.value)}
-                className={selectedDay === day.value ? "bg-cyan-600 hover:bg-cyan-700" : ""}
-                data-testid={`button-day-${day.short.toLowerCase()}`}
-              >
-                {day.short}
-              </Button>
-            ))}
-          </div>
+        {viewMode === "list" ? (
+          <ScrollArea className="w-full">
+            <div className="flex gap-3 pb-4 min-w-max">
+              {workDays.map((day) => {
+                const dayRoutes = routesByDay[day] || [];
+                const dayInfo = DAYS.find(d => d.value === day)!;
+                const dateStr = getDateForDay(day);
 
-          <div className="flex items-center gap-4 text-sm text-slate-600">
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              <span>{totalStops} stops</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <span>{completedStops} completed</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{Math.round(totalTime / 60)}h {totalTime % 60}m total</span>
-            </div>
-          </div>
-        </div>
+                return (
+                  <div key={day} className="w-72 flex-shrink-0">
+                    <div className="bg-blue-600 text-white px-3 py-2 rounded-t-lg font-semibold text-center">
+                      {dateStr} {dayInfo.label}
+                    </div>
+                    <div className="bg-slate-100 rounded-b-lg p-2 space-y-2 min-h-[400px]">
+                      {dayRoutes.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">
+                          <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No routes</p>
+                        </div>
+                      ) : (
+                        dayRoutes.map((route, routeIndex) => {
+                          const initials = getInitials(route.technicianName || route.name);
+                          const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
+                          const stopCount = route.stops.length;
+                          const miles = route.estimatedMiles || 0;
 
-        <ScrollArea className="w-full">
-          <div className="flex gap-4 pb-4 min-w-max">
-            {isLoading ? (
-              <div className="flex items-center justify-center w-full py-12">
-                <div className="text-slate-500">Loading routes...</div>
-              </div>
-            ) : routes.length === 0 ? (
-              <Card className="w-80 border-dashed border-2 border-slate-300">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Truck className="h-12 w-12 text-slate-400 mb-4" />
-                  <p className="text-slate-600 text-center mb-4">No routes for {DAYS.find(d => d.value === selectedDay)?.label}</p>
+                          return (
+                            <Card
+                              key={route.id}
+                              className="border-0 shadow-sm overflow-hidden"
+                              data-testid={`route-card-${route.id}`}
+                            >
+                              <div 
+                                className="h-1.5"
+                                style={{ backgroundColor: route.color }}
+                              />
+                              <CardContent className="p-3">
+                                <div className="flex items-start gap-3">
+                                  <div 
+                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                                    style={{ backgroundColor: route.color }}
+                                  >
+                                    {initials}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                      <h3 className="font-semibold text-sm text-slate-900 truncate">
+                                        {route.name}
+                                      </h3>
+                                      <div className="flex items-center gap-1">
+                                        {route.isLocked && (
+                                          <Lock className="h-3 w-3 text-slate-400" />
+                                        )}
+                                        <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-0.5">
+                                          <MapPin className="h-3 w-3 text-slate-600" />
+                                          <span className="text-xs font-semibold text-slate-700">
+                                            {stopCount}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 truncate">
+                                      {route.technicianName || "Unassigned"}
+                                    </p>
+                                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                      <span className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        {formatTime(totalTime)}
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Navigation className="h-3 w-3" />
+                                        {miles.toFixed(1)}mi
+                                      </span>
+                                      <span className="flex items-center gap-1">
+                                        <Timer className="h-3 w-3" />
+                                        {formatTime(route.estimatedDriveTime || 0)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedRoute(route);
+                                          setNewRoute({
+                                            name: route.name,
+                                            color: route.color,
+                                            technicianName: route.technicianName || "",
+                                            dayOfWeek: route.dayOfWeek,
+                                          });
+                                          setShowEditRouteDialog(true);
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedRoute(route);
+                                          setShowCreateStopDialog(true);
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Stop
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => updateRouteMutation.mutate({
+                                          id: route.id,
+                                          updates: { isLocked: !route.isLocked }
+                                        })}
+                                      >
+                                        {route.isLocked ? (
+                                          <><Unlock className="h-4 w-4 mr-2" />Unlock</>
+                                        ) : (
+                                          <><Lock className="h-4 w-4 mr-2" />Lock</>
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={() => {
+                                          if (confirm("Delete this route?")) {
+                                            deleteRouteMutation.mutate(route.id);
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+
+                                {route.stops.length > 0 && (
+                                  <div className="mt-3 space-y-1.5">
+                                    {route.stops.slice(0, 3).map((stop, idx) => (
+                                      <div
+                                        key={stop.id}
+                                        className="flex items-center gap-2 text-xs bg-slate-50 rounded px-2 py-1.5"
+                                      >
+                                        <span 
+                                          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                                          style={{ backgroundColor: route.color }}
+                                        >
+                                          {idx + 1}
+                                        </span>
+                                        <span className="truncate flex-1 text-slate-700">
+                                          {stop.propertyName}
+                                        </span>
+                                        <span className="text-slate-400">
+                                          {stop.estimatedTime || 30}m
+                                        </span>
+                                      </div>
+                                    ))}
+                                    {route.stops.length > 3 && (
+                                      <p className="text-xs text-slate-400 text-center">
+                                        +{route.stops.length - 3} more stops
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-slate-500 border-2 border-dashed border-slate-300"
+                        onClick={() => {
+                          setNewRoute({ ...newRoute, dayOfWeek: day });
+                          setShowCreateRouteDialog(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Route
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm border w-fit">
+              {workDays.map((day) => {
+                const dayInfo = DAYS.find(d => d.value === day)!;
+                return (
                   <Button
-                    variant="outline"
-                    onClick={() => setShowCreateRouteDialog(true)}
-                    data-testid="button-create-first-route"
+                    key={day}
+                    variant={selectedMapDay === day ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setSelectedMapDay(day)}
+                    className={selectedMapDay === day ? "bg-blue-600" : ""}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Route
+                    {dayInfo.short}
                   </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              routes.map((route) => (
-                <Card
-                  key={route.id}
-                  className="w-80 flex-shrink-0"
-                  style={{ borderTopColor: route.color, borderTopWidth: "4px" }}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, route.id)}
-                  data-testid={`route-card-${route.id}`}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-semibold flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
+                );
+              })}
+            </div>
+
+            <div className="flex gap-4">
+              <div className="w-64 flex-shrink-0 space-y-2">
+                <h3 className="font-semibold text-slate-700">
+                  {DAYS.find(d => d.value === selectedMapDay)?.label} Routes
+                </h3>
+                {mapRoutes.map((route) => (
+                  <Card key={route.id} className="border-l-4" style={{ borderLeftColor: route.color }}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
                           style={{ backgroundColor: route.color }}
-                        />
-                        {route.name}
-                        {route.isLocked && <Lock className="h-3 w-3 text-slate-400" />}
-                      </CardTitle>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedRoute(route);
-                              setNewRoute({ name: route.name, color: route.color, technicianName: route.technicianName || "" });
-                              setShowEditRouteDialog(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit Route
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setSelectedRoute(route);
-                              setShowCreateStopDialog(true);
-                            }}
-                          >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Stop
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => updateRouteMutation.mutate({ id: route.id, updates: { isLocked: !route.isLocked } })}
-                          >
-                            {route.isLocked ? <Unlock className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
-                            {route.isLocked ? "Unlock Route" : "Lock Route"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => {
-                              if (confirm("Delete this route and all its stops?")) {
-                                deleteRouteMutation.mutate(route.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Route
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    {route.technicianName && (
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <User className="h-3 w-3" />
-                        {route.technicianName}
+                        >
+                          {getInitials(route.technicianName || route.name)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{route.name}</p>
+                          <p className="text-xs text-slate-500">{route.stops.length} stops</p>
+                        </div>
                       </div>
-                    )}
-                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                      <span>{route.stops.length} stops</span>
-                      <span>{route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0)} min</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {route.stops.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg">
-                        <MapPin className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-sm">No stops</p>
-                        <p className="text-xs">Drag stops here or add new</p>
-                      </div>
-                    ) : (
-                      route.stops.map((stop, index) => {
-                        const statusInfo = stopStatusConfig[stop.status || "not_started"];
-                        return (
-                          <div
-                            key={stop.id}
-                            draggable={!route.isLocked}
-                            onDragStart={(e) => handleDragStart(e, stop, route.id)}
-                            className={`p-3 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-move ${
-                              draggedStop?.stop.id === stop.id ? "opacity-50" : ""
-                            }`}
-                            data-testid={`stop-card-${stop.id}`}
-                          >
-                            <div className="flex items-start gap-2">
-                              <div className="flex items-center gap-1 text-slate-400">
-                                <GripVertical className="h-4 w-4" />
-                                <span className="text-xs font-medium">{index + 1}</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2">
-                                  <h4 className="font-medium text-sm text-slate-900 truncate">
-                                    {stop.propertyName}
-                                  </h4>
-                                  <Badge className={`${statusInfo.color} text-xs`}>
-                                    {statusInfo.label}
-                                  </Badge>
-                                </div>
-                                {stop.customerName && (
-                                  <p className="text-xs text-slate-500 truncate flex items-center gap-1">
-                                    <Building2 className="h-3 w-3" />
-                                    {stop.customerName}
-                                  </p>
-                                )}
-                                {stop.address && (
-                                  <p className="text-xs text-slate-400 truncate">
-                                    {stop.address}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {stop.estimatedTime || 30}m
-                                  </span>
-                                  {stop.frequency && stop.frequency !== "weekly" && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {stop.frequency}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <MoreVertical className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => updateStopMutation.mutate({ id: stop.id, updates: { status: "completed" } })}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Mark Completed
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => updateStopMutation.mutate({ id: stop.id, updates: { status: "no_access" } })}
-                                  >
-                                    <AlertCircle className="h-4 w-4 mr-2" />
-                                    No Access
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-red-600"
-                                    onClick={() => deleteStopMutation.mutate(stop.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Remove
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="flex-1 h-[600px] rounded-lg overflow-hidden border shadow-sm">
+                <MapContainer
+                  center={defaultCenter}
+                  zoom={10}
+                  style={{ height: "100%", width: "100%" }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {mapRoutes.map((route, routeIndex) => {
+                    const coords: [number, number][] = [];
+                    return route.stops.map((stop, stopIndex) => {
+                      const lat = stop.lat || (33.5 + Math.random() * 0.5);
+                      const lng = stop.lng || (-117.5 + Math.random() * 0.5);
+                      coords.push([lat, lng]);
+
+                      return (
+                        <Marker
+                          key={stop.id}
+                          position={[lat, lng]}
+                          icon={createMarkerIcon(route.color, stopIndex + 1)}
+                        >
+                          <Popup>
+                            <div className="p-1">
+                              <p className="font-semibold">{stop.propertyName}</p>
+                              {stop.customerName && (
+                                <p className="text-sm text-slate-600">{stop.customerName}</p>
+                              )}
+                              {stop.address && (
+                                <p className="text-xs text-slate-500">{stop.address}</p>
+                              )}
+                              <p className="text-xs mt-1">
+                                Stop #{stopIndex + 1} on {route.name}
+                              </p>
                             </div>
-                          </div>
-                        );
-                      })
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-slate-500 hover:text-slate-700"
-                      onClick={() => {
-                        setSelectedRoute(route);
-                        setShowCreateStopDialog(true);
-                      }}
-                      data-testid={`button-add-stop-${route.id}`}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Stop
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))
-            )}
+                          </Popup>
+                        </Marker>
+                      );
+                    });
+                  })}
+                </MapContainer>
+              </div>
+            </div>
           </div>
-        </ScrollArea>
+        )}
 
         <Dialog open={showCreateRouteDialog} onOpenChange={setShowCreateRouteDialog}>
           <DialogContent>
@@ -565,32 +616,46 @@ export default function Scheduling() {
                 <Input
                   value={newRoute.name}
                   onChange={(e) => setNewRoute({ ...newRoute, name: e.target.value })}
-                  placeholder="e.g., North Zone Morning"
-                  data-testid="input-route-name"
+                  placeholder="e.g., Alan Repairs Wed"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Technician Name (optional)</Label>
+                <Label>Technician Name</Label>
                 <Input
                   value={newRoute.technicianName}
                   onChange={(e) => setNewRoute({ ...newRoute, technicianName: e.target.value })}
-                  placeholder="e.g., John Smith"
-                  data-testid="input-technician-name"
+                  placeholder="e.g., Alan Bateman"
                 />
               </div>
               <div className="space-y-2">
+                <Label>Day of Week</Label>
+                <div className="flex gap-1 flex-wrap">
+                  {DAYS.filter(d => d.value > 0).map((day) => (
+                    <Button
+                      key={day.value}
+                      type="button"
+                      variant={newRoute.dayOfWeek === day.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNewRoute({ ...newRoute, dayOfWeek: day.value })}
+                      className={newRoute.dayOfWeek === day.value ? "bg-blue-600" : ""}
+                    >
+                      {day.short}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label>Route Color</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {ROUTE_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"
                       className={`w-8 h-8 rounded-full border-2 ${
-                        newRoute.color === color ? "border-slate-900" : "border-transparent"
+                        newRoute.color === color ? "border-slate-900 ring-2 ring-offset-2 ring-slate-400" : "border-transparent"
                       }`}
                       style={{ backgroundColor: color }}
                       onClick={() => setNewRoute({ ...newRoute, color })}
-                      data-testid={`button-color-${color}`}
                     />
                   ))}
                 </div>
@@ -603,8 +668,7 @@ export default function Scheduling() {
               <Button
                 onClick={() => createRouteMutation.mutate(newRoute)}
                 disabled={!newRoute.name}
-                className="bg-cyan-600 hover:bg-cyan-700"
-                data-testid="button-submit-route"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 Create Route
               </Button>
@@ -623,7 +687,6 @@ export default function Scheduling() {
                 <Input
                   value={newRoute.name}
                   onChange={(e) => setNewRoute({ ...newRoute, name: e.target.value })}
-                  data-testid="input-edit-route-name"
                 />
               </div>
               <div className="space-y-2">
@@ -631,18 +694,17 @@ export default function Scheduling() {
                 <Input
                   value={newRoute.technicianName}
                   onChange={(e) => setNewRoute({ ...newRoute, technicianName: e.target.value })}
-                  data-testid="input-edit-technician-name"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Route Color</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {ROUTE_COLORS.map((color) => (
                     <button
                       key={color}
                       type="button"
                       className={`w-8 h-8 rounded-full border-2 ${
-                        newRoute.color === color ? "border-slate-900" : "border-transparent"
+                        newRoute.color === color ? "border-slate-900 ring-2 ring-offset-2 ring-slate-400" : "border-transparent"
                       }`}
                       style={{ backgroundColor: color }}
                       onClick={() => setNewRoute({ ...newRoute, color })}
@@ -656,9 +718,11 @@ export default function Scheduling() {
                 Cancel
               </Button>
               <Button
-                onClick={() => selectedRoute && updateRouteMutation.mutate({ id: selectedRoute.id, updates: newRoute })}
-                className="bg-cyan-600 hover:bg-cyan-700"
-                data-testid="button-save-route"
+                onClick={() => selectedRoute && updateRouteMutation.mutate({
+                  id: selectedRoute.id,
+                  updates: { name: newRoute.name, color: newRoute.color, technicianName: newRoute.technicianName }
+                })}
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 Save Changes
               </Button>
@@ -678,7 +742,6 @@ export default function Scheduling() {
                   value={newStop.propertyName}
                   onChange={(e) => setNewStop({ ...newStop, propertyName: e.target.value })}
                   placeholder="e.g., Sunset Villas Pool"
-                  data-testid="input-property-name"
                 />
               </div>
               <div className="space-y-2">
@@ -687,7 +750,6 @@ export default function Scheduling() {
                   value={newStop.customerName}
                   onChange={(e) => setNewStop({ ...newStop, customerName: e.target.value })}
                   placeholder="e.g., Sunset Villas HOA"
-                  data-testid="input-customer-name"
                 />
               </div>
               <div className="space-y-2">
@@ -696,16 +758,6 @@ export default function Scheduling() {
                   value={newStop.address}
                   onChange={(e) => setNewStop({ ...newStop, address: e.target.value })}
                   placeholder="e.g., 123 Palm Dr, Phoenix, AZ"
-                  data-testid="input-address"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Pool Name</Label>
-                <Input
-                  value={newStop.poolName}
-                  onChange={(e) => setNewStop({ ...newStop, poolName: e.target.value })}
-                  placeholder="e.g., Main Pool, Spa"
-                  data-testid="input-pool-name"
                 />
               </div>
               <div className="space-y-2">
@@ -714,7 +766,6 @@ export default function Scheduling() {
                   type="number"
                   value={newStop.estimatedTime}
                   onChange={(e) => setNewStop({ ...newStop, estimatedTime: parseInt(e.target.value) || 30 })}
-                  data-testid="input-estimated-time"
                 />
               </div>
             </div>
@@ -725,8 +776,7 @@ export default function Scheduling() {
               <Button
                 onClick={() => selectedRoute && createStopMutation.mutate({ routeId: selectedRoute.id, stop: newStop })}
                 disabled={!newStop.propertyName}
-                className="bg-cyan-600 hover:bg-cyan-700"
-                data-testid="button-submit-stop"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 Add Stop
               </Button>
