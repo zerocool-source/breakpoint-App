@@ -22,6 +22,8 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -147,7 +149,7 @@ const PREDEFINED_TASKS: Task[] = [
   { id: "t15", name: "Check equipment", category: "inProgress", isCompleted: false },
 ];
 
-function SortableTask({ task, equipment, onToggle }: { task: Task; equipment: Equipment[]; onToggle: (id: string) => void }) {
+function SortableTask({ task, onToggle }: { task: Task; onToggle: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   
   const style = {
@@ -155,20 +157,6 @@ function SortableTask({ task, equipment, onToggle }: { task: Task; equipment: Eq
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-
-  const isHidden = task.hiddenConditions?.some(condition => {
-    const eq = equipment.find(e => e.type === condition.type);
-    return eq && condition.values.includes(eq.value);
-  });
-
-  if (isHidden) {
-    return (
-      <div className="flex items-center gap-3 p-3 border rounded-lg bg-slate-50 opacity-50">
-        <span className="text-slate-400 line-through">{task.name}</span>
-        <span className="text-xs text-slate-400 ml-auto">Not shown in app ({equipment.find(e => task.hiddenConditions?.some(c => c.type === e.type))?.value})</span>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -196,6 +184,13 @@ function SortableTask({ task, equipment, onToggle }: { task: Task; equipment: Eq
   );
 }
 
+function isTaskHidden(task: Task, equipment: Equipment[]): boolean {
+  return task.hiddenConditions?.some(condition => {
+    const eq = equipment.find(e => e.type === condition.type);
+    return eq && condition.values.includes(eq.value);
+  }) || false;
+}
+
 function WorkflowSection({ 
   category, 
   tasks, 
@@ -207,24 +202,32 @@ function WorkflowSection({
   equipment: Equipment[];
   onToggleTask: (id: string) => void;
 }) {
-  const categoryTasks = tasks.filter(t => t.category === category.id);
+  const { setNodeRef, isOver } = useDroppable({ id: category.id });
+  
+  const visibleTasks = tasks
+    .filter(t => t.category === category.id)
+    .filter(t => !isTaskHidden(t, equipment));
   
   return (
-    <div className={`rounded-lg p-3 ${category.color} border`}>
+    <div 
+      ref={setNodeRef}
+      className={`rounded-lg p-3 ${category.color} border ${isOver ? "ring-2 ring-blue-400 ring-offset-2" : ""}`}
+      data-testid={`workflow-section-${category.id}`}
+    >
       <div className="text-center text-sm text-slate-500 font-medium mb-3">{category.label}</div>
-      {categoryTasks.length === 0 ? (
-        <div className="border-2 border-dashed rounded-lg py-6 text-center text-slate-400 text-sm">
-          DRAG ITEMS HERE
-        </div>
-      ) : (
-        <SortableContext items={categoryTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={visibleTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+        {visibleTasks.length === 0 ? (
+          <div className="border-2 border-dashed rounded-lg py-6 text-center text-slate-400 text-sm">
+            DRAG ITEMS HERE
+          </div>
+        ) : (
           <div className="space-y-2">
-            {categoryTasks.map(task => (
-              <SortableTask key={task.id} task={task} equipment={equipment} onToggle={onToggleTask} />
+            {visibleTasks.map(task => (
+              <SortableTask key={task.id} task={task} onToggle={onToggleTask} />
             ))}
           </div>
-        </SortableContext>
-      )}
+        )}
+      </SortableContext>
     </div>
   );
 }
@@ -286,13 +289,66 @@ function CustomerDetail({
 
   const statusBadge = STATUS_BADGES[customer.status || "active"] || STATUS_BADGES.active;
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    
+    const activeTaskId = active.id as string;
+    const overId = over.id as string;
+    
+    const categoryIds = TASK_CATEGORIES.map(c => c.id);
+    const targetCategory = categoryIds.includes(overId) ? overId : null;
+    
+    if (!targetCategory) {
+      const overTask = tasks.find(t => t.id === overId);
+      if (overTask) {
+        const activeTask = tasks.find(t => t.id === activeTaskId);
+        if (activeTask && activeTask.category !== overTask.category) {
+          setTasks(prev => prev.map(t => 
+            t.id === activeTaskId ? { ...t, category: overTask.category } : t
+          ));
+        }
+      }
+    } else {
+      const activeTask = tasks.find(t => t.id === activeTaskId);
+      if (activeTask && activeTask.category !== targetCategory) {
+        setTasks(prev => prev.map(t => 
+          t.id === activeTaskId ? { ...t, category: targetCategory } : t
+        ));
+      }
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
+    if (!over) return;
+    
+    const activeTaskId = active.id as string;
+    const overId = over.id as string;
+    
+    const categoryIds = TASK_CATEGORIES.map(c => c.id);
+    
+    if (categoryIds.includes(overId)) {
+      setTasks(prev => prev.map(t => 
+        t.id === activeTaskId ? { ...t, category: overId } : t
+      ));
+      return;
+    }
+    
+    if (activeTaskId !== overId) {
       setTasks((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id);
-        const newIndex = items.findIndex((i) => i.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
+        const activeTask = items.find(t => t.id === activeTaskId);
+        const overTask = items.find(t => t.id === overId);
+        
+        if (!activeTask || !overTask) return items;
+        
+        const updatedItems = items.map(t => 
+          t.id === activeTaskId ? { ...t, category: overTask.category } : t
+        );
+        
+        const oldIndex = updatedItems.findIndex((i) => i.id === activeTaskId);
+        const newIndex = updatedItems.findIndex((i) => i.id === overId);
+        return arrayMove(updatedItems, oldIndex, newIndex);
       });
     }
   };
@@ -694,7 +750,7 @@ function CustomerDetail({
 
                   <Card data-testid="panel-workflow">
                     <CardContent className="p-4">
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
                         <div className="space-y-4">
                           {TASK_CATEGORIES.map(category => (
                             <WorkflowSection 
