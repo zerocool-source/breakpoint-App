@@ -320,11 +320,14 @@ function EditTechnicianModal({
   );
 }
 
+const ITEMS_PER_PAGE = 11;
+
 export default function RepairTechs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTech, setEditingTech] = useState<Technician | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
@@ -416,6 +419,31 @@ export default function RepairTechs() {
       return nameA.localeCompare(nameB);
     });
 
+  const totalPages = Math.ceil(filteredTechnicians.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedTechnicians = filteredTechnicians.slice(startIndex, endIndex);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, "...", totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterStatus]);
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -494,7 +522,7 @@ export default function RepairTechs() {
                   </td>
                 </tr>
               ) : (
-                filteredTechnicians.map((tech) => {
+                paginatedTechnicians.map((tech) => {
                   const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.trim();
                   const initials = getInitials(tech.firstName, tech.lastName);
                   const avatarColor = getAvatarColor(fullName);
@@ -552,8 +580,76 @@ export default function RepairTechs() {
           </table>
         </div>
 
-        <div className="text-sm text-slate-500">
-          Showing {filteredTechnicians.length} of {technicians.length} technicians
+        <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border border-slate-200 rounded-lg">
+          <div className="text-sm text-slate-600">
+            Showing {filteredTechnicians.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length} technicians
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="h-8 px-3"
+                data-testid="button-first-page"
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-3"
+                data-testid="button-prev-page"
+              >
+                Prev
+              </Button>
+              
+              {getPageNumbers().map((page, idx) => (
+                typeof page === "number" ? (
+                  <Button
+                    key={idx}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "h-8 w-8",
+                      currentPage === page && "bg-blue-600 hover:bg-blue-700"
+                    )}
+                    data-testid={`button-page-${page}`}
+                  >
+                    {page}
+                  </Button>
+                ) : (
+                  <span key={idx} className="px-2 text-slate-400">...</span>
+                )
+              ))}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 px-3"
+                data-testid="button-next-page"
+              >
+                Next
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="h-8 px-3"
+                data-testid="button-last-page"
+              >
+                Last
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
