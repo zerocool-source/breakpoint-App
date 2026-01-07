@@ -27,7 +27,7 @@ import {
 import {
   Search, Plus, Users, Building2, User, MapPin, Phone, Mail,
   MoreVertical, X, ChevronLeft, ChevronRight, Tag, Edit, Trash2,
-  Home, FileText, Check, Loader2, Calendar, Clock
+  Home, FileText, Check, Loader2, Calendar, Clock, Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +67,40 @@ interface Contact {
   phone: string | null;
   type: string;
 }
+
+interface Equipment {
+  id: string;
+  customerId: string;
+  propertyId: string | null;
+  category: string;
+  equipmentType: string;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  installDate: string | null;
+  warrantyExpiry: string | null;
+  notes: string | null;
+}
+
+const EQUIPMENT_CATEGORIES = [
+  { value: "filter", label: "Filter", icon: "🔲" },
+  { value: "pump", label: "Pump", icon: "💧" },
+  { value: "heater", label: "Heater", icon: "🔥" },
+  { value: "controller", label: "Controller", icon: "🎛️" },
+  { value: "chlorinator", label: "Chlorinator", icon: "🧪" },
+  { value: "cleaner", label: "Cleaner", icon: "🧹" },
+  { value: "other", label: "Other", icon: "⚙️" },
+];
+
+const EQUIPMENT_TYPES: Record<string, string[]> = {
+  filter: ["Sand", "DE", "Cartridge"],
+  pump: ["Single Speed", "Dual Speed", "Variable Speed"],
+  heater: ["Gas", "Electric", "Heat Pump", "Solar"],
+  controller: ["Automation", "Timer", "Salt Cell Controller"],
+  chlorinator: ["Salt Cell", "In-Line", "Floating"],
+  cleaner: ["Suction", "Pressure", "Robotic"],
+  other: ["Cover", "Light", "Valve", "Blower", "Custom"],
+};
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active", color: "bg-green-500" },
@@ -547,6 +581,174 @@ function AddContactModal({
   );
 }
 
+function AddEquipmentModal({
+  open,
+  onClose,
+  onSave,
+  customerId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: Partial<Equipment>) => void;
+  customerId: string;
+}) {
+  const [formData, setFormData] = useState({
+    category: "pump",
+    selectedType: "",
+    customType: "",
+    brand: "",
+    model: "",
+    serialNumber: "",
+    installDate: "",
+    warrantyExpiry: "",
+    notes: "",
+  });
+
+  const isCustom = formData.selectedType === "Custom";
+  const finalEquipmentType = isCustom ? formData.customType : formData.selectedType;
+
+  const handleSubmit = () => {
+    if (!finalEquipmentType.trim()) return;
+    onSave({ 
+      category: formData.category,
+      equipmentType: finalEquipmentType,
+      brand: formData.brand || null,
+      model: formData.model || null,
+      serialNumber: formData.serialNumber || null,
+      customerId,
+      installDate: formData.installDate || null,
+      warrantyExpiry: formData.warrantyExpiry || null,
+      notes: formData.notes || null,
+    });
+    setFormData({ category: "pump", selectedType: "", customType: "", brand: "", model: "", serialNumber: "", installDate: "", warrantyExpiry: "", notes: "" });
+    onClose();
+  };
+
+  const availableTypes = EQUIPMENT_TYPES[formData.category] || [];
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Add Equipment</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value, selectedType: "", customType: "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EQUIPMENT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.icon} {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Type *</Label>
+              <Select
+                value={formData.selectedType}
+                onValueChange={(value) => setFormData({ ...formData, selectedType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTypes.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                  <SelectItem value="Custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {isCustom && (
+            <div className="space-y-2">
+              <Label>Custom Type Name *</Label>
+              <Input
+                value={formData.customType}
+                onChange={(e) => setFormData({ ...formData, customType: e.target.value })}
+                placeholder="Enter custom equipment type"
+              />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Brand</Label>
+              <Input
+                value={formData.brand}
+                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                placeholder="e.g. Pentair, Hayward"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Model</Label>
+              <Input
+                value={formData.model}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                placeholder="Model number"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Serial Number</Label>
+            <Input
+              value={formData.serialNumber}
+              onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+              placeholder="S/N"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Install Date</Label>
+              <Input
+                type="date"
+                value={formData.installDate}
+                onChange={(e) => setFormData({ ...formData, installDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Warranty Expiry</Label>
+              <Input
+                type="date"
+                value={formData.warrantyExpiry}
+                onChange={(e) => setFormData({ ...formData, warrantyExpiry: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Notes</Label>
+            <Textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Additional notes about this equipment"
+              className="min-h-[60px]"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!finalEquipmentType.trim()}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Add Equipment
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CustomerDetailPanel({
   customer,
   onClose,
@@ -561,6 +763,7 @@ function CustomerDetailPanel({
   const [activeTab, setActiveTab] = useState("properties");
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showAddEquipment, setShowAddEquipment] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [scheduleActive, setScheduleActive] = useState(false);
   const [visitDays, setVisitDays] = useState<string[]>([]);
@@ -590,8 +793,18 @@ function CustomerDetailPanel({
     },
   });
 
+  const { data: equipmentData } = useQuery<{ equipment: Equipment[] }>({
+    queryKey: ["/api/customers", customer.id, "equipment"],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${customer.id}/equipment`);
+      if (!res.ok) return { equipment: [] };
+      return res.json();
+    },
+  });
+
   const properties = propertiesData?.properties || [];
   const contacts = contactsData?.contacts || [];
+  const equipmentList = equipmentData?.equipment || [];
 
   useEffect(() => {
     if (properties.length > 0 && !selectedPropertyId) {
@@ -676,6 +889,33 @@ function CustomerDetailPanel({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "contacts"] });
+    },
+  });
+
+  const addEquipmentMutation = useMutation({
+    mutationFn: async (data: Partial<Equipment>) => {
+      const res = await fetch(`/api/customers/${customer.id}/equipment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "equipment"] });
+      setShowAddEquipment(false);
+    },
+  });
+
+  const deleteEquipmentMutation = useMutation({
+    mutationFn: async (equipmentId: string) => {
+      const res = await fetch(`/api/equipment/${equipmentId}`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "equipment"] });
     },
   });
 
@@ -796,6 +1036,10 @@ function CustomerDetailPanel({
           <TabsTrigger value="route" className="gap-1">
             <Calendar className="h-4 w-4" />
             Route
+          </TabsTrigger>
+          <TabsTrigger value="equipment" className="gap-1">
+            <Wrench className="h-4 w-4" />
+            Equipment ({equipmentList.length})
           </TabsTrigger>
         </TabsList>
 
@@ -1122,6 +1366,85 @@ function CustomerDetailPanel({
           </ScrollArea>
           )}
         </TabsContent>
+
+        <TabsContent value="equipment" className="flex-1 m-0 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-700">Equipment</h3>
+            <Button size="sm" onClick={() => setShowAddEquipment(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Equipment
+            </Button>
+          </div>
+          <ScrollArea className="h-[calc(100vh-450px)]">
+            {equipmentList.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No equipment recorded</p>
+                <Button variant="link" size="sm" onClick={() => setShowAddEquipment(true)}>
+                  Add first equipment
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {EQUIPMENT_CATEGORIES.map((cat) => {
+                  const catEquipment = equipmentList.filter(e => e.category === cat.value);
+                  if (catEquipment.length === 0) return null;
+                  return (
+                    <div key={cat.value} className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                      </div>
+                      {catEquipment.map((equip) => (
+                        <Card key={equip.id} className="border-l-4 border-l-blue-400">
+                          <CardContent className="p-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-medium text-sm">{equip.equipmentType}</p>
+                                {equip.brand && (
+                                  <p className="text-xs text-slate-500">{equip.brand}{equip.model && ` - ${equip.model}`}</p>
+                                )}
+                                {equip.serialNumber && (
+                                  <p className="text-xs text-slate-400">S/N: {equip.serialNumber}</p>
+                                )}
+                                {equip.warrantyExpiry && (
+                                  <p className="text-xs text-slate-400">
+                                    Warranty: {new Date(equip.warrantyExpiry).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem 
+                                    className="text-red-600"
+                                    onSelect={(e) => {
+                                      e.preventDefault();
+                                      if (confirm("Are you sure you want to delete this equipment?")) {
+                                        deleteEquipmentMutation.mutate(equip.id);
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </ScrollArea>
+        </TabsContent>
       </Tabs>
 
       <AddPropertyModal
@@ -1135,6 +1458,13 @@ function CustomerDetailPanel({
         open={showAddContact}
         onClose={() => setShowAddContact(false)}
         onSave={(data) => addContactMutation.mutate(data)}
+        customerId={customer.id}
+      />
+
+      <AddEquipmentModal
+        open={showAddEquipment}
+        onClose={() => setShowAddEquipment(false)}
+        onSave={(data) => addEquipmentMutation.mutate(data)}
         customerId={customer.id}
       />
     </div>

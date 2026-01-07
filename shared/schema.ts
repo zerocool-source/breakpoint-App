@@ -113,6 +113,32 @@ export const pools = pgTable("pools", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Equipment (pool equipment linked to properties/customers)
+export const equipment = pgTable("equipment", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull(),
+  propertyId: varchar("property_id"),
+  category: text("category").notNull(), // "filter", "pump", "heater", "controller", "chlorinator", "cleaner", "other"
+  equipmentType: text("equipment_type").notNull(), // "Sand", "DE", "Cartridge", "Variable Speed", "In-Line Chlorinator", etc.
+  brand: text("brand"),
+  model: text("model"),
+  serialNumber: text("serial_number"),
+  installDate: timestamp("install_date"),
+  warrantyExpiry: timestamp("warranty_expiry"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEquipmentSchema = createInsertSchema(equipment).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEquipment = z.infer<typeof insertEquipmentSchema>;
+export type Equipment = typeof equipment.$inferSelect;
+
 // Route Schedules (assigns properties to technicians by day)
 export const routeSchedules = pgTable("route_schedules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

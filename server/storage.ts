@@ -6,6 +6,7 @@ import {
   type Customer, type InsertCustomer,
   type CustomerAddress, type InsertCustomerAddress,
   type Pool, type InsertPool,
+  type Equipment, type InsertEquipment,
   type RouteSchedule, type InsertRouteSchedule,
   type RouteAssignment, type InsertRouteAssignment,
   type ServiceOccurrence, type InsertServiceOccurrence,
@@ -26,7 +27,7 @@ import {
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
   type UnscheduledStop, type InsertUnscheduledStop,
-  settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, routeSchedules, routeAssignments, serviceOccurrences,
+  settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
@@ -106,6 +107,13 @@ export interface IStorage {
   updatePool(id: string, updates: Partial<InsertPool>): Promise<Pool | undefined>;
   upsertPool(externalId: string, pool: InsertPool): Promise<Pool>;
   clearPoolsByCustomer(customerId: string): Promise<void>;
+
+  // Equipment
+  getEquipmentByCustomer(customerId: string): Promise<Equipment[]>;
+  getEquipment(id: string): Promise<Equipment | undefined>;
+  createEquipment(equip: InsertEquipment): Promise<Equipment>;
+  updateEquipment(id: string, updates: Partial<InsertEquipment>): Promise<Equipment | undefined>;
+  deleteEquipment(id: string): Promise<void>;
 
   // Chat
   getChatHistory(limit?: number): Promise<ChatMessage[]>;
@@ -545,6 +553,33 @@ export class DbStorage implements IStorage {
 
   async clearPoolsByCustomer(customerId: string): Promise<void> {
     await db.delete(pools).where(eq(pools.customerId, customerId));
+  }
+
+  // Equipment
+  async getEquipmentByCustomer(customerId: string): Promise<Equipment[]> {
+    return db.select().from(equipment).where(eq(equipment.customerId, customerId));
+  }
+
+  async getEquipment(id: string): Promise<Equipment | undefined> {
+    const result = await db.select().from(equipment).where(eq(equipment.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createEquipment(equip: InsertEquipment): Promise<Equipment> {
+    const result = await db.insert(equipment).values(equip).returning();
+    return result[0];
+  }
+
+  async updateEquipment(id: string, updates: Partial<InsertEquipment>): Promise<Equipment | undefined> {
+    const result = await db.update(equipment)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(equipment.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEquipment(id: string): Promise<void> {
+    await db.delete(equipment).where(eq(equipment.id, id));
   }
 
   // Chat

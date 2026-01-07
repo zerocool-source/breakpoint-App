@@ -1525,6 +1525,71 @@ function setupRoutes(app: any) {
     }
   });
 
+  // ==================== EQUIPMENT ====================
+
+  // Get equipment for a customer
+  app.get("/api/customers/:customerId/equipment", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const equipmentList = await storage.getEquipmentByCustomer(customerId);
+      res.json({ equipment: equipmentList });
+    } catch (error: any) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ error: "Failed to fetch equipment", message: error.message });
+    }
+  });
+
+  // Create equipment
+  app.post("/api/customers/:customerId/equipment", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const { propertyId, category, equipmentType, brand, model, serialNumber, installDate, warrantyExpiry, notes } = req.body;
+      const equip = await storage.createEquipment({
+        customerId,
+        propertyId: propertyId || null,
+        category,
+        equipmentType,
+        brand: brand || null,
+        model: model || null,
+        serialNumber: serialNumber || null,
+        installDate: installDate ? new Date(installDate) : null,
+        warrantyExpiry: warrantyExpiry ? new Date(warrantyExpiry) : null,
+        notes: notes || null,
+      });
+      res.json({ success: true, equipment: equip });
+    } catch (error: any) {
+      console.error("Error creating equipment:", error);
+      res.status(500).json({ error: "Failed to create equipment", message: error.message });
+    }
+  });
+
+  // Update equipment
+  app.put("/api/equipment/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      if (updates.installDate) updates.installDate = new Date(updates.installDate);
+      if (updates.warrantyExpiry) updates.warrantyExpiry = new Date(updates.warrantyExpiry);
+      const equip = await storage.updateEquipment(id, updates);
+      res.json({ success: true, equipment: equip });
+    } catch (error: any) {
+      console.error("Error updating equipment:", error);
+      res.status(500).json({ error: "Failed to update equipment", message: error.message });
+    }
+  });
+
+  // Delete equipment
+  app.delete("/api/equipment/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteEquipment(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting equipment:", error);
+      res.status(500).json({ error: "Failed to delete equipment", message: error.message });
+    }
+  });
+
   // Get customer detail with pools from Pool Brain
   app.get("/api/customers/:customerId/detail", async (req: any, res: any) => {
     try {
