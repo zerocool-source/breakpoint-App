@@ -55,6 +55,7 @@ export interface IStorage {
   getTechnicianByExternalId(externalId: string): Promise<Technician | undefined>;
   createTechnician(technician: InsertTechnician): Promise<Technician>;
   updateTechnician(id: string, updates: Partial<InsertTechnician>): Promise<Technician | undefined>;
+  deleteTechnician(id: string): Promise<void>;
   upsertTechnician(externalId: string, technician: InsertTechnician): Promise<Technician>;
   clearAllTechnicians(): Promise<void>;
 
@@ -287,6 +288,10 @@ export class DbStorage implements IStorage {
       .where(eq(technicians.id, id))
       .returning();
     return result[0];
+  }
+
+  async deleteTechnician(id: string): Promise<void> {
+    await db.delete(technicians).where(eq(technicians.id, id));
   }
 
   async upsertTechnician(externalId: string, technician: InsertTechnician): Promise<Technician> {

@@ -1727,6 +1727,17 @@ function setupRoutes(app: any) {
     }
   });
 
+  app.delete("/api/technicians/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteTechnician(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting technician:", error);
+      res.status(500).json({ error: "Failed to delete technician", message: error.message });
+    }
+  });
+
   // ==================== CHAT ====================
 
   app.get("/api/chat/history", async (req: any, res: any) => {

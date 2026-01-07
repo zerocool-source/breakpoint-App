@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ChevronDown, Plus, Image } from "lucide-react";
+import { Search, ChevronDown, Plus, Image, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Technician {
@@ -152,10 +162,169 @@ function AddTechnicianModal({
   );
 }
 
+function EditTechnicianModal({ 
+  open, 
+  onClose, 
+  technician,
+  onSave,
+  onDelete
+}: { 
+  open: boolean; 
+  onClose: () => void;
+  technician: Technician | null;
+  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string }) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (technician) {
+      setFirstName(technician.firstName || "");
+      setLastName(technician.lastName || "");
+      setPhone(technician.phone || "");
+      setEmail(technician.email || "");
+    }
+  }, [technician]);
+
+  const handleSubmit = () => {
+    if (!technician || !firstName.trim() || !lastName.trim()) return;
+    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email });
+    onClose();
+  };
+
+  const handleDelete = () => {
+    if (!technician) return;
+    onDelete(technician.id);
+    setShowDeleteConfirm(false);
+    onClose();
+  };
+
+  const handleClose = () => {
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setEmail("");
+    onClose();
+  };
+
+  if (!technician) return null;
+
+  const fullName = `${technician.firstName} ${technician.lastName}`.trim();
+  const initials = getInitials(technician.firstName, technician.lastName);
+  const avatarColor = getAvatarColor(fullName);
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-[700px] p-0 gap-0">
+          <DialogHeader className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+            <DialogTitle className="text-lg font-semibold">Edit Repair Technician</DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-6 bg-slate-100">
+            <div className="flex items-start gap-6">
+              <div className="flex flex-col items-center gap-2">
+                <div className={cn(
+                  "w-16 h-16 rounded-lg flex items-center justify-center text-white text-xl font-semibold",
+                  avatarColor
+                )}>
+                  {initials}
+                </div>
+                <button className="text-blue-600 text-sm font-medium hover:underline">
+                  Change Photo
+                </button>
+              </div>
+              
+              <div className="flex-1 grid grid-cols-3 gap-4">
+                <div className="space-y-3">
+                  <Input
+                    placeholder="First Name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="bg-white"
+                    data-testid="input-edit-first-name"
+                  />
+                  <Input
+                    placeholder="Last Name"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="bg-white"
+                    data-testid="input-edit-last-name"
+                  />
+                </div>
+                <div>
+                  <Input
+                    placeholder="Phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="bg-white"
+                    data-testid="input-edit-phone"
+                  />
+                </div>
+                <div>
+                  <Input
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-white"
+                    data-testid="input-edit-email"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between mt-6">
+              <Button 
+                variant="destructive"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="gap-2"
+                data-testid="button-delete-tech"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={!firstName.trim() || !lastName.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                data-testid="button-save-tech"
+              >
+                SAVE CHANGES
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Technician</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {fullName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 export default function RepairTechs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTech, setEditingTech] = useState<Technician | null>(null);
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
@@ -177,6 +346,34 @@ export default function RepairTechs() {
         body: JSON.stringify({ ...tech, role: "repair", active: true }),
       });
       if (!res.ok) throw new Error("Failed to add technician");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "repair"] });
+    },
+  });
+
+  const updateTechnicianMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string } }) => {
+      const res = await fetch(`/api/technicians/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update technician");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "repair"] });
+    },
+  });
+
+  const deleteTechnicianMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/technicians/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete technician");
       return res.json();
     },
     onSuccess: () => {
@@ -341,6 +538,7 @@ export default function RepairTechs() {
                         <Button 
                           variant="link" 
                           className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                          onClick={() => setEditingTech(tech)}
                           data-testid={`button-edit-${tech.id}`}
                         >
                           Edit
@@ -363,6 +561,14 @@ export default function RepairTechs() {
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={(tech) => addTechnicianMutation.mutate(tech)}
+      />
+
+      <EditTechnicianModal
+        open={!!editingTech}
+        onClose={() => setEditingTech(null)}
+        technician={editingTech}
+        onSave={(id, data) => updateTechnicianMutation.mutate({ id, data })}
+        onDelete={(id) => deleteTechnicianMutation.mutate(id)}
       />
     </AppLayout>
   );
