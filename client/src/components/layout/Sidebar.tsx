@@ -184,7 +184,6 @@ export function Sidebar() {
       label: "Properties", 
       children: [
         { label: "Repairs", href: "/property-repairs" },
-        { label: "Chemicals", href: "/chemicals" },
         { label: "Visits", href: "/visits" },
       ]
     },
