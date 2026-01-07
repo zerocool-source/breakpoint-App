@@ -3,6 +3,10 @@ import {
   type Alert, type InsertAlert,
   type Workflow, type InsertWorkflow,
   type Customer, type InsertCustomer,
+  type CustomerAddress, type InsertCustomerAddress,
+  type Pool, type InsertPool,
+  type RouteSchedule, type InsertRouteSchedule,
+  type RouteAssignment, type InsertRouteAssignment,
   type ChatMessage, type InsertChatMessage,
   type CompletedAlert, type InsertCompletedAlert,
   type PayPeriod, type InsertPayPeriod,
@@ -20,7 +24,8 @@ import {
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
   type UnscheduledStop, type InsertUnscheduledStop,
-  settings, alerts, workflows, customers, chatMessages, completedAlerts,
+  settings, alerts, workflows, customers, customerAddresses, pools, routeSchedules, routeAssignments,
+  chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
   estimates, routes, routeStops, routeMoves, unscheduledStops
@@ -51,6 +56,20 @@ export interface IStorage {
   updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer | undefined>;
   upsertCustomer(externalId: string, customer: InsertCustomer): Promise<Customer>;
   clearAllCustomers(): Promise<void>;
+
+  // Customer Addresses
+  getCustomerAddresses(customerId: string): Promise<CustomerAddress[]>;
+  createCustomerAddress(address: InsertCustomerAddress): Promise<CustomerAddress>;
+  upsertCustomerAddress(customerId: string, externalId: string, address: InsertCustomerAddress): Promise<CustomerAddress>;
+
+  // Pools
+  getPoolsByCustomer(customerId: string): Promise<Pool[]>;
+  getPool(id: string): Promise<Pool | undefined>;
+  getPoolByExternalId(externalId: string): Promise<Pool | undefined>;
+  createPool(pool: InsertPool): Promise<Pool>;
+  updatePool(id: string, updates: Partial<InsertPool>): Promise<Pool | undefined>;
+  upsertPool(externalId: string, pool: InsertPool): Promise<Pool>;
+  clearPoolsByCustomer(customerId: string): Promise<void>;
 
   // Chat
   getChatHistory(limit?: number): Promise<ChatMessage[]>;
@@ -268,6 +287,71 @@ export class DbStorage implements IStorage {
 
   async clearAllCustomers(): Promise<void> {
     await db.delete(customers);
+  }
+
+  // Customer Addresses
+  async getCustomerAddresses(customerId: string): Promise<CustomerAddress[]> {
+    return db.select().from(customerAddresses).where(eq(customerAddresses.customerId, customerId));
+  }
+
+  async createCustomerAddress(address: InsertCustomerAddress): Promise<CustomerAddress> {
+    const result = await db.insert(customerAddresses).values(address).returning();
+    return result[0];
+  }
+
+  async upsertCustomerAddress(customerId: string, externalId: string, address: InsertCustomerAddress): Promise<CustomerAddress> {
+    const existing = await db.select().from(customerAddresses)
+      .where(and(eq(customerAddresses.customerId, customerId), eq(customerAddresses.externalId, externalId)))
+      .limit(1);
+    if (existing[0]) {
+      const result = await db.update(customerAddresses)
+        .set(address)
+        .where(eq(customerAddresses.id, existing[0].id))
+        .returning();
+      return result[0];
+    }
+    return this.createCustomerAddress({ ...address, customerId, externalId });
+  }
+
+  // Pools
+  async getPoolsByCustomer(customerId: string): Promise<Pool[]> {
+    return db.select().from(pools).where(eq(pools.customerId, customerId));
+  }
+
+  async getPool(id: string): Promise<Pool | undefined> {
+    const result = await db.select().from(pools).where(eq(pools.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getPoolByExternalId(externalId: string): Promise<Pool | undefined> {
+    const result = await db.select().from(pools).where(eq(pools.externalId, externalId)).limit(1);
+    return result[0];
+  }
+
+  async createPool(pool: InsertPool): Promise<Pool> {
+    const result = await db.insert(pools).values(pool).returning();
+    return result[0];
+  }
+
+  async updatePool(id: string, updates: Partial<InsertPool>): Promise<Pool | undefined> {
+    const result = await db.update(pools)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pools.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async upsertPool(externalId: string, pool: InsertPool): Promise<Pool> {
+    const existing = await this.getPoolByExternalId(externalId);
+    if (existing) {
+      const updated = await this.updatePool(existing.id, pool);
+      return updated!;
+    }
+    return this.createPool({ ...pool, externalId });
+  }
+
+  async clearPoolsByCustomer(customerId: string): Promise<void> {
+    await db.delete(pools).where(eq(pools.customerId, customerId));
   }
 
   // Chat

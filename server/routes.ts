@@ -1380,6 +1380,92 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Get customer detail with pools from Pool Brain
+  app.get("/api/customers/:customerId/detail", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch pools for this customer
+      const poolsData = await client.getCustomerPoolDetails({ customer_id: customerId, limit: 100 });
+      const rawPools = poolsData.data || [];
+
+      const poolsList = rawPools.map((p: any) => ({
+        id: p.RecordID || p.PoolID,
+        externalId: String(p.RecordID || p.PoolID),
+        name: p.PoolName || p.Name || "Pool",
+        poolType: p.PoolType || p.Type || "Pool",
+        serviceLevel: p.ServiceLevel || p.ServiceType || null,
+        waterType: p.WaterType || null,
+        gallons: p.Gallons || p.Volume || null,
+        address: p.Address || p.PoolAddress || null,
+        city: p.City || null,
+        state: p.State || null,
+        zip: p.Zip || p.ZipCode || null,
+      }));
+
+      // Also try to get customer notes
+      let addresses: any[] = [];
+      let notes = "";
+      try {
+        const customerData = await client.getCustomerDetail({ customer_id: customerId, limit: 1 });
+        const cust = customerData.data?.[0];
+        if (cust) {
+          notes = cust.Notes || "";
+          // Extract addresses if available
+          if (cust.Address) {
+            addresses.push({
+              type: "primary",
+              addressLine1: cust.Address,
+              city: cust.City,
+              state: cust.State,
+              zip: cust.Zip,
+            });
+          }
+          if (cust.BillingAddress && cust.BillingAddress !== cust.Address) {
+            addresses.push({
+              type: "billing",
+              addressLine1: cust.BillingAddress,
+              city: cust.BillingCity || cust.City,
+              state: cust.BillingState || cust.State,
+              zip: cust.BillingZip || cust.Zip,
+            });
+          }
+        }
+      } catch (e) {
+        console.log("Could not fetch customer notes");
+      }
+
+      res.json({ pools: poolsList, addresses, notes });
+    } catch (error: any) {
+      console.error("Error fetching customer detail:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch customer detail" });
+    }
+  });
+
+  // Get pools for a customer from local storage
+  app.get("/api/customers/:customerId/pools", async (req: any, res: any) => {
+    try {
+      const { customerId } = req.params;
+      const customerPools = await storage.getPoolsByCustomer(customerId);
+      res.json({ pools: customerPools });
+    } catch (error: any) {
+      console.error("Error fetching pools:", error);
+      res.status(500).json({ error: "Failed to fetch pools" });
+    }
+  });
+
   // Import customers from Pool Brain to local storage
   app.post("/api/customers/import", async (req: any, res: any) => {
     try {

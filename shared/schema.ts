@@ -55,6 +55,65 @@ export const customers = pgTable("customers", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Customer Addresses (multiple addresses per customer)
+export const customerAddresses = pgTable("customer_addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull(),
+  externalId: text("external_id"),
+  addressType: text("address_type").default("primary"), // "primary", "billing", "service"
+  addressLine1: text("address_line_1"),
+  addressLine2: text("address_line_2"),
+  city: text("city"),
+  state: text("state"),
+  zip: text("zip"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Pools / Bodies of Water (linked to customers)
+export const pools = pgTable("pools", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull(),
+  externalId: text("external_id"),
+  name: text("name").notNull(), // "LAP-POOL", "BEACH-POOL", "SPA", etc.
+  poolType: text("pool_type"), // Pool, Spa, Fountain, etc.
+  serviceLevel: text("service_level"), // "Pool Tech Services", etc.
+  waterType: text("water_type"), // Chlorine, Salt, etc.
+  gallons: integer("gallons"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zip: text("zip"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Route Schedules (assigns pools to technicians by day)
+export const routeSchedules = pgTable("route_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  poolId: varchar("pool_id").notNull(),
+  isActive: boolean("is_active").default(true),
+  frequency: text("frequency").default("weekly"), // "weekly", "biweekly", "custom"
+  customWeeks: integer("custom_weeks"),
+  endDate: timestamp("end_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Route Schedule Assignments (which technician on which day)
+export const routeAssignments = pgTable("route_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scheduleId: varchar("schedule_id").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, etc.
+  technicianId: text("technician_id").notNull(),
+  technicianName: text("technician_name"),
+  routeName: text("route_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Chat History (for Ace Prime conversations)
 export const chatMessages = pgTable("chat_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -131,6 +190,28 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
   createdAt: true,
 });
 
+export const insertCustomerAddressSchema = createInsertSchema(customerAddresses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPoolSchema = createInsertSchema(pools).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRouteScheduleSchema = createInsertSchema(routeSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRouteAssignmentSchema = createInsertSchema(routeAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
   id: true,
   timestamp: true,
@@ -168,6 +249,18 @@ export type Workflow = typeof workflows.$inferSelect;
 
 export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
 export type Customer = typeof customers.$inferSelect;
+
+export type InsertCustomerAddress = z.infer<typeof insertCustomerAddressSchema>;
+export type CustomerAddress = typeof customerAddresses.$inferSelect;
+
+export type InsertPool = z.infer<typeof insertPoolSchema>;
+export type Pool = typeof pools.$inferSelect;
+
+export type InsertRouteSchedule = z.infer<typeof insertRouteScheduleSchema>;
+export type RouteSchedule = typeof routeSchedules.$inferSelect;
+
+export type InsertRouteAssignment = z.infer<typeof insertRouteAssignmentSchema>;
+export type RouteAssignment = typeof routeAssignments.$inferSelect;
 
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;

@@ -1,0 +1,43 @@
+Create a customer-service workflow module for a pool service management app. The module should replicate these features:
+
+1. Customer profile page
+   - Shows customer status and email.
+   - Tabs for “Addresses” and “Contacts”; allow search and add operations.
+   - Display tags (e.g., seasonal service frequency).
+   - Route stop email field with ability to edit multiple addresses.
+
+2. Route integration
+   - A “Route” link with a calendar icon that links to the scheduling board.
+
+3. Bodies of water tabs
+   - Horizontal tabs representing different bodies of water (pool, spa, fountain, etc.).
+   - Color-coded tabs; user can add, delete, or rename tabs.
+   - Switching tabs updates the workflow template fields.
+
+4. Service configuration panel
+   - Three fields: “Service Level” (dropdown), “Type” (dropdown), and “Gallons” (numeric input).
+   - Changes to these fields update the task list template.
+
+5. Workflow builder
+   - Sections for “When Arriving,” “Before Pictures,” “Chemical Readings,” “Chemical Dosing,” and “Job in Progress.”
+   - Each section is a collapsible container with a drop zone labeled “Drag items here.”
+   - Tasks:
+     - Have drag handles for reordering.
+     - Include a completion checkbox.
+     - Support optional icons (camera, calendar, etc.).
+     - Hide automatically when irrelevant (e.g., hidden if the equipment type doesn’t match).
+   - A blue “Add Item” link opens a modal to choose from pre-defined tasks and add them to the workflow.
+
+6. Equipment settings
+   - Icon buttons at the bottom representing filter type, pump, chlorinator, and heater.
+   - Selecting an equipment type influences which tasks appear or are hidden.
+   - A “view more” link reveals additional equipment categories.
+
+Technical requirements:
+- Use React for the frontend.
+- Use state management to store customer details, addresses, contacts, workflow configuration, and equipment types.
+- Implement drag-and-drop for tasks and sections.
+- Provide a backend stub or mock API to save and load customer data, workflows, and equipment settings.
+- Use clear, modular components: `CustomerSidebar`, `ServiceTabs`, `ServiceConfigPanel`, `WorkflowBuilder`, and `EquipmentSelector`.
+
+Focus on replicating the user experience shown in the screenshots, including the ability to reorder tasks, drag-and-drop items between sections, add new bodies of water via tabs, and toggle equipment to conditionally display tasks.
