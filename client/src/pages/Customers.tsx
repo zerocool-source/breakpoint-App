@@ -27,7 +27,7 @@ import {
 import {
   Search, Plus, Users, Building2, User, MapPin, Phone, Mail,
   MoreVertical, X, ChevronLeft, ChevronRight, Tag, Edit, Trash2,
-  Home, FileText, Check, Loader2
+  Home, FileText, Check, Loader2, Calendar, Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -720,6 +720,10 @@ function CustomerDetailPanel({
             <FileText className="h-4 w-4" />
             Notes
           </TabsTrigger>
+          <TabsTrigger value="route" className="gap-1">
+            <Calendar className="h-4 w-4" />
+            Route
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="properties" className="flex-1 m-0 p-4">
@@ -877,6 +881,86 @@ function CustomerDetailPanel({
               <p className="text-slate-400 italic">No notes for this customer</p>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="route" className="flex-1 m-0 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-700">Route Schedule</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Activate Route Schedule</span>
+              <Switch />
+            </div>
+          </div>
+          <ScrollArea className="h-[calc(100vh-450px)]">
+            <div className="space-y-4">
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-slate-700 mb-3">Weekly Schedule</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
+                      <div key={day} className="flex items-center gap-3 p-3 border rounded-lg bg-slate-50">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
+                          {day.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-600">{day}</p>
+                          <p className="text-xs text-slate-400">Not scheduled</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-slate-700 mb-3">How Often</h4>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="frequency" defaultChecked className="text-blue-600" />
+                      <span className="text-sm">Once a week</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="frequency" className="text-blue-600" />
+                      <span className="text-sm">Every other week</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" name="frequency" className="text-blue-600" />
+                      <span className="text-sm">Every (x) weeks</span>
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-slate-700 mb-3">Multiple Visits Per Week</h4>
+                  <div className="flex gap-2">
+                    {["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((day) => (
+                      <Button 
+                        key={day} 
+                        variant="outline" 
+                        size="sm"
+                        className="text-xs px-2 py-1"
+                      >
+                        {day}
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-slate-700 mb-3">Route Notes</h4>
+                  <Textarea 
+                    placeholder="Add notes about route schedule..."
+                    className="min-h-[100px]"
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
         </TabsContent>
       </Tabs>
 
