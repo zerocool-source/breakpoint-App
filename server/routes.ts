@@ -2697,6 +2697,225 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to delete estimate" });
     }
   });
+
+  // ==================== ROUTES (Scheduling) ====================
+
+  // Get all routes (optionally filter by day of week)
+  app.get("/api/routes", async (req: any, res: any) => {
+    try {
+      const dayOfWeek = req.query.dayOfWeek !== undefined ? parseInt(req.query.dayOfWeek) : undefined;
+      const routesList = await storage.getRoutes(dayOfWeek);
+      
+      // Fetch stops for each route
+      const routesWithStops = await Promise.all(
+        routesList.map(async (route) => {
+          const stops = await storage.getRouteStops(route.id);
+          return { ...route, stops };
+        })
+      );
+      
+      res.json({ routes: routesWithStops });
+    } catch (error: any) {
+      console.error("Error getting routes:", error);
+      res.status(500).json({ error: "Failed to get routes" });
+    }
+  });
+
+  // Get single route with stops
+  app.get("/api/routes/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const route = await storage.getRoute(id);
+      if (!route) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+      const stops = await storage.getRouteStops(id);
+      res.json({ route: { ...route, stops } });
+    } catch (error: any) {
+      console.error("Error getting route:", error);
+      res.status(500).json({ error: "Failed to get route" });
+    }
+  });
+
+  // Create new route
+  app.post("/api/routes", async (req: any, res: any) => {
+    try {
+      const route = await storage.createRoute(req.body);
+      res.json({ route });
+    } catch (error: any) {
+      console.error("Error creating route:", error);
+      res.status(500).json({ error: "Failed to create route" });
+    }
+  });
+
+  // Update route
+  app.put("/api/routes/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const route = await storage.updateRoute(id, req.body);
+      if (!route) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+      res.json({ route });
+    } catch (error: any) {
+      console.error("Error updating route:", error);
+      res.status(500).json({ error: "Failed to update route" });
+    }
+  });
+
+  // Delete route
+  app.delete("/api/routes/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteRoute(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting route:", error);
+      res.status(500).json({ error: "Failed to delete route" });
+    }
+  });
+
+  // Reorder routes
+  app.put("/api/routes/reorder", async (req: any, res: any) => {
+    try {
+      const { routeIds } = req.body;
+      await storage.reorderRoutes(routeIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reordering routes:", error);
+      res.status(500).json({ error: "Failed to reorder routes" });
+    }
+  });
+
+  // ==================== ROUTE STOPS ====================
+
+  // Get stops for a route
+  app.get("/api/routes/:routeId/stops", async (req: any, res: any) => {
+    try {
+      const { routeId } = req.params;
+      const stops = await storage.getRouteStops(routeId);
+      res.json({ stops });
+    } catch (error: any) {
+      console.error("Error getting route stops:", error);
+      res.status(500).json({ error: "Failed to get route stops" });
+    }
+  });
+
+  // Create route stop
+  app.post("/api/routes/:routeId/stops", async (req: any, res: any) => {
+    try {
+      const { routeId } = req.params;
+      const stop = await storage.createRouteStop({ ...req.body, routeId });
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error creating route stop:", error);
+      res.status(500).json({ error: "Failed to create route stop" });
+    }
+  });
+
+  // Update route stop
+  app.put("/api/route-stops/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const stop = await storage.updateRouteStop(id, req.body);
+      if (!stop) {
+        return res.status(404).json({ error: "Route stop not found" });
+      }
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error updating route stop:", error);
+      res.status(500).json({ error: "Failed to update route stop" });
+    }
+  });
+
+  // Delete route stop
+  app.delete("/api/route-stops/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteRouteStop(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting route stop:", error);
+      res.status(500).json({ error: "Failed to delete route stop" });
+    }
+  });
+
+  // Move stop to different route
+  app.post("/api/route-stops/:id/move", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { newRouteId, isPermanent, moveDate } = req.body;
+      const stop = await storage.moveStopToRoute(id, newRouteId, isPermanent, moveDate ? new Date(moveDate) : undefined);
+      if (!stop) {
+        return res.status(404).json({ error: "Route stop not found" });
+      }
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error moving route stop:", error);
+      res.status(500).json({ error: "Failed to move route stop" });
+    }
+  });
+
+  // Reorder stops within a route
+  app.put("/api/routes/:routeId/stops/reorder", async (req: any, res: any) => {
+    try {
+      const { stopIds } = req.body;
+      await storage.reorderRouteStops(stopIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reordering route stops:", error);
+      res.status(500).json({ error: "Failed to reorder route stops" });
+    }
+  });
+
+  // ==================== UNSCHEDULED STOPS ====================
+
+  // Get unscheduled stops
+  app.get("/api/unscheduled-stops", async (req: any, res: any) => {
+    try {
+      const stops = await storage.getUnscheduledStops();
+      res.json({ stops });
+    } catch (error: any) {
+      console.error("Error getting unscheduled stops:", error);
+      res.status(500).json({ error: "Failed to get unscheduled stops" });
+    }
+  });
+
+  // Create unscheduled stop
+  app.post("/api/unscheduled-stops", async (req: any, res: any) => {
+    try {
+      const stop = await storage.createUnscheduledStop(req.body);
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error creating unscheduled stop:", error);
+      res.status(500).json({ error: "Failed to create unscheduled stop" });
+    }
+  });
+
+  // Delete unscheduled stop
+  app.delete("/api/unscheduled-stops/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUnscheduledStop(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting unscheduled stop:", error);
+      res.status(500).json({ error: "Failed to delete unscheduled stop" });
+    }
+  });
+
+  // Move unscheduled stop to route
+  app.post("/api/unscheduled-stops/:id/assign", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { routeId } = req.body;
+      const stop = await storage.moveUnscheduledToRoute(id, routeId);
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error assigning unscheduled stop:", error);
+      res.status(500).json({ error: "Failed to assign unscheduled stop" });
+    }
+  });
 }
 
   
