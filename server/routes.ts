@@ -1640,6 +1640,57 @@ function setupRoutes(app: any) {
     }
   });
 
+  app.post("/api/technicians/sync", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const techsData = await client.getTechnicianDetail({ limit: 500 });
+      const techList = techsData.data || [];
+
+      let synced = 0;
+      for (const t of techList) {
+        const externalId = String(t.RecordID || t.TechnicianID);
+        await storage.upsertTechnician(externalId, {
+          externalId,
+          firstName: t.FirstName || "",
+          lastName: t.LastName || "",
+          phone: t.Phone || t.CellPhone || "",
+          email: t.Email || "",
+          role: "service",
+          active: t.Active !== false && t.Active !== 0,
+        });
+        synced++;
+      }
+
+      res.json({ success: true, synced, message: `Synced ${synced} technicians from Pool Brain` });
+    } catch (error: any) {
+      console.error("Error syncing technicians:", error);
+      res.status(500).json({ error: "Failed to sync technicians", message: error.message });
+    }
+  });
+
+  app.get("/api/technicians/stored", async (req: any, res: any) => {
+    try {
+      const role = req.query.role as string | undefined;
+      const technicians = await storage.getTechnicians(role);
+      res.json({ technicians });
+    } catch (error: any) {
+      console.error("Error fetching stored technicians:", error);
+      res.status(500).json({ error: "Failed to fetch technicians", message: error.message });
+    }
+  });
+
   // ==================== CHAT ====================
 
   app.get("/api/chat/history", async (req: any, res: any) => {

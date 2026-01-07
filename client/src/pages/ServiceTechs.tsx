@@ -45,8 +45,9 @@ function getAvatarColor(name: string): string {
 export default function ServiceTechs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const { data: technicians = [], isLoading, refetch, isRefetching } = useQuery<Technician[]>({
+  const { data: technicians = [], isLoading, refetch } = useQuery<Technician[]>({
     queryKey: ["/api/technicians/poolbrain"],
     queryFn: async () => {
       const res = await fetch("/api/technicians/poolbrain");
@@ -55,6 +56,19 @@ export default function ServiceTechs() {
       return data.technicians || data.data || data || [];
     },
   });
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/technicians/sync", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to sync technicians");
+      await refetch();
+    } catch (error) {
+      console.error("Sync failed:", error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const filteredTechnicians = technicians.filter((tech) => {
     const fullName = `${tech.FirstName || ""} ${tech.LastName || ""}`.toLowerCase();
@@ -78,11 +92,11 @@ export default function ServiceTechs() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => refetch()}
-            disabled={isRefetching}
+            onClick={handleSync}
+            disabled={isSyncing}
             data-testid="button-refresh-techs"
           >
-            <RefreshCw className={cn("w-4 h-4 mr-2", isRefetching && "animate-spin")} />
+            <RefreshCw className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
             Sync from Pool Brain
           </Button>
         </div>

@@ -2,6 +2,7 @@ import {
   type Settings, type InsertSettings,
   type Alert, type InsertAlert,
   type Workflow, type InsertWorkflow,
+  type Technician, type InsertTechnician,
   type Customer, type InsertCustomer,
   type CustomerAddress, type InsertCustomerAddress,
   type Pool, type InsertPool,
@@ -24,7 +25,7 @@ import {
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
   type UnscheduledStop, type InsertUnscheduledStop,
-  settings, alerts, workflows, customers, customerAddresses, pools, routeSchedules, routeAssignments,
+  settings, alerts, workflows, technicians, customers, customerAddresses, pools, routeSchedules, routeAssignments,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
@@ -47,6 +48,15 @@ export interface IStorage {
   getWorkflows(): Promise<Workflow[]>;
   createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
   updateWorkflowStatus(id: string, status: string): Promise<Workflow | undefined>;
+
+  // Technicians
+  getTechnicians(role?: string): Promise<Technician[]>;
+  getTechnician(id: string): Promise<Technician | undefined>;
+  getTechnicianByExternalId(externalId: string): Promise<Technician | undefined>;
+  createTechnician(technician: InsertTechnician): Promise<Technician>;
+  updateTechnician(id: string, updates: Partial<InsertTechnician>): Promise<Technician | undefined>;
+  upsertTechnician(externalId: string, technician: InsertTechnician): Promise<Technician>;
+  clearAllTechnicians(): Promise<void>;
 
   // Customers
   getCustomers(): Promise<Customer[]>;
@@ -246,6 +256,50 @@ export class DbStorage implements IStorage {
       .where(eq(workflows.id, id))
       .returning();
     return result[0];
+  }
+
+  // Technicians
+  async getTechnicians(role?: string): Promise<Technician[]> {
+    if (role) {
+      return db.select().from(technicians).where(eq(technicians.role, role)).orderBy(technicians.lastName);
+    }
+    return db.select().from(technicians).orderBy(technicians.lastName);
+  }
+
+  async getTechnician(id: string): Promise<Technician | undefined> {
+    const result = await db.select().from(technicians).where(eq(technicians.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getTechnicianByExternalId(externalId: string): Promise<Technician | undefined> {
+    const result = await db.select().from(technicians).where(eq(technicians.externalId, externalId)).limit(1);
+    return result[0];
+  }
+
+  async createTechnician(technician: InsertTechnician): Promise<Technician> {
+    const result = await db.insert(technicians).values(technician as any).returning();
+    return result[0];
+  }
+
+  async updateTechnician(id: string, updates: Partial<InsertTechnician>): Promise<Technician | undefined> {
+    const result = await db.update(technicians)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(technicians.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async upsertTechnician(externalId: string, technician: InsertTechnician): Promise<Technician> {
+    const existing = await this.getTechnicianByExternalId(externalId);
+    if (existing) {
+      const updated = await this.updateTechnician(existing.id, technician);
+      return updated!;
+    }
+    return this.createTechnician({ ...technician, externalId });
+  }
+
+  async clearAllTechnicians(): Promise<void> {
+    await db.delete(technicians);
   }
 
   // Customers

@@ -36,6 +36,29 @@ export const workflows = pgTable("workflows", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Technicians (from Pool Brain)
+export const technicians = pgTable("technicians", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: text("external_id"),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: text("phone"),
+  email: text("email"),
+  role: text("role").default("service"), // "service", "repair"
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTechnicianSchema = createInsertSchema(technicians).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
+export type Technician = typeof technicians.$inferSelect;
+
 // Customers / HOAs (from Pool Brain or manual entry)
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
