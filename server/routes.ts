@@ -1369,7 +1369,96 @@ function setupRoutes(app: any) {
     }
   });
 
-  // Get customers list for job creation dropdown
+  // Get stored customers from local database
+  app.get("/api/customers/stored", async (req: any, res: any) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json({ customers });
+    } catch (error: any) {
+      console.error("Error fetching stored customers:", error);
+      res.status(500).json({ error: "Failed to fetch customers" });
+    }
+  });
+
+  // Import customers from Pool Brain to local storage
+  app.post("/api/customers/import", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+      const { clearExisting } = req.body || {};
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      if (clearExisting) {
+        await storage.clearAllCustomers();
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch customers and pool details
+      const [customersData, poolsData] = await Promise.all([
+        client.getCustomerDetail({ limit: 2000 }),
+        client.getCustomerPoolDetails({ limit: 2000 }).catch(() => ({ data: [] })),
+      ]);
+
+      const rawCustomers = customersData.data || [];
+      const rawPools = poolsData.data || [];
+
+      // Count pools per customer
+      const poolCountMap = new Map<string, number>();
+      for (const pool of rawPools) {
+        const custId = String(pool.CustomerID || pool.customerId || "");
+        poolCountMap.set(custId, (poolCountMap.get(custId) || 0) + 1);
+      }
+
+      let imported = 0;
+      for (const c of rawCustomers) {
+        const externalId = String(c.RecordID || c.CustomerID || c.customerId);
+        const name = c.CustomerName || c.CompanyName || c.Name || "Unknown";
+        const poolCount = poolCountMap.get(externalId) || 0;
+        
+        // Determine status based on Pool Brain data
+        let status = "active";
+        if (c.Status) {
+          const s = c.Status.toLowerCase();
+          if (s.includes("inactive")) status = "inactive";
+          else if (s.includes("lead")) status = "lead";
+        }
+        if (poolCount > 0) status = "active_routed";
+
+        await storage.upsertCustomer(externalId, {
+          name,
+          email: c.Email || c.email || null,
+          phone: c.Phone || c.phone || c.PhoneNumber || null,
+          address: c.Address || c.address || null,
+          city: c.City || c.city || null,
+          state: c.State || c.state || null,
+          zip: c.Zip || c.zip || c.ZipCode || null,
+          status,
+          poolCount,
+          notes: c.Notes || c.notes || null,
+        });
+        imported++;
+      }
+
+      res.json({
+        success: true,
+        message: `Imported ${imported} customers from Pool Brain`,
+        count: imported,
+      });
+    } catch (error: any) {
+      console.error("Error importing customers:", error);
+      res.status(500).json({ error: error.message || "Failed to import customers" });
+    }
+  });
+
+  // Get customers list for job creation dropdown (from Pool Brain API directly)
   app.get("/api/customers", async (req: any, res: any) => {
     try {
       const settings = await storage.getSettings();
@@ -1386,6 +1475,7 @@ function setupRoutes(app: any) {
       });
 
       const customersData = await client.getCustomerDetail({ limit: 1000 });
+      console.log(`Fetched ${customersData.data?.length || 0} customers`);
       
       const customers = (customersData.data || []).map((c: any) => ({
         id: c.RecordID,

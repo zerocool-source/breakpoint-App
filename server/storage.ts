@@ -45,7 +45,12 @@ export interface IStorage {
 
   // Customers
   getCustomers(): Promise<Customer[]>;
+  getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomerByExternalId(externalId: string): Promise<Customer | undefined>;
   createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  upsertCustomer(externalId: string, customer: InsertCustomer): Promise<Customer>;
+  clearAllCustomers(): Promise<void>;
 
   // Chat
   getChatHistory(limit?: number): Promise<ChatMessage[]>;
@@ -229,9 +234,40 @@ export class DbStorage implements IStorage {
     return db.select().from(customers).orderBy(customers.name);
   }
 
+  async getCustomer(id: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getCustomerByExternalId(externalId: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.externalId, externalId)).limit(1);
+    return result[0];
+  }
+
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
     const result = await db.insert(customers).values(customer).returning();
     return result[0];
+  }
+
+  async updateCustomer(id: string, updates: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const result = await db.update(customers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customers.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async upsertCustomer(externalId: string, customer: InsertCustomer): Promise<Customer> {
+    const existing = await this.getCustomerByExternalId(externalId);
+    if (existing) {
+      const updated = await this.updateCustomer(existing.id, customer);
+      return updated!;
+    }
+    return this.createCustomer({ ...customer, externalId });
+  }
+
+  async clearAllCustomers(): Promise<void> {
+    await db.delete(customers);
   }
 
   // Chat

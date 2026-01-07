@@ -44,8 +44,15 @@ export const customers = pgTable("customers", {
   email: text("email"),
   phone: text("phone"),
   address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zip: text("zip"),
+  status: text("status").default("active"), // active_routed, active_no_route, inactive, lead
   poolCount: integer("pool_count").default(0),
+  tags: text("tags"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Chat History (for Ace Prime conversations)
