@@ -2976,12 +2976,27 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      const [routeData, technicianData, poolData, customerData] = await Promise.all([
+      // Fetch route and technician data (required), pools and customers are optional
+      const [routeData, technicianData] = await Promise.all([
         client.getTechnicianRouteDetail({ limit: 2000 }),
         client.getTechnicianDetail({ limit: 500 }),
-        client.getPoolsList({ limit: 2000 }),
-        client.getCustomerDetail({ limit: 2000 }),
       ]);
+
+      // Fetch pools and customers separately with error handling
+      let poolData: any = { data: [] };
+      let customerData: any = { data: [] };
+      
+      try {
+        poolData = await client.getPoolsList({ limit: 2000 });
+      } catch (e) {
+        console.log("Could not fetch pools list, continuing without pool data");
+      }
+      
+      try {
+        customerData = await client.getCustomerDetail({ limit: 2000 });
+      } catch (e) {
+        console.log("Could not fetch customer details, continuing without customer data");
+      }
 
       const technicians = technicianData?.technicians || technicianData?.data || [];
       const routes = routeData?.routes || routeData?.data || routeData || [];
