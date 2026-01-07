@@ -897,7 +897,7 @@ function CustomerDetailPanel({
                 <CardContent className="p-4">
                   <h4 className="font-medium text-slate-700 mb-3">Weekly Schedule</h4>
                   <div className="grid grid-cols-2 gap-3">
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map((day) => (
+                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
                       <div key={day} className="flex items-center gap-3 p-3 border rounded-lg bg-slate-50">
                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
                           {day.slice(0, 2).toUpperCase()}
