@@ -480,7 +480,7 @@ function CustomerDetail({
                 <div>
                   <p className="text-sm text-slate-500 mb-2">Route Stop Email</p>
                   <Input 
-                    value={customer.email || ""} 
+                    defaultValue={customer.email || ""} 
                     placeholder="email@example.com" 
                     className="text-sm"
                     data-testid="input-route-email"
@@ -610,7 +610,7 @@ function CustomerDetail({
 
               <TabsContent value="notes" className="px-4 py-4" data-testid="panel-notes">
                 <Textarea 
-                  value={notes} 
+                  defaultValue={notes} 
                   placeholder="Customer notes..."
                   className="min-h-[200px]"
                   data-testid="textarea-notes"
