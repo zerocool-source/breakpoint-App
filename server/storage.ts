@@ -139,6 +139,7 @@ export interface IStorage {
   createRoute(route: InsertRoute): Promise<Route>;
   updateRoute(id: string, updates: Partial<InsertRoute>): Promise<Route | undefined>;
   deleteRoute(id: string): Promise<void>;
+  clearAllRoutes(): Promise<void>;
   reorderRoutes(routeIds: string[]): Promise<void>;
 
   // Route Stops
@@ -815,6 +816,11 @@ export class DbStorage implements IStorage {
   async deleteRoute(id: string): Promise<void> {
     await db.delete(routeStops).where(eq(routeStops.routeId, id));
     await db.delete(routes).where(eq(routes.id, id));
+  }
+
+  async clearAllRoutes(): Promise<void> {
+    await db.delete(routeStops);
+    await db.delete(routes);
   }
 
   async reorderRoutes(routeIds: string[]): Promise<void> {

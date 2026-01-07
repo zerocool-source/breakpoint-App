@@ -235,6 +235,7 @@ export default function Scheduling() {
       const response = await fetch("/api/routes/import-from-poolbrain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clearExisting: true }),
       });
       if (!response.ok) {
         const errorData = await response.json();

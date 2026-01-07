@@ -2960,9 +2960,15 @@ function setupRoutes(app: any) {
       const settings = await storage.getSettings();
       const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
       const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+      const { clearExisting } = req.body || {};
 
       if (!apiKey) {
         return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      // Clear existing routes if requested
+      if (clearExisting) {
+        await storage.clearAllRoutes();
       }
 
       const client = new PoolBrainClient({
@@ -2971,16 +2977,18 @@ function setupRoutes(app: any) {
       });
 
       const [routeData, technicianData, poolData, customerData] = await Promise.all([
-        client.getTechnicianRouteDetail({ limit: 1000 }),
-        client.getTechnicianDetail({ limit: 100 }),
-        client.getPoolsList({ limit: 1000 }),
-        client.getCustomerDetail({ limit: 1000 }),
+        client.getTechnicianRouteDetail({ limit: 2000 }),
+        client.getTechnicianDetail({ limit: 500 }),
+        client.getPoolsList({ limit: 2000 }),
+        client.getCustomerDetail({ limit: 2000 }),
       ]);
 
       const technicians = technicianData?.technicians || technicianData?.data || [];
       const routes = routeData?.routes || routeData?.data || routeData || [];
       const pools = poolData?.pools || poolData?.data || [];
       const customers = customerData?.customers || customerData?.data || [];
+      
+      console.log(`Pool Brain import: ${routes.length} route entries, ${technicians.length} technicians, ${pools.length} pools, ${customers.length} customers`);
 
       const poolMap = new Map<number, any>();
       for (const pool of pools) {
