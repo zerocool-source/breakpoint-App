@@ -571,6 +571,7 @@ export type Estimate = typeof estimates.$inferSelect;
 // Routes (Service routes for technicians)
 export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: text("external_id"), // Pool Brain route ID
   name: text("name").notNull(),
   dayOfWeek: integer("day_of_week").notNull(), // 0=Sunday, 1=Monday, etc.
   color: text("color").notNull().default("#0891b2"),
@@ -599,11 +600,17 @@ export type Route = typeof routes.$inferSelect;
 // Route Stops (Jobs/pools assigned to routes)
 export const routeStops = pgTable("route_stops", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: text("external_id"), // Pool Brain stop ID
   routeId: text("route_id").notNull(),
   propertyId: text("property_id").notNull(),
   propertyName: text("property_name").notNull(),
+  customerId: text("customer_id"), // Pool Brain CustomerID
   customerName: text("customer_name"),
+  poolId: text("pool_id"), // Pool Brain WaterBodyID
   address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zip: text("zip"),
   poolName: text("pool_name"),
   jobType: text("job_type").default("route_stop"), // route_stop, one_time
   status: text("status").default("not_started"), // not_started, in_progress, completed, no_access, skipped

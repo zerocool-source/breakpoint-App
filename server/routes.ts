@@ -3231,6 +3231,7 @@ function setupRoutes(app: any) {
 
         const route = await storage.createRoute({
           name: `${techName} - ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dayOfWeek]}`,
+          externalId: stops[0]?.RouteID ? String(stops[0].RouteID) : null,
           dayOfWeek,
           color: ROUTE_COLORS[colorIndex % ROUTE_COLORS.length],
           technicianId: String(techId),
@@ -3252,10 +3253,16 @@ function setupRoutes(app: any) {
 
           await storage.createRouteStop({
             routeId: route.id,
+            externalId: stopEntry.RouteStopID ? String(stopEntry.RouteStopID) : null,
             propertyId: String(poolId),
             propertyName,
+            customerId: customerId ? String(customerId) : null,
             customerName,
+            poolId: poolId ? String(poolId) : null,
             address,
+            city: customer?.City || customer?.city || pool?.City || pool?.city || null,
+            state: customer?.State || customer?.state || pool?.State || pool?.state || null,
+            zip: customer?.Zip || customer?.zip || pool?.Zip || pool?.zip || null,
             poolName: propertyName,
             sortOrder,
             estimatedTime: stopEntry.EstimatedTime || stopEntry.estimatedTime || 30,
