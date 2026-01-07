@@ -3208,7 +3208,32 @@ function setupRoutes(app: any) {
   // Create new route
   app.post("/api/routes", async (req: any, res: any) => {
     try {
-      const route = await storage.createRoute(req.body);
+      const { customerIds, ...routeData } = req.body;
+      const route = await storage.createRoute(routeData);
+      
+      // If customers were selected, create stops for each
+      if (customerIds && Array.isArray(customerIds) && customerIds.length > 0) {
+        for (let i = 0; i < customerIds.length; i++) {
+          const customerId = customerIds[i];
+          const customer = await storage.getCustomer(customerId);
+          if (customer) {
+            // Get first property for the customer if any
+            const properties = await storage.getCustomerAddresses(customerId);
+            const property = properties[0];
+            
+            await storage.createRouteStop({
+              routeId: route.id,
+              propertyId: property?.id || customerId,
+              propertyName: property?.addressLine1 || customer.name,
+              customerName: customer.name,
+              address: property ? `${property.addressLine1 || ""}, ${property.city || ""} ${property.state || ""} ${property.zip || ""}`.trim() : customer.address,
+              sortOrder: i + 1,
+              estimatedTime: 30,
+            });
+          }
+        }
+      }
+      
       res.json({ route });
     } catch (error: any) {
       console.error("Error creating route:", error);

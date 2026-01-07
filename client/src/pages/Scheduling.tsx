@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Plus, MapPin, Clock, Truck, 
@@ -58,6 +59,15 @@ interface Route {
   estimatedOnSiteTime: number | null;
   sortOrder: number | null;
   stops: RouteStop[];
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  poolCount: number | null;
 }
 
 const DAYS = [
@@ -145,6 +155,7 @@ export default function Scheduling() {
     technicianName: "",
     dayOfWeek: 1,
   });
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
   const [newStop, setNewStop] = useState({
     propertyName: "",
@@ -163,6 +174,17 @@ export default function Scheduling() {
     },
   });
 
+  const { data: customersData } = useQuery<{ customers: Customer[] }>({
+    queryKey: ["/api/customers"],
+    queryFn: async () => {
+      const response = await fetch("/api/customers");
+      if (!response.ok) return { customers: [] };
+      return response.json();
+    },
+  });
+
+  const customers = customersData?.customers || [];
+
   const createRouteMutation = useMutation({
     mutationFn: async (route: any) => {
       const response = await fetch("/api/routes", {
@@ -178,6 +200,7 @@ export default function Scheduling() {
       toast({ title: "Route Created", description: "New route has been added." });
       setShowCreateRouteDialog(false);
       setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "", dayOfWeek: 1 });
+      setSelectedCustomerIds([]);
     },
   });
 
@@ -806,13 +829,62 @@ export default function Scheduling() {
                   ))}
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>Add Customers to Route (Optional)</Label>
+                <Select
+                  value=""
+                  onValueChange={(customerId) => {
+                    if (customerId && !selectedCustomerIds.includes(customerId)) {
+                      setSelectedCustomerIds([...selectedCustomerIds, customerId]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select customers to add..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers
+                      .filter(c => !selectedCustomerIds.includes(c.id))
+                      .map((customer) => (
+                        <SelectItem key={customer.id} value={customer.id}>
+                          {customer.name} {customer.address ? `- ${customer.address}` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {selectedCustomerIds.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs text-slate-500">Selected customers:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedCustomerIds.map((id) => {
+                        const customer = customers.find(c => c.id === id);
+                        return (
+                          <span 
+                            key={id} 
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                          >
+                            {customer?.name || "Unknown"}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCustomerIds(selectedCustomerIds.filter(cid => cid !== id))}
+                              className="hover:text-red-600"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreateRouteDialog(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={() => createRouteMutation.mutate(newRoute)}
+                onClick={() => createRouteMutation.mutate({ ...newRoute, customerIds: selectedCustomerIds })}
                 disabled={!newRoute.name}
                 className="bg-blue-600 hover:bg-blue-700"
               >
