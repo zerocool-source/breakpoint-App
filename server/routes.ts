@@ -1612,6 +1612,42 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Route Schedule endpoints
+  app.get("/api/properties/:propertyId/route-schedule", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const schedule = await storage.getRouteScheduleByProperty(propertyId);
+      res.json({ schedule: schedule || null });
+    } catch (error: any) {
+      console.error("Error fetching route schedule:", error);
+      res.status(500).json({ error: "Failed to fetch route schedule" });
+    }
+  });
+
+  app.put("/api/properties/:propertyId/route-schedule", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const scheduleData = req.body;
+      const schedule = await storage.upsertRouteSchedule(propertyId, scheduleData);
+      res.json({ schedule });
+    } catch (error: any) {
+      console.error("Error saving route schedule:", error);
+      res.status(500).json({ error: "Failed to save route schedule" });
+    }
+  });
+
+  // Service occurrence endpoints
+  app.get("/api/properties/:propertyId/service-occurrences", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const occurrences = await storage.getServiceOccurrencesByProperty(propertyId);
+      res.json({ occurrences });
+    } catch (error: any) {
+      console.error("Error fetching service occurrences:", error);
+      res.status(500).json({ error: "Failed to fetch service occurrences" });
+    }
+  });
+
   // Import customers from Pool Brain to local storage
   app.post("/api/customers/import", async (req: any, res: any) => {
     try {
