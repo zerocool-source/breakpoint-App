@@ -233,6 +233,24 @@ function WorkflowSection({
   );
 }
 
+interface RouteScheduleConfig {
+  active: boolean;
+  frequencyType: "weekly" | "everyOtherWeek" | "customWeeks" | "multiDay";
+  intervalWeeks: number;
+  daysOfWeek: string[];
+  endDate: string | null;
+  notes: string;
+  dayAssignments: Record<string, { technicianId: string; technicianName: string; routeName: string }>;
+}
+
+const DEFAULT_TECHNICIANS = [
+  { id: "t1", name: "Kyle Pollock", initials: "KP" },
+  { id: "t2", name: "Paul Martinez", initials: "PM" },
+  { id: "t3", name: "John Smith", initials: "JS" },
+];
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 function CustomerDetail({ 
   customer, 
   onClose 
@@ -244,6 +262,7 @@ function CustomerDetail({
   const [activePoolIndex, setActivePoolIndex] = useState(0);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddPool, setShowAddPool] = useState(false);
+  const [showRouteSchedule, setShowRouteSchedule] = useState(false);
   const [newPoolName, setNewPoolName] = useState("");
   const [newPoolType, setNewPoolType] = useState("pool");
   const [tasks, setTasks] = useState<Task[]>(PREDEFINED_TASKS.slice(0, 8).map((t, i) => ({ ...t, id: `task-${i}` })));
@@ -255,6 +274,23 @@ function CustomerDetail({
   ]);
   const [searchContacts, setSearchContacts] = useState("");
   const [searchAddresses, setSearchAddresses] = useState("");
+  const [routeSchedule, setRouteSchedule] = useState<RouteScheduleConfig>({
+    active: true,
+    frequencyType: "weekly",
+    intervalWeeks: 1,
+    daysOfWeek: ["Mon", "Wed", "Fri"],
+    endDate: null,
+    notes: "",
+    dayAssignments: {
+      Mon: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Mon" },
+      Tue: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Tue" },
+      Wed: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Wed" },
+      Thu: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Thu" },
+      Fri: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Fri" },
+      Sat: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Sat" },
+      Sun: { technicianId: "t1", technicianName: "Kyle Pollock", routeName: "(Beaumont/North) Sun" },
+    },
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -427,17 +463,16 @@ function CustomerDetail({
                   <FileText className="h-4 w-4" />
                 </TabsTrigger>
               </TabsList>
-              <Link href={`/scheduling?customerId=${encodeURIComponent(customer.externalId || customer.id)}&customerName=${encodeURIComponent(customer.name)}`}>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-green-600 border-green-600"
-                  data-testid="button-route-schedule"
-                >
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Route
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-green-600 border-green-600"
+                onClick={() => setShowRouteSchedule(true)}
+                data-testid="button-route-schedule"
+              >
+                <Calendar className="h-4 w-4 mr-1" />
+                Route
+              </Button>
             </div>
 
             <ScrollArea className="flex-1">
@@ -773,6 +808,231 @@ function CustomerDetail({
         </div>
       </div>
 
+      <Dialog open={showRouteSchedule} onOpenChange={setShowRouteSchedule}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-blue-600 text-xl">Route Schedule</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+              <span className="font-medium text-lg">Activate Route Schedule</span>
+              <Switch 
+                checked={routeSchedule.active} 
+                onCheckedChange={(checked) => setRouteSchedule(prev => ({ ...prev, active: checked }))}
+                data-testid="switch-route-active" 
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <Label className="font-medium text-base mb-3 block">How Often?</Label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="frequency" 
+                      checked={routeSchedule.frequencyType === "weekly"}
+                      onChange={() => setRouteSchedule(prev => ({ ...prev, frequencyType: "weekly", intervalWeeks: 1 }))}
+                      className="w-4 h-4 text-blue-600" 
+                      data-testid="radio-weekly" 
+                    />
+                    <span>Once a week</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="frequency" 
+                      checked={routeSchedule.frequencyType === "everyOtherWeek"}
+                      onChange={() => setRouteSchedule(prev => ({ ...prev, frequencyType: "everyOtherWeek", intervalWeeks: 2 }))}
+                      className="w-4 h-4 text-blue-600" 
+                      data-testid="radio-biweekly" 
+                    />
+                    <span>Every other week</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="frequency" 
+                      checked={routeSchedule.frequencyType === "customWeeks"}
+                      onChange={() => setRouteSchedule(prev => ({ ...prev, frequencyType: "customWeeks" }))}
+                      className="w-4 h-4 text-blue-600" 
+                      data-testid="radio-custom" 
+                    />
+                    <span className="flex items-center gap-2">
+                      Every 
+                      <Input 
+                        type="number" 
+                        min={1}
+                        max={12}
+                        value={routeSchedule.intervalWeeks}
+                        onChange={(e) => setRouteSchedule(prev => ({ ...prev, intervalWeeks: parseInt(e.target.value) || 1 }))}
+                        className="w-16 h-8"
+                        disabled={routeSchedule.frequencyType !== "customWeeks"}
+                      />
+                      weeks
+                    </span>
+                  </label>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="font-medium text-base mb-3 block">Ends On:</Label>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="ends" 
+                      checked={routeSchedule.endDate === null}
+                      onChange={() => setRouteSchedule(prev => ({ ...prev, endDate: null }))}
+                      className="w-4 h-4 text-blue-600" 
+                      data-testid="radio-never" 
+                    />
+                    <span>Never</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="ends" 
+                      checked={routeSchedule.endDate !== null}
+                      onChange={() => setRouteSchedule(prev => ({ ...prev, endDate: new Date().toISOString().split('T')[0] }))}
+                      className="w-4 h-4 text-blue-600" 
+                      data-testid="radio-date" 
+                    />
+                    <span className="flex items-center gap-2">
+                      Date
+                      <Input 
+                        type="date" 
+                        value={routeSchedule.endDate || ""}
+                        onChange={(e) => setRouteSchedule(prev => ({ ...prev, endDate: e.target.value }))}
+                        className="h-8"
+                        disabled={routeSchedule.endDate === null}
+                      />
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="font-medium text-base mb-3 block">Multiple visits per week</Label>
+              <div className="flex gap-2">
+                {WEEKDAYS.map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => {
+                      setRouteSchedule(prev => ({
+                        ...prev,
+                        daysOfWeek: prev.daysOfWeek.includes(day) 
+                          ? prev.daysOfWeek.filter(d => d !== day)
+                          : [...prev.daysOfWeek, day]
+                      }));
+                    }}
+                    className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                      routeSchedule.daysOfWeek.includes(day) 
+                        ? "bg-blue-600 text-white" 
+                        : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                    }`}
+                    data-testid={`day-chip-${day.toLowerCase()}`}
+                  >
+                    {day.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="font-medium text-base mb-3 block">Day Assignments</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {WEEKDAYS.map((day) => {
+                  const assignment = routeSchedule.dayAssignments[day];
+                  const tech = DEFAULT_TECHNICIANS.find(t => t.id === assignment?.technicianId) || DEFAULT_TECHNICIANS[0];
+                  const isActiveDay = routeSchedule.daysOfWeek.includes(day);
+                  const dayLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+                  
+                  return (
+                    <div 
+                      key={day} 
+                      className={`flex items-center gap-3 p-3 border rounded-lg ${isActiveDay ? "bg-white" : "bg-slate-50 opacity-60"}`}
+                      data-testid={`route-day-${day.toLowerCase()}`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                        isActiveDay ? "bg-cyan-100 text-cyan-700" : "bg-slate-200 text-slate-500"
+                      }`}>
+                        {tech.initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Select 
+                          value={assignment?.technicianId || "t1"}
+                          onValueChange={(techId) => {
+                            const newTech = DEFAULT_TECHNICIANS.find(t => t.id === techId)!;
+                            setRouteSchedule(prev => ({
+                              ...prev,
+                              dayAssignments: {
+                                ...prev.dayAssignments,
+                                [day]: {
+                                  technicianId: techId,
+                                  technicianName: newTech.name,
+                                  routeName: `(Beaumont/North) ${day}`
+                                }
+                              }
+                            }));
+                          }}
+                          disabled={!isActiveDay}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DEFAULT_TECHNICIANS.map(t => (
+                              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500 mt-1 truncate">{assignment?.routeName || `Route ${day}`}</p>
+                      </div>
+                      <span className="text-xs text-slate-400">{dayLabels[WEEKDAYS.indexOf(day)]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <Label className="font-medium text-base mb-2 block">Notes</Label>
+              <Textarea 
+                placeholder="Add notes for the technician (e.g., 'Check water level when windy', 'Lock gate on last visit')..." 
+                className="min-h-[80px]"
+                value={routeSchedule.notes}
+                onChange={(e) => setRouteSchedule(prev => ({ ...prev, notes: e.target.value }))}
+                data-testid="textarea-route-notes" 
+              />
+              <p className="text-xs text-slate-400 mt-1">Character limit: 6000</p>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t">
+              <Link href={`/scheduling?customerId=${encodeURIComponent(customer.externalId || customer.id)}&customerName=${encodeURIComponent(customer.name)}`}>
+                <Button variant="outline" className="text-blue-600 border-blue-600">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  View on Scheduling Board
+                </Button>
+              </Link>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowRouteSchedule(false)}>Cancel</Button>
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    setShowRouteSchedule(false);
+                  }}
+                  data-testid="button-save-route-schedule"
+                >
+                  Save Schedule
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showAddTask} onOpenChange={setShowAddTask}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -849,6 +1109,8 @@ export default function Customers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -905,6 +1167,18 @@ export default function Customers() {
     
     return result;
   }, [customers, searchQuery, statusFilter]);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, showArchived]);
+
+  // Paginate the filtered customers
+  const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
+  const paginatedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredCustomers.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredCustomers, currentPage, ITEMS_PER_PAGE]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -1065,7 +1339,7 @@ export default function Customers() {
                       <p className="text-sm text-slate-500 mt-2">Loading customers...</p>
                     </td>
                   </tr>
-                ) : filteredCustomers.length === 0 ? (
+                ) : paginatedCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center">
                       <Users className="h-10 w-10 mx-auto text-slate-300 mb-2" />
@@ -1077,7 +1351,7 @@ export default function Customers() {
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.map((customer) => {
+                  paginatedCustomers.map((customer) => {
                     const fullAddress = formatAddress(customer);
                     const addressCount = customer.poolCount || 0;
                     
@@ -1149,8 +1423,84 @@ export default function Customers() {
           </div>
         </Card>
 
-        <div className="text-sm text-slate-500" data-testid="text-customer-count">
-          Showing {filteredCustomers.length} of {customers.length} customers
+        <div className="flex items-center justify-between" data-testid="pagination-controls">
+          <div className="text-sm text-slate-500" data-testid="text-customer-count">
+            {filteredCustomers.length > 0 
+              ? `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1}-${Math.min(currentPage * ITEMS_PER_PAGE, filteredCustomers.length)} of ${filteredCustomers.length} customers`
+              : "No customers to show"
+            }
+          </div>
+          
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                data-testid="button-first-page"
+              >
+                First
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                data-testid="button-prev-page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={currentPage === pageNum ? "bg-blue-600" : ""}
+                      data-testid={`button-page-${pageNum}`}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                data-testid="button-next-page"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                data-testid="button-last-page"
+              >
+                Last
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>

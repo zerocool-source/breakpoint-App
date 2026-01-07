@@ -127,6 +127,7 @@ export default function Scheduling() {
   const queryClient = useQueryClient();
   const [location] = useLocation();
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [dayViewMode, setDayViewMode] = useState<"1day" | "2day" | "week">("1day");
   const [selectedDay, setSelectedDay] = useState(new Date().getDay() || 1);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [showCreateRouteDialog, setShowCreateRouteDialog] = useState(false);
@@ -398,32 +399,62 @@ export default function Scheduling() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border w-fit">
-          {workDays.map((day) => {
-            const dayInfo = DAYS.find(d => d.value === day)!;
-            const dateStr = getDateForDay(day);
-            const routeCount = (routesByDay[day] || []).length;
-            return (
-              <Button
-                key={day}
-                variant={selectedDay === day ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setSelectedDay(day)}
-                className={`flex-col h-auto py-2 px-3 ${selectedDay === day ? "bg-blue-600" : ""}`}
-              >
-                <span className="text-xs opacity-75">{dateStr}</span>
-                <span className="font-semibold">{dayInfo.short}</span>
-                {routeCount > 0 && (
-                  <span className="text-[10px] mt-0.5 opacity-75">{routeCount} routes</span>
-                )}
-              </Button>
-            );
-          })}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
+            <Button
+              variant={dayViewMode === "1day" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setDayViewMode("1day")}
+              className={dayViewMode === "1day" ? "bg-slate-700" : ""}
+            >
+              1 Day
+            </Button>
+            <Button
+              variant={dayViewMode === "2day" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setDayViewMode("2day")}
+              className={dayViewMode === "2day" ? "bg-slate-700" : ""}
+            >
+              2 Day
+            </Button>
+            <Button
+              variant={dayViewMode === "week" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setDayViewMode("week")}
+              className={dayViewMode === "week" ? "bg-slate-700" : ""}
+            >
+              Week
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
+            {workDays.map((day) => {
+              const dayInfo = DAYS.find(d => d.value === day)!;
+              const dateStr = getDateForDay(day);
+              const routeCount = (routesByDay[day] || []).length;
+              return (
+                <Button
+                  key={day}
+                  variant={selectedDay === day ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setSelectedDay(day)}
+                  className={`flex-col h-auto py-2 px-3 ${selectedDay === day ? "bg-blue-600" : ""}`}
+                >
+                  <span className="text-xs opacity-75">{dateStr}</span>
+                  <span className="font-semibold">{dayInfo.short}</span>
+                  {routeCount > 0 && (
+                    <span className="text-[10px] mt-0.5 opacity-75">{routeCount} routes</span>
+                  )}
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         {viewMode === "list" ? (
           <ScrollArea className="h-[calc(100vh-220px)]">
             <div className="space-y-3 pr-4">
+
               {dayRoutes.length === 0 ? (
                 <div className="text-center py-12 text-slate-400">
                   <Truck className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -547,25 +578,34 @@ export default function Scheduling() {
 
                       {isExpanded && (
                         <div className="border-t bg-slate-50">
-                          <div className="p-3 border-b bg-blue-600">
+                          <div className="p-3 border-b bg-blue-600 flex items-center justify-between">
                             <Button size="sm" variant="secondary" className="text-blue-600">
                               Optimize Route
                             </Button>
                           </div>
 
-                          <div className="p-3 border-b bg-white flex items-center gap-3">
-                            <Play className="h-5 w-5 text-slate-400" />
-                            <div>
-                              <p className="font-medium text-slate-700">Start Location</p>
-                              <p className="text-sm text-slate-500">Office / Home base</p>
+                          <div className="p-3 bg-white border-b">
+                            <div className="flex items-center gap-2 mb-3">
+                              <h4 className="font-semibold text-slate-800">Route Stops</h4>
+                              <div className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center">?</div>
                             </div>
-                            <div className="ml-auto flex items-center gap-2">
-                              <span className="text-sm text-slate-500">All</span>
-                              <Checkbox />
+                            <div className="flex items-center gap-3">
+                              <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                  placeholder="customer name or address"
+                                  className="pl-9 h-9"
+                                  data-testid={`route-${route.id}-stop-search`}
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-slate-600">Select all</span>
+                                <Checkbox data-testid={`route-${route.id}-select-all`} />
+                              </div>
                             </div>
                           </div>
 
-                          <div className="divide-y">
+                          <div className="divide-y border-l-4" style={{ borderLeftColor: route.color }}>
                             {route.stops.map((stop, idx) => (
                               <div 
                                 key={stop.id} 
@@ -573,12 +613,10 @@ export default function Scheduling() {
                                 data-testid={`route-stop-${stop.id}`}
                               >
                                 <div className="flex items-center gap-2 mt-1">
-                                  <GripVertical className="h-4 w-4 text-slate-300 cursor-grab" />
-                                  <div 
-                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                                    style={{ backgroundColor: route.color }}
-                                  >
-                                    {idx + 1}
+                                  <GripVertical className="h-5 w-5 text-slate-300 cursor-grab" />
+                                  <div className="flex flex-col items-center">
+                                    <MapPin className="h-4 w-4 text-slate-500" />
+                                    <span className="text-xs font-bold text-slate-600 mt-0.5">{idx + 1}</span>
                                   </div>
                                 </div>
                                 
@@ -587,23 +625,25 @@ export default function Scheduling() {
                                     {stop.customerName || stop.propertyName}
                                   </p>
                                   <p className="text-sm text-slate-600">
-                                    {stop.poolName || stop.propertyName}
-                                    {stop.address && ` - ${stop.address}`}
+                                    {stop.address}
+                                  </p>
+                                  <p className="text-sm text-slate-500">
+                                    {stop.city && `${stop.city}, `}{stop.state} {stop.zip}
                                   </p>
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                  <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                  <span className="text-sm font-bold text-blue-700">
                                     {dayShort}
                                   </span>
-                                  <Checkbox />
+                                  <Checkbox data-testid={`stop-${stop.id}-select`} />
                                 </div>
                               </div>
                             ))}
                           </div>
 
                           {route.stops.length === 0 && (
-                            <div className="p-6 text-center text-slate-400">
+                            <div className="p-6 text-center text-slate-400 bg-white">
                               <p>No stops on this route</p>
                               <Button
                                 variant="link"
@@ -617,6 +657,13 @@ export default function Scheduling() {
                               </Button>
                             </div>
                           )}
+
+                          <div className="border-t bg-white p-3">
+                            <div className="border rounded-lg p-3 flex items-center justify-between hover:bg-slate-50 cursor-pointer">
+                              <span className="text-slate-700 font-medium">Unscheduled</span>
+                              <span className="text-slate-500">0 Route Stops</span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </Card>
