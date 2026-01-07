@@ -8,6 +8,7 @@ import {
   type Pool, type InsertPool,
   type RouteSchedule, type InsertRouteSchedule,
   type RouteAssignment, type InsertRouteAssignment,
+  type ServiceOccurrence, type InsertServiceOccurrence,
   type ChatMessage, type InsertChatMessage,
   type CompletedAlert, type InsertCompletedAlert,
   type PayPeriod, type InsertPayPeriod,
@@ -25,7 +26,7 @@ import {
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
   type UnscheduledStop, type InsertUnscheduledStop,
-  settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, routeSchedules, routeAssignments,
+  settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
@@ -80,6 +81,18 @@ export interface IStorage {
   getCustomerContacts(customerId: string): Promise<any[]>;
   createCustomerContact(contact: any): Promise<any>;
   deleteCustomerContact(id: string): Promise<void>;
+
+  // Route Schedules
+  getRouteScheduleByProperty(propertyId: string): Promise<RouteSchedule | undefined>;
+  upsertRouteSchedule(propertyId: string, schedule: Partial<InsertRouteSchedule>): Promise<RouteSchedule>;
+  updateRouteSchedule(id: string, updates: Partial<InsertRouteSchedule>): Promise<RouteSchedule | undefined>;
+
+  // Service Occurrences
+  getServiceOccurrencesByProperty(propertyId: string): Promise<ServiceOccurrence[]>;
+  getServiceOccurrencesBySchedule(scheduleId: string): Promise<ServiceOccurrence[]>;
+  createServiceOccurrence(occurrence: InsertServiceOccurrence): Promise<ServiceOccurrence>;
+  bulkCreateServiceOccurrences(occurrences: InsertServiceOccurrence[]): Promise<ServiceOccurrence[]>;
+  updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined>;
 
   // Pools
   getPoolsByCustomer(customerId: string): Promise<Pool[]>;
@@ -400,6 +413,61 @@ export class DbStorage implements IStorage {
 
   async deleteCustomerContact(id: string): Promise<void> {
     await db.delete(customerContacts).where(eq(customerContacts.id, id));
+  }
+
+  // Route Schedules
+  async getRouteScheduleByProperty(propertyId: string): Promise<RouteSchedule | undefined> {
+    const result = await db.select().from(routeSchedules).where(eq(routeSchedules.propertyId, propertyId)).limit(1);
+    return result[0];
+  }
+
+  async upsertRouteSchedule(propertyId: string, schedule: Partial<InsertRouteSchedule>): Promise<RouteSchedule> {
+    const existing = await this.getRouteScheduleByProperty(propertyId);
+    if (existing) {
+      const result = await db.update(routeSchedules)
+        .set({ ...schedule, propertyId, updatedAt: new Date() })
+        .where(eq(routeSchedules.id, existing.id))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(routeSchedules).values({ ...schedule, propertyId } as InsertRouteSchedule).returning();
+    return result[0];
+  }
+
+  async updateRouteSchedule(id: string, updates: Partial<InsertRouteSchedule>): Promise<RouteSchedule | undefined> {
+    const result = await db.update(routeSchedules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(routeSchedules.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Service Occurrences
+  async getServiceOccurrencesByProperty(propertyId: string): Promise<ServiceOccurrence[]> {
+    return db.select().from(serviceOccurrences).where(eq(serviceOccurrences.propertyId, propertyId));
+  }
+
+  async getServiceOccurrencesBySchedule(scheduleId: string): Promise<ServiceOccurrence[]> {
+    return db.select().from(serviceOccurrences).where(eq(serviceOccurrences.sourceScheduleId, scheduleId));
+  }
+
+  async createServiceOccurrence(occurrence: InsertServiceOccurrence): Promise<ServiceOccurrence> {
+    const result = await db.insert(serviceOccurrences).values(occurrence).returning();
+    return result[0];
+  }
+
+  async bulkCreateServiceOccurrences(occurrences: InsertServiceOccurrence[]): Promise<ServiceOccurrence[]> {
+    if (occurrences.length === 0) return [];
+    const result = await db.insert(serviceOccurrences).values(occurrences).returning();
+    return result;
+  }
+
+  async updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined> {
+    const result = await db.update(serviceOccurrences)
+      .set({ status })
+      .where(eq(serviceOccurrences.id, id))
+      .returning();
+    return result[0];
   }
 
   // Pools
