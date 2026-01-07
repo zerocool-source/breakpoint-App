@@ -1,26 +1,32 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ChevronDown, Plus, RefreshCw } from "lucide-react";
+import { Search, ChevronDown, Plus, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Technician {
-  TechnicianID: number;
-  FirstName: string;
-  LastName: string;
-  Phone: string;
-  Email: string;
-  Active: boolean;
-  CompanyID?: number;
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  active: boolean;
+  role: string;
 }
 
 function getInitials(firstName: string, lastName: string): string {
@@ -42,45 +48,163 @@ function getAvatarColor(name: string): string {
   return colors[hash % colors.length];
 }
 
+function AddTechnicianModal({ 
+  open, 
+  onClose, 
+  onAdd 
+}: { 
+  open: boolean; 
+  onClose: () => void;
+  onAdd: (tech: { firstName: string; lastName: string; phone: string; email: string }) => void;
+}) {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+
+  const handleSubmit = () => {
+    if (!firstName.trim() || !lastName.trim()) return;
+    onAdd({ firstName: firstName.trim(), lastName: lastName.trim(), phone, email });
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setEmail("");
+    onClose();
+  };
+
+  const handleClose = () => {
+    setFirstName("");
+    setLastName("");
+    setPhone("");
+    setEmail("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[700px] p-0 gap-0">
+        <DialogHeader className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+          <DialogTitle className="text-lg font-semibold">Add Technician</DialogTitle>
+        </DialogHeader>
+        
+        <div className="p-6 bg-slate-100">
+          <div className="flex items-start gap-6">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300">
+                <Image className="w-8 h-8 text-slate-400" />
+              </div>
+              <button className="text-blue-600 text-sm font-medium hover:underline">
+                Add Photo
+              </button>
+            </div>
+            
+            <div className="flex-1 grid grid-cols-3 gap-4">
+              <div className="space-y-3">
+                <Input
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="bg-white"
+                  data-testid="input-first-name"
+                />
+                <Input
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="bg-white"
+                  data-testid="input-last-name"
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="bg-white"
+                  data-testid="input-phone"
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-white"
+                  data-testid="input-email"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-6">
+            <Button 
+              onClick={handleSubmit}
+              disabled={!firstName.trim() || !lastName.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+              data-testid="button-add-tech-submit"
+            >
+              ADD TECH
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ServiceTechs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: technicians = [], isLoading, refetch } = useQuery<Technician[]>({
-    queryKey: ["/api/technicians/poolbrain"],
-    queryFn: async () => {
-      const res = await fetch("/api/technicians/poolbrain");
-      if (!res.ok) throw new Error("Failed to fetch technicians");
-      const data = await res.json();
-      return data.technicians || data.data || data || [];
+  const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
+    queryKey: ["/api/technicians/stored"],
+  });
+
+  const technicians = techniciansData?.technicians || [];
+
+  const addTechnicianMutation = useMutation({
+    mutationFn: async (tech: { firstName: string; lastName: string; phone: string; email: string }) => {
+      const res = await fetch("/api/technicians/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...tech, role: "service", active: true }),
+      });
+      if (!res.ok) throw new Error("Failed to add technician");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
     },
   });
 
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      const res = await fetch("/api/technicians/sync", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to sync technicians");
-      await refetch();
-    } catch (error) {
-      console.error("Sync failed:", error);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const res = await fetch(`/api/technicians/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+      });
+      if (!res.ok) throw new Error("Failed to update technician");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
+    },
+  });
 
   const filteredTechnicians = technicians.filter((tech) => {
-    const fullName = `${tech.FirstName || ""} ${tech.LastName || ""}`.toLowerCase();
-    const phone = (tech.Phone || "").toLowerCase();
-    const email = (tech.Email || "").toLowerCase();
+    const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.toLowerCase();
+    const phone = (tech.phone || "").toLowerCase();
+    const email = (tech.email || "").toLowerCase();
     const matchesSearch = 
       fullName.includes(searchQuery.toLowerCase()) ||
       phone.includes(searchQuery.toLowerCase()) ||
       email.includes(searchQuery.toLowerCase());
     
-    if (filterStatus === "active") return matchesSearch && tech.Active;
-    if (filterStatus === "inactive") return matchesSearch && !tech.Active;
+    if (filterStatus === "active") return matchesSearch && tech.active;
+    if (filterStatus === "inactive") return matchesSearch && !tech.active;
     return matchesSearch;
   });
 
@@ -89,16 +213,6 @@ export default function ServiceTechs() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">Service Technicians</h1>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleSync}
-            disabled={isSyncing}
-            data-testid="button-refresh-techs"
-          >
-            <RefreshCw className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
-            Sync from Pool Brain
-          </Button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -127,7 +241,11 @@ export default function ServiceTechs() {
             />
           </div>
 
-          <Button className="bg-blue-600 hover:bg-blue-700 ml-auto" data-testid="button-add-technician">
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 ml-auto" 
+            onClick={() => setShowAddModal(true)}
+            data-testid="button-add-technician"
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Technician
           </Button>
@@ -158,26 +276,26 @@ export default function ServiceTechs() {
               {isLoading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                    Loading technicians from Pool Brain...
+                    Loading technicians...
                   </td>
                 </tr>
               ) : filteredTechnicians.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                    {searchQuery ? "No technicians match your search" : "No technicians found"}
+                    {searchQuery ? "No technicians match your search" : "No technicians found. Click 'Add Technician' to add one."}
                   </td>
                 </tr>
               ) : (
                 filteredTechnicians.map((tech) => {
-                  const fullName = `${tech.FirstName || ""} ${tech.LastName || ""}`.trim();
-                  const initials = getInitials(tech.FirstName, tech.LastName);
+                  const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.trim();
+                  const initials = getInitials(tech.firstName, tech.lastName);
                   const avatarColor = getAvatarColor(fullName);
                   
                   return (
                     <tr 
-                      key={tech.TechnicianID} 
+                      key={tech.id} 
                       className="hover:bg-slate-50 transition-colors"
-                      data-testid={`row-technician-${tech.TechnicianID}`}
+                      data-testid={`row-technician-${tech.id}`}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -193,17 +311,18 @@ export default function ServiceTechs() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        {tech.Phone || "-"}
+                        {tech.phone || "-"}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        {tech.Email || "-"}
+                        {tech.email || "-"}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center">
                           <Switch 
-                            checked={tech.Active} 
+                            checked={tech.active} 
+                            onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
                             className="data-[state=checked]:bg-blue-600"
-                            data-testid={`switch-status-${tech.TechnicianID}`}
+                            data-testid={`switch-status-${tech.id}`}
                           />
                         </div>
                       </td>
@@ -211,7 +330,7 @@ export default function ServiceTechs() {
                         <Button 
                           variant="link" 
                           className="text-blue-600 hover:text-blue-800 p-0 h-auto"
-                          data-testid={`button-edit-${tech.TechnicianID}`}
+                          data-testid={`button-edit-${tech.id}`}
                         >
                           Edit
                         </Button>
@@ -228,6 +347,12 @@ export default function ServiceTechs() {
           Showing {filteredTechnicians.length} of {technicians.length} technicians
         </div>
       </div>
+
+      <AddTechnicianModal 
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={(tech) => addTechnicianMutation.mutate(tech)}
+      />
     </AppLayout>
   );
 }

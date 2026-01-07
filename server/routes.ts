@@ -1691,6 +1691,42 @@ function setupRoutes(app: any) {
     }
   });
 
+  app.post("/api/technicians/add", async (req: any, res: any) => {
+    try {
+      const { firstName, lastName, phone, email, role, active } = req.body;
+      if (!firstName || !lastName) {
+        return res.status(400).json({ error: "First name and last name are required" });
+      }
+      const technician = await storage.createTechnician({
+        firstName,
+        lastName,
+        phone: phone || null,
+        email: email || null,
+        role: role || "service",
+        active: active !== false,
+      });
+      res.json({ success: true, technician });
+    } catch (error: any) {
+      console.error("Error adding technician:", error);
+      res.status(500).json({ error: "Failed to add technician", message: error.message });
+    }
+  });
+
+  app.patch("/api/technicians/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const technician = await storage.updateTechnician(id, updates);
+      if (!technician) {
+        return res.status(404).json({ error: "Technician not found" });
+      }
+      res.json({ success: true, technician });
+    } catch (error: any) {
+      console.error("Error updating technician:", error);
+      res.status(500).json({ error: "Failed to update technician", message: error.message });
+    }
+  });
+
   // ==================== CHAT ====================
 
   app.get("/api/chat/history", async (req: any, res: any) => {
