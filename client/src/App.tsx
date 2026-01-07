@@ -49,7 +49,8 @@ function Router() {
 type AppStage = "intro" | "loading" | "ready";
 
 function App() {
-  const [stage, setStage] = useState<AppStage>("intro");
+  // Skip intro and loading screens - set directly to "ready"
+  const [stage, setStage] = useState<AppStage>("ready");
 
   if (stage === "intro") {
     return <IntroVideo onComplete={() => setStage("loading")} />;
