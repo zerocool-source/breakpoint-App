@@ -569,35 +569,50 @@ export default function Scheduling() {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   {mapRoutes.map((route, routeIndex) => {
-                    const coords: [number, number][] = [];
-                    return route.stops.map((stop, stopIndex) => {
-                      const lat = stop.lat || (33.5 + Math.random() * 0.5);
-                      const lng = stop.lng || (-117.5 + Math.random() * 0.5);
-                      coords.push([lat, lng]);
-
-                      return (
-                        <Marker
-                          key={stop.id}
-                          position={[lat, lng]}
-                          icon={createMarkerIcon(route.color, stopIndex + 1)}
-                        >
-                          <Popup>
-                            <div className="p-1">
-                              <p className="font-semibold">{stop.propertyName}</p>
-                              {stop.customerName && (
-                                <p className="text-sm text-slate-600">{stop.customerName}</p>
-                              )}
-                              {stop.address && (
-                                <p className="text-xs text-slate-500">{stop.address}</p>
-                              )}
-                              <p className="text-xs mt-1">
-                                Stop #{stopIndex + 1} on {route.name}
-                              </p>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      );
+                    const routeCoords: [number, number][] = route.stops.map((stop, stopIndex) => {
+                      const baseLat = 33.7 + (routeIndex * 0.15);
+                      const baseLng = -117.3 - (routeIndex * 0.15);
+                      const lat = stop.lat || (baseLat + (stopIndex * 0.02));
+                      const lng = stop.lng || (baseLng + (stopIndex * 0.025));
+                      return [lat, lng] as [number, number];
                     });
+
+                    return (
+                      <React.Fragment key={route.id}>
+                        {routeCoords.length > 1 && (
+                          <Polyline
+                            positions={routeCoords}
+                            pathOptions={{ 
+                              color: route.color, 
+                              weight: 3,
+                              opacity: 0.7
+                            }}
+                          />
+                        )}
+                        {route.stops.map((stop, stopIndex) => (
+                          <Marker
+                            key={stop.id}
+                            position={routeCoords[stopIndex]}
+                            icon={createMarkerIcon(route.color, stopIndex + 1)}
+                          >
+                            <Popup>
+                              <div className="p-1">
+                                <p className="font-semibold">{stop.propertyName}</p>
+                                {stop.customerName && (
+                                  <p className="text-sm text-slate-600">{stop.customerName}</p>
+                                )}
+                                {stop.address && (
+                                  <p className="text-xs text-slate-500">{stop.address}</p>
+                                )}
+                                <p className="text-xs mt-1">
+                                  Stop #{stopIndex + 1} on {route.name}
+                                </p>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        ))}
+                      </React.Fragment>
+                    );
                   })}
                 </MapContainer>
               </div>
