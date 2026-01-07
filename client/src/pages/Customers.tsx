@@ -773,7 +773,8 @@ function CustomerDetailPanel({
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-red-600"
-                              onClick={() => {
+                              onSelect={(e) => {
+                                e.preventDefault();
                                 if (confirm("Are you sure you want to delete this property?")) {
                                   deletePropertyMutation.mutate(prop.id);
                                 }
@@ -846,7 +847,8 @@ function CustomerDetailPanel({
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="text-red-600"
-                              onClick={() => {
+                              onSelect={(e) => {
+                                e.preventDefault();
                                 if (confirm("Are you sure you want to delete this contact?")) {
                                   deleteContactMutation.mutate(contact.id);
                                 }
