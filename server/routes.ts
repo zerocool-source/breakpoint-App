@@ -1693,28 +1693,7 @@ function setupRoutes(app: any) {
   // Get customers list for job creation dropdown (from Pool Brain API directly)
   app.get("/api/customers", async (req: any, res: any) => {
     try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      const customersData = await client.getCustomerDetail({ limit: 1000 });
-      console.log(`Fetched ${customersData.data?.length || 0} customers`);
-      
-      const customers = (customersData.data || []).map((c: any) => ({
-        id: c.RecordID,
-        name: c.CustomerName || c.CompanyName || "Unknown",
-        address: c.Address || "",
-      }));
-
+      const customers = await storage.getCustomers();
       res.json({ customers });
     } catch (error: any) {
       console.error("Error fetching customers:", error);
