@@ -31,6 +31,12 @@ Preferred communication style: Simple, everyday language.
   - Intelligence/Chat interface for AI interactions
   - Automations page for workflow management (email generation)
   - Settings page for API configuration
+  - **Operations page** - Dedicated page for managing repairs and service alerts grouped by property
+  - **Equipment Notes** (under Properties) - Comprehensive equipment tracking with PM schedules, service records, and maintenance status badges (Critical, Overdue, Due Soon, Current, Paused)
+  - **Equipment Tracker** (under Properties) - QuickBooks-style metrics dashboard for equipment
+  - **Fleet Management** (expandable nav):
+    - Fleet Dashboard - Truck management, service records, maintenance tracking
+    - Truck Inventory - Per-truck inventory management with low stock alerts, quantity controls, category filtering
 
 **Rationale:** Page-based architecture provides clear separation of concerns. TanStack Query handles caching and real-time data synchronization automatically. The custom theme creates a distinctive brand identity for the pool management industry.
 
