@@ -124,17 +124,22 @@ function formatTime(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-function getWeekDates(weekOffset: number = 0) {
+function getWeekDates(weekOffset: number = 0, includeSunday: boolean = false) {
   const today = new Date();
   const currentDay = today.getDay();
   const monday = new Date(today);
   monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1) + (weekOffset * 7));
   
   const dates: { date: Date; dayOfWeek: number }[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     dates.push({ date: d, dayOfWeek: i + 1 });
+  }
+  if (includeSunday) {
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    dates.push({ date: sunday, dayOfWeek: 0 });
   }
   return dates;
 }
@@ -249,6 +254,7 @@ export default function Scheduling() {
   const [activeDragItem, setActiveDragItem] = useState<UnscheduledOccurrence | null>(null);
   const [allCollapsed, setAllCollapsed] = useState(true);
   const [showUnscheduledPanel, setShowUnscheduledPanel] = useState(false);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -275,8 +281,6 @@ export default function Scheduling() {
     poolName: "",
     estimatedTime: 30,
   });
-
-  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
   const { data: allRoutesData, isLoading } = useQuery({
     queryKey: ["all-routes"],
@@ -463,6 +467,24 @@ export default function Scheduling() {
   };
 
   const allRoutes: Route[] = allRoutesData?.routes || [];
+
+  const hasSundayRoutes = useMemo(() => {
+    return allRoutes.some(route => route.dayOfWeek === 0);
+  }, [allRoutes]);
+
+  const weekDates = useMemo(() => getWeekDates(weekOffset, hasSundayRoutes), [weekOffset, hasSundayRoutes]);
+
+  const visibleDates = useMemo(() => {
+    if (dayViewMode === "week") {
+      return weekDates;
+    } else if (dayViewMode === "2day") {
+      const startIdx = Math.min(selectedDayIndex, weekDates.length - 2);
+      return weekDates.slice(startIdx, startIdx + 2);
+    } else {
+      const idx = Math.min(selectedDayIndex, weekDates.length - 1);
+      return [weekDates[idx]];
+    }
+  }, [dayViewMode, weekDates, selectedDayIndex]);
 
   const routesByDay = useMemo(() => {
     const grouped: Record<number, Route[]> = {};
@@ -661,36 +683,75 @@ export default function Scheduling() {
 
           {/* Main Content */}
           {viewMode === "list" ? (
-            <div className="flex-1 overflow-hidden">
-              {/* Day Column Headers */}
-              <div className="grid grid-cols-5 bg-[#1C2A4B]">
-                {weekDates.map(({ date, dayOfWeek }) => {
-                  const isToday = new Date().toDateString() === date.toDateString();
-                  const dayName = DAYS[dayOfWeek].label;
-                  const dateStr = `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getDate()}`;
-                  
-                  return (
-                    <div 
-                      key={dayOfWeek} 
-                      className={`px-4 py-3 border-r border-[#2A3A5B] last:border-r-0 ${isToday ? "bg-[#2A3A5B]" : ""}`}
+            <div className="flex-1 overflow-hidden flex">
+              {/* Left side: Day Columns */}
+              <div className={`flex flex-col overflow-hidden ${dayViewMode === "week" ? "flex-1" : "w-1/2"}`}>
+                {/* Day Navigation for 1-day and 2-day views */}
+                {dayViewMode !== "week" && (
+                  <div className="bg-[#0F1B33] px-4 py-2 flex items-center justify-between border-b border-[#2A3A5B]">
+                    <button 
+                      onClick={() => setSelectedDayIndex(Math.max(0, selectedDayIndex - 1))}
+                      disabled={selectedDayIndex === 0}
+                      className="p-1 rounded hover:bg-white/10 text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      data-testid="btn-prev-day"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-medium text-sm">{dateStr}</span>
-                        <span className="text-white/60 text-sm">{dayName}</span>
-                        {isToday && (
-                          <span className="ml-auto text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-medium">
-                            TODAY
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-white/80 text-xs font-medium">
+                      {dayViewMode === "1day" ? "Single Day View" : "2 Day View"}
+                    </span>
+                    <button 
+                      onClick={() => setSelectedDayIndex(Math.min(weekDates.length - (dayViewMode === "2day" ? 2 : 1), selectedDayIndex + 1))}
+                      disabled={selectedDayIndex >= weekDates.length - (dayViewMode === "2day" ? 2 : 1)}
+                      className="p-1 rounded hover:bg-white/10 text-white/80 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      data-testid="btn-next-day"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
 
-              {/* Day Columns with Cards */}
-              <div className="grid grid-cols-5 h-[calc(100%-52px)] overflow-hidden">
-                {weekDates.map(({ date, dayOfWeek }) => {
+                {/* Day Column Headers */}
+                <div className={`grid bg-[#1C2A4B] ${
+                  dayViewMode === "week" 
+                    ? (hasSundayRoutes ? "grid-cols-7" : "grid-cols-6") 
+                    : dayViewMode === "2day" 
+                      ? "grid-cols-2" 
+                      : "grid-cols-1"
+                }`}>
+                  {visibleDates.map(({ date, dayOfWeek }) => {
+                    const isToday = new Date().toDateString() === date.toDateString();
+                    const dayName = DAYS[dayOfWeek].label;
+                    const dateStr = `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getDate()}`;
+                    
+                    return (
+                      <div 
+                        key={dayOfWeek} 
+                        className={`px-4 py-3 border-r border-[#2A3A5B] last:border-r-0 ${isToday ? "bg-[#2A3A5B]" : ""}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium text-sm">{dateStr}</span>
+                          <span className="text-white/60 text-sm">{dayName}</span>
+                          {isToday && (
+                            <span className="ml-auto text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-medium">
+                              TODAY
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Day Columns with Cards */}
+                <div className={`grid h-[calc(100%-52px)] overflow-hidden ${
+                  dayViewMode === "week" 
+                    ? (hasSundayRoutes ? "grid-cols-7" : "grid-cols-6") 
+                    : dayViewMode === "2day" 
+                      ? "grid-cols-2" 
+                      : "grid-cols-1"
+                }`}>
+                  {visibleDates.map(({ date, dayOfWeek }) => {
                   const dayRoutesForColumn = filterCustomerName && filteredRoutesAllDays
                     ? filteredRoutesAllDays.matchingRoutesByDay[dayOfWeek] || []
                     : routesByDay[dayOfWeek] || [];
@@ -937,6 +998,75 @@ export default function Scheduling() {
                   );
                 })}
               </div>
+              </div>
+
+              {/* Right side: Map for 1-day and 2-day views */}
+              {dayViewMode !== "week" && (
+                <div className="w-1/2 flex-shrink-0 rounded-lg overflow-hidden shadow-sm border border-slate-200">
+                  <MapContainer
+                    center={defaultCenter}
+                    zoom={10}
+                    style={{ height: "100%", width: "100%" }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {visibleDates.flatMap(({ dayOfWeek }) => {
+                      const dayRoutes = filterCustomerName && filteredRoutesAllDays
+                        ? filteredRoutesAllDays.matchingRoutesByDay[dayOfWeek] || []
+                        : routesByDay[dayOfWeek] || [];
+                      
+                      return dayRoutes.map((route, routeIndex) => {
+                        const routeCoords: [number, number][] = route.stops.map((stop, stopIndex) => {
+                          const baseLat = 33.7 + (routeIndex * 0.15);
+                          const baseLng = -117.3 - (routeIndex * 0.15);
+                          const lat = stop.lat || (baseLat + (stopIndex * 0.02));
+                          const lng = stop.lng || (baseLng + (stopIndex * 0.025));
+                          return [lat, lng] as [number, number];
+                        });
+
+                        return (
+                          <React.Fragment key={route.id}>
+                            {routeCoords.length > 1 && (
+                              <Polyline
+                                positions={routeCoords}
+                                pathOptions={{ 
+                                  color: route.color, 
+                                  weight: 3,
+                                  opacity: 0.7
+                                }}
+                              />
+                            )}
+                            {route.stops.map((stop, stopIndex) => (
+                              <Marker
+                                key={stop.id}
+                                position={routeCoords[stopIndex]}
+                                icon={createMarkerIcon(route.color, stopIndex + 1)}
+                              >
+                                <Popup>
+                                  <div className="p-1">
+                                    <p className="font-semibold">{stop.customerName || stop.propertyName}</p>
+                                    {stop.poolName && (
+                                      <p className="text-sm text-slate-600">{stop.poolName}</p>
+                                    )}
+                                    {stop.address && (
+                                      <p className="text-xs text-slate-500">{stop.address}</p>
+                                    )}
+                                    <p className="text-xs mt-1">
+                                      Stop #{stopIndex + 1} on {route.name}
+                                    </p>
+                                  </div>
+                                </Popup>
+                              </Marker>
+                            ))}
+                          </React.Fragment>
+                        );
+                      });
+                    })}
+                  </MapContainer>
+                </div>
+              )}
             </div>
           ) : (
             /* Map View */
@@ -1095,7 +1225,7 @@ export default function Scheduling() {
                 <div className="space-y-2">
                   <Label>Day of Week</Label>
                   <div className="flex gap-1 flex-wrap">
-                    {DAYS.filter(d => d.value > 0 && d.value < 6).map((day) => (
+                    {DAYS.map((day) => (
                       <Button
                         key={day.value}
                         type="button"
