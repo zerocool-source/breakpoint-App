@@ -526,7 +526,7 @@ export class DbStorage implements IStorage {
   }
 
   async deleteServiceOccurrencesBySchedule(scheduleId: string): Promise<void> {
-    await db.delete(serviceOccurrences).where(eq(serviceOccurrences.scheduleId, scheduleId));
+    await db.delete(serviceOccurrences).where(eq(serviceOccurrences.sourceScheduleId, scheduleId));
   }
 
   // Pools
