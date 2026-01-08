@@ -674,33 +674,33 @@ export default function Scheduling() {
                   
                   return (
                     <div key={day} className="min-w-0">
-                      {/* Day Header */}
-                      <div className={`${isToday ? "bg-blue-700" : "bg-blue-600"} text-white rounded-t-lg px-4 py-3 text-center`}>
-                        <div className="text-lg font-bold">{dayInfo.label}</div>
-                        {isToday && <div className="text-xs opacity-75">Today</div>}
+                      {/* Day Header - Pool Brain Style */}
+                      <div className={`${isToday ? "bg-slate-800" : "bg-slate-700"} text-white px-3 py-2`}>
+                        <div className="text-sm font-semibold">{dayInfo.label}</div>
+                        {isToday && <div className="text-[10px] text-slate-300">Today</div>}
                       </div>
                       
                       {/* Unscheduled for this day - droppable area */}
                       <DroppableUnscheduledArea dayOfWeek={day}>
-                        <div className={`bg-amber-50 border-x border-amber-200 p-2 space-y-1 min-h-[48px] ${dayUnscheduled.length === 0 ? "flex items-center justify-center" : ""}`}>
+                        <div className={`bg-amber-50 border-x border-amber-200 px-2 py-1.5 ${dayUnscheduled.length === 0 ? "flex items-center justify-center min-h-[32px]" : ""}`}>
                           {dayUnscheduled.length > 0 ? (
-                            <>
-                              <div className="flex items-center gap-1 text-xs text-amber-700 font-medium mb-1">
-                                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-[10px] text-amber-700 font-medium">
+                                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
                                 Unscheduled ({dayUnscheduled.length})
                               </div>
                               {dayUnscheduled.map((occ) => (
                                 <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={day} />
                               ))}
-                            </>
+                            </div>
                           ) : (
-                            <div className="text-xs text-amber-400">Drop here to unschedule</div>
+                            <div className="text-[10px] text-amber-400">Drop to unschedule</div>
                           )}
                         </div>
                       </DroppableUnscheduledArea>
                       
-                      {/* Technician Route Cards */}
-                      <div className="bg-slate-100 rounded-b-lg p-3 min-h-[300px] space-y-3">
+                      {/* Technician Route Cards - Pool Brain Style */}
+                      <div className="bg-slate-100 p-2 min-h-[400px] space-y-2">
                         {dayRoutesForColumn.length === 0 ? (
                           <div className="text-center py-8 text-slate-400 text-sm">
                             No routes
@@ -717,85 +717,91 @@ export default function Scheduling() {
                             return (
                               <DroppableRouteCard key={route.id} route={route} dayOfWeek={day}>
                                 <Card 
-                                  className="overflow-hidden bg-white cursor-pointer hover:shadow-md transition-shadow"
+                                  className="overflow-hidden bg-white cursor-pointer hover:shadow-lg transition-shadow border-0 shadow-sm"
                                   onClick={() => toggleRouteExpanded(route.id)}
                                   data-testid={`route-card-${route.id}`}
                                 >
-                              <div className="p-4">
-                                <div className="flex items-start gap-3">
+                              {/* Card Content - Fixed Height Layout */}
+                              <div className="p-3 h-[100px] flex flex-col justify-between">
+                                <div className="flex items-center gap-3">
+                                  {/* Circular Avatar */}
                                   <div 
-                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0"
+                                    className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
                                     style={{ backgroundColor: route.color }}
                                   >
                                     {initials}
                                   </div>
+                                  {/* Route Info */}
                                   <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-slate-900 text-base leading-tight">{route.name}</h3>
-                                    <p className="text-sm text-slate-500 mt-0.5">{route.technicianName || "Unassigned"}</p>
+                                    <h3 className="font-semibold text-slate-800 text-sm leading-tight line-clamp-2">{route.name}</h3>
+                                    <p className="text-xs text-slate-500">{route.technicianName || "Unassigned"}</p>
                                   </div>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <MapPin className="h-4 w-4 text-amber-500" />
-                                    <span className="font-bold text-slate-700 text-sm">{stopCount}</span>
+                                  {/* Stop Count Badge */}
+                                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                                    <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+                                      <span className="font-bold text-amber-600 text-xs">{stopCount}</span>
+                                    </div>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-slate-600">
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedRoute(route);
+                                            setNewRoute({
+                                              name: route.name,
+                                              color: route.color,
+                                              technicianName: route.technicianName || "",
+                                              dayOfWeek: route.dayOfWeek,
+                                            });
+                                            setShowEditRouteDialog(true);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4 mr-2" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedRoute(route);
+                                            setShowCreateStopDialog(true);
+                                          }}
+                                        >
+                                          <Plus className="h-4 w-4 mr-2" />
+                                          Add Stop
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-red-600"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm("Delete this route?")) {
+                                              deleteRouteMutation.mutate(route.id);
+                                            }
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </div>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                                        <MoreVertical className="h-3 w-3" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedRoute(route);
-                                          setNewRoute({
-                                            name: route.name,
-                                            color: route.color,
-                                            technicianName: route.technicianName || "",
-                                            dayOfWeek: route.dayOfWeek,
-                                          });
-                                          setShowEditRouteDialog(true);
-                                        }}
-                                      >
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedRoute(route);
-                                          setShowCreateStopDialog(true);
-                                        }}
-                                      >
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Stop
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="text-red-600"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (confirm("Delete this route?")) {
-                                            deleteRouteMutation.mutate(route.id);
-                                          }
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
                                 </div>
-                                <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
+                                {/* Stats Row */}
+                                <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-100">
                                   <span className="flex items-center gap-1">
-                                    <Clock className="h-4 w-4" />
+                                    <Clock className="h-3 w-3" />
                                     {formatTime(totalTime)}
                                   </span>
                                   <span className="flex items-center gap-1">
-                                    <Navigation className="h-4 w-4" />
+                                    <Navigation className="h-3 w-3" />
                                     {miles.toFixed(1)}mi
                                   </span>
                                   <span className="flex items-center gap-1">
-                                    <Timer className="h-4 w-4" />
+                                    <Timer className="h-3 w-3" />
                                     {formatTime(driveTime)}
                                   </span>
                                 </div>
