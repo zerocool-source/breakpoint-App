@@ -197,13 +197,29 @@ function DraggableUnscheduledItem({ occurrence, dayOfWeek }: { occurrence: Unsch
 function DroppableRouteCard({ route, children, dayOfWeek }: { route: Route; children: React.ReactNode; dayOfWeek: number }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `route-${route.id}`,
-    data: { route, dayOfWeek },
+    data: { route, dayOfWeek, type: "route" },
   });
 
   return (
     <div
       ref={setNodeRef}
       className={`transition-all ${isOver ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DroppableUnscheduledArea({ dayOfWeek, children }: { dayOfWeek: number; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `unscheduled-drop-${dayOfWeek}`,
+    data: { dayOfWeek, type: "unscheduled" },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition-all ${isOver ? "ring-2 ring-amber-500 ring-offset-2 bg-amber-100" : ""}`}
     >
       {children}
     </div>
@@ -428,9 +444,19 @@ export default function Scheduling() {
     if (!over) return;
     
     const activeData = active.data.current as { occurrence: UnscheduledOccurrence; dayOfWeek: number };
-    const overData = over.data.current as { route: Route; dayOfWeek: number };
+    const overData = over.data.current as { route?: Route; dayOfWeek: number; type: string };
     
     if (!activeData || !overData) return;
+    
+    // Handle dropping back to unscheduled
+    if (overData.type === "unscheduled") {
+      // Item is already unscheduled or being moved to unscheduled - no action needed for now
+      toast({
+        title: "Already Unscheduled",
+        description: "This item is already in the unscheduled queue.",
+      });
+      return;
+    }
     
     if (activeData.dayOfWeek !== overData.dayOfWeek) {
       toast({
@@ -441,10 +467,12 @@ export default function Scheduling() {
       return;
     }
     
-    assignToRouteMutation.mutate({
-      occurrenceId: activeData.occurrence.id,
-      routeId: overData.route.id,
-    });
+    if (overData.route) {
+      assignToRouteMutation.mutate({
+        occurrenceId: activeData.occurrence.id,
+        routeId: overData.route.id,
+      });
+    }
   };
 
   const allRoutes: Route[] = allRoutesData?.routes || [];
@@ -543,36 +571,6 @@ export default function Scheduling() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            {/* Collapsible Unscheduled Queue */}
-            {unscheduledOccurrences.length > 0 && (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100">
-                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mr-2" />
-                    Unscheduled
-                    <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{unscheduledOccurrences.length}</span>
-                    <ChevronDown className="h-3 w-3 ml-1" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="absolute right-4 top-20 z-50 w-80 bg-white rounded-lg shadow-xl border border-amber-200 p-3 max-h-96 overflow-y-auto">
-                  <div className="space-y-2">
-                    {Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
-                      const dayOfWeek = Number(dayKey);
-                      const dayInfo = DAYS[dayOfWeek];
-                      return (
-                        <div key={dayKey} className="border-b border-slate-100 pb-2 last:border-0">
-                          <div className="text-xs font-medium text-slate-600 mb-1">{dayInfo.label}</div>
-                          {occurrences.map((occ) => (
-                            <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={dayOfWeek} />
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
             <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
               <Button
                 variant={dayViewMode === "1day" ? "default" : "ghost"}
@@ -628,6 +626,37 @@ export default function Scheduling() {
               <Plus className="h-4 w-4 mr-1" />
               Add Route
             </Button>
+            {/* Collapsible Unscheduled Queue - after Add Route */}
+            {unscheduledOccurrences.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mr-2" />
+                    Unscheduled
+                    <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{unscheduledOccurrences.length}</span>
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="absolute right-4 top-20 z-50 w-80 bg-white rounded-lg shadow-xl border border-amber-200 p-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2">
+                    {Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
+                      const dayOfWeek = Number(dayKey);
+                      const dayInfo = DAYS[dayOfWeek];
+                      return (
+                        <DroppableUnscheduledArea key={dayKey} dayOfWeek={dayOfWeek}>
+                          <div className="border-b border-slate-100 pb-2 last:border-0">
+                            <div className="text-xs font-medium text-slate-600 mb-1">{dayInfo.label}</div>
+                            {occurrences.map((occ) => (
+                              <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={dayOfWeek} />
+                            ))}
+                          </div>
+                        </DroppableUnscheduledArea>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </div>
         </div>
 
@@ -673,21 +702,27 @@ export default function Scheduling() {
                         {isToday && <div className="text-[10px] opacity-75">Today</div>}
                       </div>
                       
-                      {/* Unscheduled for this day */}
-                      {dayUnscheduled.length > 0 && (
-                        <div className="bg-amber-50 border-x border-amber-200 p-2 space-y-1">
-                          <div className="flex items-center gap-1 text-[10px] text-amber-700 font-medium mb-1">
-                            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
-                            Unscheduled ({dayUnscheduled.length})
-                          </div>
-                          {dayUnscheduled.map((occ) => (
-                            <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={day} />
-                          ))}
+                      {/* Unscheduled for this day - droppable area */}
+                      <DroppableUnscheduledArea dayOfWeek={day}>
+                        <div className={`bg-amber-50 border-x border-amber-200 p-2 space-y-1 min-h-[40px] ${dayUnscheduled.length === 0 ? "flex items-center justify-center" : ""}`}>
+                          {dayUnscheduled.length > 0 ? (
+                            <>
+                              <div className="flex items-center gap-1 text-[10px] text-amber-700 font-medium mb-1">
+                                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                                Unscheduled ({dayUnscheduled.length})
+                              </div>
+                              {dayUnscheduled.map((occ) => (
+                                <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={day} />
+                              ))}
+                            </>
+                          ) : (
+                            <div className="text-[10px] text-amber-400">Drop here to unschedule</div>
+                          )}
                         </div>
-                      )}
+                      </DroppableUnscheduledArea>
                       
                       {/* Technician Route Cards */}
-                      <div className={`bg-slate-100 ${dayUnscheduled.length > 0 ? "" : "rounded-b-lg"} p-2 min-h-[200px] space-y-2`}>
+                      <div className="bg-slate-100 rounded-b-lg p-2 min-h-[200px] space-y-2">
                         {dayRoutesForColumn.length === 0 ? (
                           <div className="text-center py-4 text-slate-400 text-xs">
                             No routes
