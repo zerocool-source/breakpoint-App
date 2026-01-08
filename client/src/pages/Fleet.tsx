@@ -32,25 +32,32 @@ function excelDateToJS(serial: number): Date {
   return new Date(utc_days * 86400 * 1000);
 }
 
-function formatDate(dateStr: string | number | null | undefined): string {
-  if (!dateStr) return "—";
+function parseDate(dateStr: string | number | null | undefined): Date | null {
+  if (!dateStr) return null;
+  
   if (typeof dateStr === 'number') {
-    return excelDateToJS(dateStr).toLocaleDateString();
+    return excelDateToJS(dateStr);
   }
+  
+  const numericValue = parseFloat(dateStr);
+  if (!isNaN(numericValue) && numericValue > 40000 && numericValue < 60000) {
+    return excelDateToJS(numericValue);
+  }
+  
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr as string;
+  if (isNaN(date.getTime())) return null;
+  return date;
+}
+
+function formatDate(dateStr: string | number | null | undefined): string {
+  const date = parseDate(dateStr);
+  if (!date) return "—";
   return date.toLocaleDateString();
 }
 
 function daysSince(dateStr: string | number | null | undefined): number | null {
-  if (!dateStr) return null;
-  let date: Date;
-  if (typeof dateStr === 'number') {
-    date = excelDateToJS(dateStr);
-  } else {
-    date = new Date(dateStr);
-  }
-  if (isNaN(date.getTime())) return null;
+  const date = parseDate(dateStr);
+  if (!date) return null;
   const now = new Date();
   return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
 }
@@ -118,8 +125,8 @@ export default function Fleet() {
       const typeRecords = records.filter(r => r.serviceType === type);
       if (typeRecords.length > 0) {
         latestByType[type] = typeRecords.sort((a, b) => {
-          const dateA = typeof a.serviceDate === 'number' ? a.serviceDate : new Date(a.serviceDate || 0).getTime();
-          const dateB = typeof b.serviceDate === 'number' ? b.serviceDate : new Date(b.serviceDate || 0).getTime();
+          const dateA = parseDate(a.serviceDate)?.getTime() || 0;
+          const dateB = parseDate(b.serviceDate)?.getTime() || 0;
           return dateB - dateA;
         })[0];
       }
@@ -167,9 +174,8 @@ export default function Fleet() {
   const fleetStats = {
     totalTrucks: trucks.length,
     servicesThisMonth: allRecords.filter(r => {
-      const date = typeof r.serviceDate === 'number' 
-        ? excelDateToJS(r.serviceDate) 
-        : new Date(r.serviceDate || 0);
+      const date = parseDate(r.serviceDate);
+      if (!date) return false;
       const now = new Date();
       return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     }).length,
