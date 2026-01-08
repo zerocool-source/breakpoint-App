@@ -1,29 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Truck, 
   Wrench, 
-  Calendar, 
   AlertTriangle, 
   CheckCircle, 
   Clock,
   Plus,
-  ChevronRight,
-  Activity,
-  Fuel,
-  Settings,
-  RefreshCw
+  Search,
+  ClipboardCheck
 } from "lucide-react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import type { FleetTruck, FleetMaintenanceRecord } from "@shared/schema";
 import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES } from "@shared/schema";
 
@@ -34,16 +32,11 @@ function excelDateToJS(serial: number): Date {
 
 function parseDate(dateStr: string | number | null | undefined): Date | null {
   if (!dateStr) return null;
-  
-  if (typeof dateStr === 'number') {
-    return excelDateToJS(dateStr);
-  }
-  
+  if (typeof dateStr === 'number') return excelDateToJS(dateStr);
   const numericValue = parseFloat(dateStr);
   if (!isNaN(numericValue) && numericValue > 40000 && numericValue < 60000) {
     return excelDateToJS(numericValue);
   }
-  
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return null;
   return date;
@@ -64,20 +57,12 @@ function daysSince(dateStr: string | number | null | undefined): number | null {
 
 function getMaintenanceStatus(days: number | null, serviceType: string): { status: string; color: string } {
   if (days === null) return { status: "No Record", color: "bg-gray-200 text-gray-700" };
-  
   const thresholds: Record<string, number> = {
-    "Oil Change": 90,
-    "Tire Rotation": 180,
-    "Brake Inspection": 365,
-    "Air Filter": 365,
-    "Transmission Fluid": 730,
-    "Coolant System": 730,
-    "Brake Fluid": 730,
-    "New Tires": 1095,
+    "Oil Change": 90, "Tire Rotation": 180, "Brake Inspection": 365,
+    "Air Filter": 365, "Transmission Fluid": 730, "Coolant System": 730,
+    "Brake Fluid": 730, "New Tires": 1095,
   };
-  
   const threshold = thresholds[serviceType] || 365;
-  
   if (days > threshold * 1.2) return { status: "Overdue", color: "bg-red-100 text-red-700" };
   if (days > threshold * 0.9) return { status: "Due Soon", color: "bg-yellow-100 text-yellow-700" };
   return { status: "Current", color: "bg-green-100 text-green-700" };
@@ -88,23 +73,40 @@ interface TruckWithMaintenance extends FleetTruck {
   latestByType: Record<string, FleetMaintenanceRecord>;
 }
 
-const SERVICE_TYPE_FILTERS = [
-  "All",
-  "Oil Change",
-  "Tire Rotation", 
-  "Brake Inspection",
-  "Air Filter",
-  "Transmission Fluid",
-  "Coolant System",
-  "Brake Fluid",
+const COLORS = {
+  green: "#22c55e",
+  red: "#ef4444",
+  yellow: "#eab308",
+  blue: "#3b82f6",
+  orange: "#f97316",
+  purple: "#8b5cf6",
+  gray: "#6b7280",
+};
+
+const MOCK_ISSUES = [
+  { id: 1, date: "2026-01-08", tech: "Mike R.", vehicle: "TRK-012", type: "AC Not Working", priority: "High", status: "New" },
+  { id: 2, date: "2026-01-07", tech: "Carlos M.", vehicle: "VAN-008", type: "Brake Noise", priority: "Critical", status: "In Progress" },
+  { id: 3, date: "2026-01-07", tech: "James L.", vehicle: "TRK-023", type: "Check Engine", priority: "Medium", status: "Acknowledged" },
+  { id: 4, date: "2026-01-06", tech: "David P.", vehicle: "TRK-005", type: "Tire Pressure", priority: "Low", status: "Resolved" },
+  { id: 5, date: "2026-01-06", tech: "Alex T.", vehicle: "VAN-011", type: "Fluid Leak", priority: "High", status: "New" },
+];
+
+const MOCK_ACTIVITY = [
+  { id: 1, user: "MR", name: "Mike R.", action: "commented on", vehicle: "TRK-012", comment: "AC compressor making unusual noise, needs inspection", time: "2 hours ago" },
+  { id: 2, user: "SM", name: "Sarah M.", action: "updated status for", vehicle: "VAN-008", comment: "Parts ordered, ETA 3 days", time: "4 hours ago" },
+  { id: 3, user: "JL", name: "James L.", action: "reported issue on", vehicle: "TRK-023", comment: "@dispatch Check engine light came on during route", time: "6 hours ago" },
+  { id: 4, user: "DP", name: "David P.", action: "completed service for", vehicle: "TRK-005", comment: "Oil change and tire rotation complete", time: "1 day ago" },
 ];
 
 export default function Fleet() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [vehicleFilter, setVehicleFilter] = useState("all");
   const [selectedTruck, setSelectedTruck] = useState<TruckWithMaintenance | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [serviceFilter, setServiceFilter] = useState("All");
   const [addRecordModal, setAddRecordModal] = useState(false);
+  const [issueFilter, setIssueFilter] = useState("all");
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
   const [newRecord, setNewRecord] = useState({
     serviceType: "",
     vendor: "",
@@ -132,7 +134,6 @@ export default function Fleet() {
   const trucksWithMaintenance: TruckWithMaintenance[] = trucks.map(truck => {
     const records = allRecords.filter(r => r.truckNumber === truck.truckNumber);
     const latestByType: Record<string, FleetMaintenanceRecord> = {};
-    
     for (const type of FLEET_SERVICE_TYPES) {
       const typeRecords = records.filter(r => r.serviceType === type);
       if (typeRecords.length > 0) {
@@ -143,30 +144,7 @@ export default function Fleet() {
         })[0];
       }
     }
-    
     return { ...truck, maintenanceRecords: records, latestByType };
-  });
-
-  const addRecordMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await fetch("/api/fleet/maintenance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/fleet/maintenance"] });
-      setAddRecordModal(false);
-      setNewRecord({
-        serviceType: "",
-        vendor: "",
-        mileage: "",
-        notes: "",
-        serviceDate: new Date().toISOString().split('T')[0],
-      });
-    },
   });
 
   const updateTruckStatusMutation = useMutation({
@@ -178,416 +156,601 @@ export default function Fleet() {
       });
       return res.json();
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/fleet/trucks"] }),
+  });
+
+  const addRecordMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/fleet/maintenance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to save record");
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/fleet/trucks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/maintenance"] });
+      setAddRecordModal(false);
+      setSelectedVehicleId("");
+      setNewRecord({ serviceType: "", vendor: "", mileage: "", notes: "", serviceDate: new Date().toISOString().split('T')[0] });
+      toast({ title: "Service record saved", description: "The maintenance record has been added successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save service record. Please try again.", variant: "destructive" });
     },
   });
 
-  const handleAddRecord = () => {
-    if (!selectedTruck || !newRecord.serviceType) return;
-    
-    addRecordMutation.mutate({
-      truckId: selectedTruck.id,
-      truckNumber: selectedTruck.truckNumber,
-      serviceType: newRecord.serviceType,
-      vendor: newRecord.vendor,
-      mileage: newRecord.mileage ? parseInt(newRecord.mileage) : null,
-      notes: newRecord.notes,
-      serviceDate: newRecord.serviceDate,
-    });
+  // Calculate stats
+  const stats = {
+    active: trucks.filter(t => t.status === "Active" || !t.status).length,
+    inShop: trucks.filter(t => t.status === "In Shop").length,
+    inactive: trucks.filter(t => t.status === "Inactive").length,
+    total: trucks.length,
   };
 
-  const fleetStats = {
-    totalTrucks: trucks.length,
-    activeTrucks: trucks.filter(t => t.status === "Active" || !t.status).length,
-    inactiveTrucks: trucks.filter(t => t.status === "Inactive").length,
-    inShopTrucks: trucks.filter(t => t.status === "In Shop").length,
-    servicesThisMonth: allRecords.filter(r => {
-      const date = parseDate(r.serviceDate);
-      if (!date) return false;
-      const now = new Date();
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    }).length,
-    overdueMaintenance: trucksWithMaintenance.reduce((acc, truck) => {
+  const maintenanceStats = {
+    overdue: trucksWithMaintenance.reduce((acc, truck) => {
       for (const type of FLEET_SERVICE_TYPES) {
         const record = truck.latestByType[type];
         const days = daysSince(record?.serviceDate);
-        const status = getMaintenanceStatus(days, type);
-        if (status.status === "Overdue") acc++;
+        if (getMaintenanceStatus(days, type).status === "Overdue") acc++;
       }
       return acc;
     }, 0),
-    upcomingMaintenance: trucksWithMaintenance.reduce((acc, truck) => {
+    dueSoon: trucksWithMaintenance.reduce((acc, truck) => {
       for (const type of FLEET_SERVICE_TYPES) {
         const record = truck.latestByType[type];
         const days = daysSince(record?.serviceDate);
-        const status = getMaintenanceStatus(days, type);
-        if (status.status === "Due Soon") acc++;
+        if (getMaintenanceStatus(days, type).status === "Due Soon") acc++;
       }
       return acc;
     }, 0),
   };
 
-  const getTruckStatusColor = (status: string | null | undefined) => {
-    switch (status) {
-      case "Active": return "bg-green-100 text-green-700";
-      case "Inactive": return "bg-gray-200 text-gray-700";
-      case "In Shop": return "bg-orange-100 text-orange-700";
-      default: return "bg-green-100 text-green-700";
-    }
+  const vehicleStatusData = [
+    { name: "Active", value: stats.active, color: COLORS.green },
+    { name: "In Shop", value: stats.inShop, color: COLORS.yellow },
+    { name: "Inactive", value: stats.inactive, color: COLORS.gray },
+  ];
+
+  const repairCostsData = [
+    { name: "AC/Heating", value: 4200, color: COLORS.blue },
+    { name: "Brakes", value: 3800, color: COLORS.red },
+    { name: "Engine", value: 2900, color: COLORS.orange },
+    { name: "Tires", value: 2400, color: COLORS.green },
+    { name: "Other", value: 1800, color: COLORS.gray },
+  ];
+
+  const monthlyServiceCosts = [
+    { month: "Aug", cost: 8500 },
+    { month: "Sep", cost: 12200 },
+    { month: "Oct", cost: 9800 },
+    { month: "Nov", cost: 11500 },
+    { month: "Dec", cost: 7200 },
+    { month: "Jan", cost: 6800 },
+  ];
+
+  const fuelCostsData = [
+    { month: "Aug", cost: 4200 },
+    { month: "Sep", cost: 4800 },
+    { month: "Oct", cost: 5100 },
+    { month: "Nov", cost: 4600 },
+    { month: "Dec", cost: 3900 },
+    { month: "Jan", cost: 4100 },
+  ];
+
+  const resolutionTimeData = [
+    { month: "Aug", days: 3.2 },
+    { month: "Sep", days: 2.8 },
+    { month: "Oct", days: 4.1 },
+    { month: "Nov", days: 2.5 },
+    { month: "Dec", days: 3.0 },
+    { month: "Jan", days: 2.2 },
+  ];
+
+  const getPriorityBadge = (priority: string) => {
+    const styles: Record<string, string> = {
+      Critical: "bg-red-100 text-red-700",
+      High: "bg-orange-100 text-orange-700",
+      Medium: "bg-yellow-100 text-yellow-700",
+      Low: "bg-gray-100 text-gray-700",
+    };
+    return styles[priority] || styles.Low;
   };
 
-  const getTruckHealthScore = (truck: TruckWithMaintenance): number => {
-    let score = 100;
-    let checks = 0;
-    
-    for (const type of FLEET_SERVICE_TYPES) {
-      const record = truck.latestByType[type];
-      const days = daysSince(record?.serviceDate);
-      const status = getMaintenanceStatus(days, type);
-      checks++;
-      
-      if (status.status === "Overdue") score -= 15;
-      else if (status.status === "Due Soon") score -= 5;
-      else if (status.status === "No Record") score -= 10;
-    }
-    
-    return Math.max(0, Math.min(100, score));
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      New: "bg-blue-100 text-blue-700",
+      Acknowledged: "bg-yellow-100 text-yellow-700",
+      "In Progress": "bg-purple-100 text-purple-700",
+      Resolved: "bg-green-100 text-green-700",
+    };
+    return styles[status] || styles.New;
   };
+
+  const filteredIssues = MOCK_ISSUES.filter(issue => {
+    if (issueFilter === "new") return issue.status === "New";
+    if (issueFilter === "critical") return issue.priority === "Critical";
+    return true;
+  });
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Fleet Management</h1>
-          <p className="text-slate-500">Track and maintain your service vehicles</p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4 text-center">
-              <Truck className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-blue-700">{fleetStats.totalTrucks}</p>
-              <p className="text-xs text-blue-600 font-medium">Total Fleet</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4 text-center">
-              <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-green-700">{fleetStats.activeTrucks}</p>
-              <p className="text-xs text-green-600 font-medium">Active</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-4 text-center">
-              <Wrench className="h-6 w-6 text-orange-600 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-orange-700">{fleetStats.inShopTrucks}</p>
-              <p className="text-xs text-orange-600 font-medium">In Shop</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
-            <CardContent className="p-4 text-center">
-              <Truck className="h-6 w-6 text-gray-500 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-gray-600">{fleetStats.inactiveTrucks}</p>
-              <p className="text-xs text-gray-500 font-medium">Inactive</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-4 text-center">
-              <Activity className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-purple-700">{fleetStats.servicesThisMonth}</p>
-              <p className="text-xs text-purple-600 font-medium">This Month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-            <CardContent className="p-4 text-center">
-              <Clock className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-yellow-700">{fleetStats.upcomingMaintenance}</p>
-              <p className="text-xs text-yellow-600 font-medium">Due Soon</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardContent className="p-4 text-center">
-              <AlertTriangle className="h-6 w-6 text-red-600 mx-auto mb-2" />
-              <p className="text-3xl font-bold text-red-700">{fleetStats.overdueMaintenance}</p>
-              <p className="text-xs text-red-600 font-medium">Overdue</p>
-            </CardContent>
-          </Card>
+      <div className="space-y-6 bg-slate-50 min-h-screen -m-6 p-6">
+        {/* Top Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Fleet Dashboard</h1>
+            <p className="text-sm text-slate-500">Last updated: {new Date().toLocaleString()}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search vehicles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 w-64 bg-white"
+                data-testid="input-search"
+              />
+            </div>
+            <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+              <SelectTrigger className="w-40 bg-white" data-testid="filter-vehicles">
+                <SelectValue placeholder="All Vehicles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Vehicles</SelectItem>
+                <SelectItem value="active">Active Only</SelectItem>
+                <SelectItem value="inshop">In Shop</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-slate-100">
-            <TabsTrigger value="overview" data-testid="tab-overview">Fleet Overview</TabsTrigger>
-            <TabsTrigger value="maintenance" data-testid="tab-maintenance">Maintenance Log</TabsTrigger>
-            <TabsTrigger value="smogs" data-testid="tab-smogs">Smogs</TabsTrigger>
-            <TabsTrigger value="tires" data-testid="tab-tires">Tires</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-4">
-            {trucksLoading ? (
-              <div className="flex items-center justify-center h-40">
-                <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {trucksWithMaintenance.map((truck) => {
-                  const healthScore = getTruckHealthScore(truck);
-                  const healthColor = healthScore >= 80 ? "bg-green-500" : healthScore >= 60 ? "bg-yellow-500" : "bg-red-500";
-                  const truckStatus = truck.status || "Active";
-                  
-                  return (
-                    <Card 
-                      key={truck.id} 
-                      className={`bg-white border-slate-200 hover:border-blue-300 cursor-pointer transition-all hover:shadow-md ${truckStatus === "Inactive" ? "opacity-60" : ""}`}
-                      onClick={() => setSelectedTruck(truck)}
-                      data-testid={`card-truck-${truck.truckNumber}`}
+        {/* Row 1 - Status Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Vehicle Status Donut */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Vehicle Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width={100} height={100}>
+                  <PieChart>
+                    <Pie
+                      data={vehicleStatusData}
+                      innerRadius={30}
+                      outerRadius={45}
+                      dataKey="value"
+                      stroke="none"
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <Truck className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-lg text-slate-900">#{truck.truckNumber}</p>
-                              <p className="text-xs text-slate-500">{truck.currentMileage?.toLocaleString() || "—"} mi</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <div className={`w-10 h-10 rounded-full ${healthColor} flex items-center justify-center`}>
-                              <span className="text-white font-bold text-sm">{healthScore}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mb-3">
-                          <Select
-                            value={truckStatus}
-                            onValueChange={(value) => {
-                              updateTruckStatusMutation.mutate({ truckId: truck.id, status: value });
-                            }}
-                          >
-                            <SelectTrigger 
-                              className={`h-7 text-xs ${getTruckStatusColor(truckStatus)}`}
-                              onClick={(e) => e.stopPropagation()}
-                              data-testid={`status-select-${truck.truckNumber}`}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent onClick={(e) => e.stopPropagation()}>
-                              {FLEET_TRUCK_STATUSES.map(status => (
-                                <SelectItem key={status} value={status}>{status}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1">
-                          {FLEET_SERVICE_TYPES.slice(0, 4).map(type => {
-                            const record = truck.latestByType[type];
-                            const days = daysSince(record?.serviceDate);
-                            const status = getMaintenanceStatus(days, type);
-                            return (
-                              <Badge key={type} className={`text-xs px-1.5 py-0.5 ${status.color}`}>
-                                {type.split(' ')[0].substring(0, 3)}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="maintenance" className="mt-4">
-            <Card className="bg-white border-slate-200">
-              <CardHeader>
-                <div className="flex flex-col gap-4">
-                  <CardTitle className="text-lg">Recent Maintenance Activity</CardTitle>
-                  <div className="flex flex-wrap gap-2">
-                    {SERVICE_TYPE_FILTERS.map(filter => (
-                      <Button
-                        key={filter}
-                        variant={serviceFilter === filter ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setServiceFilter(filter)}
-                        data-testid={`filter-${filter.toLowerCase().replace(/\s+/g, '-')}`}
-                      >
-                        {filter}
-                      </Button>
-                    ))}
-                  </div>
+                      {vehicleStatusData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1">
+                  {vehicleStatusData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2 text-sm">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-gray-600">{item.name}</span>
+                      <span className="font-semibold">{item.value}</span>
+                    </div>
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {allRecords
-                    .filter(r => serviceFilter === "All" || r.serviceType === serviceFilter)
-                    .slice(0, 50)
-                    .map((record) => (
-                    <div key={record.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Wrench className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900">
-                            Truck #{record.truckNumber} - {record.serviceType}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            {record.vendor || "Unknown vendor"} • {record.mileage?.toLocaleString() || "—"} mi
-                          </p>
-                        </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Active Service Orders */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Active Service Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-gray-600">Open</span>
+                  </div>
+                  <span className="text-2xl font-bold">8</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                    <span className="text-gray-600">In Progress</span>
+                  </div>
+                  <span className="text-2xl font-bold">3</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="text-gray-600">Completed Today</span>
+                  </div>
+                  <span className="text-2xl font-bold">5</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Maintenance Alerts */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Maintenance Alerts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-around">
+                <div className="text-center">
+                  <p className="text-4xl font-bold text-red-500">{maintenanceStats.overdue}</p>
+                  <p className="text-sm text-gray-500">Overdue</p>
+                </div>
+                <div className="h-12 w-px bg-gray-200" />
+                <div className="text-center">
+                  <p className="text-4xl font-bold text-yellow-500">{maintenanceStats.dueSoon}</p>
+                  <p className="text-sm text-gray-500">Due This Week</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Avg Resolution Time */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Avg. Resolution Time</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={80}>
+                <LineChart data={resolutionTimeData}>
+                  <Line type="monotone" dataKey="days" stroke={COLORS.blue} strokeWidth={2} dot={false} />
+                  <Tooltip formatter={(value) => [`${value} days`, "Avg Time"]} />
+                </LineChart>
+              </ResponsiveContainer>
+              <p className="text-center text-sm text-gray-500 mt-1">Last 6 months</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Row 2 - Costs & Issues */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Top Repair Reasons */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Top Repair Reasons (90 Days)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width={100} height={100}>
+                  <PieChart>
+                    <Pie
+                      data={repairCostsData}
+                      innerRadius={30}
+                      outerRadius={45}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {repairCostsData.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1 flex-1">
+                  {repairCostsData.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-gray-600">{item.name}</span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-slate-900">{formatDate(record.serviceDate)}</p>
+                      <span className="font-semibold">${item.value.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Open Issues */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Open Issues</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-around">
+                <div className="text-center">
+                  <p className="text-5xl font-bold text-blue-600">12</p>
+                  <p className="text-sm text-gray-500">Open</p>
+                </div>
+                <div className="h-16 w-px bg-gray-200" />
+                <div className="text-center">
+                  <p className="text-5xl font-bold text-red-500">3</p>
+                  <p className="text-sm text-gray-500">Overdue</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Service Costs */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Monthly Service Costs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart data={monthlyServiceCosts}>
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis hide />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Cost"]} />
+                  <Bar dataKey="cost" fill={COLORS.blue} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Row 3 - Fuel, Assignments, Activity */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Fuel Costs */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Fuel Costs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart data={fuelCostsData}>
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis hide />
+                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Fuel"]} />
+                  <Bar dataKey="cost" fill={COLORS.green} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Vehicle Assignments */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Vehicle Assignments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-around">
+                <div className="text-center">
+                  <p className="text-5xl font-bold text-green-600">{stats.active}</p>
+                  <p className="text-sm text-gray-500">Assigned to Techs</p>
+                </div>
+                <div className="h-16 w-px bg-gray-200" />
+                <div className="text-center">
+                  <p className="text-5xl font-bold text-gray-400">{stats.inactive + stats.inShop}</p>
+                  <p className="text-sm text-gray-500">Unassigned</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[140px] px-6 pb-4">
+                <div className="space-y-3">
+                  {MOCK_ACTIVITY.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
+                        {activity.user}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">
+                          <span className="font-medium">{activity.name}</span>
+                          <span className="text-gray-500"> {activity.action} </span>
+                          <span className="text-blue-600 font-medium">{activity.vehicle}</span>
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {activity.comment.includes("@") ? (
+                            <>
+                              {activity.comment.split("@")[0]}
+                              <span className="bg-yellow-100 text-yellow-800 px-1 rounded">@{activity.comment.split("@")[1].split(" ")[0]}</span>
+                              {" " + activity.comment.split("@")[1].split(" ").slice(1).join(" ")}
+                            </>
+                          ) : activity.comment}
+                        </p>
+                        <p className="text-xs text-gray-400">{activity.time}</p>
                       </div>
                     </div>
                   ))}
-                  
-                  {allRecords.filter(r => serviceFilter === "All" || r.serviceType === serviceFilter).length === 0 && (
-                    <div className="text-center py-8 text-slate-500">
-                      <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No {serviceFilter === "All" ? "maintenance" : serviceFilter} records yet</p>
-                    </div>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
 
-          <TabsContent value="smogs" className="mt-4">
-            <Card className="bg-white border-slate-200">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Smog Check Tracking</CardTitle>
-                  <Button size="sm" data-testid="button-add-smog">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Smog Record
-                  </Button>
+        {/* Row 4 - Tech Issues & Equipment */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Tech Submitted Issues - Wider */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow lg:col-span-2">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Tech Reported Issues</CardTitle>
+                  <Badge className="bg-blue-100 text-blue-700">NEW</Badge>
+                  <span className="text-sm text-gray-500">({filteredIssues.length})</span>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {trucksWithMaintenance.map(truck => {
-                    const smogRecord = truck.maintenanceRecords.find(r => 
-                      r.serviceType?.toLowerCase().includes('smog')
-                    );
-                    const daysSinceSmog = smogRecord ? daysSince(smogRecord.serviceDate) : null;
-                    const smogDue = daysSinceSmog === null || daysSinceSmog > 365;
-                    const smogDueSoon = daysSinceSmog !== null && daysSinceSmog > 300 && daysSinceSmog <= 365;
-                    
+                <Select value={issueFilter} onValueChange={setIssueFilter}>
+                  <SelectTrigger className="w-32 h-8 text-xs" data-testid="filter-issues">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="new">New Only</SelectItem>
+                    <SelectItem value="critical">Critical Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-500">
+                      <th className="pb-2 font-medium">Date</th>
+                      <th className="pb-2 font-medium">Tech</th>
+                      <th className="pb-2 font-medium">Vehicle</th>
+                      <th className="pb-2 font-medium">Issue Type</th>
+                      <th className="pb-2 font-medium">Priority</th>
+                      <th className="pb-2 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredIssues.map((issue) => (
+                      <tr key={issue.id} className="border-b hover:bg-gray-50 cursor-pointer">
+                        <td className="py-2 text-gray-600">{issue.date}</td>
+                        <td className="py-2">{issue.tech}</td>
+                        <td className="py-2 text-blue-600 font-medium">{issue.vehicle}</td>
+                        <td className="py-2">{issue.type}</td>
+                        <td className="py-2">
+                          <Badge className={getPriorityBadge(issue.priority)}>{issue.priority}</Badge>
+                        </td>
+                        <td className="py-2">
+                          <Badge className={getStatusBadge(issue.status)}>{issue.status}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 text-center">
+                <Button variant="link" className="text-blue-600 text-sm">View All Issues</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Equipment Status */}
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Equipment Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="text-gray-700">In-Service</span>
+                  </div>
+                  <span className="text-2xl font-bold text-green-600">{stats.active}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <ClipboardCheck className="h-5 w-5 text-yellow-600" />
+                    <span className="text-gray-700">Needs Inspection</span>
+                  </div>
+                  <span className="text-2xl font-bold text-yellow-600">{maintenanceStats.dueSoon}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Wrench className="h-5 w-5 text-orange-600" />
+                    <span className="text-gray-700">Out for Repair</span>
+                  </div>
+                  <span className="text-2xl font-bold text-orange-600">{stats.inShop}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Vehicle Grid */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold">Vehicle Fleet ({trucks.length})</CardTitle>
+              <Button size="sm" onClick={() => setAddRecordModal(true)} data-testid="button-add-service">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Service Record
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {trucksLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                {trucksWithMaintenance
+                  .filter(truck => {
+                    const matchesSearch = !searchQuery || truck.truckNumber.toString().includes(searchQuery);
+                    let matchesStatus = true;
+                    if (vehicleFilter === "active") matchesStatus = truck.status === "Active" || !truck.status;
+                    else if (vehicleFilter === "inshop") matchesStatus = truck.status === "In Shop";
+                    else if (vehicleFilter === "inactive") matchesStatus = truck.status === "Inactive";
+                    return matchesSearch && matchesStatus;
+                  })
+                  .map((truck) => {
+                    const truckStatus = truck.status || "Active";
+                    const statusColor = truckStatus === "Active" ? "border-green-400" : 
+                                       truckStatus === "In Shop" ? "border-yellow-400" : "border-gray-300";
+                    const healthScore = (() => {
+                      let score = 100;
+                      for (const type of FLEET_SERVICE_TYPES) {
+                        const record = truck.latestByType[type];
+                        const days = daysSince(record?.serviceDate);
+                        const status = getMaintenanceStatus(days, type);
+                        if (status.status === "Overdue") score -= 15;
+                        else if (status.status === "Due Soon") score -= 5;
+                        else if (status.status === "No Record") score -= 10;
+                      }
+                      return Math.max(0, Math.min(100, score));
+                    })();
+                    const healthColor = healthScore >= 80 ? "bg-green-500" : healthScore >= 60 ? "bg-yellow-500" : "bg-red-500";
+
                     return (
-                      <div 
-                        key={truck.id} 
-                        className="p-4 border border-slate-200 rounded-lg"
-                        data-testid={`smog-truck-${truck.truckNumber}`}
+                      <div
+                        key={truck.id}
+                        className={`p-3 border-2 ${statusColor} rounded-lg cursor-pointer hover:shadow-md transition-all bg-white`}
+                        onClick={() => setSelectedTruck(truck)}
+                        data-testid={`card-truck-${truck.truckNumber}`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1">
                             <Truck className="h-4 w-4 text-blue-600" />
-                            <span className="font-medium">Truck #{truck.truckNumber}</span>
+                            <span className="font-bold text-sm">#{truck.truckNumber}</span>
                           </div>
-                          <Badge className={
-                            smogDue ? "bg-red-100 text-red-700" : 
-                            smogDueSoon ? "bg-yellow-100 text-yellow-700" : 
-                            "bg-green-100 text-green-700"
-                          }>
-                            {smogDue ? "Due" : smogDueSoon ? "Due Soon" : "Current"}
-                          </Badge>
+                          <div className={`w-6 h-6 rounded-full ${healthColor} flex items-center justify-center`}>
+                            <span className="text-white text-xs font-bold">{healthScore}</span>
+                          </div>
                         </div>
-                        <div className="text-sm text-slate-500">
-                          <p>Last Smog: {smogRecord ? formatDate(smogRecord.serviceDate) : "No record"}</p>
-                          {daysSinceSmog !== null && (
-                            <p className="text-xs mt-1">{daysSinceSmog} days ago</p>
-                          )}
-                        </div>
+                        <Select
+                          value={truckStatus}
+                          onValueChange={(value) => {
+                            updateTruckStatusMutation.mutate({ truckId: truck.id, status: value });
+                          }}
+                        >
+                          <SelectTrigger 
+                            className="h-6 text-xs"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent onClick={(e) => e.stopPropagation()}>
+                            {FLEET_TRUCK_STATUSES.map(s => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     );
                   })}
-                </div>
-                {trucks.length === 0 && (
-                  <div className="text-center py-8 text-slate-500">
-                    <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No trucks to display</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="tires" className="mt-4">
-            <Card className="bg-white border-slate-200">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Tire Tracking</CardTitle>
-                  <Button size="sm" data-testid="button-add-tires">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Tire Record
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {trucksWithMaintenance.map(truck => {
-                    const tireRotation = truck.latestByType["Tire Rotation"];
-                    const newTires = truck.latestByType["New Tires"];
-                    const daysSinceRotation = tireRotation ? daysSince(tireRotation.serviceDate) : null;
-                    const daysSinceNewTires = newTires ? daysSince(newTires.serviceDate) : null;
-                    
-                    const rotationStatus = getMaintenanceStatus(daysSinceRotation, "Tire Rotation");
-                    const tiresStatus = getMaintenanceStatus(daysSinceNewTires, "New Tires");
-                    
-                    return (
-                      <div 
-                        key={truck.id} 
-                        className="p-4 border border-slate-200 rounded-lg"
-                        data-testid={`tires-truck-${truck.truckNumber}`}
-                      >
-                        <div className="flex items-center gap-2 mb-3">
-                          <Truck className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium">Truck #{truck.truckNumber}</span>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-500">Tire Rotation</span>
-                            <Badge className={rotationStatus.color}>{rotationStatus.status}</Badge>
-                          </div>
-                          <p className="text-xs text-slate-400">
-                            {tireRotation ? `${formatDate(tireRotation.serviceDate)} (${daysSinceRotation} days)` : "No record"}
-                          </p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-slate-500">New Tires</span>
-                            <Badge className={tiresStatus.color}>{tiresStatus.status}</Badge>
-                          </div>
-                          <p className="text-xs text-slate-400">
-                            {newTires ? `${formatDate(newTires.serviceDate)} (${daysSinceNewTires} days)` : "No record"}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {trucks.length === 0 && (
-                  <div className="text-center py-8 text-slate-500">
-                    <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No trucks to display</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Truck Detail Modal */}
       <Dialog open={!!selectedTruck} onOpenChange={() => setSelectedTruck(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -595,59 +758,34 @@ export default function Fleet() {
               <Truck className="h-5 w-5 text-blue-600" />
               Truck #{selectedTruck?.truckNumber} Details
             </DialogTitle>
+            <DialogDescription>View and manage maintenance records for this vehicle.</DialogDescription>
           </DialogHeader>
-          
           {selectedTruck && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-slate-50 rounded-lg">
                   <p className="text-sm text-slate-500">Current Mileage</p>
                   <p className="text-xl font-bold">{selectedTruck.currentMileage?.toLocaleString() || "—"}</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg">
-                  <p className="text-sm text-slate-500">Health Score</p>
-                  <p className="text-xl font-bold">{getTruckHealthScore(selectedTruck)}%</p>
+                  <p className="text-sm text-slate-500">Status</p>
+                  <p className="text-xl font-bold">{selectedTruck.status || "Active"}</p>
                 </div>
               </div>
-
-              {selectedTruck.notes && (
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <p className="text-sm font-medium text-yellow-800">Notes</p>
-                  <p className="text-sm text-yellow-700">{selectedTruck.notes}</p>
-                </div>
-              )}
-
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-slate-900">Maintenance Status</h4>
-                  <Button size="sm" onClick={() => setAddRecordModal(true)} data-testid="button-add-record">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Record
-                  </Button>
-                </div>
-                
+                <h4 className="font-medium mb-2">Maintenance Status</h4>
                 <div className="space-y-2">
                   {FLEET_SERVICE_TYPES.map(type => {
                     const record = selectedTruck.latestByType[type];
                     const days = daysSince(record?.serviceDate);
                     const status = getMaintenanceStatus(days, type);
-                    
                     return (
-                      <div key={type} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Wrench className="h-4 w-4 text-slate-400" />
-                          <div>
-                            <p className="font-medium text-slate-900">{type}</p>
-                            <p className="text-sm text-slate-500">
-                              {record ? (
-                                <>
-                                  {formatDate(record.serviceDate)} • {record.vendor || "Unknown"} • {record.mileage?.toLocaleString() || "—"} mi
-                                </>
-                              ) : (
-                                "No record"
-                              )}
-                            </p>
-                          </div>
+                      <div key={type} className="flex items-center justify-between p-2 border rounded-lg">
+                        <div>
+                          <p className="font-medium text-sm">{type}</p>
+                          <p className="text-xs text-gray-500">
+                            {record ? formatDate(record.serviceDate) : "No record"}
+                          </p>
                         </div>
                         <Badge className={status.color}>{status.status}</Badge>
                       </div>
@@ -655,43 +793,41 @@ export default function Fleet() {
                   })}
                 </div>
               </div>
-
-              <div>
-                <h4 className="font-medium text-slate-900 mb-3">Service History</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {selectedTruck.maintenanceRecords.length > 0 ? (
-                    selectedTruck.maintenanceRecords.map(record => (
-                      <div key={record.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                        <div>
-                          <p className="text-sm font-medium">{record.serviceType}</p>
-                          <p className="text-xs text-slate-500">{record.vendor}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm">{formatDate(record.serviceDate)}</p>
-                          <p className="text-xs text-slate-500">{record.mileage?.toLocaleString()} mi</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-500 text-center py-4">No service history</p>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={addRecordModal} onOpenChange={setAddRecordModal}>
+      {/* Add Record Modal */}
+      <Dialog open={addRecordModal} onOpenChange={(open) => {
+        setAddRecordModal(open);
+        if (!open) {
+          setSelectedVehicleId("");
+          setNewRecord({ serviceType: "", vendor: "", mileage: "", notes: "", serviceDate: new Date().toISOString().split('T')[0] });
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Maintenance Record</DialogTitle>
+            <DialogTitle>Add Service Record</DialogTitle>
+            <DialogDescription>Record a new maintenance service for a vehicle.</DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-4">
             <div>
+              <Label>Vehicle</Label>
+              <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vehicle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trucks.map(t => (
+                    <SelectItem key={t.id} value={t.id}>Truck #{t.truckNumber}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>Service Type</Label>
-              <Select value={newRecord.serviceType} onValueChange={v => setNewRecord(p => ({ ...p, serviceType: v }))}>
+              <Select value={newRecord.serviceType} onValueChange={(v) => setNewRecord({ ...newRecord, serviceType: v })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select service type" />
                 </SelectTrigger>
@@ -702,48 +838,61 @@ export default function Fleet() {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label>Service Date</Label>
               <Input 
                 type="date" 
                 value={newRecord.serviceDate}
-                onChange={e => setNewRecord(p => ({ ...p, serviceDate: e.target.value }))}
+                onChange={(e) => setNewRecord({ ...newRecord, serviceDate: e.target.value })}
               />
             </div>
-
             <div>
               <Label>Vendor</Label>
               <Input 
-                placeholder="e.g., Jiffy Lube, Ramona Tire"
                 value={newRecord.vendor}
-                onChange={e => setNewRecord(p => ({ ...p, vendor: e.target.value }))}
+                onChange={(e) => setNewRecord({ ...newRecord, vendor: e.target.value })}
+                placeholder="Enter vendor name"
               />
             </div>
-
             <div>
               <Label>Mileage</Label>
               <Input 
                 type="number"
-                placeholder="Current mileage"
                 value={newRecord.mileage}
-                onChange={e => setNewRecord(p => ({ ...p, mileage: e.target.value }))}
+                onChange={(e) => setNewRecord({ ...newRecord, mileage: e.target.value })}
+                placeholder="Current mileage"
               />
             </div>
-
             <div>
-              <Label>Notes (optional)</Label>
+              <Label>Notes</Label>
               <Textarea 
-                placeholder="Any additional notes..."
                 value={newRecord.notes}
-                onChange={e => setNewRecord(p => ({ ...p, notes: e.target.value }))}
+                onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
+                placeholder="Additional notes..."
               />
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddRecordModal(false)}>Cancel</Button>
-            <Button onClick={handleAddRecord} disabled={!newRecord.serviceType}>Save Record</Button>
+            <Button 
+              disabled={!selectedVehicleId || !newRecord.serviceType}
+              onClick={() => {
+                const selectedTruckData = trucks.find(t => t.id === selectedVehicleId);
+                if (selectedTruckData && newRecord.serviceType) {
+                  addRecordMutation.mutate({
+                    truckId: selectedVehicleId,
+                    truckNumber: selectedTruckData.truckNumber,
+                    serviceType: newRecord.serviceType,
+                    vendor: newRecord.vendor || null,
+                    mileage: newRecord.mileage ? parseInt(newRecord.mileage) : null,
+                    notes: newRecord.notes || null,
+                    serviceDate: newRecord.serviceDate,
+                  });
+                }
+              }}
+            >
+              Save Record
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

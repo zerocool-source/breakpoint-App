@@ -1,0 +1,113 @@
+Build a fleet management dashboard for a commercial pool service company with 40+ service vehicles. Use Next.js 15 with App Router, TypeScript, and Tailwind CSS. The design should be clean, professional, and card-based similar to Fleetio.
+
+## Layout Structure
+- Dark navy sidebar (#1e293b) with company logo area at top, collapsible navigation menu
+- Light gray main area (#f8fafc) with card grid
+- Top bar with: search input, "All Vehicles" dropdown filter, compact/expanded view toggle, "Manage Widgets" button
+- Dashboard title "Fleet Dashboard" with last-updated timestamp
+
+## Navigation Sidebar Menu Items
+- Dashboard (home icon)
+- Vehicles (truck icon) → submenu: Vehicle List, Assignments, Maintenance History
+- Service Orders (wrench icon)
+- Inspections (clipboard-check icon)
+- Issues (alert-triangle icon) ← highlight this with a badge showing open count
+- Fuel Logs (fuel icon)
+- Parts & Inventory (box icon)
+- Reports (bar-chart icon)
+- Settings (gear icon)
+
+## Dashboard Widgets (card-based grid layout)
+
+### Row 1
+1. **Vehicle Status** - Donut chart showing:
+   - Active (green) 
+   - In Shop (yellow)
+   - Out of Service (red)
+   - Available (blue)
+   Display counts next to each legend item
+
+2. **Active Service Orders** - Simple counts:
+   - Open (number with blue dot)
+   - In Progress (number with yellow dot)
+   - Completed Today (number with green dot)
+
+3. **Maintenance Alerts** - Large number display:
+   - "Overdue" count in red
+   - "Due This Week" count in yellow
+
+4. **Avg. Resolution Time** - Line chart showing average days to resolve issues over last 6 months
+
+### Row 2
+5. **Top Repair Reasons** (Last 90 Days) - Donut chart with cost breakdown:
+   - AC/Heating
+   - Brakes
+   - Engine
+   - Tires
+   - Other
+   Show dollar amounts next to each
+
+6. **Open Issues** - Count cards:
+   - "Open" (large number)
+   - "Overdue" (large number in red if > 0)
+
+7. **Monthly Service Costs** - Bar chart showing costs by month for last 6 months
+
+### Row 3
+8. **Fuel Costs** - Bar chart by month with Y-axis scale
+
+9. **Vehicle Assignments** - Two large numbers:
+   - "Assigned to Techs" 
+   - "Unassigned"
+
+10. **Recent Activity** - Scrollable feed showing:
+    - User avatar (circle with initials)
+    - "[Name] commented on [Vehicle: #ID]" with clickable link
+    - Preview of comment text
+    - Timestamp "X hours ago"
+    - Support @mentions highlighted in yellow badges
+
+### Row 4
+11. **Technician Submitted Issues** - NEW WIDGET - Table/list format:
+    - Header: "Tech Reported Issues" with "NEW" badge and count
+    - Columns: Date Submitted | Tech Name | Vehicle # | Issue Type | Priority | Status
+    - Priority badges: Critical (red), High (orange), Medium (yellow), Low (gray)
+    - Status: New (blue), Acknowledged (yellow), In Progress (purple), Resolved (green)
+    - Each row clickable to expand details
+    - "View All Issues" link at bottom
+    - Show issues from last 7 days by default
+    - Filter dropdown: All, New, Critical Only
+
+12. **Equipment Status** - Simple list:
+    - In-Service count
+    - Needs Inspection count
+    - Out for Repair count
+
+## Design Specifications
+- Cards: White background, rounded-lg, subtle shadow (shadow-sm), p-6
+- Section headers: text-sm font-semibold text-gray-600 uppercase tracking-wide
+- Large numbers: text-3xl font-bold
+- Status colors: 
+  - Green (#22c55e) = good/active/resolved
+  - Red (#ef4444) = overdue/critical
+  - Yellow (#eab308) = attention/due soon
+  - Blue (#3b82f6) = open/info/links
+  - Orange (#f97316) = high priority
+- Charts: Use Recharts library
+- Icons: Use Lucide React icons
+
+## Interactive Features
+- Clicking any widget metric should eventually link to filtered detail view
+- "Manage Widgets" button opens modal to show/hide widgets
+- Cards should have hover state (slight shadow increase)
+- Recent Activity feed auto-scrolls or has max-height with overflow
+
+## Sample Data
+Generate realistic mock data for a pool service company:
+- 42 total vehicles
+- Mix of trucks and vans
+- Technician names
+- Vehicle IDs like "TRK-001", "VAN-015"
+- Issue types: Engine Warning Light, AC Not Working, Brake Noise, Tire Pressure, Check Engine, Fluid Leak, Electrical Issue
+
+Make all components modular and reusable. Use a consistent spacing system (gap-6 for grid). Mobile responsive - stack to single column on small screens.
