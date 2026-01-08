@@ -222,9 +222,11 @@ export default function Notes() {
     
     for (const pool of customer.pools) {
       if (pool.name.toLowerCase().includes(query)) return true;
+      if (pool.notes?.toLowerCase().includes(query)) return true;
       for (const equip of pool.equipment) {
         if (equip.type.toLowerCase().includes(query)) return true;
         if (equip.category.toLowerCase().includes(query)) return true;
+        if (equip.notes?.toLowerCase().includes(query)) return true;
       }
     }
     
@@ -327,7 +329,7 @@ export default function Notes() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Search customers, pools, or equipment..."
+              placeholder="Search customers, pools, equipment, or notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
