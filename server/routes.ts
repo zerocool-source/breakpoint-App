@@ -4439,6 +4439,137 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to seed PM defaults" });
     }
   });
+
+  // ==================== FLEET MANAGEMENT ====================
+
+  // Get all trucks with their latest maintenance records
+  app.get("/api/fleet/trucks", async (req: any, res: any) => {
+    try {
+      const trucks = await storage.getFleetTrucks();
+      res.json(trucks);
+    } catch (error: any) {
+      console.error("Error getting fleet trucks:", error);
+      res.status(500).json({ error: "Failed to get fleet trucks" });
+    }
+  });
+
+  // Get single truck
+  app.get("/api/fleet/trucks/:id", async (req: any, res: any) => {
+    try {
+      const truck = await storage.getFleetTruck(req.params.id);
+      if (!truck) {
+        return res.status(404).json({ error: "Truck not found" });
+      }
+      res.json(truck);
+    } catch (error: any) {
+      console.error("Error getting truck:", error);
+      res.status(500).json({ error: "Failed to get truck" });
+    }
+  });
+
+  // Create truck
+  app.post("/api/fleet/trucks", async (req: any, res: any) => {
+    try {
+      const truck = await storage.createFleetTruck(req.body);
+      res.json(truck);
+    } catch (error: any) {
+      console.error("Error creating truck:", error);
+      res.status(500).json({ error: "Failed to create truck" });
+    }
+  });
+
+  // Update truck
+  app.put("/api/fleet/trucks/:id", async (req: any, res: any) => {
+    try {
+      const truck = await storage.updateFleetTruck(req.params.id, req.body);
+      res.json(truck);
+    } catch (error: any) {
+      console.error("Error updating truck:", error);
+      res.status(500).json({ error: "Failed to update truck" });
+    }
+  });
+
+  // Get all maintenance records
+  app.get("/api/fleet/maintenance", async (req: any, res: any) => {
+    try {
+      const { truckId, truckNumber } = req.query;
+      let records;
+      if (truckId) {
+        records = await storage.getFleetMaintenanceRecordsByTruck(truckId);
+      } else if (truckNumber) {
+        records = await storage.getFleetMaintenanceRecordsByTruckNumber(parseInt(truckNumber));
+      } else {
+        records = await storage.getFleetMaintenanceRecords();
+      }
+      res.json(records);
+    } catch (error: any) {
+      console.error("Error getting maintenance records:", error);
+      res.status(500).json({ error: "Failed to get maintenance records" });
+    }
+  });
+
+  // Create maintenance record
+  app.post("/api/fleet/maintenance", async (req: any, res: any) => {
+    try {
+      const record = await storage.createFleetMaintenanceRecord(req.body);
+      res.json(record);
+    } catch (error: any) {
+      console.error("Error creating maintenance record:", error);
+      res.status(500).json({ error: "Failed to create maintenance record" });
+    }
+  });
+
+  // Get fleet statistics
+  app.get("/api/fleet/stats", async (req: any, res: any) => {
+    try {
+      const trucks = await storage.getFleetTrucks();
+      const records = await storage.getFleetMaintenanceRecords();
+      
+      const stats = {
+        totalTrucks: trucks.length,
+        activeTrucks: trucks.filter(t => t.isActive).length,
+        totalMaintenanceRecords: records.length,
+        recentServices: records.slice(0, 10),
+      };
+      res.json(stats);
+    } catch (error: any) {
+      console.error("Error getting fleet stats:", error);
+      res.status(500).json({ error: "Failed to get fleet stats" });
+    }
+  });
+
+  // Seed fleet data from Excel
+  app.post("/api/fleet/seed", async (req: any, res: any) => {
+    try {
+      const { trucks, maintenanceRecords } = req.body;
+      let trucksCreated = 0;
+      let recordsCreated = 0;
+
+      const truckIdMap: Record<number, string> = {};
+      
+      for (const truck of trucks) {
+        const upserted = await storage.upsertFleetTruck(truck.truckNumber, truck);
+        truckIdMap[truck.truckNumber] = upserted.id;
+        trucksCreated++;
+      }
+
+      for (const record of maintenanceRecords) {
+        const truckId = truckIdMap[record.truckNumber];
+        if (truckId) {
+          await storage.createFleetMaintenanceRecord({
+            ...record,
+            truckId,
+          });
+          recordsCreated++;
+        }
+      }
+
+      res.json({ trucksCreated, recordsCreated });
+    } catch (error: any) {
+      console.error("Error seeding fleet data:", error);
+      res.status(500).json({ error: "Failed to seed fleet data" });
+    }
+  });
 }
 
   

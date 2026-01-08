@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Settings,
   Wrench,
+  Package,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -231,8 +232,14 @@ export function Sidebar() {
       ]
     },
     { 
-      key: "vendors",
+      key: "fleet",
       icon: Truck, 
+      label: "Fleet", 
+      href: "/fleet"
+    },
+    { 
+      key: "vendors",
+      icon: Package, 
       label: "Vendors", 
       children: [
         { label: "Invoice Vendors", href: "/invoice-vendors" },

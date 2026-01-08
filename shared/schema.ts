@@ -913,3 +913,64 @@ export const PM_SERVICE_REASONS = [
 ] as const;
 
 export type PmServiceReason = typeof PM_SERVICE_REASONS[number];
+
+// Fleet Trucks
+export const fleetTrucks = pgTable("fleet_trucks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  truckNumber: integer("truck_number").notNull().unique(),
+  currentMileage: integer("current_mileage"),
+  registrationDue: text("registration_due"),
+  smogDue: text("smog_due"),
+  smogResult: text("smog_result"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFleetTruckSchema = createInsertSchema(fleetTrucks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFleetTruck = z.infer<typeof insertFleetTruckSchema>;
+export type FleetTruck = typeof fleetTrucks.$inferSelect;
+
+// Fleet Service Types (Oil Change, Tire Rotation, etc.)
+export const FLEET_SERVICE_TYPES = [
+  "Oil Change",
+  "Tire Rotation",
+  "Brake Inspection",
+  "Air Filter",
+  "Transmission Fluid",
+  "Coolant System",
+  "Brake Fluid",
+  "New Tires",
+] as const;
+
+export type FleetServiceType = typeof FLEET_SERVICE_TYPES[number];
+
+// Fleet Maintenance Records
+export const fleetMaintenanceRecords = pgTable("fleet_maintenance_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  truckId: varchar("truck_id").notNull(),
+  truckNumber: integer("truck_number").notNull(),
+  serviceType: text("service_type").notNull(), // One of FLEET_SERVICE_TYPES
+  serviceDate: text("service_date"), // Excel serial date or ISO string
+  vendor: text("vendor"),
+  mileage: integer("mileage"),
+  cost: real("cost"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFleetMaintenanceRecordSchema = createInsertSchema(fleetMaintenanceRecords).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFleetMaintenanceRecord = z.infer<typeof insertFleetMaintenanceRecordSchema>;
+export type FleetMaintenanceRecord = typeof fleetMaintenanceRecords.$inferSelect;

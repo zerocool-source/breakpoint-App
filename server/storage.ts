@@ -31,12 +31,15 @@ import {
   type PmIntervalSetting, type InsertPmIntervalSetting,
   type EquipmentPmSchedule, type InsertEquipmentPmSchedule,
   type PmServiceRecord, type InsertPmServiceRecord,
+  type FleetTruck, type InsertFleetTruck,
+  type FleetMaintenanceRecord, type InsertFleetMaintenanceRecord,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
   estimates, routes, routeStops, routeMoves, unscheduledStops,
-  pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords
+  pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
+  fleetTrucks, fleetMaintenanceRecords
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -1653,6 +1656,76 @@ export class DbStorage implements IStorage {
     }
 
     return { serviceTypesCreated: createdTypes.length, intervalsCreated };
+  }
+
+  // Fleet Trucks
+  async getFleetTrucks(): Promise<FleetTruck[]> {
+    return db.select().from(fleetTrucks).orderBy(fleetTrucks.truckNumber);
+  }
+
+  async getFleetTruck(id: string): Promise<FleetTruck | undefined> {
+    const result = await db.select().from(fleetTrucks).where(eq(fleetTrucks.id, id));
+    return result[0];
+  }
+
+  async getFleetTruckByNumber(truckNumber: number): Promise<FleetTruck | undefined> {
+    const result = await db.select().from(fleetTrucks).where(eq(fleetTrucks.truckNumber, truckNumber));
+    return result[0];
+  }
+
+  async createFleetTruck(truck: InsertFleetTruck): Promise<FleetTruck> {
+    const result = await db.insert(fleetTrucks).values(truck as any).returning();
+    return result[0];
+  }
+
+  async updateFleetTruck(id: string, updates: Partial<InsertFleetTruck>): Promise<FleetTruck | undefined> {
+    const result = await db.update(fleetTrucks)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(fleetTrucks.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async upsertFleetTruck(truckNumber: number, truck: InsertFleetTruck): Promise<FleetTruck> {
+    const existing = await this.getFleetTruckByNumber(truckNumber);
+    if (existing) {
+      const updated = await this.updateFleetTruck(existing.id, truck);
+      return updated!;
+    }
+    return this.createFleetTruck(truck);
+  }
+
+  // Fleet Maintenance Records
+  async getFleetMaintenanceRecords(): Promise<FleetMaintenanceRecord[]> {
+    return db.select().from(fleetMaintenanceRecords).orderBy(desc(fleetMaintenanceRecords.serviceDate));
+  }
+
+  async getFleetMaintenanceRecordsByTruck(truckId: string): Promise<FleetMaintenanceRecord[]> {
+    return db.select().from(fleetMaintenanceRecords)
+      .where(eq(fleetMaintenanceRecords.truckId, truckId))
+      .orderBy(desc(fleetMaintenanceRecords.serviceDate));
+  }
+
+  async getFleetMaintenanceRecordsByTruckNumber(truckNumber: number): Promise<FleetMaintenanceRecord[]> {
+    return db.select().from(fleetMaintenanceRecords)
+      .where(eq(fleetMaintenanceRecords.truckNumber, truckNumber))
+      .orderBy(desc(fleetMaintenanceRecords.serviceDate));
+  }
+
+  async createFleetMaintenanceRecord(record: InsertFleetMaintenanceRecord): Promise<FleetMaintenanceRecord> {
+    const result = await db.insert(fleetMaintenanceRecords).values(record as any).returning();
+    return result[0];
+  }
+
+  async getLatestMaintenanceByType(truckId: string, serviceType: string): Promise<FleetMaintenanceRecord | undefined> {
+    const result = await db.select().from(fleetMaintenanceRecords)
+      .where(and(
+        eq(fleetMaintenanceRecords.truckId, truckId),
+        eq(fleetMaintenanceRecords.serviceType, serviceType)
+      ))
+      .orderBy(desc(fleetMaintenanceRecords.serviceDate))
+      .limit(1);
+    return result[0];
   }
 }
 
