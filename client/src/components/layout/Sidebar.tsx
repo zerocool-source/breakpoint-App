@@ -14,6 +14,7 @@ import {
   Settings,
   Wrench,
   Package,
+  Hammer,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -183,6 +184,12 @@ export function Sidebar() {
         { label: "Equipment Notes", href: "/notes" },
         { label: "Equipment Tracker", href: "/equipment" },
       ]
+    },
+    { 
+      key: "operations",
+      icon: Hammer, 
+      label: "Operations", 
+      href: "/operations"
     },
     { 
       key: "technicians",
