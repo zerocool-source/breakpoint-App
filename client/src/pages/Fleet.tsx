@@ -21,7 +21,7 @@ import {
   Search,
   ClipboardCheck
 } from "lucide-react";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { FleetTruck, FleetMaintenanceRecord } from "@shared/schema";
 import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES } from "@shared/schema";
 
@@ -214,41 +214,6 @@ export default function Fleet() {
     { name: "Inactive", value: stats.inactive, color: COLORS.gray },
   ];
 
-  const repairCostsData = [
-    { name: "AC/Heating", value: 4200, color: COLORS.blue },
-    { name: "Brakes", value: 3800, color: COLORS.red },
-    { name: "Engine", value: 2900, color: COLORS.orange },
-    { name: "Tires", value: 2400, color: COLORS.green },
-    { name: "Other", value: 1800, color: COLORS.gray },
-  ];
-
-  const monthlyServiceCosts = [
-    { month: "Aug", cost: 8500 },
-    { month: "Sep", cost: 12200 },
-    { month: "Oct", cost: 9800 },
-    { month: "Nov", cost: 11500 },
-    { month: "Dec", cost: 7200 },
-    { month: "Jan", cost: 6800 },
-  ];
-
-  const fuelCostsData = [
-    { month: "Aug", cost: 4200 },
-    { month: "Sep", cost: 4800 },
-    { month: "Oct", cost: 5100 },
-    { month: "Nov", cost: 4600 },
-    { month: "Dec", cost: 3900 },
-    { month: "Jan", cost: 4100 },
-  ];
-
-  const resolutionTimeData = [
-    { month: "Aug", days: 3.2 },
-    { month: "Sep", days: 2.8 },
-    { month: "Oct", days: 4.1 },
-    { month: "Nov", days: 2.5 },
-    { month: "Dec", days: 3.0 },
-    { month: "Jan", days: 2.2 },
-  ];
-
   const getPriorityBadge = (priority: string) => {
     const styles: Record<string, string> = {
       Critical: "bg-red-100 text-red-700",
@@ -398,62 +363,6 @@ export default function Fleet() {
             </CardContent>
           </Card>
 
-          {/* Avg Resolution Time */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Avg. Resolution Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={80}>
-                <LineChart data={resolutionTimeData}>
-                  <Line type="monotone" dataKey="days" stroke={COLORS.blue} strokeWidth={2} dot={false} />
-                  <Tooltip formatter={(value) => [`${value} days`, "Avg Time"]} />
-                </LineChart>
-              </ResponsiveContainer>
-              <p className="text-center text-sm text-gray-500 mt-1">Last 6 months</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Row 2 - Costs & Issues */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Top Repair Reasons */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Top Repair Reasons (90 Days)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <ResponsiveContainer width={100} height={100}>
-                  <PieChart>
-                    <Pie
-                      data={repairCostsData}
-                      innerRadius={30}
-                      outerRadius={45}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {repairCostsData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1 flex-1">
-                  {repairCostsData.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-gray-600">{item.name}</span>
-                      </div>
-                      <span className="font-semibold">${item.value.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Open Issues */}
           <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
@@ -462,75 +371,21 @@ export default function Fleet() {
             <CardContent>
               <div className="flex items-center justify-around">
                 <div className="text-center">
-                  <p className="text-5xl font-bold text-blue-600">12</p>
+                  <p className="text-4xl font-bold text-blue-600">12</p>
                   <p className="text-sm text-gray-500">Open</p>
                 </div>
-                <div className="h-16 w-px bg-gray-200" />
+                <div className="h-12 w-px bg-gray-200" />
                 <div className="text-center">
-                  <p className="text-5xl font-bold text-red-500">3</p>
+                  <p className="text-4xl font-bold text-red-500">3</p>
                   <p className="text-sm text-gray-500">Overdue</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Monthly Service Costs */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Monthly Service Costs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={100}>
-                <BarChart data={monthlyServiceCosts}>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis hide />
-                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Cost"]} />
-                  <Bar dataKey="cost" fill={COLORS.blue} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Row 3 - Fuel, Assignments, Activity */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Fuel Costs */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Fuel Costs</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={100}>
-                <BarChart data={fuelCostsData}>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis hide />
-                  <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, "Fuel"]} />
-                  <Bar dataKey="cost" fill={COLORS.green} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Vehicle Assignments */}
-          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Vehicle Assignments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-around">
-                <div className="text-center">
-                  <p className="text-5xl font-bold text-green-600">{stats.active}</p>
-                  <p className="text-sm text-gray-500">Assigned to Techs</p>
-                </div>
-                <div className="h-16 w-px bg-gray-200" />
-                <div className="text-center">
-                  <p className="text-5xl font-bold text-gray-400">{stats.inactive + stats.inShop}</p>
-                  <p className="text-sm text-gray-500">Unassigned</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* Row 2 - Activity & Issues */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Recent Activity */}
           <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
@@ -662,7 +517,7 @@ export default function Fleet() {
           </Card>
         </div>
 
-        {/* Vehicle Grid */}
+        {/* Vehicle Fleet */}
         <Card className="bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -679,71 +534,103 @@ export default function Fleet() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
-                {trucksWithMaintenance
-                  .filter(truck => {
-                    const matchesSearch = !searchQuery || truck.truckNumber.toString().includes(searchQuery);
-                    let matchesStatus = true;
-                    if (vehicleFilter === "active") matchesStatus = truck.status === "Active" || !truck.status;
-                    else if (vehicleFilter === "inshop") matchesStatus = truck.status === "In Shop";
-                    else if (vehicleFilter === "inactive") matchesStatus = truck.status === "Inactive";
-                    return matchesSearch && matchesStatus;
-                  })
-                  .map((truck) => {
-                    const truckStatus = truck.status || "Active";
-                    const statusColor = truckStatus === "Active" ? "border-green-400" : 
-                                       truckStatus === "In Shop" ? "border-yellow-400" : "border-gray-300";
-                    const healthScore = (() => {
-                      let score = 100;
-                      for (const type of FLEET_SERVICE_TYPES) {
-                        const record = truck.latestByType[type];
-                        const days = daysSince(record?.serviceDate);
-                        const status = getMaintenanceStatus(days, type);
-                        if (status.status === "Overdue") score -= 15;
-                        else if (status.status === "Due Soon") score -= 5;
-                        else if (status.status === "No Record") score -= 10;
-                      }
-                      return Math.max(0, Math.min(100, score));
-                    })();
-                    const healthColor = healthScore >= 80 ? "bg-green-500" : healthScore >= 60 ? "bg-yellow-500" : "bg-red-500";
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-500">
+                      <th className="pb-2 font-medium">Vehicle</th>
+                      <th className="pb-2 font-medium">Status</th>
+                      <th className="pb-2 font-medium">Mileage</th>
+                      <th className="pb-2 font-medium">Truck Health</th>
+                      <th className="pb-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trucksWithMaintenance
+                      .filter(truck => {
+                        const matchesSearch = !searchQuery || truck.truckNumber.toString().includes(searchQuery);
+                        let matchesStatus = true;
+                        if (vehicleFilter === "active") matchesStatus = truck.status === "Active" || !truck.status;
+                        else if (vehicleFilter === "inshop") matchesStatus = truck.status === "In Shop";
+                        else if (vehicleFilter === "inactive") matchesStatus = truck.status === "Inactive";
+                        return matchesSearch && matchesStatus;
+                      })
+                      .map((truck) => {
+                        const truckStatus = truck.status || "Active";
+                        const healthScore = (() => {
+                          let score = 100;
+                          for (const type of FLEET_SERVICE_TYPES) {
+                            const record = truck.latestByType[type];
+                            const days = daysSince(record?.serviceDate);
+                            const status = getMaintenanceStatus(days, type);
+                            if (status.status === "Overdue") score -= 15;
+                            else if (status.status === "Due Soon") score -= 5;
+                            else if (status.status === "No Record") score -= 10;
+                          }
+                          return Math.max(0, Math.min(100, score));
+                        })();
+                        const healthColor = healthScore >= 80 ? "text-green-600" : healthScore >= 60 ? "text-yellow-600" : "text-red-600";
+                        const statusBadgeColor = truckStatus === "Active" ? "bg-green-100 text-green-700" :
+                                                 truckStatus === "In Shop" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700";
 
-                    return (
-                      <div
-                        key={truck.id}
-                        className={`p-3 border-2 ${statusColor} rounded-lg cursor-pointer hover:shadow-md transition-all bg-white`}
-                        onClick={() => setSelectedTruck(truck)}
-                        data-testid={`card-truck-${truck.truckNumber}`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1">
-                            <Truck className="h-4 w-4 text-blue-600" />
-                            <span className="font-bold text-sm">#{truck.truckNumber}</span>
-                          </div>
-                          <div className={`w-6 h-6 rounded-full ${healthColor} flex items-center justify-center`}>
-                            <span className="text-white text-xs font-bold">{healthScore}</span>
-                          </div>
-                        </div>
-                        <Select
-                          value={truckStatus}
-                          onValueChange={(value) => {
-                            updateTruckStatusMutation.mutate({ truckId: truck.id, status: value });
-                          }}
-                        >
-                          <SelectTrigger 
-                            className="h-6 text-xs"
-                            onClick={(e) => e.stopPropagation()}
+                        return (
+                          <tr 
+                            key={truck.id} 
+                            className="border-b hover:bg-gray-50 cursor-pointer"
+                            onClick={() => setSelectedTruck(truck)}
+                            data-testid={`row-truck-${truck.truckNumber}`}
                           >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent onClick={(e) => e.stopPropagation()}>
-                            {FLEET_TRUCK_STATUSES.map(s => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
+                            <td className="py-3">
+                              <div className="flex items-center gap-2">
+                                <Truck className="h-4 w-4 text-blue-600" />
+                                <span className="font-bold">#{truck.truckNumber}</span>
+                              </div>
+                            </td>
+                            <td className="py-3">
+                              <Select
+                                value={truckStatus}
+                                onValueChange={(value) => {
+                                  updateTruckStatusMutation.mutate({ truckId: truck.id, status: value });
+                                }}
+                              >
+                                <SelectTrigger 
+                                  className="h-7 w-28 text-xs"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent onClick={(e) => e.stopPropagation()}>
+                                  {FLEET_TRUCK_STATUSES.map(s => (
+                                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="py-3 text-gray-600">
+                              {truck.currentMileage?.toLocaleString() || "—"}
+                            </td>
+                            <td className="py-3">
+                              <span className={`font-semibold ${healthColor}`}>
+                                {healthScore}%
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedTruck(truck);
+                                }}
+                              >
+                                View Details
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
