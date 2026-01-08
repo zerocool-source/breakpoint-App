@@ -88,10 +88,22 @@ interface TruckWithMaintenance extends FleetTruck {
   latestByType: Record<string, FleetMaintenanceRecord>;
 }
 
+const SERVICE_TYPE_FILTERS = [
+  "All",
+  "Oil Change",
+  "Tire Rotation", 
+  "Brake Inspection",
+  "Air Filter",
+  "Transmission Fluid",
+  "Coolant System",
+  "Brake Fluid",
+];
+
 export default function Fleet() {
   const queryClient = useQueryClient();
   const [selectedTruck, setSelectedTruck] = useState<TruckWithMaintenance | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [serviceFilter, setServiceFilter] = useState("All");
   const [addRecordModal, setAddRecordModal] = useState(false);
   const [newRecord, setNewRecord] = useState({
     serviceType: "",
@@ -286,6 +298,8 @@ export default function Fleet() {
           <TabsList className="bg-slate-100">
             <TabsTrigger value="overview" data-testid="tab-overview">Fleet Overview</TabsTrigger>
             <TabsTrigger value="maintenance" data-testid="tab-maintenance">Maintenance Log</TabsTrigger>
+            <TabsTrigger value="smogs" data-testid="tab-smogs">Smogs</TabsTrigger>
+            <TabsTrigger value="tires" data-testid="tab-tires">Tires</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -360,11 +374,29 @@ export default function Fleet() {
           <TabsContent value="maintenance" className="mt-4">
             <Card className="bg-white border-slate-200">
               <CardHeader>
-                <CardTitle className="text-lg">Recent Maintenance Activity</CardTitle>
+                <div className="flex flex-col gap-4">
+                  <CardTitle className="text-lg">Recent Maintenance Activity</CardTitle>
+                  <div className="flex flex-wrap gap-2">
+                    {SERVICE_TYPE_FILTERS.map(filter => (
+                      <Button
+                        key={filter}
+                        variant={serviceFilter === filter ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setServiceFilter(filter)}
+                        data-testid={`filter-${filter.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {filter}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {allRecords.slice(0, 20).map((record) => (
+                  {allRecords
+                    .filter(r => serviceFilter === "All" || r.serviceType === serviceFilter)
+                    .slice(0, 50)
+                    .map((record) => (
                     <div key={record.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="p-2 bg-blue-100 rounded-lg">
@@ -385,13 +417,135 @@ export default function Fleet() {
                     </div>
                   ))}
                   
-                  {allRecords.length === 0 && (
+                  {allRecords.filter(r => serviceFilter === "All" || r.serviceType === serviceFilter).length === 0 && (
                     <div className="text-center py-8 text-slate-500">
                       <Wrench className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>No maintenance records yet</p>
+                      <p>No {serviceFilter === "All" ? "maintenance" : serviceFilter} records yet</p>
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="smogs" className="mt-4">
+            <Card className="bg-white border-slate-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Smog Check Tracking</CardTitle>
+                  <Button size="sm" data-testid="button-add-smog">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Smog Record
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {trucksWithMaintenance.map(truck => {
+                    const smogRecord = truck.maintenanceRecords.find(r => 
+                      r.serviceType?.toLowerCase().includes('smog')
+                    );
+                    const daysSinceSmog = smogRecord ? daysSince(smogRecord.serviceDate) : null;
+                    const smogDue = daysSinceSmog === null || daysSinceSmog > 365;
+                    const smogDueSoon = daysSinceSmog !== null && daysSinceSmog > 300 && daysSinceSmog <= 365;
+                    
+                    return (
+                      <div 
+                        key={truck.id} 
+                        className="p-4 border border-slate-200 rounded-lg"
+                        data-testid={`smog-truck-${truck.truckNumber}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-blue-600" />
+                            <span className="font-medium">Truck #{truck.truckNumber}</span>
+                          </div>
+                          <Badge className={
+                            smogDue ? "bg-red-100 text-red-700" : 
+                            smogDueSoon ? "bg-yellow-100 text-yellow-700" : 
+                            "bg-green-100 text-green-700"
+                          }>
+                            {smogDue ? "Due" : smogDueSoon ? "Due Soon" : "Current"}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          <p>Last Smog: {smogRecord ? formatDate(smogRecord.serviceDate) : "No record"}</p>
+                          {daysSinceSmog !== null && (
+                            <p className="text-xs mt-1">{daysSinceSmog} days ago</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {trucks.length === 0 && (
+                  <div className="text-center py-8 text-slate-500">
+                    <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No trucks to display</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tires" className="mt-4">
+            <Card className="bg-white border-slate-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Tire Tracking</CardTitle>
+                  <Button size="sm" data-testid="button-add-tires">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Tire Record
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {trucksWithMaintenance.map(truck => {
+                    const tireRotation = truck.latestByType["Tire Rotation"];
+                    const newTires = truck.latestByType["New Tires"];
+                    const daysSinceRotation = tireRotation ? daysSince(tireRotation.serviceDate) : null;
+                    const daysSinceNewTires = newTires ? daysSince(newTires.serviceDate) : null;
+                    
+                    const rotationStatus = getMaintenanceStatus(daysSinceRotation, "Tire Rotation");
+                    const tiresStatus = getMaintenanceStatus(daysSinceNewTires, "New Tires");
+                    
+                    return (
+                      <div 
+                        key={truck.id} 
+                        className="p-4 border border-slate-200 rounded-lg"
+                        data-testid={`tires-truck-${truck.truckNumber}`}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <Truck className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium">Truck #{truck.truckNumber}</span>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Tire Rotation</span>
+                            <Badge className={rotationStatus.color}>{rotationStatus.status}</Badge>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            {tireRotation ? `${formatDate(tireRotation.serviceDate)} (${daysSinceRotation} days)` : "No record"}
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-slate-500">New Tires</span>
+                            <Badge className={tiresStatus.color}>{tiresStatus.status}</Badge>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            {newTires ? `${formatDate(newTires.serviceDate)} (${daysSinceNewTires} days)` : "No record"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {trucks.length === 0 && (
+                  <div className="text-center py-8 text-slate-500">
+                    <Truck className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No trucks to display</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
