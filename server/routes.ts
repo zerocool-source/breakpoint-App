@@ -1607,11 +1607,27 @@ function setupRoutes(app: any) {
         companyId: companyId || undefined,
       });
 
-      // Fetch customers and pool details with equipment
-      const [customersData, poolsData] = await Promise.all([
+      // Fetch customers, pool details with equipment, and notes
+      const [customersData, poolsData, notesData] = await Promise.all([
         client.getCustomerDetail({ limit: 2000 }).catch(() => ({ data: [] })),
         client.getCustomerPoolDetails({ limit: 2000 }).catch(() => ({ data: [] })),
+        client.getCustomerNotes({ limit: 5000 }).catch(() => ({ data: [] })),
       ]);
+
+      // Build notes map by water body ID
+      const notesByWaterBody: Record<string, string[]> = {};
+      if (notesData.data && Array.isArray(notesData.data)) {
+        notesData.data.forEach((note: any) => {
+          const waterBodyId = note.WaterBodyID || note.waterBodyId || note.PoolID;
+          const noteText = note.Note || note.Notes || note.notes || note.Text || note.text || note.Description || note.description || '';
+          if (waterBodyId && noteText && noteText.trim()) {
+            if (!notesByWaterBody[waterBodyId]) {
+              notesByWaterBody[waterBodyId] = [];
+            }
+            notesByWaterBody[waterBodyId].push(noteText.trim());
+          }
+        });
+      }
 
       // Build customer map
       const customerMap: Record<string, any> = {};
@@ -1651,102 +1667,119 @@ function setupRoutes(app: any) {
         // Extract equipment info from pool data
         const equipment: { category: string; type: string; notes: string | null }[] = [];
         
-        // Helper to extract equipment type as string
-        const extractEquipmentType = (value: any): string | null => {
-          if (!value) return null;
-          if (typeof value === 'string') return value;
-          if (typeof value === 'object') {
-            // Pool Brain returns equipment as objects with notes field containing description
-            if (value.notes && typeof value.notes === 'string' && value.notes.trim()) {
-              return value.notes.trim();
-            }
-            // Fallback to type name or eqId lookup
-            if (value.typeName) return value.typeName;
-            if (value.name) return value.name;
-            return 'Installed';
+        // Helper to extract equipment type name (not notes)
+        const extractEquipmentType = (typeField: any, equipObj: any): string | null => {
+          // Prefer explicit *_Type field
+          if (typeField && typeof typeField === 'string' && typeField.trim()) {
+            return typeField.trim();
           }
-          return String(value);
+          // Fall back to object properties (but NOT notes - those are actual notes)
+          if (equipObj && typeof equipObj === 'object') {
+            if (equipObj.typeName) return equipObj.typeName;
+            if (equipObj.name) return equipObj.name;
+            if (equipObj.type && typeof equipObj.type === 'string') return equipObj.type;
+            // If equipment object exists but no type name, mark as installed
+            if (equipObj.isPresent === 1 || equipObj.eqId) return 'Installed';
+          }
+          return null;
+        };
+        
+        // Helper to extract notes from equipment object
+        const extractEquipmentNotes = (equipObj: any): string | null => {
+          if (!equipObj || typeof equipObj !== 'object') return null;
+          const notes = equipObj.notes || equipObj.Note || equipObj.Notes || equipObj.description;
+          if (notes && typeof notes === 'string' && notes.trim()) {
+            return notes.trim();
+          }
+          return null;
         };
         
         // Filter
-        const filterType = extractEquipmentType(pool.Filter) || extractEquipmentType(pool.FilterType);
-        if (filterType) {
+        const filterType = extractEquipmentType(pool.FilterType, pool.Filter);
+        if (filterType || pool.Filter) {
           equipment.push({
             category: 'filter',
-            type: filterType,
-            notes: typeof pool.FilterNotes === 'string' ? pool.FilterNotes : null,
+            type: filterType || 'Installed',
+            notes: extractEquipmentNotes(pool.Filter) || (typeof pool.FilterNotes === 'string' ? pool.FilterNotes : null),
           });
         }
         
         // Pump
-        const pumpType = extractEquipmentType(pool.Pump) || extractEquipmentType(pool.PumpType);
-        if (pumpType) {
+        const pumpType = extractEquipmentType(pool.PumpType, pool.Pump);
+        if (pumpType || pool.Pump) {
           equipment.push({
             category: 'pump',
-            type: pumpType,
-            notes: typeof pool.PumpNotes === 'string' ? pool.PumpNotes : null,
+            type: pumpType || 'Installed',
+            notes: extractEquipmentNotes(pool.Pump) || (typeof pool.PumpNotes === 'string' ? pool.PumpNotes : null),
           });
         }
         
         // Heater
-        const heaterType = extractEquipmentType(pool.Heater) || extractEquipmentType(pool.HeaterType);
-        if (heaterType) {
+        const heaterType = extractEquipmentType(pool.HeaterType, pool.Heater);
+        if (heaterType || pool.Heater) {
           equipment.push({
             category: 'heater',
-            type: heaterType,
-            notes: typeof pool.HeaterNotes === 'string' ? pool.HeaterNotes : null,
+            type: heaterType || 'Installed',
+            notes: extractEquipmentNotes(pool.Heater) || (typeof pool.HeaterNotes === 'string' ? pool.HeaterNotes : null),
           });
         }
         
         // Chlorinator
-        const chlorinatorType = extractEquipmentType(pool.Chlorinator) || extractEquipmentType(pool.ChlorinatorType);
-        if (chlorinatorType) {
+        const chlorinatorType = extractEquipmentType(pool.ChlorinatorType, pool.Chlorinator);
+        if (chlorinatorType || pool.Chlorinator) {
           equipment.push({
             category: 'chlorinator',
-            type: chlorinatorType,
-            notes: typeof pool.ChlorinatorNotes === 'string' ? pool.ChlorinatorNotes : null,
+            type: chlorinatorType || 'Installed',
+            notes: extractEquipmentNotes(pool.Chlorinator) || (typeof pool.ChlorinatorNotes === 'string' ? pool.ChlorinatorNotes : null),
           });
         }
         
         // Controller/Automation
-        const controllerType = extractEquipmentType(pool.Controller) || extractEquipmentType(pool.Automation);
-        if (controllerType) {
+        const controllerType = extractEquipmentType(pool.ControllerType, pool.Controller) || extractEquipmentType(pool.AutomationType, pool.Automation);
+        if (controllerType || pool.Controller || pool.Automation) {
           equipment.push({
             category: 'controller',
-            type: controllerType,
-            notes: typeof pool.ControllerNotes === 'string' ? pool.ControllerNotes : (typeof pool.AutomationNotes === 'string' ? pool.AutomationNotes : null),
+            type: controllerType || 'Installed',
+            notes: extractEquipmentNotes(pool.Controller) || extractEquipmentNotes(pool.Automation) || (typeof pool.ControllerNotes === 'string' ? pool.ControllerNotes : (typeof pool.AutomationNotes === 'string' ? pool.AutomationNotes : null)),
           });
         }
         
         // Cleaner
-        const cleanerType = extractEquipmentType(pool.Cleaner) || extractEquipmentType(pool.CleanerType);
-        if (cleanerType) {
+        const cleanerType = extractEquipmentType(pool.CleanerType, pool.Cleaner);
+        if (cleanerType || pool.Cleaner) {
           equipment.push({
             category: 'cleaner',
-            type: cleanerType,
-            notes: typeof pool.CleanerNotes === 'string' ? pool.CleanerNotes : null,
+            type: cleanerType || 'Installed',
+            notes: extractEquipmentNotes(pool.Cleaner) || (typeof pool.CleanerNotes === 'string' ? pool.CleanerNotes : null),
           });
         }
 
         // Timer
-        const timerType = extractEquipmentType(pool.Timer) || extractEquipmentType(pool.TimerType);
-        if (timerType) {
+        const timerType = extractEquipmentType(pool.TimerType, pool.Timer);
+        if (timerType || pool.Timer) {
           equipment.push({
             category: 'timer',
-            type: timerType,
-            notes: typeof pool.TimerNotes === 'string' ? pool.TimerNotes : null,
+            type: timerType || 'Installed',
+            notes: extractEquipmentNotes(pool.Timer) || (typeof pool.TimerNotes === 'string' ? pool.TimerNotes : null),
           });
         }
 
+        const poolId = pool.RecordID || pool.PoolID;
+        const poolNotes = notesByWaterBody[poolId] || [];
+        const existingPoolNotes = pool.Notes || pool.PoolNotes || null;
+        const allNotes = existingPoolNotes 
+          ? [existingPoolNotes, ...poolNotes].join('\n')
+          : poolNotes.join('\n') || null;
+
         customerMap[customerId].pools.push({
-          id: pool.RecordID || pool.PoolID,
+          id: poolId,
           name: pool.PoolName || pool.Name || 'Pool',
           type: pool.PoolType || pool.Type || 'Pool',
           address: pool.PoolAddress || pool.Address || null,
           waterType: pool.WaterType || null,
           serviceLevel: pool.ServiceLevel || null,
           equipment,
-          notes: pool.Notes || pool.PoolNotes || null,
+          notes: allNotes,
         });
       }
 
