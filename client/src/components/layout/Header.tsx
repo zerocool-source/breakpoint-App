@@ -45,7 +45,7 @@ export function Header() {
           <DateTicker />
         </div>
       </div>
-      <div className="h-16 flex items-center justify-between px-8">
+      <div className="h-16 flex items-center justify-between px-8 pl-[0px] pr-[0px]">
         <div className="flex items-center gap-4 w-1/3">
           <div className="relative w-full max-w-md group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
