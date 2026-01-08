@@ -86,12 +86,12 @@ interface EnrichedAlert {
   poolName: string;
   customerId: number;
   customerName: string;
-  alertType: string;
-  alertDescription: string;
+  type: string;
+  message: string;
   createdAt: string;
   status: string;
-  techNote?: string;
-  photos?: string[];
+  techName?: string;
+  pictures?: string[];
 }
 
 type StatusFilter = "all" | "overdue" | "due_soon";
@@ -314,13 +314,21 @@ export default function Equipment() {
   const getPropertyRepairs = (customerId: string) => {
     return alerts.filter(alert => {
       const alertCustomerId = String(alert.customerId);
-      return alertCustomerId === customerId && 
-        (alert.alertType?.toLowerCase().includes('repair') || 
-         alert.alertDescription?.toLowerCase().includes('repair') ||
-         alert.alertDescription?.toLowerCase().includes('broken') ||
-         alert.alertDescription?.toLowerCase().includes('needs') ||
-         alert.alertDescription?.toLowerCase().includes('not working') ||
-         alert.alertDescription?.toLowerCase().includes("doesn't work"));
+      const matchesCustomer = alertCustomerId === customerId;
+      if (!matchesCustomer) return false;
+      
+      const msg = (alert.message || "").toLowerCase();
+      const alertType = (alert.type || "").toLowerCase();
+      
+      return alertType.includes('issue') ||
+             alertType.includes('repair') ||
+             msg.includes('repair') ||
+             msg.includes('broken') ||
+             msg.includes('needs') ||
+             msg.includes('not working') ||
+             msg.includes("doesn't work") ||
+             msg.includes('leak') ||
+             msg.includes('issue');
     });
   };
 
@@ -756,9 +764,9 @@ export default function Equipment() {
                                   <div className="flex items-center gap-2">
                                     <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300">
                                       <Wrench className="h-3 w-3 mr-1" />
-                                      Repair Needed
+                                      {repair.type || "Issue"}
                                     </Badge>
-                                    {repair.photos && repair.photos.length > 0 && (
+                                    {repair.pictures && repair.pictures.length > 0 && (
                                       <Button variant="link" size="sm" className="h-6 px-0 text-blue-600 gap-1">
                                         <Camera className="h-3 w-3" />
                                         View Pictures
@@ -768,12 +776,12 @@ export default function Equipment() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <p className="font-medium text-slate-800">{repair.alertDescription || "Equipment needs repair"}</p>
+                                  <p className="font-medium text-slate-800">{repair.message || "Equipment needs attention"}</p>
                                   
-                                  {repair.techNote && (
+                                  {repair.techName && (
                                     <div className="bg-white rounded p-2 border">
-                                      <p className="text-xs text-slate-500 font-medium">Tech Note:</p>
-                                      <p className="text-sm text-slate-700">{repair.techNote}</p>
+                                      <p className="text-xs text-slate-500 font-medium">Technician:</p>
+                                      <p className="text-sm text-slate-700">{repair.techName}</p>
                                     </div>
                                   )}
 
