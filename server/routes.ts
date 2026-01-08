@@ -4570,6 +4570,77 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to seed fleet data" });
     }
   });
+
+  // ==================== TRUCK INVENTORY ====================
+
+  // Get all inventory for a truck
+  app.get("/api/fleet/inventory/:truckId", async (req: any, res: any) => {
+    try {
+      const { truckId } = req.params;
+      const inventory = await storage.getTruckInventory(truckId);
+      res.json(inventory);
+    } catch (error: any) {
+      console.error("Error getting truck inventory:", error);
+      res.status(500).json({ error: "Failed to get truck inventory" });
+    }
+  });
+
+  // Get all inventory across all trucks
+  app.get("/api/fleet/inventory", async (req: any, res: any) => {
+    try {
+      const inventory = await storage.getAllTruckInventory();
+      res.json(inventory);
+    } catch (error: any) {
+      console.error("Error getting all inventory:", error);
+      res.status(500).json({ error: "Failed to get all inventory" });
+    }
+  });
+
+  // Get low stock items
+  app.get("/api/fleet/inventory-low-stock", async (req: any, res: any) => {
+    try {
+      const lowStock = await storage.getLowStockItems();
+      res.json(lowStock);
+    } catch (error: any) {
+      console.error("Error getting low stock items:", error);
+      res.status(500).json({ error: "Failed to get low stock items" });
+    }
+  });
+
+  // Create inventory item
+  app.post("/api/fleet/inventory", async (req: any, res: any) => {
+    try {
+      const item = await storage.createTruckInventoryItem(req.body);
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error creating inventory item:", error);
+      res.status(500).json({ error: "Failed to create inventory item" });
+    }
+  });
+
+  // Update inventory item
+  app.put("/api/fleet/inventory/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const updated = await storage.updateTruckInventoryItem(id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating inventory item:", error);
+      res.status(500).json({ error: "Failed to update inventory item" });
+    }
+  });
+
+  // Delete inventory item
+  app.delete("/api/fleet/inventory/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteTruckInventoryItem(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting inventory item:", error);
+      res.status(500).json({ error: "Failed to delete inventory item" });
+    }
+  });
 }
 
   

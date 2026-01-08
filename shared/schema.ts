@@ -1034,3 +1034,41 @@ export const insertFleetMaintenanceRecordSchema = createInsertSchema(fleetMainte
 
 export type InsertFleetMaintenanceRecord = z.infer<typeof insertFleetMaintenanceRecordSchema>;
 export type FleetMaintenanceRecord = typeof fleetMaintenanceRecords.$inferSelect;
+
+// Truck Inventory Items
+export const TRUCK_INVENTORY_CATEGORIES = [
+  "Chemicals",
+  "Tools",
+  "Parts",
+  "Safety Equipment",
+  "Cleaning Supplies",
+  "Test Equipment",
+  "Other",
+] as const;
+
+export type TruckInventoryCategory = typeof TRUCK_INVENTORY_CATEGORIES[number];
+
+export const truckInventory = pgTable("truck_inventory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  truckId: varchar("truck_id").notNull(),
+  truckNumber: integer("truck_number").notNull(),
+  itemName: text("item_name").notNull(),
+  category: text("category").notNull(),
+  quantity: integer("quantity").notNull().default(0),
+  unit: text("unit").default("each"),
+  minQuantity: integer("min_quantity").default(0),
+  maxQuantity: integer("max_quantity"),
+  lastRestocked: timestamp("last_restocked"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTruckInventorySchema = createInsertSchema(truckInventory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTruckInventory = z.infer<typeof insertTruckInventorySchema>;
+export type TruckInventory = typeof truckInventory.$inferSelect;

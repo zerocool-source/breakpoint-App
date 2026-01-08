@@ -33,13 +33,14 @@ import {
   type PmServiceRecord, type InsertPmServiceRecord,
   type FleetTruck, type InsertFleetTruck,
   type FleetMaintenanceRecord, type InsertFleetMaintenanceRecord,
+  type TruckInventory, type InsertTruckInventory,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
   estimates, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
-  fleetTrucks, fleetMaintenanceRecords
+  fleetTrucks, fleetMaintenanceRecords, truckInventory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -1726,6 +1727,40 @@ export class DbStorage implements IStorage {
       .orderBy(desc(fleetMaintenanceRecords.serviceDate))
       .limit(1);
     return result[0];
+  }
+
+  // Truck Inventory
+  async getTruckInventory(truckId: string): Promise<TruckInventory[]> {
+    return db.select().from(truckInventory)
+      .where(eq(truckInventory.truckId, truckId))
+      .orderBy(truckInventory.category, truckInventory.itemName);
+  }
+
+  async getAllTruckInventory(): Promise<TruckInventory[]> {
+    return db.select().from(truckInventory)
+      .orderBy(truckInventory.truckNumber, truckInventory.category, truckInventory.itemName);
+  }
+
+  async createTruckInventoryItem(item: InsertTruckInventory): Promise<TruckInventory> {
+    const result = await db.insert(truckInventory).values(item as any).returning();
+    return result[0];
+  }
+
+  async updateTruckInventoryItem(id: string, updates: Partial<InsertTruckInventory>): Promise<TruckInventory | undefined> {
+    const result = await db.update(truckInventory)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(truckInventory.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTruckInventoryItem(id: string): Promise<void> {
+    await db.delete(truckInventory).where(eq(truckInventory.id, id));
+  }
+
+  async getLowStockItems(): Promise<TruckInventory[]> {
+    const all = await this.getAllTruckInventory();
+    return all.filter(item => item.quantity <= (item.minQuantity || 0));
   }
 }
 

@@ -19,11 +19,15 @@ import {
   Clock,
   Plus,
   Search,
-  ClipboardCheck
+  ClipboardCheck,
+  Package,
+  PackagePlus,
+  Minus,
+  Trash2
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import type { FleetTruck, FleetMaintenanceRecord } from "@shared/schema";
-import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES } from "@shared/schema";
+import type { FleetTruck, FleetMaintenanceRecord, TruckInventory } from "@shared/schema";
+import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES, TRUCK_INVENTORY_CATEGORIES } from "@shared/schema";
 
 function excelDateToJS(serial: number): Date {
   const utc_days = Math.floor(serial - 25569);
@@ -115,6 +119,17 @@ export default function Fleet() {
     serviceDate: new Date().toISOString().split('T')[0],
   });
 
+  const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [selectedInventoryTruck, setSelectedInventoryTruck] = useState<FleetTruck | null>(null);
+  const [newInventoryItem, setNewInventoryItem] = useState({
+    itemName: "",
+    category: "Chemicals",
+    quantity: 0,
+    unit: "each",
+    minQuantity: 0,
+    notes: "",
+  });
+
   const { data: trucks = [], isLoading: trucksLoading } = useQuery<FleetTruck[]>({
     queryKey: ["/api/fleet/trucks"],
     queryFn: async () => {
@@ -127,6 +142,22 @@ export default function Fleet() {
     queryKey: ["/api/fleet/maintenance"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/maintenance");
+      return res.json();
+    },
+  });
+
+  const { data: allInventory = [] } = useQuery<TruckInventory[]>({
+    queryKey: ["/api/fleet/inventory"],
+    queryFn: async () => {
+      const res = await fetch("/api/fleet/inventory");
+      return res.json();
+    },
+  });
+
+  const { data: lowStockItems = [] } = useQuery<TruckInventory[]>({
+    queryKey: ["/api/fleet/inventory-low-stock"],
+    queryFn: async () => {
+      const res = await fetch("/api/fleet/inventory-low-stock");
       return res.json();
     },
   });
@@ -180,6 +211,61 @@ export default function Fleet() {
       toast({ title: "Error", description: "Failed to save service record. Please try again.", variant: "destructive" });
     },
   });
+
+  const addInventoryMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/fleet/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to add inventory item");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/inventory-low-stock"] });
+      setInventoryModalOpen(false);
+      setNewInventoryItem({ itemName: "", category: "Chemicals", quantity: 0, unit: "each", minQuantity: 0, notes: "" });
+      toast({ title: "Inventory added", description: "Item has been added to truck inventory." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add inventory item.", variant: "destructive" });
+    },
+  });
+
+  const updateInventoryMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      const res = await fetch(`/api/fleet/inventory/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error("Failed to update inventory");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/inventory-low-stock"] });
+    },
+  });
+
+  const deleteInventoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/fleet/inventory/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete inventory");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/inventory-low-stock"] });
+      toast({ title: "Item removed", description: "Inventory item has been removed." });
+    },
+  });
+
+  const getInventoryForTruck = (truckId: string) => {
+    return allInventory.filter(item => item.truckId === truckId);
+  };
 
   // Calculate stats
   const stats = {
@@ -635,6 +721,142 @@ export default function Fleet() {
             )}
           </CardContent>
         </Card>
+
+        {/* Truck Inventory Section */}
+        <Card className="bg-white shadow-sm">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Package className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-lg font-semibold">Truck Inventory</CardTitle>
+                {lowStockItems.length > 0 && (
+                  <Badge className="bg-red-100 text-red-700">
+                    {lowStockItems.length} Low Stock
+                  </Badge>
+                )}
+              </div>
+              <Button 
+                size="sm" 
+                onClick={() => setInventoryModalOpen(true)} 
+                data-testid="button-add-inventory"
+              >
+                <PackagePlus className="h-4 w-4 mr-2" />
+                Add Inventory Item
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {trucks.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>No trucks available. Add trucks first to manage inventory.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {trucks.map(truck => {
+                  const inventory = getInventoryForTruck(truck.id);
+                  const lowItems = inventory.filter(item => item.quantity <= (item.minQuantity || 0));
+                  
+                  return (
+                    <div key={truck.id} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-blue-600" />
+                          <span className="font-bold">Truck #{truck.truckNumber}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {inventory.length} items
+                          </Badge>
+                          {lowItems.length > 0 && (
+                            <Badge className="bg-red-100 text-red-700 text-xs">
+                              {lowItems.length} low
+                            </Badge>
+                          )}
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInventoryTruck(truck);
+                            setInventoryModalOpen(true);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Item
+                        </Button>
+                      </div>
+                      
+                      {inventory.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">No inventory items tracked</p>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {inventory.slice(0, 8).map(item => (
+                            <div 
+                              key={item.id} 
+                              className={`p-2 rounded border text-sm ${
+                                item.quantity <= (item.minQuantity || 0) 
+                                  ? 'bg-red-50 border-red-200' 
+                                  : 'bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium truncate">{item.itemName}</span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0"
+                                    onClick={() => updateInventoryMutation.mutate({
+                                      id: item.id,
+                                      updates: { quantity: Math.max(0, item.quantity - 1) }
+                                    })}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className={`font-bold ${
+                                    item.quantity <= (item.minQuantity || 0) ? 'text-red-600' : ''
+                                  }`}>
+                                    {item.quantity}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0"
+                                    onClick={() => updateInventoryMutation.mutate({
+                                      id: item.id,
+                                      updates: { quantity: item.quantity + 1 }
+                                    })}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className="text-xs text-gray-500">{item.category}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-4 w-4 p-0 text-red-500 hover:text-red-700"
+                                  onClick={() => deleteInventoryMutation.mutate(item.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          {inventory.length > 8 && (
+                            <div className="p-2 flex items-center justify-center text-sm text-blue-600">
+                              +{inventory.length - 8} more items
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Truck Detail Modal */}
@@ -779,6 +1001,135 @@ export default function Fleet() {
               }}
             >
               Save Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Inventory Modal */}
+      <Dialog open={inventoryModalOpen} onOpenChange={(open) => {
+        setInventoryModalOpen(open);
+        if (!open) {
+          setSelectedInventoryTruck(null);
+          setNewInventoryItem({ itemName: "", category: "Chemicals", quantity: 0, unit: "each", minQuantity: 0, notes: "" });
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              Add Inventory Item
+            </DialogTitle>
+            <DialogDescription>Add a new item to truck inventory.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Truck</Label>
+              <Select 
+                value={selectedInventoryTruck?.id || ""} 
+                onValueChange={(v) => setSelectedInventoryTruck(trucks.find(t => t.id === v) || null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select truck" />
+                </SelectTrigger>
+                <SelectContent>
+                  {trucks.map(t => (
+                    <SelectItem key={t.id} value={t.id}>Truck #{t.truckNumber}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Item Name</Label>
+              <Input 
+                value={newInventoryItem.itemName}
+                onChange={(e) => setNewInventoryItem({ ...newInventoryItem, itemName: e.target.value })}
+                placeholder="e.g., Chlorine Tablets, Test Strips..."
+              />
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select 
+                value={newInventoryItem.category} 
+                onValueChange={(v) => setNewInventoryItem({ ...newInventoryItem, category: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRUCK_INVENTORY_CATEGORIES.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Quantity</Label>
+                <Input 
+                  type="number"
+                  min={0}
+                  value={newInventoryItem.quantity}
+                  onChange={(e) => setNewInventoryItem({ ...newInventoryItem, quantity: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <Label>Unit</Label>
+                <Select 
+                  value={newInventoryItem.unit} 
+                  onValueChange={(v) => setNewInventoryItem({ ...newInventoryItem, unit: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="each">Each</SelectItem>
+                    <SelectItem value="lbs">Lbs</SelectItem>
+                    <SelectItem value="gallons">Gallons</SelectItem>
+                    <SelectItem value="cases">Cases</SelectItem>
+                    <SelectItem value="boxes">Boxes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>Minimum Quantity (for low stock alert)</Label>
+              <Input 
+                type="number"
+                min={0}
+                value={newInventoryItem.minQuantity}
+                onChange={(e) => setNewInventoryItem({ ...newInventoryItem, minQuantity: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Textarea 
+                value={newInventoryItem.notes}
+                onChange={(e) => setNewInventoryItem({ ...newInventoryItem, notes: e.target.value })}
+                placeholder="Optional notes..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInventoryModalOpen(false)}>Cancel</Button>
+            <Button 
+              disabled={!selectedInventoryTruck || !newInventoryItem.itemName}
+              onClick={() => {
+                if (selectedInventoryTruck && newInventoryItem.itemName) {
+                  addInventoryMutation.mutate({
+                    truckId: selectedInventoryTruck.id,
+                    truckNumber: selectedInventoryTruck.truckNumber,
+                    itemName: newInventoryItem.itemName,
+                    category: newInventoryItem.category,
+                    quantity: newInventoryItem.quantity,
+                    unit: newInventoryItem.unit,
+                    minQuantity: newInventoryItem.minQuantity,
+                    notes: newInventoryItem.notes || null,
+                  });
+                }
+              }}
+            >
+              Add Item
             </Button>
           </DialogFooter>
         </DialogContent>
