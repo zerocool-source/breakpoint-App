@@ -243,7 +243,10 @@ export function Sidebar() {
       key: "fleet",
       icon: Truck, 
       label: "Fleet", 
-      href: "/fleet"
+      children: [
+        { label: "Fleet Dashboard", href: "/fleet" },
+        { label: "Truck Inventory", href: "/fleet/inventory" },
+      ]
     },
     { 
       key: "vendors",

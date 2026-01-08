@@ -25,6 +25,7 @@ import ServiceTechs from "@/pages/ServiceTechs";
 import RepairTechs from "@/pages/RepairTechs";
 import Notes from "@/pages/Notes";
 import Fleet from "@/pages/Fleet";
+import TruckInventory from "@/pages/TruckInventory";
 import Equipment from "@/pages/Equipment";
 import Operations from "@/pages/Operations";
 import NotFound from "@/pages/not-found";
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/tech-repairs" component={RepairTechs} />
       <Route path="/notes" component={Notes} />
       <Route path="/fleet" component={Fleet} />
+      <Route path="/fleet/inventory" component={TruckInventory} />
       <Route path="/equipment" component={Equipment} />
       <Route path="/operations" component={Operations} />
       <Route path="/intelligence" component={Intelligence} />
