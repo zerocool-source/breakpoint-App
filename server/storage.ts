@@ -72,6 +72,7 @@ export interface IStorage {
 
   // Customer Addresses
   getCustomerAddresses(customerId: string): Promise<CustomerAddress[]>;
+  getAllAddressesWithCustomers(): Promise<{ id: string; addressLine1: string | null; city: string | null; state: string | null; zip: string | null; customerName: string }[]>;
   getCustomerAddress(id: string): Promise<CustomerAddress | undefined>;
   createCustomerAddress(address: InsertCustomerAddress): Promise<CustomerAddress>;
   upsertCustomerAddress(customerId: string, externalId: string, address: InsertCustomerAddress): Promise<CustomerAddress>;
@@ -391,6 +392,21 @@ export class DbStorage implements IStorage {
   // Customer Addresses
   async getCustomerAddresses(customerId: string): Promise<CustomerAddress[]> {
     return db.select().from(customerAddresses).where(eq(customerAddresses.customerId, customerId));
+  }
+
+  async getAllAddressesWithCustomers(): Promise<{ id: string; addressLine1: string | null; city: string | null; state: string | null; zip: string | null; customerName: string }[]> {
+    const result = await db
+      .select({
+        id: customerAddresses.id,
+        addressLine1: customerAddresses.addressLine1,
+        city: customerAddresses.city,
+        state: customerAddresses.state,
+        zip: customerAddresses.zip,
+        customerName: customers.name,
+      })
+      .from(customerAddresses)
+      .innerJoin(customers, eq(customerAddresses.customerId, customers.id));
+    return result;
   }
 
   async getCustomerAddress(id: string): Promise<CustomerAddress | undefined> {

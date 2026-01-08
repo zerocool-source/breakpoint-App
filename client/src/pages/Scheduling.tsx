@@ -338,7 +338,8 @@ export default function Scheduling() {
   const unscheduledByDay = useMemo(() => {
     const grouped: Record<number, UnscheduledOccurrence[]> = {};
     for (const occ of unscheduledOccurrences) {
-      const dayOfWeek = new Date(occ.date).getDay();
+      // Use getUTCDay() to avoid timezone issues with UTC dates
+      const dayOfWeek = new Date(occ.date).getUTCDay();
       if (!grouped[dayOfWeek]) grouped[dayOfWeek] = [];
       grouped[dayOfWeek].push(occ);
     }
@@ -676,6 +677,7 @@ export default function Scheduling() {
                   className="w-80 p-0 bg-white shadow-xl border border-slate-200" 
                   align="end"
                   sideOffset={8}
+                  disablePortal={true}
                 >
                   <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
                     <div className="flex items-center gap-2">

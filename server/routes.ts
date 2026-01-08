@@ -3389,19 +3389,16 @@ function setupRoutes(app: any) {
         sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6
       };
       
-      // Get all addresses to enrich with customer/property data
-      const allCustomers = await storage.getCustomers();
+      // Get all addresses with customer data in one efficient query
+      const allAddresses = await storage.getAllAddressesWithCustomers();
       const addressMap = new Map<string, { propertyName: string; customerName: string; address: string }>();
       
-      for (const customer of allCustomers) {
-        const addresses = await storage.getCustomerAddresses(customer.id);
-        for (const addr of addresses) {
-          addressMap.set(addr.id, {
-            propertyName: addr.street || "Property",
-            customerName: customer.name,
-            address: `${addr.street || ""}, ${addr.city || ""}, ${addr.state || ""} ${addr.zip || ""}`.trim()
-          });
-        }
+      for (const addr of allAddresses) {
+        addressMap.set(addr.id, {
+          propertyName: addr.addressLine1 || "Property",
+          customerName: addr.customerName,
+          address: `${addr.addressLine1 || ""}, ${addr.city || ""}, ${addr.state || ""} ${addr.zip || ""}`.trim()
+        });
       }
       
       // Generate occurrences for each active schedule
