@@ -35,8 +35,11 @@ import {
   ClipboardCheck,
   Calendar,
   AlertCircle,
-  Pause
+  Pause,
+  Download
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { PM_SERVICE_REASONS, type EquipmentPmSchedule, type PmServiceType, type PmServiceRecord } from "@shared/schema";
 
 interface PoolEquipment {
@@ -524,6 +527,93 @@ export default function Notes() {
     0
   );
 
+  const exportToExcel = () => {
+    const equipmentRows: Array<{
+      Customer: string;
+      Address: string;
+      Pool: string;
+      "Pool Type": string;
+      "Water Type": string;
+      Category: string;
+      Type: string;
+      Notes: string;
+    }> = [];
+
+    const pmRows: Array<{
+      Customer: string;
+      Pool: string;
+      "Service Type": string;
+      "Status": string;
+      "Last Service": string;
+      "Next Due": string;
+      "Interval (Months)": number;
+    }> = [];
+
+    for (const customer of customers) {
+      const customerAddress = [customer.address, customer.city, customer.state, customer.zip]
+        .filter(Boolean)
+        .join(", ");
+      
+      for (const pool of customer.pools) {
+        for (const equip of pool.equipment) {
+          equipmentRows.push({
+            Customer: customer.name,
+            Address: customerAddress,
+            Pool: pool.name,
+            "Pool Type": pool.type || "",
+            "Water Type": pool.waterType || "",
+            Category: equip.category,
+            Type: equip.type,
+            Notes: equip.notes || "",
+          });
+        }
+      }
+
+      const customerSchedules = getPmSchedulesForCustomer(customer.id);
+      for (const schedule of customerSchedules) {
+        const serviceType = serviceTypes.find(st => st.id === schedule.pmServiceTypeId);
+        const statusLabel = schedule.status === "paused" ? "Paused" : 
+          (schedule.duePriority || 0) < -30 ? "Critical" :
+          (schedule.duePriority || 0) < 0 ? "Overdue" :
+          (schedule.duePriority || 0) <= 30 ? "Due Soon" : "Current";
+        
+        const intervalMonths = schedule.customIntervalMonths || 0;
+        
+        pmRows.push({
+          Customer: customer.name,
+          Pool: customer.pools.find(p => p.id === schedule.bodyOfWaterId)?.name || schedule.propertyName,
+          "Service Type": serviceType?.name || "Unknown",
+          "Status": statusLabel,
+          "Last Service": schedule.lastServiceDate ? new Date(schedule.lastServiceDate).toLocaleDateString() : "Never",
+          "Next Due": schedule.nextDueDate ? new Date(schedule.nextDueDate).toLocaleDateString() : "Not set",
+          "Interval (Months)": intervalMonths,
+        });
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    
+    const equipmentWs = XLSX.utils.json_to_sheet(equipmentRows);
+    equipmentWs["!cols"] = [
+      { wch: 30 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, 
+      { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 50 }
+    ];
+    XLSX.utils.book_append_sheet(wb, equipmentWs, "Equipment");
+
+    if (pmRows.length > 0) {
+      const pmWs = XLSX.utils.json_to_sheet(pmRows);
+      pmWs["!cols"] = [
+        { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 12 },
+        { wch: 15 }, { wch: 15 }, { wch: 15 }
+      ];
+      XLSX.utils.book_append_sheet(wb, pmWs, "PM Schedules");
+    }
+
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/octet-stream" });
+    saveAs(blob, `Equipment_Notes_${new Date().toISOString().split("T")[0]}.xlsx`);
+  };
+
   return (
     <AppLayout>
       <div data-testid="notes-page">
@@ -534,15 +624,26 @@ export default function Notes() {
               All customer equipment from Pool Brain
             </p>
           </div>
-          <Button 
-            onClick={() => refetch()} 
-            disabled={isFetching}
-            className="bg-blue-600 hover:bg-blue-700"
-            data-testid="button-refresh"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            {isFetching ? 'Syncing...' : 'Sync from Pool Brain'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={exportToExcel} 
+              variant="outline"
+              className="border-green-300 text-green-700 hover:bg-green-50"
+              data-testid="button-export"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button 
+              onClick={() => refetch()} 
+              disabled={isFetching}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              {isFetching ? 'Syncing...' : 'Sync from Pool Brain'}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
