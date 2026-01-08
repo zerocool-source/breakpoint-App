@@ -836,7 +836,7 @@ export default function Scheduling() {
                     <div key={dayOfWeek} className="border-r border-slate-200 last:border-r-0 flex flex-col bg-slate-50 overflow-hidden">
                       {/* Scrollable Route Cards - Unscheduled items only appear in Route Stops popover */}
                       <ScrollArea className="flex-1">
-                        <div className="p-2 space-y-2">
+                        <div className="p-2 space-y-2 pl-[0px] pr-[0px] pt-[0px] pb-[0px]">
                           {dayRoutesForColumn.length === 0 ? (
                             <div className="text-center py-8 text-slate-400 text-sm">
                               No routes scheduled
@@ -1134,7 +1134,7 @@ export default function Scheduling() {
             </div>
           ) : (
             /* Map View */
-            <div className="flex-1 flex gap-4 p-4 overflow-hidden">
+            (<div className="flex-1 flex gap-4 p-4 overflow-hidden">
               <div className="w-72 flex-shrink-0 space-y-2 overflow-auto bg-white rounded-lg p-3 shadow-sm">
                 <h3 className="font-semibold text-slate-700 text-sm mb-3">
                   All Routes ({allRoutes.length})
@@ -1161,7 +1161,6 @@ export default function Scheduling() {
                   </div>
                 ))}
               </div>
-
               <div className="flex-1 rounded-lg overflow-hidden shadow-sm">
                 <MapContainer
                   center={defaultCenter}
@@ -1220,7 +1219,7 @@ export default function Scheduling() {
                   })}
                 </MapContainer>
               </div>
-            </div>
+            </div>)
           )}
 
           {/* Create Route Dialog */}

@@ -119,11 +119,13 @@ export const equipment = pgTable("equipment", {
   customerId: varchar("customer_id").notNull(),
   poolId: varchar("pool_id"), // Links to body of water (pool, spa, fountain, etc.)
   propertyId: varchar("property_id"),
-  category: text("category").notNull(), // "filter", "pump", "heater", "controller", "chlorinator", "cleaner", "other"
-  equipmentType: text("equipment_type").notNull(), // "Sand", "DE", "Cartridge", "Variable Speed", "In-Line Chlorinator", etc.
-  brand: text("brand"),
+  category: text("category").notNull(), // "filter", "pump", "heater", "controller", "feed_pump", "probe", "timer", "fill_valve", "other"
+  equipmentType: text("equipment_type").notNull(), // "Sand", "DE", "Cartridge", "Variable Speed", etc.
+  brand: text("brand"), // Make
   model: text("model"),
-  serialNumber: text("serial_number"),
+  serialNumber: text("serial_number"), // For warranty items
+  quantity: integer("quantity").default(1),
+  photos: text("photos").array(), // Array of photo URLs
   installDate: timestamp("install_date"),
   warrantyExpiry: timestamp("warranty_expiry"),
   notes: text("notes"),

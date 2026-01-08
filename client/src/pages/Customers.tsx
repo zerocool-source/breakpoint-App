@@ -78,6 +78,8 @@ interface Equipment {
   brand: string | null;
   model: string | null;
   serialNumber: string | null;
+  quantity: number | null;
+  photos: string[] | null;
   installDate: string | null;
   warrantyExpiry: string | null;
   notes: string | null;
@@ -109,17 +111,25 @@ const EQUIPMENT_CATEGORIES = [
   { value: "pump", label: "Pump", icon: "💧" },
   { value: "heater", label: "Heater", icon: "🔥" },
   { value: "controller", label: "Controller", icon: "🎛️" },
+  { value: "feed_pump", label: "Feed Pump", icon: "💉" },
+  { value: "probe", label: "Probe", icon: "📊" },
+  { value: "timer", label: "Timer", icon: "⏱️" },
+  { value: "fill_valve", label: "Fill Valve", icon: "🚰" },
   { value: "chlorinator", label: "Chlorinator", icon: "🧪" },
   { value: "cleaner", label: "Cleaner", icon: "🧹" },
   { value: "other", label: "Other", icon: "⚙️" },
 ];
 
 const EQUIPMENT_TYPES: Record<string, string[]> = {
-  filter: ["Sand", "DE", "Cartridge"],
-  pump: ["Single Speed", "Dual Speed", "Variable Speed"],
+  filter: ["Sand", "DE", "Cartridge", "TR100C", "TR140C", "TR60C"],
+  pump: ["Single Speed", "Dual Speed", "Variable Speed", "Booster"],
   heater: ["Gas", "Electric", "Heat Pump", "Solar"],
-  controller: ["Automation", "Timer", "Salt Cell Controller"],
-  chlorinator: ["Salt Cell", "In-Line", "Floating"],
+  controller: ["Automation", "IntelliCenter", "EasyTouch", "SunTouch", "Aqualink"],
+  feed_pump: ["Stenner", "Rol-A-Chem", "Blue-White", "LMI", "Walchem"],
+  probe: ["pH Probe", "ORP Probe", "pH/ORP Combo", "Temperature Probe"],
+  timer: ["Mechanical", "Digital", "Intermatic", "Tork"],
+  fill_valve: ["Auto-Fill", "Levolor", "Float Valve", "Electronic"],
+  chlorinator: ["Salt Cell", "In-Line", "Floating", "Tab Feeder"],
   cleaner: ["Suction", "Pressure", "Robotic"],
   other: ["Cover", "Light", "Valve", "Blower", "Custom"],
 };
@@ -624,6 +634,7 @@ function AddEquipmentModal({
     brand: "",
     model: "",
     serialNumber: "",
+    quantity: "1",
     installDate: "",
     warrantyExpiry: "",
     notes: "",
@@ -641,12 +652,13 @@ function AddEquipmentModal({
       brand: formData.brand || null,
       model: formData.model || null,
       serialNumber: formData.serialNumber || null,
+      quantity: parseInt(formData.quantity) || 1,
       customerId,
       installDate: formData.installDate || null,
       warrantyExpiry: formData.warrantyExpiry || null,
       notes: formData.notes || null,
     });
-    setFormData({ category: "pump", selectedType: "", customType: "", poolId: "", brand: "", model: "", serialNumber: "", installDate: "", warrantyExpiry: "", notes: "" });
+    setFormData({ category: "pump", selectedType: "", customType: "", poolId: "", brand: "", model: "", serialNumber: "", quantity: "1", installDate: "", warrantyExpiry: "", notes: "" });
     onClose();
   };
 
@@ -745,13 +757,25 @@ function AddEquipmentModal({
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>Serial Number</Label>
-            <Input
-              value={formData.serialNumber}
-              onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-              placeholder="S/N"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Serial Number</Label>
+              <Input
+                value={formData.serialNumber}
+                onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                placeholder="S/N (for warranty)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Quantity</Label>
+              <Input
+                type="number"
+                min="1"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                placeholder="1"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -1874,7 +1898,12 @@ function CustomerDetailPanel({
                           <CardContent className="p-3">
                             <div className="flex items-start justify-between">
                               <div>
-                                <p className="font-medium text-sm">{equip.equipmentType}</p>
+                                <p className="font-medium text-sm">
+                                  {equip.quantity && equip.quantity > 1 && (
+                                    <span className="text-blue-600 mr-1">{equip.quantity}x</span>
+                                  )}
+                                  {equip.equipmentType}
+                                </p>
                                 {equip.brand && (
                                   <p className="text-xs text-slate-500">{equip.brand}{equip.model && ` - ${equip.model}`}</p>
                                 )}
