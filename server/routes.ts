@@ -1543,10 +1543,11 @@ function setupRoutes(app: any) {
   app.post("/api/customers/:customerId/equipment", async (req: any, res: any) => {
     try {
       const { customerId } = req.params;
-      const { propertyId, category, equipmentType, brand, model, serialNumber, installDate, warrantyExpiry, notes } = req.body;
+      const { propertyId, poolId, category, equipmentType, brand, model, serialNumber, installDate, warrantyExpiry, notes } = req.body;
       const equip = await storage.createEquipment({
         customerId,
         propertyId: propertyId || null,
+        poolId: poolId || null,
         category,
         equipmentType,
         brand: brand || null,
