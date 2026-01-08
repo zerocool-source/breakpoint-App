@@ -231,6 +231,9 @@ export interface IStorage {
   getRouteMoves(date?: Date): Promise<RouteMove[]>;
   createRouteMove(move: InsertRouteMove): Promise<RouteMove>;
   deleteRouteMove(id: string): Promise<void>;
+
+  // Scheduling Reset
+  resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number }>;
 }
 
 export class DbStorage implements IStorage {
@@ -1297,6 +1300,20 @@ export class DbStorage implements IStorage {
 
   async deleteRouteMove(id: string): Promise<void> {
     await db.delete(routeMoves).where(eq(routeMoves.id, id));
+  }
+
+  async resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number }> {
+    const stopsResult = await db.delete(routeStops).returning();
+    const routesResult = await db.delete(routes).returning();
+    const movesResult = await db.delete(routeMoves).returning();
+    const unscheduledResult = await db.delete(unscheduledStops).returning();
+    
+    return {
+      routesDeleted: routesResult.length,
+      stopsDeleted: stopsResult.length,
+      movesDeleted: movesResult.length,
+      unscheduledDeleted: unscheduledResult.length,
+    };
   }
 }
 

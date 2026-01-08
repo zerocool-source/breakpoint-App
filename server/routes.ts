@@ -3641,6 +3641,21 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Reset all scheduling data (routes, stops, moves, unscheduled)
+  app.post("/api/scheduling/reset", async (req: any, res: any) => {
+    try {
+      const result = await storage.resetSchedulingData();
+      res.json({ 
+        success: true, 
+        message: "Scheduling data reset successfully",
+        ...result
+      });
+    } catch (error: any) {
+      console.error("Error resetting scheduling data:", error);
+      res.status(500).json({ error: "Failed to reset scheduling data" });
+    }
+  });
+
   // ==================== UNSCHEDULED STOPS ====================
 
   // Get unscheduled stops
