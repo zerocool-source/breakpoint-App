@@ -37,6 +37,10 @@ import {
   Wrench,
   X,
   Droplets,
+  Camera,
+  FileCheck,
+  Hammer,
+  Image,
 } from "lucide-react";
 import {
   PM_EQUIPMENT_TYPES,
@@ -74,6 +78,20 @@ interface PropertyActivityLog {
   details?: string;
   createdBy?: string;
   createdAt: string;
+}
+
+interface EnrichedAlert {
+  alertId: number;
+  poolId: number;
+  poolName: string;
+  customerId: number;
+  customerName: string;
+  alertType: string;
+  alertDescription: string;
+  createdAt: string;
+  status: string;
+  techNote?: string;
+  photos?: string[];
 }
 
 type StatusFilter = "all" | "overdue" | "due_soon";
@@ -120,6 +138,12 @@ export default function Equipment() {
   const { data: serviceTypes = [] } = useQuery<PmServiceType[]>({
     queryKey: ["/api/pm/service-types"],
   });
+
+  const { data: alertsData } = useQuery<{ alerts: EnrichedAlert[] }>({
+    queryKey: ["/api/alerts/enriched"],
+  });
+  
+  const alerts = alertsData?.alerts || [];
 
   const regions = useMemo(() => {
     const regionSet = new Set<string>();
@@ -285,6 +309,23 @@ export default function Equipment() {
       customModel: "",
       notes: "",
     });
+  };
+
+  const getPropertyRepairs = (customerId: string) => {
+    return alerts.filter(alert => {
+      const alertCustomerId = String(alert.customerId);
+      return alertCustomerId === customerId && 
+        (alert.alertType?.toLowerCase().includes('repair') || 
+         alert.alertDescription?.toLowerCase().includes('repair') ||
+         alert.alertDescription?.toLowerCase().includes('broken') ||
+         alert.alertDescription?.toLowerCase().includes('needs') ||
+         alert.alertDescription?.toLowerCase().includes('not working') ||
+         alert.alertDescription?.toLowerCase().includes("doesn't work"));
+    });
+  };
+
+  const getPropertyRepairCount = (customerId: string) => {
+    return getPropertyRepairs(customerId).length;
   };
 
   const addEquipmentMutation = useMutation({
@@ -573,15 +614,19 @@ export default function Equipment() {
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
                   <TabsList className="w-full rounded-none border-b bg-white">
-                    <TabsTrigger value="equipment" className="flex-1 gap-1">
+                    <TabsTrigger value="equipment" className="flex-1 gap-1 text-xs">
                       <Wrench className="h-4 w-4" />
                       Equipment
                     </TabsTrigger>
-                    <TabsTrigger value="logs" className="flex-1 gap-1">
+                    <TabsTrigger value="operations" className="flex-1 gap-1 text-xs">
+                      <Hammer className="h-4 w-4" />
+                      Operations
+                    </TabsTrigger>
+                    <TabsTrigger value="logs" className="flex-1 gap-1 text-xs">
                       <FileText className="h-4 w-4" />
                       Logs
                     </TabsTrigger>
-                    <TabsTrigger value="settings" className="flex-1 gap-1">
+                    <TabsTrigger value="settings" className="flex-1 gap-1 text-xs">
                       <Settings className="h-4 w-4" />
                       Settings
                     </TabsTrigger>
@@ -686,6 +731,84 @@ export default function Equipment() {
                           </Button>
                         </div>
                       )}
+                    </ScrollArea>
+                  </TabsContent>
+
+                  <TabsContent value="operations" className="mt-0 p-4">
+                    <ScrollArea className="h-[calc(100vh-280px)]">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-red-600 mb-4">
+                          <Wrench className="h-5 w-5" />
+                          <span className="font-semibold text-lg">Repair Needed</span>
+                        </div>
+
+                        {getPropertyRepairs(selectedProperty.id).length === 0 ? (
+                          <div className="text-center py-10 text-slate-400">
+                            <CheckCircle2 className="h-10 w-10 mx-auto mb-2 opacity-50 text-green-500" />
+                            <p>No repairs needed</p>
+                            <p className="text-sm">All equipment is in good condition</p>
+                          </div>
+                        ) : (
+                          getPropertyRepairs(selectedProperty.id).map((repair) => (
+                            <Card key={repair.alertId} className="border-red-200 bg-red-50/50">
+                              <CardContent className="p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="bg-red-100 text-red-700 border-red-300">
+                                      <Wrench className="h-3 w-3 mr-1" />
+                                      Repair Needed
+                                    </Badge>
+                                    {repair.photos && repair.photos.length > 0 && (
+                                      <Button variant="link" size="sm" className="h-6 px-0 text-blue-600 gap-1">
+                                        <Camera className="h-3 w-3" />
+                                        View Pictures
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <p className="font-medium text-slate-800">{repair.alertDescription || "Equipment needs repair"}</p>
+                                  
+                                  {repair.techNote && (
+                                    <div className="bg-white rounded p-2 border">
+                                      <p className="text-xs text-slate-500 font-medium">Tech Note:</p>
+                                      <p className="text-sm text-slate-700">{repair.techNote}</p>
+                                    </div>
+                                  )}
+
+                                  <div className="text-xs text-slate-500">
+                                    <span>{repair.poolName}</span>
+                                    {repair.createdAt && (
+                                      <span className="ml-2">• {new Date(repair.createdAt).toLocaleDateString()}</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-2 mt-4">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                                    data-testid={`button-convert-estimate-${repair.alertId}`}
+                                  >
+                                    <FileCheck className="h-4 w-4 mr-1" />
+                                    Convert to Estimate
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    className="flex-1 bg-green-600 hover:bg-green-700"
+                                    data-testid={`button-convert-job-${repair.alertId}`}
+                                  >
+                                    <Calendar className="h-4 w-4 mr-1" />
+                                    Convert to Job
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
                     </ScrollArea>
                   </TabsContent>
 
