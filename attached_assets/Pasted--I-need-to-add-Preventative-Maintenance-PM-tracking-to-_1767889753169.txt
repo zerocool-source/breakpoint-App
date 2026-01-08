@@ -1,0 +1,356 @@
+```
+I need to add Preventative Maintenance (PM) tracking to my Equipment Notes page. This tracks when equipment services are due across ALL 188 customers, 616 pools, and 1318 equipment items synced from Pool Brain.
+
+## OBJECTIVE
+
+1. Track when equipment services (heater de-soots, filter rejuvenations, etc.) are DUE based on adjustable intervals
+2. Prevent unnecessary/too-early services - protect customers from being overcharged
+3. Require justification for every service recorded
+4. Allow admins to adjust recommended intervals anytime
+5. Apply to ALL properties and equipment in the system
+
+---
+
+## DATABASE SCHEMA (Convex)
+
+### Table 1: pmServiceTypes
+- _id (auto)
+- name (string) - "Heater De-soot", "Filter Rejuvenation", etc.
+- description (string, optional)
+- category (string) - "heater", "filter", "pump", "automation", "salt_system", "other"
+- isActive (boolean)
+- createdAt (number)
+- updatedAt (number)
+
+### Table 2: pmIntervalSettings
+Stores adjustable intervals. Admins can change these anytime.
+
+- _id (auto)
+- pmServiceTypeId (id reference to pmServiceTypes)
+- waterType (string) - "spa", "pool", "wader", "fountain", "all"
+- recommendedIntervalMonths (number) - standard interval
+- minimumIntervalMonths (number) - earliest allowed, prevents too-soon service
+- maximumIntervalMonths (number) - latest before critical alert
+- warningThresholdDays (number) - default 30, when to show "due soon"
+- industryStandard (string, optional) - "Per manufacturer recommendation", etc.
+- notes (string, optional)
+- isActive (boolean)
+- createdAt (number)
+- updatedAt (number)
+
+Indexes: by_service_type, by_water_type
+
+### Table 3: equipmentPmSchedules
+PM schedule for each piece of equipment across all properties.
+
+- _id (auto)
+- equipmentId (string) - from Pool Brain
+- equipmentName (string)
+- equipmentType (string)
+- propertyId (string)
+- propertyName (string)
+- bodyOfWaterId (string)
+- waterType (string) - "spa", "pool", "wader"
+- pmServiceTypeId (id reference)
+- intervalSettingId (id reference to pmIntervalSettings)
+- customIntervalMonths (number, optional) - override for this specific equipment
+- customIntervalReason (string, optional) - why override
+- installDate (string, optional) - ISO date
+- lastServiceDate (string, optional) - ISO date
+- nextDueDate (string) - ISO date
+- status (string) - "current", "due_soon", "overdue", "critical", "paused"
+- duePriority (number) - days until due, negative = overdue
+- notes (string, optional)
+- isActive (boolean)
+- createdAt (number)
+- updatedAt (number)
+
+Indexes: by_equipment, by_property, by_status, by_next_due, by_priority, by_service_type
+
+### Table 4: pmServiceRecords
+Completed services with required justification.
+
+- _id (auto)
+- equipmentPmScheduleId (id reference)
+- equipmentId (string)
+- equipmentName (string)
+- propertyId (string)
+- propertyName (string)
+- bodyOfWaterId (string)
+- pmServiceTypeId (id reference)
+- serviceDate (string) - ISO date
+- completedByName (string, optional)
+- durationMinutes (number, optional)
+- serviceReason (string) - REQUIRED, from dropdown list
+- workNotes (string, optional)
+- issuesFound (string, optional)
+- conditionRating (string, optional) - "good", "fair", "poor", "needs_replacement"
+- recommendedFollowUp (string, optional)
+- laborCost (number, optional)
+- partsCost (number, optional)
+- totalCost (number, optional)
+- daysSinceLastService (number) - auto-calculated
+- wasEarlyService (boolean) - true if before minimum interval
+- earlyServiceApprovedBy (string, optional)
+- earlyServiceReason (string, optional)
+- nextServiceDate (string) - auto-calculated
+- createdAt (number)
+- updatedAt (number)
+
+Indexes: by_schedule, by_equipment, by_property, by_service_date, by_service_type
+
+Service Reason dropdown options:
+- "Scheduled maintenance - due date reached"
+- "Scheduled maintenance - due soon"
+- "Customer reported issue"
+- "Problem found during routine visit"
+- "Seasonal preparation"
+- "Post-repair verification"
+- "New equipment break-in service"
+- "High usage adjustment"
+- "Equipment age requires more frequent service"
+- "Property manager requested"
+- "Other (see notes)"
+
+---
+
+## UI CHANGES TO EQUIPMENT NOTES PAGE
+
+### A. Add PM Stats Row
+Below the existing 188 Customers / 616 Pools / 1318 Equipment cards, add a PM overview row:
+
+4 cards in a row:
+- 🔴 Overdue (count) - red - "Past service date"
+- 🟠 Due Soon (count) - orange - "Within 30 days"
+- 🟢 Current (count) - green - "On schedule"
+- ⚙️ Settings - links to interval settings page
+
+### B. Add PM Status Badge to Each Property Row
+Next to the existing "2 pools" and "4 equipment" pills, add PM status:
+- 🔴 "PM Overdue" - if ANY equipment at property is overdue
+- 🟠 "PM Due Soon" - if any due within 30 days (none overdue)
+- 🟢 "PM Current" - all on schedule
+- Gray "No PM" - if no schedules exist
+
+### C. Expanded Property View - Add PM Section
+When a property row expands, show a PM section after equipment list:
+
+Section header: "📅 Preventative Maintenance" with [+ Add Schedule] button
+
+For each equipment with a PM schedule, show a card:
+- Icon (🔥 heater, 🔵 filter, ⚙️ pump, etc.)
+- Service type name
+- Equipment name and model
+- Install date and age (if available)
+- Three info boxes in a row:
+  - LAST SERVICE: date + "X days ago"
+  - NEXT DUE: date + "X days" or "X days overdue"
+  - INTERVAL: "Every X months (water type)"
+- Status badge with customer-friendly text:
+  - 🔴 "Service Recommended - Past scheduled date"
+  - 🟠 "Service Upcoming - Due within 30 days"
+  - 🟢 "Current - No service needed"
+- Action buttons: [📜 History] [📄 Report] [✓ Record Service]
+
+At bottom, show equipment WITHOUT PM schedules:
+"⚠️ Equipment without PM schedules:"
+List each with [+ Add Schedule] button
+
+---
+
+## RECORD SERVICE MODAL
+
+### Normal Case (service is due or overdue):
+- Show equipment and service info
+- Show: Last Service date + days ago
+- Show: Recommended Interval
+- Show: ✅ "Service is due" confirmation
+- Fields:
+  - Service Date (date picker, default today)
+  - Service Reason (dropdown, required)
+  - Completed By (text)
+  - Duration (minutes)
+  - Work Performed (textarea)
+  - Issues Found (textarea)
+  - Equipment Condition (radio: Good / Fair / Poor / Needs Replacement)
+  - Labor Cost, Parts Cost (optional)
+- Buttons: [Cancel] [✓ Record Service]
+
+### Too-Early Case (before minimum interval):
+- Show warning box with yellow/orange background:
+  - "⚠️ THIS SERVICE MAY BE TOO EARLY"
+  - Last Service: date (X days ago)
+  - Minimum Interval: X months (X days)
+  - "This service is X days before minimum interval"
+- Required fields:
+  - Service Reason (dropdown, required)
+  - Explanation (textarea, required) - "Explain why early service is needed"
+  - Approved By (text, required) - "Supervisor approval required"
+- Buttons: [Cancel] [⚠️ Record Early Service]
+
+---
+
+## SERVICE HISTORY MODAL
+
+When clicking [📜 History]:
+- Header with equipment name, property name
+- Equipment info: Install date, age, expected lifespan, total services
+- Timeline list of all services, newest first:
+  - Date
+  - Service type
+  - Reason
+  - Technician, duration, cost
+  - Condition rating
+  - Notes
+  - Flag if it was early service with warning icon
+- [Export Report] button at bottom
+
+---
+
+## ADD PM SCHEDULE MODAL
+
+- Property (pre-filled)
+- Equipment (dropdown of equipment at this property)
+- Body of Water (dropdown, auto-detects water type)
+- Service Type (dropdown)
+- Show recommended settings box: "Interval: X months | Min: X | Max: X"
+- Checkbox: "Use custom interval for this equipment"
+  - If checked, show: Custom Interval (months) + Reason (text)
+- Equipment Install Date (date picker, optional)
+- Last Service Date (date picker, optional - if blank, calculates from today)
+- Notes (textarea)
+- Buttons: [Cancel] [Create Schedule]
+
+---
+
+## PM INTERVAL SETTINGS PAGE (New page: /settings/pm-intervals)
+
+Admin page to manage all interval settings.
+
+For each service type, show a card with editable table:
+- Header: Service type name + icon
+- Table columns: Water Type | Recommended | Minimum | Maximum | Due Soon Alert
+- Rows for: Spa, Pool, Wader (editable number inputs)
+- Industry standard note (editable text)
+- Save button per section or global save
+
+Add ability to create new service types.
+
+---
+
+## GENERATE REPORT FEATURE
+
+When clicking [📄 Report], generate a printable/PDF report:
+
+Header:
+- Breakpoint Commercial Pool Systems logo
+- "Preventative Maintenance Report"
+- Property name and address
+- Report date
+
+Equipment section:
+- Equipment name, make/model
+- Install date and age
+- Expected lifespan
+
+Service section:
+- Service type
+- Recommended interval with explanation
+- Current status
+- Last service date
+- Next due date
+
+Service history table:
+- Date, Service, Condition, Cost columns
+- Last 4-6 services
+
+Footer:
+- Breakpoint contact info
+- License number
+- Generated date
+
+---
+
+## CONVEX QUERIES
+
+- getIntervalSettings() - all interval configurations
+- getIntervalForServiceType(serviceTypeId, waterType)
+- getPmDashboardStats() - counts by status across all properties
+- getSchedulesByProperty(propertyId)
+- getSchedulesByStatus(status, limit)
+- getServiceHistory(scheduleId, limit)
+- getEquipmentWithoutPm(propertyId)
+- getAllOverdueSchedules()
+- getAllDueSoonSchedules()
+
+## CONVEX MUTATIONS
+
+- createServiceType(name, category, description)
+- updateIntervalSettings(serviceTypeId, waterType, recommended, min, max, warningDays, notes)
+- createSchedule(equipmentId, propertyId, bodyOfWaterId, serviceTypeId, customInterval?, installDate?, lastServiceDate?, notes?)
+- updateSchedule(scheduleId, updates)
+- recordService(scheduleId, serviceDate, reason, completedBy?, duration?, workNotes?, issuesFound?, condition?, laborCost?, partsCost?, earlyApprovedBy?, earlyReason?)
+- pauseSchedule(scheduleId, reason)
+- resumeSchedule(scheduleId)
+- deleteSchedule(scheduleId)
+- seedDefaultSettings()
+
+---
+
+## VALIDATION RULES
+
+When recording a service:
+1. Get minimum interval for this service type + water type
+2. Calculate days since last service
+3. If days < minimum interval (converted to days):
+   - Mark as early service
+   - Require reason, explanation, and approver name
+   - Store wasEarlyService = true
+4. Calculate nextServiceDate = serviceDate + intervalMonths
+5. Update schedule with new lastServiceDate, nextDueDate, status
+
+Status calculation:
+- "critical" = days past > maximum interval
+- "overdue" = past recommended interval (nextDueDate < today)
+- "due_soon" = within warningThresholdDays of nextDueDate
+- "current" = not in warning window
+- "paused" = manually paused
+
+---
+
+## DEFAULT SEED DATA
+
+Service Types:
+1. Heater De-soot / Teardown Inspection (heater)
+2. Filter Rejuvenation (filter)
+3. Pump Inspection (pump)
+4. Salt Cell Cleaning (salt_system)
+5. Automation System Check (automation)
+
+Default Intervals:
+| Service | Water Type | Recommended | Minimum | Maximum |
+|---------|------------|-------------|---------|---------|
+| Heater De-soot | spa | 6 | 4 | 9 |
+| Heater De-soot | pool | 12 | 9 | 15 |
+| Heater De-soot | wader | 12 | 9 | 15 |
+| Filter Rejuvenation | spa | 6 | 4 | 9 |
+| Filter Rejuvenation | pool | 12 | 8 | 15 |
+| Filter Rejuvenation | wader | 12 | 8 | 15 |
+| Salt Cell Cleaning | all | 3 | 2 | 5 |
+| Pump Inspection | all | 12 | 9 | 18 |
+| Automation Check | all | 12 | 9 | 18 |
+
+---
+
+## UI/UX REQUIREMENTS
+
+- Match existing color scheme (blue primary, status colors)
+- Status badges pill-shaped like existing "2 pools" badges
+- Subtle background tint for overdue (red) and due soon (orange) items
+- Smooth expand/collapse animations
+- Mobile responsive - stack cards vertically on small screens
+- Loading skeletons while data loads
+- Empty states with helpful messaging
+- All dates displayed in readable format (Jan 8, 2025)
+- Days shown as "X days ago" or "In X days" or "X days overdue"
+```

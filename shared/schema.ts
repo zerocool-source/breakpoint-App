@@ -774,3 +774,142 @@ export interface PropertyRepairSummary {
     technician: string | null;
   }[];
 }
+
+// ============================================
+// PREVENTATIVE MAINTENANCE (PM) TABLES
+// ============================================
+
+// PM Service Types (Heater De-soot, Filter Rejuvenation, etc.)
+export const pmServiceTypes = pgTable("pm_service_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "heater", "filter", "pump", "automation", "salt_system", "other"
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPmServiceTypeSchema = createInsertSchema(pmServiceTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPmServiceType = z.infer<typeof insertPmServiceTypeSchema>;
+export type PmServiceType = typeof pmServiceTypes.$inferSelect;
+
+// PM Interval Settings (adjustable intervals per service type and water type)
+export const pmIntervalSettings = pgTable("pm_interval_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pmServiceTypeId: varchar("pm_service_type_id").notNull(),
+  waterType: text("water_type").notNull(), // "spa", "pool", "wader", "fountain", "all"
+  recommendedIntervalMonths: integer("recommended_interval_months").notNull(),
+  minimumIntervalMonths: integer("minimum_interval_months").notNull(),
+  maximumIntervalMonths: integer("maximum_interval_months").notNull(),
+  warningThresholdDays: integer("warning_threshold_days").default(30),
+  industryStandard: text("industry_standard"),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPmIntervalSettingSchema = createInsertSchema(pmIntervalSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPmIntervalSetting = z.infer<typeof insertPmIntervalSettingSchema>;
+export type PmIntervalSetting = typeof pmIntervalSettings.$inferSelect;
+
+// Equipment PM Schedules (PM schedule for each piece of equipment)
+export const equipmentPmSchedules = pgTable("equipment_pm_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  equipmentId: text("equipment_id").notNull(), // From Pool Brain or local
+  equipmentName: text("equipment_name").notNull(),
+  equipmentType: text("equipment_type").notNull(),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  bodyOfWaterId: text("body_of_water_id"),
+  waterType: text("water_type").notNull(), // "spa", "pool", "wader"
+  pmServiceTypeId: varchar("pm_service_type_id").notNull(),
+  intervalSettingId: varchar("interval_setting_id"),
+  customIntervalMonths: integer("custom_interval_months"),
+  customIntervalReason: text("custom_interval_reason"),
+  installDate: text("install_date"), // ISO date string
+  lastServiceDate: text("last_service_date"), // ISO date string
+  nextDueDate: text("next_due_date").notNull(), // ISO date string
+  status: text("status").notNull().default("current"), // "current", "due_soon", "overdue", "critical", "paused"
+  duePriority: integer("due_priority").default(0), // Days until due, negative = overdue
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEquipmentPmScheduleSchema = createInsertSchema(equipmentPmSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEquipmentPmSchedule = z.infer<typeof insertEquipmentPmScheduleSchema>;
+export type EquipmentPmSchedule = typeof equipmentPmSchedules.$inferSelect;
+
+// PM Service Records (completed services with required justification)
+export const pmServiceRecords = pgTable("pm_service_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  equipmentPmScheduleId: varchar("equipment_pm_schedule_id").notNull(),
+  equipmentId: text("equipment_id").notNull(),
+  equipmentName: text("equipment_name").notNull(),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  bodyOfWaterId: text("body_of_water_id"),
+  pmServiceTypeId: varchar("pm_service_type_id").notNull(),
+  serviceDate: text("service_date").notNull(), // ISO date string
+  completedByName: text("completed_by_name"),
+  durationMinutes: integer("duration_minutes"),
+  serviceReason: text("service_reason").notNull(), // Required dropdown value
+  workNotes: text("work_notes"),
+  issuesFound: text("issues_found"),
+  conditionRating: text("condition_rating"), // "good", "fair", "poor", "needs_replacement"
+  recommendedFollowUp: text("recommended_follow_up"),
+  laborCost: real("labor_cost"),
+  partsCost: real("parts_cost"),
+  totalCost: real("total_cost"),
+  daysSinceLastService: integer("days_since_last_service"),
+  wasEarlyService: boolean("was_early_service").default(false),
+  earlyServiceApprovedBy: text("early_service_approved_by"),
+  earlyServiceReason: text("early_service_reason"),
+  nextServiceDate: text("next_service_date"), // Auto-calculated ISO date
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPmServiceRecordSchema = createInsertSchema(pmServiceRecords).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPmServiceRecord = z.infer<typeof insertPmServiceRecordSchema>;
+export type PmServiceRecord = typeof pmServiceRecords.$inferSelect;
+
+// Service Reason Options (for dropdown)
+export const PM_SERVICE_REASONS = [
+  "Scheduled maintenance - due date reached",
+  "Scheduled maintenance - due soon",
+  "Customer reported issue",
+  "Problem found during routine visit",
+  "Seasonal preparation",
+  "Post-repair verification",
+  "New equipment break-in service",
+  "High usage adjustment",
+  "Equipment age requires more frequent service",
+  "Property manager requested",
+  "Other (see notes)",
+] as const;
+
+export type PmServiceReason = typeof PM_SERVICE_REASONS[number];

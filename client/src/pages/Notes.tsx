@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,10 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   RefreshCw, 
   Search, 
@@ -20,8 +25,19 @@ import {
   Beaker,
   User,
   MapPin,
-  Building
+  Building,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  Settings,
+  Plus,
+  History,
+  ClipboardCheck,
+  Calendar,
+  AlertCircle,
+  Pause
 } from "lucide-react";
+import { PM_SERVICE_REASONS, type EquipmentPmSchedule, type PmServiceType, type PmServiceRecord } from "@shared/schema";
 
 interface PoolEquipment {
   category: string;
@@ -72,6 +88,86 @@ const EQUIPMENT_COLORS: Record<string, string> = {
   timer: "bg-amber-100 text-amber-700 border-amber-200",
 };
 
+const PM_STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  critical: { icon: <AlertCircle className="h-3.5 w-3.5" />, color: "bg-red-100 text-red-700 border-red-300", label: "Critical" },
+  overdue: { icon: <AlertTriangle className="h-3.5 w-3.5" />, color: "bg-orange-100 text-orange-700 border-orange-300", label: "Overdue" },
+  due_soon: { icon: <Clock className="h-3.5 w-3.5" />, color: "bg-amber-100 text-amber-700 border-amber-300", label: "Due Soon" },
+  current: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, color: "bg-green-100 text-green-700 border-green-300", label: "Current" },
+  paused: { icon: <Pause className="h-3.5 w-3.5" />, color: "bg-slate-100 text-slate-700 border-slate-300", label: "Paused" },
+};
+
+function PmStatusBadge({ status, count }: { status: string; count?: number }) {
+  const config = PM_STATUS_CONFIG[status] || PM_STATUS_CONFIG.current;
+  return (
+    <Badge className={`${config.color} gap-1`}>
+      {config.icon}
+      <span>{config.label}</span>
+      {count !== undefined && <span className="font-bold">({count})</span>}
+    </Badge>
+  );
+}
+
+function PmScheduleCard({ 
+  schedule, 
+  serviceTypes,
+  onRecordService, 
+  onViewHistory 
+}: { 
+  schedule: EquipmentPmSchedule; 
+  serviceTypes: PmServiceType[];
+  onRecordService: (schedule: EquipmentPmSchedule) => void;
+  onViewHistory: (schedule: EquipmentPmSchedule) => void;
+}) {
+  const serviceType = serviceTypes.find(t => t.id === schedule.pmServiceTypeId);
+  const dueDate = new Date(schedule.nextDueDate);
+  const isOverdue = schedule.status === 'overdue' || schedule.status === 'critical';
+  
+  return (
+    <div className={`bg-white rounded-lg border p-3 ${isOverdue ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-slate-800">{serviceType?.name || 'Unknown Service'}</span>
+            <PmStatusBadge status={schedule.status} />
+          </div>
+          <p className="text-sm text-slate-600">{schedule.equipmentName} ({schedule.equipmentType})</p>
+          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              <span>Due: {dueDate.toLocaleDateString()}</span>
+            </div>
+            {schedule.lastServiceDate && (
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                <span>Last: {new Date(schedule.lastServiceDate).toLocaleDateString()}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => onViewHistory(schedule)}
+            data-testid={`button-pm-history-${schedule.id}`}
+          >
+            <History className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant={isOverdue ? "destructive" : "default"}
+            size="sm" 
+            onClick={() => onRecordService(schedule)}
+            data-testid={`button-pm-record-${schedule.id}`}
+          >
+            <ClipboardCheck className="h-4 w-4 mr-1" />
+            Record
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EquipmentBadge({ equipment }: { equipment: PoolEquipment }) {
   const icon = EQUIPMENT_ICONS[equipment.category] || <Wrench className="h-4 w-4" />;
   const colorClass = EQUIPMENT_COLORS[equipment.category] || "bg-gray-100 text-gray-700 border-gray-200";
@@ -85,10 +181,24 @@ function EquipmentBadge({ equipment }: { equipment: PoolEquipment }) {
   );
 }
 
-function CustomerCard({ customer, isExpanded, onToggle }: { 
+function CustomerCard({ 
+  customer, 
+  isExpanded, 
+  onToggle,
+  pmSchedules = [],
+  pmStatus,
+  serviceTypes = [],
+  onRecordService,
+  onViewHistory
+}: { 
   customer: Customer; 
   isExpanded: boolean;
   onToggle: () => void;
+  pmSchedules?: EquipmentPmSchedule[];
+  pmStatus?: { status: string; count: number } | null;
+  serviceTypes?: PmServiceType[];
+  onRecordService?: (schedule: EquipmentPmSchedule) => void;
+  onViewHistory?: (schedule: EquipmentPmSchedule) => void;
 }) {
   const totalEquipment = customer.pools.reduce((sum, pool) => sum + pool.equipment.length, 0);
   
@@ -118,6 +228,7 @@ function CustomerCard({ customer, isExpanded, onToggle }: {
                     {totalEquipment} equipment
                   </Badge>
                 )}
+                {pmStatus && <PmStatusBadge status={pmStatus.status} count={pmStatus.count} />}
               </div>
             </div>
             {customer.address && (
@@ -187,6 +298,31 @@ function CustomerCard({ customer, isExpanded, onToggle }: {
                   )}
                 </div>
               ))}
+              
+              {/* PM Schedules Section */}
+              {pmSchedules && pmSchedules.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                        Preventative Maintenance
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {pmSchedules.map((schedule) => (
+                      <PmScheduleCard
+                        key={schedule.id}
+                        schedule={schedule}
+                        serviceTypes={serviceTypes}
+                        onRecordService={onRecordService || (() => {})}
+                        onViewHistory={onViewHistory || (() => {})}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </CollapsibleContent>
@@ -198,6 +334,17 @@ function CustomerCard({ customer, isExpanded, onToggle }: {
 export default function Notes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const [recordServiceSchedule, setRecordServiceSchedule] = useState<EquipmentPmSchedule | null>(null);
+  const [historySchedule, setHistorySchedule] = useState<EquipmentPmSchedule | null>(null);
+  const [addPmCustomerId, setAddPmCustomerId] = useState<string | null>(null);
+  const [_, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+
+  // Service record form state
+  const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [serviceReason, setServiceReason] = useState<string>("");
+  const [workNotes, setWorkNotes] = useState("");
+  const [conditionRating, setConditionRating] = useState<string>("good");
 
   const { data, isLoading, refetch, isFetching } = useQuery<{ customers: Customer[] }>({
     queryKey: ["/api/poolbrain/customers-equipment"],
@@ -210,6 +357,125 @@ export default function Notes() {
       return res.json();
     },
   });
+
+  // PM Stats
+  const { data: pmStats } = useQuery<{ overdue: number; dueSoon: number; current: number; paused: number }>({
+    queryKey: ["/api/pm/stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/pm/stats");
+      if (!res.ok) return { overdue: 0, dueSoon: 0, current: 0, paused: 0 };
+      return res.json();
+    },
+  });
+
+  // PM Service Types
+  const { data: serviceTypes = [] } = useQuery<PmServiceType[]>({
+    queryKey: ["/api/pm/service-types"],
+    queryFn: async () => {
+      const res = await fetch("/api/pm/service-types");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Seed PM defaults on first load
+  const seedPm = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/pm/seed", { method: "POST" });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/service-types"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/stats"] });
+    },
+  });
+
+  // All PM Schedules
+  const { data: allPmSchedules = [] } = useQuery<EquipmentPmSchedule[]>({
+    queryKey: ["/api/pm/schedules"],
+    queryFn: async () => {
+      const res = await fetch("/api/pm/schedules");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // PM Service History for selected schedule
+  const { data: serviceHistory = [] } = useQuery<PmServiceRecord[]>({
+    queryKey: ["/api/pm/records", historySchedule?.id],
+    enabled: !!historySchedule,
+    queryFn: async () => {
+      if (!historySchedule) return [];
+      const res = await fetch(`/api/pm/records?scheduleId=${historySchedule.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Group PM schedules by customer/property for display
+  const getPmSchedulesForCustomer = (customerId: string) => {
+    return allPmSchedules.filter(s => s.propertyId === customerId);
+  };
+
+  const getCustomerPmStatus = (customerId: string) => {
+    const schedules = getPmSchedulesForCustomer(customerId);
+    if (schedules.length === 0) return null;
+    
+    const overdue = schedules.filter(s => s.status === 'overdue' || s.status === 'critical').length;
+    const dueSoon = schedules.filter(s => s.status === 'due_soon').length;
+    
+    if (overdue > 0) return { status: 'overdue', count: overdue };
+    if (dueSoon > 0) return { status: 'due_soon', count: dueSoon };
+    return { status: 'current', count: schedules.length };
+  };
+
+  // Record service mutation
+  const recordServiceMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/pm/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/schedules"] });
+      setRecordServiceSchedule(null);
+      setServiceReason("");
+      setWorkNotes("");
+    },
+  });
+
+  const handleRecordService = () => {
+    if (!recordServiceSchedule || !serviceReason) return;
+    
+    const schedule = recordServiceSchedule;
+    const serviceDateObj = new Date(serviceDate);
+    const nextDue = new Date(schedule.nextDueDate);
+    const wasEarly = serviceDateObj < nextDue;
+    const lastService = schedule.lastServiceDate ? new Date(schedule.lastServiceDate) : null;
+    const daysSinceLast = lastService 
+      ? Math.floor((serviceDateObj.getTime() - lastService.getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    recordServiceMutation.mutate({
+      equipmentPmScheduleId: schedule.id,
+      equipmentId: schedule.equipmentId,
+      equipmentName: schedule.equipmentName,
+      propertyId: schedule.propertyId,
+      propertyName: schedule.propertyName,
+      bodyOfWaterId: schedule.bodyOfWaterId,
+      pmServiceTypeId: schedule.pmServiceTypeId,
+      serviceDate,
+      serviceReason,
+      workNotes,
+      conditionRating,
+      daysSinceLastService: daysSinceLast,
+      wasEarlyService: wasEarly,
+    });
+  };
 
   const customers = data?.customers || [];
   
@@ -325,6 +591,71 @@ export default function Notes() {
           </Card>
         </div>
 
+        {/* PM Stats Row */}
+        <Card className="bg-slate-50 border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-slate-600" />
+                <span className="font-semibold text-slate-700">Preventative Maintenance</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-100 border border-red-200 cursor-pointer hover:bg-red-200 transition-colors"
+                    onClick={() => {/* TODO: Filter by overdue */}}
+                    data-testid="pm-stat-overdue"
+                  >
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-medium text-red-700">Overdue</span>
+                    <span className="text-lg font-bold text-red-700">{pmStats?.overdue || 0}</span>
+                  </div>
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-200 cursor-pointer hover:bg-amber-200 transition-colors"
+                    onClick={() => {/* TODO: Filter by due soon */}}
+                    data-testid="pm-stat-due-soon"
+                  >
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-700">Due Soon</span>
+                    <span className="text-lg font-bold text-amber-700">{pmStats?.dueSoon || 0}</span>
+                  </div>
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-100 border border-green-200 cursor-pointer hover:bg-green-200 transition-colors"
+                    onClick={() => {/* TODO: Filter by current */}}
+                    data-testid="pm-stat-current"
+                  >
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Current</span>
+                    <span className="text-lg font-bold text-green-700">{pmStats?.current || 0}</span>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-slate-300" />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setLocation('/settings/pm-intervals')}
+                  data-testid="button-pm-settings"
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  PM Settings
+                </Button>
+                {serviceTypes.length === 0 && (
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => seedPm.mutate()}
+                    disabled={seedPm.isPending}
+                    data-testid="button-pm-seed"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Initialize PM
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -381,11 +712,177 @@ export default function Notes() {
                   customer={customer}
                   isExpanded={expandedCustomers.has(customer.id)}
                   onToggle={() => toggleCustomer(customer.id)}
+                  pmSchedules={getPmSchedulesForCustomer(customer.id)}
+                  pmStatus={getCustomerPmStatus(customer.id)}
+                  serviceTypes={serviceTypes}
+                  onRecordService={setRecordServiceSchedule}
+                  onViewHistory={setHistorySchedule}
                 />
               ))}
             </div>
           )}
         </ScrollArea>
+
+        {/* Record Service Modal */}
+        <Dialog open={!!recordServiceSchedule} onOpenChange={() => setRecordServiceSchedule(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-blue-600" />
+                Record PM Service
+              </DialogTitle>
+            </DialogHeader>
+            {recordServiceSchedule && (
+              <div className="space-y-4">
+                <div className="bg-slate-50 p-3 rounded-lg">
+                  <p className="font-medium text-slate-800">{recordServiceSchedule.equipmentName}</p>
+                  <p className="text-sm text-slate-600">{recordServiceSchedule.propertyName}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <PmStatusBadge status={recordServiceSchedule.status} />
+                    <span className="text-xs text-slate-500">
+                      Due: {new Date(recordServiceSchedule.nextDueDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Early Service Warning */}
+                {new Date(serviceDate) < new Date(recordServiceSchedule.nextDueDate) && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-700">Early Service</p>
+                      <p className="text-xs text-amber-600">
+                        This service is being recorded before the due date. Please provide a reason.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="service-date">Service Date</Label>
+                    <Input
+                      id="service-date"
+                      type="date"
+                      value={serviceDate}
+                      onChange={(e) => setServiceDate(e.target.value)}
+                      data-testid="input-service-date"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="service-reason">Reason for Service *</Label>
+                    <Select value={serviceReason} onValueChange={setServiceReason}>
+                      <SelectTrigger data-testid="select-service-reason">
+                        <SelectValue placeholder="Select a reason..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PM_SERVICE_REASONS.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="condition-rating">Equipment Condition</Label>
+                    <Select value={conditionRating} onValueChange={setConditionRating}>
+                      <SelectTrigger data-testid="select-condition">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="fair">Fair</SelectItem>
+                        <SelectItem value="poor">Poor</SelectItem>
+                        <SelectItem value="needs_replacement">Needs Replacement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="work-notes">Work Notes</Label>
+                    <Textarea
+                      id="work-notes"
+                      placeholder="Describe the work performed..."
+                      value={workNotes}
+                      onChange={(e) => setWorkNotes(e.target.value)}
+                      data-testid="input-work-notes"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRecordServiceSchedule(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleRecordService} 
+                disabled={!serviceReason || recordServiceMutation.isPending}
+                data-testid="button-save-service"
+              >
+                {recordServiceMutation.isPending ? 'Saving...' : 'Save Service Record'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Service History Modal */}
+        <Dialog open={!!historySchedule} onOpenChange={() => setHistorySchedule(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="h-5 w-5 text-blue-600" />
+                Service History
+              </DialogTitle>
+            </DialogHeader>
+            {historySchedule && (
+              <div className="space-y-4">
+                <div className="bg-slate-50 p-3 rounded-lg">
+                  <p className="font-medium text-slate-800">{historySchedule.equipmentName}</p>
+                  <p className="text-sm text-slate-600">{historySchedule.propertyName}</p>
+                </div>
+
+                <ScrollArea className="h-64">
+                  {serviceHistory.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                      <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No service records yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {serviceHistory.map((record) => (
+                        <div key={record.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-slate-800">
+                              {new Date(record.serviceDate).toLocaleDateString()}
+                            </span>
+                            {record.wasEarlyService && (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                Early Service
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600">{record.serviceReason}</p>
+                          {record.workNotes && (
+                            <p className="text-sm text-slate-500 mt-1 italic">"{record.workNotes}"</p>
+                          )}
+                          {record.conditionRating && (
+                            <Badge variant="secondary" className="mt-2 capitalize">
+                              Condition: {record.conditionRating.replace('_', ' ')}
+                            </Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setHistorySchedule(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -27,11 +27,16 @@ import {
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
   type UnscheduledStop, type InsertUnscheduledStop,
+  type PmServiceType, type InsertPmServiceType,
+  type PmIntervalSetting, type InsertPmIntervalSetting,
+  type EquipmentPmSchedule, type InsertEquipmentPmSchedule,
+  type PmServiceRecord, type InsertPmServiceRecord,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
-  estimates, routes, routeStops, routeMoves, unscheduledStops
+  estimates, routes, routeStops, routeMoves, unscheduledStops,
+  pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -239,6 +244,39 @@ export interface IStorage {
 
   // Scheduling Reset
   resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number; occurrencesDeleted: number; schedulesDeleted: number }>;
+
+  // PM Service Types
+  getPmServiceTypes(): Promise<PmServiceType[]>;
+  getPmServiceType(id: string): Promise<PmServiceType | undefined>;
+  createPmServiceType(type: InsertPmServiceType): Promise<PmServiceType>;
+  updatePmServiceType(id: string, updates: Partial<InsertPmServiceType>): Promise<PmServiceType | undefined>;
+
+  // PM Interval Settings
+  getPmIntervalSettings(): Promise<PmIntervalSetting[]>;
+  getPmIntervalSetting(id: string): Promise<PmIntervalSetting | undefined>;
+  getPmIntervalByServiceAndWaterType(serviceTypeId: string, waterType: string): Promise<PmIntervalSetting | undefined>;
+  createPmIntervalSetting(setting: InsertPmIntervalSetting): Promise<PmIntervalSetting>;
+  updatePmIntervalSetting(id: string, updates: Partial<InsertPmIntervalSetting>): Promise<PmIntervalSetting | undefined>;
+
+  // Equipment PM Schedules
+  getEquipmentPmSchedules(status?: string): Promise<EquipmentPmSchedule[]>;
+  getEquipmentPmSchedule(id: string): Promise<EquipmentPmSchedule | undefined>;
+  getEquipmentPmSchedulesByProperty(propertyId: string): Promise<EquipmentPmSchedule[]>;
+  getEquipmentPmSchedulesByEquipment(equipmentId: string): Promise<EquipmentPmSchedule[]>;
+  getPmDashboardStats(): Promise<{ overdue: number; dueSoon: number; current: number; paused: number }>;
+  createEquipmentPmSchedule(schedule: InsertEquipmentPmSchedule): Promise<EquipmentPmSchedule>;
+  updateEquipmentPmSchedule(id: string, updates: Partial<InsertEquipmentPmSchedule>): Promise<EquipmentPmSchedule | undefined>;
+  deleteEquipmentPmSchedule(id: string): Promise<void>;
+  updateAllPmScheduleStatuses(): Promise<void>;
+
+  // PM Service Records
+  getPmServiceRecords(scheduleId: string, limit?: number): Promise<PmServiceRecord[]>;
+  getPmServiceRecordsByEquipment(equipmentId: string): Promise<PmServiceRecord[]>;
+  getPmServiceRecordsByProperty(propertyId: string): Promise<PmServiceRecord[]>;
+  createPmServiceRecord(record: InsertPmServiceRecord): Promise<PmServiceRecord>;
+
+  // PM Seed Data
+  seedPmDefaults(): Promise<{ serviceTypesCreated: number; intervalsCreated: number }>;
 }
 
 export class DbStorage implements IStorage {
@@ -1385,6 +1423,236 @@ export class DbStorage implements IStorage {
       occurrencesDeleted: occurrencesResult.length,
       schedulesDeleted: schedulesResult.length,
     };
+  }
+
+  // PM Service Types
+  async getPmServiceTypes(): Promise<PmServiceType[]> {
+    return db.select().from(pmServiceTypes).orderBy(pmServiceTypes.name);
+  }
+
+  async getPmServiceType(id: string): Promise<PmServiceType | undefined> {
+    const result = await db.select().from(pmServiceTypes).where(eq(pmServiceTypes.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createPmServiceType(type: InsertPmServiceType): Promise<PmServiceType> {
+    const result = await db.insert(pmServiceTypes).values(type as any).returning();
+    return result[0];
+  }
+
+  async updatePmServiceType(id: string, updates: Partial<InsertPmServiceType>): Promise<PmServiceType | undefined> {
+    const result = await db.update(pmServiceTypes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pmServiceTypes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // PM Interval Settings
+  async getPmIntervalSettings(): Promise<PmIntervalSetting[]> {
+    return db.select().from(pmIntervalSettings);
+  }
+
+  async getPmIntervalSetting(id: string): Promise<PmIntervalSetting | undefined> {
+    const result = await db.select().from(pmIntervalSettings).where(eq(pmIntervalSettings.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getPmIntervalByServiceAndWaterType(serviceTypeId: string, waterType: string): Promise<PmIntervalSetting | undefined> {
+    const result = await db.select().from(pmIntervalSettings)
+      .where(and(
+        eq(pmIntervalSettings.pmServiceTypeId, serviceTypeId),
+        or(eq(pmIntervalSettings.waterType, waterType), eq(pmIntervalSettings.waterType, 'all'))
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async createPmIntervalSetting(setting: InsertPmIntervalSetting): Promise<PmIntervalSetting> {
+    const result = await db.insert(pmIntervalSettings).values(setting as any).returning();
+    return result[0];
+  }
+
+  async updatePmIntervalSetting(id: string, updates: Partial<InsertPmIntervalSetting>): Promise<PmIntervalSetting | undefined> {
+    const result = await db.update(pmIntervalSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(pmIntervalSettings.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Equipment PM Schedules
+  async getEquipmentPmSchedules(status?: string): Promise<EquipmentPmSchedule[]> {
+    if (status) {
+      return db.select().from(equipmentPmSchedules)
+        .where(and(eq(equipmentPmSchedules.status, status), eq(equipmentPmSchedules.isActive, true)))
+        .orderBy(equipmentPmSchedules.duePriority);
+    }
+    return db.select().from(equipmentPmSchedules)
+      .where(eq(equipmentPmSchedules.isActive, true))
+      .orderBy(equipmentPmSchedules.duePriority);
+  }
+
+  async getEquipmentPmSchedule(id: string): Promise<EquipmentPmSchedule | undefined> {
+    const result = await db.select().from(equipmentPmSchedules).where(eq(equipmentPmSchedules.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getEquipmentPmSchedulesByProperty(propertyId: string): Promise<EquipmentPmSchedule[]> {
+    return db.select().from(equipmentPmSchedules)
+      .where(and(eq(equipmentPmSchedules.propertyId, propertyId), eq(equipmentPmSchedules.isActive, true)))
+      .orderBy(equipmentPmSchedules.duePriority);
+  }
+
+  async getEquipmentPmSchedulesByEquipment(equipmentId: string): Promise<EquipmentPmSchedule[]> {
+    return db.select().from(equipmentPmSchedules)
+      .where(and(eq(equipmentPmSchedules.equipmentId, equipmentId), eq(equipmentPmSchedules.isActive, true)));
+  }
+
+  async getPmDashboardStats(): Promise<{ overdue: number; dueSoon: number; current: number; paused: number }> {
+    const all = await db.select().from(equipmentPmSchedules).where(eq(equipmentPmSchedules.isActive, true));
+    const stats = { overdue: 0, dueSoon: 0, current: 0, paused: 0 };
+    for (const schedule of all) {
+      if (schedule.status === 'overdue' || schedule.status === 'critical') stats.overdue++;
+      else if (schedule.status === 'due_soon') stats.dueSoon++;
+      else if (schedule.status === 'paused') stats.paused++;
+      else stats.current++;
+    }
+    return stats;
+  }
+
+  async createEquipmentPmSchedule(schedule: InsertEquipmentPmSchedule): Promise<EquipmentPmSchedule> {
+    const result = await db.insert(equipmentPmSchedules).values(schedule as any).returning();
+    return result[0];
+  }
+
+  async updateEquipmentPmSchedule(id: string, updates: Partial<InsertEquipmentPmSchedule>): Promise<EquipmentPmSchedule | undefined> {
+    const result = await db.update(equipmentPmSchedules)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(equipmentPmSchedules.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEquipmentPmSchedule(id: string): Promise<void> {
+    await db.update(equipmentPmSchedules).set({ isActive: false }).where(eq(equipmentPmSchedules.id, id));
+  }
+
+  async updateAllPmScheduleStatuses(): Promise<void> {
+    const schedules = await db.select().from(equipmentPmSchedules).where(eq(equipmentPmSchedules.isActive, true));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const schedule of schedules) {
+      if (schedule.status === 'paused') continue;
+
+      const nextDue = new Date(schedule.nextDueDate);
+      const diffDays = Math.floor((nextDue.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let newStatus = 'current';
+      if (diffDays < -30) newStatus = 'critical';
+      else if (diffDays < 0) newStatus = 'overdue';
+      else if (diffDays <= 30) newStatus = 'due_soon';
+
+      if (schedule.status !== newStatus || schedule.duePriority !== diffDays) {
+        await db.update(equipmentPmSchedules)
+          .set({ status: newStatus, duePriority: diffDays, updatedAt: new Date() })
+          .where(eq(equipmentPmSchedules.id, schedule.id));
+      }
+    }
+  }
+
+  // PM Service Records
+  async getPmServiceRecords(scheduleId: string, limit?: number): Promise<PmServiceRecord[]> {
+    const query = db.select().from(pmServiceRecords)
+      .where(eq(pmServiceRecords.equipmentPmScheduleId, scheduleId))
+      .orderBy(desc(pmServiceRecords.serviceDate));
+    if (limit) {
+      return query.limit(limit);
+    }
+    return query;
+  }
+
+  async getPmServiceRecordsByEquipment(equipmentId: string): Promise<PmServiceRecord[]> {
+    return db.select().from(pmServiceRecords)
+      .where(eq(pmServiceRecords.equipmentId, equipmentId))
+      .orderBy(desc(pmServiceRecords.serviceDate));
+  }
+
+  async getPmServiceRecordsByProperty(propertyId: string): Promise<PmServiceRecord[]> {
+    return db.select().from(pmServiceRecords)
+      .where(eq(pmServiceRecords.propertyId, propertyId))
+      .orderBy(desc(pmServiceRecords.serviceDate));
+  }
+
+  async createPmServiceRecord(record: InsertPmServiceRecord): Promise<PmServiceRecord> {
+    const result = await db.insert(pmServiceRecords).values(record as any).returning();
+    return result[0];
+  }
+
+  // PM Seed Data
+  async seedPmDefaults(): Promise<{ serviceTypesCreated: number; intervalsCreated: number }> {
+    const existingTypes = await this.getPmServiceTypes();
+    if (existingTypes.length > 0) {
+      return { serviceTypesCreated: 0, intervalsCreated: 0 };
+    }
+
+    const serviceTypesData = [
+      { name: 'Heater De-soot / Teardown Inspection', category: 'heater', description: 'Clean heater internals, inspect heat exchanger, check ignition system' },
+      { name: 'Filter Rejuvenation', category: 'filter', description: 'Deep clean or replace filter media, inspect tank and internals' },
+      { name: 'Pump Inspection', category: 'pump', description: 'Check seals, bearings, motor condition, and flow rates' },
+      { name: 'Salt Cell Cleaning', category: 'salt_system', description: 'Acid wash salt cell, inspect plates, check output' },
+      { name: 'Automation System Check', category: 'automation', description: 'Test all circuits, update firmware, verify sensors' },
+    ];
+
+    const createdTypes: PmServiceType[] = [];
+    for (const type of serviceTypesData) {
+      const created = await this.createPmServiceType(type as InsertPmServiceType);
+      createdTypes.push(created);
+    }
+
+    const intervalConfigs = [
+      { typeName: 'Heater De-soot / Teardown Inspection', intervals: [
+        { waterType: 'spa', recommended: 6, min: 4, max: 9 },
+        { waterType: 'pool', recommended: 12, min: 9, max: 15 },
+        { waterType: 'wader', recommended: 12, min: 9, max: 15 },
+      ]},
+      { typeName: 'Filter Rejuvenation', intervals: [
+        { waterType: 'spa', recommended: 6, min: 4, max: 9 },
+        { waterType: 'pool', recommended: 12, min: 8, max: 15 },
+        { waterType: 'wader', recommended: 12, min: 8, max: 15 },
+      ]},
+      { typeName: 'Pump Inspection', intervals: [
+        { waterType: 'all', recommended: 12, min: 9, max: 18 },
+      ]},
+      { typeName: 'Salt Cell Cleaning', intervals: [
+        { waterType: 'all', recommended: 3, min: 2, max: 5 },
+      ]},
+      { typeName: 'Automation System Check', intervals: [
+        { waterType: 'all', recommended: 12, min: 9, max: 18 },
+      ]},
+    ];
+
+    let intervalsCreated = 0;
+    for (const config of intervalConfigs) {
+      const serviceType = createdTypes.find(t => t.name === config.typeName);
+      if (!serviceType) continue;
+
+      for (const interval of config.intervals) {
+        await this.createPmIntervalSetting({
+          pmServiceTypeId: serviceType.id,
+          waterType: interval.waterType,
+          recommendedIntervalMonths: interval.recommended,
+          minimumIntervalMonths: interval.min,
+          maximumIntervalMonths: interval.max,
+          warningThresholdDays: 30,
+          isActive: true,
+        } as InsertPmIntervalSetting);
+        intervalsCreated++;
+      }
+    }
+
+    return { serviceTypesCreated: createdTypes.length, intervalsCreated };
   }
 }
 
