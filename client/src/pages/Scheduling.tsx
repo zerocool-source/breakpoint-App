@@ -821,22 +821,7 @@ export default function Scheduling() {
 
                   return (
                     <div key={dayOfWeek} className="border-r border-slate-200 last:border-r-0 flex flex-col bg-slate-50 overflow-hidden">
-                      {/* Unscheduled area for this day */}
-                      {dayUnscheduled.length > 0 && (
-                        <DroppableUnscheduledArea dayOfWeek={dayOfWeek}>
-                          <div className="p-2 bg-amber-50 border-b border-amber-200">
-                            <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium mb-1.5">
-                              <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                              Unscheduled ({dayUnscheduled.length})
-                            </div>
-                            {dayUnscheduled.map((occ) => (
-                              <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={dayOfWeek} />
-                            ))}
-                          </div>
-                        </DroppableUnscheduledArea>
-                      )}
-
-                      {/* Scrollable Route Cards */}
+                      {/* Scrollable Route Cards - Unscheduled items only appear in Route Stops popover */}
                       <ScrollArea className="flex-1">
                         <div className="p-2 space-y-2">
                           {dayRoutesForColumn.length === 0 ? (
@@ -847,8 +832,10 @@ export default function Scheduling() {
                             dayRoutesForColumn.map((route) => {
                               const isExpanded = expandedRoutes.has(route.id);
                               const initials = getInitials(route.technicianName || route.name);
-                              const totalTime = route.stops.reduce((a, s) => a + (s.estimatedTime || 30), 0);
-                              const stopCount = route.stops.length;
+                              // Only show scheduled stops on route cards (not unscheduled)
+                              const scheduledStops = route.stops.filter((s: any) => s.status !== "unscheduled");
+                              const totalTime = scheduledStops.reduce((a: number, s: any) => a + (s.estimatedTime || 30), 0);
+                              const stopCount = scheduledStops.length;
                               const miles = route.estimatedMiles || Math.round(stopCount * 3.5);
                               const driveTime = route.estimatedDriveTime || Math.round(stopCount * 8);
                               const hasActivity = stopCount > 0;
@@ -982,16 +969,16 @@ export default function Scheduling() {
                                       </div>
                                     )}
                                     
-                                    {/* Expanded Stops List */}
+                                    {/* Expanded Stops List - Only show scheduled stops */}
                                     {isExpanded && (
                                       <div className="border-t bg-slate-50">
                                         <div className="divide-y divide-slate-100">
-                                          {route.stops.length === 0 ? (
+                                          {scheduledStops.length === 0 ? (
                                             <div className="p-4 text-center text-slate-400 text-xs">
                                               No stops assigned to this route
                                             </div>
                                           ) : (
-                                            route.stops.map((stop, idx) => (
+                                            scheduledStops.map((stop: any, idx: number) => (
                                               <div 
                                                 key={stop.id}
                                                 className="p-3 bg-white hover:bg-slate-50 flex items-start gap-3"
