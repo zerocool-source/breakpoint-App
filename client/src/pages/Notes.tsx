@@ -36,11 +36,14 @@ import {
   Calendar,
   AlertCircle,
   Pause,
-  Download
+  Download,
+  Edit,
+  Save,
+  X
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { PM_SERVICE_REASONS, type EquipmentPmSchedule, type PmServiceType, type PmServiceRecord } from "@shared/schema";
+import { PM_SERVICE_REASONS, type EquipmentPmSchedule, type PmServiceType, type PmServiceRecord, type PmIntervalSetting } from "@shared/schema";
 
 interface PoolEquipment {
   category: string;
@@ -113,13 +116,27 @@ function PmStatusBadge({ status, count }: { status: string; count?: number }) {
 function PmScheduleCard({ 
   schedule, 
   serviceTypes,
+  intervalSetting,
+  isEditing,
   onRecordService, 
-  onViewHistory 
+  onViewHistory,
+  onEditInterval,
+  onSaveInterval,
+  onCancelEdit,
+  intervalForm,
+  setIntervalForm
 }: { 
   schedule: EquipmentPmSchedule; 
   serviceTypes: PmServiceType[];
+  intervalSetting?: PmIntervalSetting;
+  isEditing: boolean;
   onRecordService: (schedule: EquipmentPmSchedule) => void;
   onViewHistory: (schedule: EquipmentPmSchedule) => void;
+  onEditInterval: (scheduleId: string) => void;
+  onSaveInterval: () => void;
+  onCancelEdit: () => void;
+  intervalForm: { recommended: number; minimum: number; maximum: number; warning: number };
+  setIntervalForm: (form: { recommended: number; minimum: number; maximum: number; warning: number }) => void;
 }) {
   const serviceType = serviceTypes.find(t => t.id === schedule.pmServiceTypeId);
   const dueDate = new Date(schedule.nextDueDate);
@@ -143,6 +160,90 @@ function PmScheduleCard({
               <div className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 <span>Last: {new Date(schedule.lastServiceDate).toLocaleDateString()}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Interval Settings Section - always show with defaults if no interval */}
+          <div className="mt-3 pt-3 border-t border-slate-200">
+            {isEditing ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <Label className="text-xs text-slate-500">Recommended (mo)</Label>
+                    <Input
+                      type="number"
+                      value={intervalForm.recommended}
+                      onChange={(e) => setIntervalForm({ ...intervalForm, recommended: parseInt(e.target.value) || 0 })}
+                      className="h-8 text-sm"
+                      data-testid="input-interval-recommended"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500">Minimum (mo)</Label>
+                    <Input
+                      type="number"
+                      value={intervalForm.minimum}
+                      onChange={(e) => setIntervalForm({ ...intervalForm, minimum: parseInt(e.target.value) || 0 })}
+                      className="h-8 text-sm"
+                      data-testid="input-interval-minimum"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500">Maximum (mo)</Label>
+                    <Input
+                      type="number"
+                      value={intervalForm.maximum}
+                      onChange={(e) => setIntervalForm({ ...intervalForm, maximum: parseInt(e.target.value) || 0 })}
+                      className="h-8 text-sm"
+                      data-testid="input-interval-maximum"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500">Warning (days)</Label>
+                    <Input
+                      type="number"
+                      value={intervalForm.warning}
+                      onChange={(e) => setIntervalForm({ ...intervalForm, warning: parseInt(e.target.value) || 0 })}
+                      className="h-8 text-sm"
+                      data-testid="input-interval-warning"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" onClick={onSaveInterval} className="h-7" data-testid="button-save-interval">
+                    <Save className="h-3 w-3 mr-1" />Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={onCancelEdit} className="h-7" data-testid="button-cancel-interval">
+                    <X className="h-3 w-3 mr-1" />Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <span>
+                    <span className="font-medium">Recommended:</span> {intervalSetting?.recommendedIntervalMonths || 12}mo
+                  </span>
+                  <span>
+                    <span className="font-medium">Min:</span> {intervalSetting?.minimumIntervalMonths || 9}mo
+                  </span>
+                  <span>
+                    <span className="font-medium">Max:</span> {intervalSetting?.maximumIntervalMonths || 24}mo
+                  </span>
+                  <span>
+                    <span className="font-medium">Warning:</span> {intervalSetting?.warningThresholdDays || 30} days
+                  </span>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-6 px-2"
+                  onClick={() => onEditInterval(schedule.id)}
+                  data-testid={`button-edit-interval-${schedule.id}`}
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
               </div>
             )}
           </div>
@@ -191,8 +292,17 @@ function CustomerCard({
   pmSchedules = [],
   pmStatus,
   serviceTypes = [],
+  intervalSettings = [],
   onRecordService,
-  onViewHistory
+  onViewHistory,
+  onAddEquipment,
+  editingInterval,
+  intervalForm,
+  onEditInterval,
+  onSaveInterval,
+  onCancelEdit,
+  setIntervalForm,
+  getIntervalForSchedule
 }: { 
   customer: Customer; 
   isExpanded: boolean;
@@ -200,8 +310,17 @@ function CustomerCard({
   pmSchedules?: EquipmentPmSchedule[];
   pmStatus?: { status: string; count: number } | null;
   serviceTypes?: PmServiceType[];
+  intervalSettings?: PmIntervalSetting[];
   onRecordService?: (schedule: EquipmentPmSchedule) => void;
   onViewHistory?: (schedule: EquipmentPmSchedule) => void;
+  onAddEquipment?: (poolId: string, poolName: string) => void;
+  editingInterval?: string | null;
+  intervalForm?: { recommended: number; minimum: number; maximum: number; warning: number };
+  onEditInterval?: (scheduleId: string) => void;
+  onSaveInterval?: () => void;
+  onCancelEdit?: () => void;
+  setIntervalForm?: (form: { recommended: number; minimum: number; maximum: number; warning: number }) => void;
+  getIntervalForSchedule?: (schedule: EquipmentPmSchedule) => PmIntervalSetting | undefined;
 }) {
   const totalEquipment = customer.pools.reduce((sum, pool) => sum + pool.equipment.length, 0);
   
@@ -312,6 +431,17 @@ function CustomerCard({
                         Preventative Maintenance
                       </span>
                     </div>
+                    {customer.pools.length > 0 && onAddEquipment && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => onAddEquipment(customer.pools[0].id, customer.pools[0].name)}
+                        data-testid={`button-add-equipment-${customer.id}`}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add Equipment
+                      </Button>
+                    )}
                   </div>
                   <div className="space-y-2">
                     {pmSchedules.map((schedule) => (
@@ -319,11 +449,34 @@ function CustomerCard({
                         key={schedule.id}
                         schedule={schedule}
                         serviceTypes={serviceTypes}
+                        intervalSetting={getIntervalForSchedule ? getIntervalForSchedule(schedule) : undefined}
+                        isEditing={editingInterval === schedule.id}
                         onRecordService={onRecordService || (() => {})}
                         onViewHistory={onViewHistory || (() => {})}
+                        onEditInterval={onEditInterval || (() => {})}
+                        onSaveInterval={onSaveInterval || (() => {})}
+                        onCancelEdit={onCancelEdit || (() => {})}
+                        intervalForm={intervalForm || { recommended: 12, minimum: 9, maximum: 24, warning: 30 }}
+                        setIntervalForm={setIntervalForm || (() => {})}
                       />
                     ))}
                   </div>
+                </div>
+              )}
+              
+              {/* Add Equipment Button when no PM schedules exist */}
+              {(!pmSchedules || pmSchedules.length === 0) && customer.pools.length > 0 && onAddEquipment && (
+                <div className="mt-4 pt-4 border-t">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => onAddEquipment(customer.pools[0].id, customer.pools[0].name)}
+                    data-testid={`button-add-equipment-empty-${customer.id}`}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Equipment with PM Schedule
+                  </Button>
                 </div>
               )}
             </div>
@@ -340,6 +493,10 @@ export default function Notes() {
   const [recordServiceSchedule, setRecordServiceSchedule] = useState<EquipmentPmSchedule | null>(null);
   const [historySchedule, setHistorySchedule] = useState<EquipmentPmSchedule | null>(null);
   const [addPmCustomerId, setAddPmCustomerId] = useState<string | null>(null);
+  const [addEquipmentModal, setAddEquipmentModal] = useState<{ customerId: string; poolId: string; poolName: string } | null>(null);
+  const [editingInterval, setEditingInterval] = useState<string | null>(null);
+  const [intervalForm, setIntervalForm] = useState({ recommended: 12, minimum: 9, maximum: 24, warning: 30 });
+  const [newEquipment, setNewEquipment] = useState({ category: "", type: "", notes: "" });
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -403,6 +560,76 @@ export default function Notes() {
     },
   });
 
+  // PM Interval Settings
+  const { data: intervalSettings = [] } = useQuery<PmIntervalSetting[]>({
+    queryKey: ["/api/pm/interval-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/pm/interval-settings");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Get interval settings for a schedule with fallback
+  const getIntervalForSchedule = (schedule: EquipmentPmSchedule) => {
+    // First try exact match
+    let interval = intervalSettings.find(
+      s => s.pmServiceTypeId === schedule.pmServiceTypeId && 
+           s.waterType === schedule.waterType
+    );
+    
+    // Fallback to 'all' water type
+    if (!interval) {
+      interval = intervalSettings.find(
+        s => s.pmServiceTypeId === schedule.pmServiceTypeId && 
+             s.waterType === 'all'
+      );
+    }
+    
+    // Fallback to any interval for this service type
+    if (!interval) {
+      interval = intervalSettings.find(
+        s => s.pmServiceTypeId === schedule.pmServiceTypeId
+      );
+    }
+    
+    return interval;
+  };
+
+  // Update interval setting mutation
+  const updateIntervalMutation = useMutation({
+    mutationFn: async (data: { id: string; recommendedIntervalMonths: number; minimumIntervalMonths: number; maximumIntervalMonths: number; warningThresholdDays: number }) => {
+      const res = await fetch(`/api/pm/interval-settings/${data.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/interval-settings"] });
+      setEditingInterval(null);
+    },
+  });
+
+  // Add equipment with PM schedule mutation
+  const addEquipmentMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/pm/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/stats"] });
+      setAddEquipmentModal(null);
+      setNewEquipment({ category: "", type: "", notes: "" });
+    },
+  });
+
   // PM Service History for selected schedule
   const { data: serviceHistory = [] } = useQuery<PmServiceRecord[]>({
     queryKey: ["/api/pm/records", historySchedule?.id],
@@ -430,6 +657,104 @@ export default function Notes() {
     if (overdue > 0) return { status: 'overdue', count: overdue };
     if (dueSoon > 0) return { status: 'due_soon', count: dueSoon };
     return { status: 'current', count: schedules.length };
+  };
+
+  // Create interval setting mutation
+  const createIntervalMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/pm/interval-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pm/interval-settings"] });
+      setEditingInterval(null);
+    },
+  });
+
+  // Handle editing interval settings
+  const handleEditInterval = (scheduleId: string) => {
+    const schedule = allPmSchedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    const interval = getIntervalForSchedule(schedule);
+    // Use existing values or defaults
+    setIntervalForm({
+      recommended: interval?.recommendedIntervalMonths || 12,
+      minimum: interval?.minimumIntervalMonths || 9,
+      maximum: interval?.maximumIntervalMonths || 24,
+      warning: interval?.warningThresholdDays || 30,
+    });
+    setEditingInterval(scheduleId);
+  };
+
+  // Handle saving interval settings
+  const handleSaveInterval = () => {
+    if (!editingInterval) return;
+    
+    const schedule = allPmSchedules.find(s => s.id === editingInterval);
+    if (!schedule) return;
+    
+    const interval = getIntervalForSchedule(schedule);
+    if (interval) {
+      // Update existing interval
+      updateIntervalMutation.mutate({
+        id: interval.id,
+        recommendedIntervalMonths: intervalForm.recommended,
+        minimumIntervalMonths: intervalForm.minimum,
+        maximumIntervalMonths: intervalForm.maximum,
+        warningThresholdDays: intervalForm.warning,
+      });
+    } else {
+      // Create new interval setting
+      createIntervalMutation.mutate({
+        pmServiceTypeId: schedule.pmServiceTypeId,
+        waterType: schedule.waterType || "pool",
+        recommendedIntervalMonths: intervalForm.recommended,
+        minimumIntervalMonths: intervalForm.minimum,
+        maximumIntervalMonths: intervalForm.maximum,
+        warningThresholdDays: intervalForm.warning,
+        industryStandard: null,
+        notes: null,
+        isActive: true,
+      });
+    }
+  };
+
+  // Handle adding new equipment with PM schedule
+  const handleAddEquipment = () => {
+    if (!addEquipmentModal || !newEquipment.category || !newEquipment.type) return;
+    
+    // Get first service type for this equipment category
+    const matchingServiceType = serviceTypes.find(st => 
+      st.category.toLowerCase() === newEquipment.category.toLowerCase()
+    ) || serviceTypes[0];
+    
+    if (!matchingServiceType) return;
+
+    // Calculate next due date (use recommended interval)
+    const interval = intervalSettings.find(
+      s => s.pmServiceTypeId === matchingServiceType.id
+    );
+    const months = interval?.recommendedIntervalMonths || 12;
+    const nextDue = new Date();
+    nextDue.setMonth(nextDue.getMonth() + months);
+
+    addEquipmentMutation.mutate({
+      equipmentId: `manual-${Date.now()}`,
+      equipmentName: `${newEquipment.category} - ${newEquipment.type}`,
+      equipmentType: newEquipment.category,
+      propertyId: addEquipmentModal.customerId,
+      propertyName: addEquipmentModal.poolName,
+      bodyOfWaterId: addEquipmentModal.poolId,
+      waterType: "pool",
+      pmServiceTypeId: matchingServiceType.id,
+      nextDueDate: nextDue.toISOString().split('T')[0],
+      status: "current",
+    });
   };
 
   // Record service mutation
@@ -730,16 +1055,6 @@ export default function Notes() {
                     <span className="text-lg font-bold text-green-700">{pmStats?.current || 0}</span>
                   </div>
                 </div>
-                <div className="h-8 w-px bg-slate-300" />
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setLocation('/settings/pm-intervals')}
-                  data-testid="button-pm-settings"
-                >
-                  <Settings className="h-4 w-4 mr-1" />
-                  PM Settings
-                </Button>
                 {serviceTypes.length === 0 && (
                   <Button 
                     variant="default" 
@@ -816,8 +1131,17 @@ export default function Notes() {
                   pmSchedules={getPmSchedulesForCustomer(customer.id)}
                   pmStatus={getCustomerPmStatus(customer.id)}
                   serviceTypes={serviceTypes}
+                  intervalSettings={intervalSettings}
                   onRecordService={setRecordServiceSchedule}
                   onViewHistory={setHistorySchedule}
+                  onAddEquipment={(poolId, poolName) => setAddEquipmentModal({ customerId: customer.id, poolId, poolName })}
+                  editingInterval={editingInterval}
+                  intervalForm={intervalForm}
+                  onEditInterval={handleEditInterval}
+                  onSaveInterval={handleSaveInterval}
+                  onCancelEdit={() => setEditingInterval(null)}
+                  setIntervalForm={setIntervalForm}
+                  getIntervalForSchedule={getIntervalForSchedule}
                 />
               ))}
             </div>
@@ -981,6 +1305,91 @@ export default function Notes() {
             )}
             <DialogFooter>
               <Button onClick={() => setHistorySchedule(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Equipment Modal */}
+        <Dialog open={!!addEquipmentModal} onOpenChange={() => setAddEquipmentModal(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-blue-600" />
+                Add Equipment with PM Schedule
+              </DialogTitle>
+            </DialogHeader>
+            {addEquipmentModal && (
+              <div className="space-y-4">
+                <div className="bg-slate-50 p-3 rounded-lg">
+                  <p className="text-sm text-slate-600">Adding equipment to:</p>
+                  <p className="font-medium text-slate-800">{addEquipmentModal.poolName}</p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="equipment-category">Equipment Category</Label>
+                    <Select
+                      value={newEquipment.category}
+                      onValueChange={(value) => setNewEquipment({ ...newEquipment, category: value })}
+                    >
+                      <SelectTrigger id="equipment-category" data-testid="select-equipment-category">
+                        <SelectValue placeholder="Select category..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="filter">Filter</SelectItem>
+                        <SelectItem value="pump">Pump</SelectItem>
+                        <SelectItem value="heater">Heater</SelectItem>
+                        <SelectItem value="controller">Controller</SelectItem>
+                        <SelectItem value="chlorinator">Chlorinator</SelectItem>
+                        <SelectItem value="cleaner">Cleaner</SelectItem>
+                        <SelectItem value="timer">Timer</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="equipment-type">Equipment Type/Model</Label>
+                    <Input
+                      id="equipment-type"
+                      placeholder="e.g., Pentair IntelliFlo, Hayward DE Filter..."
+                      value={newEquipment.type}
+                      onChange={(e) => setNewEquipment({ ...newEquipment, type: e.target.value })}
+                      data-testid="input-equipment-type"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="equipment-notes">Notes (Optional)</Label>
+                    <Textarea
+                      id="equipment-notes"
+                      placeholder="Any additional notes about this equipment..."
+                      value={newEquipment.notes}
+                      onChange={(e) => setNewEquipment({ ...newEquipment, notes: e.target.value })}
+                      data-testid="input-equipment-notes"
+                    />
+                  </div>
+
+                  {serviceTypes.length > 0 && (
+                    <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
+                      <p className="font-medium mb-1">PM Schedule will be created:</p>
+                      <p>A preventative maintenance schedule will be automatically created based on the equipment category with recommended service intervals.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddEquipmentModal(null)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAddEquipment} 
+                disabled={!newEquipment.category || !newEquipment.type || addEquipmentMutation.isPending}
+                data-testid="button-add-equipment-submit"
+              >
+                {addEquipmentMutation.isPending ? 'Adding...' : 'Add Equipment'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
