@@ -914,6 +914,15 @@ export const PM_SERVICE_REASONS = [
 
 export type PmServiceReason = typeof PM_SERVICE_REASONS[number];
 
+// Fleet Truck Statuses
+export const FLEET_TRUCK_STATUSES = [
+  "Active",
+  "Inactive",
+  "In Shop",
+] as const;
+
+export type FleetTruckStatus = typeof FLEET_TRUCK_STATUSES[number];
+
 // Fleet Trucks
 export const fleetTrucks = pgTable("fleet_trucks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -923,6 +932,7 @@ export const fleetTrucks = pgTable("fleet_trucks", {
   smogDue: text("smog_due"),
   smogResult: text("smog_result"),
   notes: text("notes"),
+  status: text("status").default("Active"), // "Active", "Inactive", "In Shop"
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

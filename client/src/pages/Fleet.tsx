@@ -25,7 +25,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import type { FleetTruck, FleetMaintenanceRecord } from "@shared/schema";
-import { FLEET_SERVICE_TYPES } from "@shared/schema";
+import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES } from "@shared/schema";
 
 function excelDateToJS(serial: number): Date {
   const utc_days = Math.floor(serial - 25569);
@@ -169,6 +169,20 @@ export default function Fleet() {
     },
   });
 
+  const updateTruckStatusMutation = useMutation({
+    mutationFn: async ({ truckId, status }: { truckId: string; status: string }) => {
+      const res = await fetch(`/api/fleet/trucks/${truckId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/fleet/trucks"] });
+    },
+  });
+
   const handleAddRecord = () => {
     if (!selectedTruck || !newRecord.serviceType) return;
     
@@ -185,6 +199,9 @@ export default function Fleet() {
 
   const fleetStats = {
     totalTrucks: trucks.length,
+    activeTrucks: trucks.filter(t => t.status === "Active" || !t.status).length,
+    inactiveTrucks: trucks.filter(t => t.status === "Inactive").length,
+    inShopTrucks: trucks.filter(t => t.status === "In Shop").length,
     servicesThisMonth: allRecords.filter(r => {
       const date = parseDate(r.serviceDate);
       if (!date) return false;
@@ -209,6 +226,15 @@ export default function Fleet() {
       }
       return acc;
     }, 0),
+  };
+
+  const getTruckStatusColor = (status: string | null | undefined) => {
+    switch (status) {
+      case "Active": return "bg-green-100 text-green-700";
+      case "Inactive": return "bg-gray-200 text-gray-700";
+      case "In Shop": return "bg-orange-100 text-orange-700";
+      default: return "bg-green-100 text-green-700";
+    }
   };
 
   const getTruckHealthScore = (truck: TruckWithMaintenance): number => {
@@ -236,60 +262,60 @@ export default function Fleet() {
           <h1 className="text-2xl font-bold text-slate-900">Fleet Management</h1>
           <p className="text-slate-500">Track and maintain your service vehicles</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Truck className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{fleetStats.totalTrucks}</p>
-                  <p className="text-sm text-slate-500">Total Trucks</p>
-                </div>
-              </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4 text-center">
+              <Truck className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-blue-700">{fleetStats.totalTrucks}</p>
+              <p className="text-xs text-blue-600 font-medium">Total Fleet</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{fleetStats.servicesThisMonth}</p>
-                  <p className="text-sm text-slate-500">Services This Month</p>
-                </div>
-              </div>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4 text-center">
+              <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-green-700">{fleetStats.activeTrucks}</p>
+              <p className="text-xs text-green-600 font-medium">Active</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{fleetStats.upcomingMaintenance}</p>
-                  <p className="text-sm text-slate-500">Due Soon</p>
-                </div>
-              </div>
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <CardContent className="p-4 text-center">
+              <Wrench className="h-6 w-6 text-orange-600 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-orange-700">{fleetStats.inShopTrucks}</p>
+              <p className="text-xs text-orange-600 font-medium">In Shop</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-slate-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{fleetStats.overdueMaintenance}</p>
-                  <p className="text-sm text-slate-500">Overdue</p>
-                </div>
-              </div>
+          <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+            <CardContent className="p-4 text-center">
+              <Truck className="h-6 w-6 text-gray-500 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-gray-600">{fleetStats.inactiveTrucks}</p>
+              <p className="text-xs text-gray-500 font-medium">Inactive</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-4 text-center">
+              <Activity className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-purple-700">{fleetStats.servicesThisMonth}</p>
+              <p className="text-xs text-purple-600 font-medium">This Month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+            <CardContent className="p-4 text-center">
+              <Clock className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-yellow-700">{fleetStats.upcomingMaintenance}</p>
+              <p className="text-xs text-yellow-600 font-medium">Due Soon</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <CardContent className="p-4 text-center">
+              <AlertTriangle className="h-6 w-6 text-red-600 mx-auto mb-2" />
+              <p className="text-3xl font-bold text-red-700">{fleetStats.overdueMaintenance}</p>
+              <p className="text-xs text-red-600 font-medium">Overdue</p>
             </CardContent>
           </Card>
         </div>
@@ -308,60 +334,70 @@ export default function Fleet() {
                 <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {trucksWithMaintenance.map((truck) => {
                   const healthScore = getTruckHealthScore(truck);
-                  const healthColor = healthScore >= 80 ? "text-green-600" : healthScore >= 60 ? "text-yellow-600" : "text-red-600";
+                  const healthColor = healthScore >= 80 ? "bg-green-500" : healthScore >= 60 ? "bg-yellow-500" : "bg-red-500";
+                  const truckStatus = truck.status || "Active";
                   
                   return (
                     <Card 
                       key={truck.id} 
-                      className="bg-white border-slate-200 hover:border-blue-300 cursor-pointer transition-colors"
+                      className={`bg-white border-slate-200 hover:border-blue-300 cursor-pointer transition-all hover:shadow-md ${truckStatus === "Inactive" ? "opacity-60" : ""}`}
                       onClick={() => setSelectedTruck(truck)}
                       data-testid={`card-truck-${truck.truckNumber}`}
                     >
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <Truck className="h-5 w-5 text-blue-600" />
-                            <CardTitle className="text-lg">Truck #{truck.truckNumber}</CardTitle>
-                          </div>
-                          <div className={`text-lg font-bold ${healthColor}`}>
-                            {healthScore}%
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-500">Current Mileage</span>
-                            <span className="font-medium">{truck.currentMileage?.toLocaleString() || "—"}</span>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <p className="text-xs text-slate-500 font-medium">Service Status</p>
-                            <div className="flex flex-wrap gap-1">
-                              {FLEET_SERVICE_TYPES.slice(0, 4).map(type => {
-                                const record = truck.latestByType[type];
-                                const days = daysSince(record?.serviceDate);
-                                const status = getMaintenanceStatus(days, type);
-                                return (
-                                  <Badge key={type} className={`text-xs ${status.color}`}>
-                                    {type.split(' ')[0]}
-                                  </Badge>
-                                );
-                              })}
+                            <div className="p-2 bg-blue-100 rounded-lg">
+                              <Truck className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-lg text-slate-900">#{truck.truckNumber}</p>
+                              <p className="text-xs text-slate-500">{truck.currentMileage?.toLocaleString() || "—"} mi</p>
                             </div>
                           </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <div className={`w-10 h-10 rounded-full ${healthColor} flex items-center justify-center`}>
+                              <span className="text-white font-bold text-sm">{healthScore}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mb-3">
+                          <Select
+                            value={truckStatus}
+                            onValueChange={(value) => {
+                              updateTruckStatusMutation.mutate({ truckId: truck.id, status: value });
+                            }}
+                          >
+                            <SelectTrigger 
+                              className={`h-7 text-xs ${getTruckStatusColor(truckStatus)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              data-testid={`status-select-${truck.truckNumber}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent onClick={(e) => e.stopPropagation()}>
+                              {FLEET_TRUCK_STATUSES.map(status => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                          {truck.notes && (
-                            <p className="text-xs text-slate-500 line-clamp-2">{truck.notes}</p>
-                          )}
-
-                          <Button variant="ghost" size="sm" className="w-full justify-between text-blue-600">
-                            View Details
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
+                        <div className="flex flex-wrap gap-1">
+                          {FLEET_SERVICE_TYPES.slice(0, 4).map(type => {
+                            const record = truck.latestByType[type];
+                            const days = daysSince(record?.serviceDate);
+                            const status = getMaintenanceStatus(days, type);
+                            return (
+                              <Badge key={type} className={`text-xs px-1.5 py-0.5 ${status.color}`}>
+                                {type.split(' ')[0].substring(0, 3)}
+                              </Badge>
+                            );
+                          })}
                         </div>
                       </CardContent>
                     </Card>
