@@ -1649,68 +1649,92 @@ function setupRoutes(app: any) {
         }
 
         // Extract equipment info from pool data
-        const equipment = [];
+        const equipment: { category: string; type: string; notes: string | null }[] = [];
+        
+        // Helper to extract equipment type as string
+        const extractEquipmentType = (value: any): string | null => {
+          if (!value) return null;
+          if (typeof value === 'string') return value;
+          if (typeof value === 'object') {
+            // Pool Brain returns equipment as objects with notes field containing description
+            if (value.notes && typeof value.notes === 'string' && value.notes.trim()) {
+              return value.notes.trim();
+            }
+            // Fallback to type name or eqId lookup
+            if (value.typeName) return value.typeName;
+            if (value.name) return value.name;
+            return 'Installed';
+          }
+          return String(value);
+        };
         
         // Filter
-        if (pool.Filter || pool.FilterType) {
+        const filterType = extractEquipmentType(pool.Filter) || extractEquipmentType(pool.FilterType);
+        if (filterType) {
           equipment.push({
             category: 'filter',
-            type: pool.Filter || pool.FilterType || 'Unknown',
-            notes: pool.FilterNotes || null,
+            type: filterType,
+            notes: typeof pool.FilterNotes === 'string' ? pool.FilterNotes : null,
           });
         }
         
         // Pump
-        if (pool.Pump || pool.PumpType) {
+        const pumpType = extractEquipmentType(pool.Pump) || extractEquipmentType(pool.PumpType);
+        if (pumpType) {
           equipment.push({
             category: 'pump',
-            type: pool.Pump || pool.PumpType || 'Unknown',
-            notes: pool.PumpNotes || null,
+            type: pumpType,
+            notes: typeof pool.PumpNotes === 'string' ? pool.PumpNotes : null,
           });
         }
         
         // Heater
-        if (pool.Heater || pool.HeaterType) {
+        const heaterType = extractEquipmentType(pool.Heater) || extractEquipmentType(pool.HeaterType);
+        if (heaterType) {
           equipment.push({
             category: 'heater',
-            type: pool.Heater || pool.HeaterType || 'Unknown',
-            notes: pool.HeaterNotes || null,
+            type: heaterType,
+            notes: typeof pool.HeaterNotes === 'string' ? pool.HeaterNotes : null,
           });
         }
         
         // Chlorinator
-        if (pool.Chlorinator || pool.ChlorinatorType) {
+        const chlorinatorType = extractEquipmentType(pool.Chlorinator) || extractEquipmentType(pool.ChlorinatorType);
+        if (chlorinatorType) {
           equipment.push({
             category: 'chlorinator',
-            type: pool.Chlorinator || pool.ChlorinatorType || 'Unknown',
-            notes: pool.ChlorinatorNotes || null,
+            type: chlorinatorType,
+            notes: typeof pool.ChlorinatorNotes === 'string' ? pool.ChlorinatorNotes : null,
           });
         }
         
         // Controller/Automation
-        if (pool.Controller || pool.Automation) {
+        const controllerType = extractEquipmentType(pool.Controller) || extractEquipmentType(pool.Automation);
+        if (controllerType) {
           equipment.push({
             category: 'controller',
-            type: pool.Controller || pool.Automation || 'Unknown',
-            notes: pool.ControllerNotes || pool.AutomationNotes || null,
+            type: controllerType,
+            notes: typeof pool.ControllerNotes === 'string' ? pool.ControllerNotes : (typeof pool.AutomationNotes === 'string' ? pool.AutomationNotes : null),
           });
         }
         
         // Cleaner
-        if (pool.Cleaner || pool.CleanerType) {
+        const cleanerType = extractEquipmentType(pool.Cleaner) || extractEquipmentType(pool.CleanerType);
+        if (cleanerType) {
           equipment.push({
             category: 'cleaner',
-            type: pool.Cleaner || pool.CleanerType || 'Unknown',
-            notes: pool.CleanerNotes || null,
+            type: cleanerType,
+            notes: typeof pool.CleanerNotes === 'string' ? pool.CleanerNotes : null,
           });
         }
 
         // Timer
-        if (pool.Timer || pool.TimerType) {
+        const timerType = extractEquipmentType(pool.Timer) || extractEquipmentType(pool.TimerType);
+        if (timerType) {
           equipment.push({
             category: 'timer',
-            type: pool.Timer || pool.TimerType || 'Unknown',
-            notes: pool.TimerNotes || null,
+            type: timerType,
+            notes: typeof pool.TimerNotes === 'string' ? pool.TimerNotes : null,
           });
         }
 
