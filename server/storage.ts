@@ -72,6 +72,7 @@ export interface IStorage {
 
   // Customer Addresses
   getCustomerAddresses(customerId: string): Promise<CustomerAddress[]>;
+  getCustomerAddress(id: string): Promise<CustomerAddress | undefined>;
   createCustomerAddress(address: InsertCustomerAddress): Promise<CustomerAddress>;
   upsertCustomerAddress(customerId: string, externalId: string, address: InsertCustomerAddress): Promise<CustomerAddress>;
   deleteCustomer(id: string): Promise<void>;
@@ -98,6 +99,7 @@ export interface IStorage {
   bulkCreateServiceOccurrences(occurrences: InsertServiceOccurrence[]): Promise<ServiceOccurrence[]>;
   updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined>;
   assignOccurrenceToRoute(id: string, routeId: string, technicianId?: string): Promise<ServiceOccurrence | undefined>;
+  deleteServiceOccurrencesBySchedule(scheduleId: string): Promise<void>;
 
   // Pools
   getPoolsByCustomer(customerId: string): Promise<Pool[]>;
@@ -391,6 +393,11 @@ export class DbStorage implements IStorage {
     return db.select().from(customerAddresses).where(eq(customerAddresses.customerId, customerId));
   }
 
+  async getCustomerAddress(id: string): Promise<CustomerAddress | undefined> {
+    const result = await db.select().from(customerAddresses).where(eq(customerAddresses.id, id)).limit(1);
+    return result[0];
+  }
+
   async createCustomerAddress(address: InsertCustomerAddress): Promise<CustomerAddress> {
     const result = await db.insert(customerAddresses).values(address).returning();
     return result[0];
@@ -516,6 +523,10 @@ export class DbStorage implements IStorage {
       .where(eq(serviceOccurrences.id, id))
       .returning();
     return result[0];
+  }
+
+  async deleteServiceOccurrencesBySchedule(scheduleId: string): Promise<void> {
+    await db.delete(serviceOccurrences).where(eq(serviceOccurrences.scheduleId, scheduleId));
   }
 
   // Pools

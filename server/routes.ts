@@ -1742,6 +1742,51 @@ function setupRoutes(app: any) {
       const { propertyId } = req.params;
       const scheduleData = req.body;
       const schedule = await storage.upsertRouteSchedule(propertyId, scheduleData);
+      
+      // Delete existing unscheduled service occurrences for this schedule
+      await storage.deleteServiceOccurrencesBySchedule(schedule.id);
+      
+      // If schedule is active and has visit days, generate service occurrences
+      if (schedule.isActive && schedule.visitDays && schedule.visitDays.length > 0) {
+        // Get property info for customer name
+        const property = await storage.getCustomerAddress(propertyId);
+        let customerName = "";
+        if (property && property.customerId) {
+          const customer = await storage.getCustomer(property.customerId);
+          customerName = customer?.name || "";
+        }
+        
+        // Map day names to day of week numbers (0-6, Mon-Sun format used in scheduling)
+        const dayNameToNumber: Record<string, number> = {
+          "Monday": 0,
+          "Tuesday": 1,
+          "Wednesday": 2,
+          "Thursday": 3,
+          "Friday": 4,
+          "Saturday": 5,
+          "Sunday": 6
+        };
+        
+        // Generate service occurrences for each visit day
+        const occurrencesToCreate = schedule.visitDays.map((dayName: string) => ({
+          scheduleId: schedule.id,
+          propertyId: propertyId,
+          customerId: property?.customerId || null,
+          customerName: customerName,
+          propertyName: property?.name || "",
+          status: "unscheduled",
+          dayOfWeek: dayNameToNumber[dayName] ?? 0,
+          routeId: null,
+          technicianId: null,
+          scheduledDate: null,
+          notes: schedule.routeNotes || null
+        }));
+        
+        if (occurrencesToCreate.length > 0) {
+          await storage.bulkCreateServiceOccurrences(occurrencesToCreate);
+        }
+      }
+      
       res.json({ schedule });
     } catch (error: any) {
       console.error("Error saving route schedule:", error);

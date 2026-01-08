@@ -25,8 +25,9 @@ import {
   Plus, MapPin, Clock, 
   Trash2, Edit, GripVertical, MoreVertical, 
   Map, List, ChevronLeft, ChevronRight,
-  Navigation, Timer, ChevronDown, ChevronUp, Filter, EyeOff, ChevronsDownUp
+  Navigation, Timer, ChevronDown, ChevronUp, Filter, EyeOff, ChevronsDownUp, X
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -254,6 +255,7 @@ export default function Scheduling() {
   const [activeDragItem, setActiveDragItem] = useState<UnscheduledOccurrence | null>(null);
   const [allCollapsed, setAllCollapsed] = useState(true);
   const [showUnscheduledPanel, setShowUnscheduledPanel] = useState(false);
+  const [showMapPanel, setShowMapPanel] = useState(true);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
   const sensors = useSensors(
@@ -649,13 +651,68 @@ export default function Scheduling() {
 
               <div className="h-5 w-px bg-white/20 mx-1" />
 
+              <Popover open={showUnscheduledPanel} onOpenChange={setShowUnscheduledPanel}>
+                <PopoverTrigger asChild>
+                  <button 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-md text-amber-400 hover:bg-amber-500/30 text-xs font-medium transition-colors"
+                    data-testid="btn-unscheduled"
+                  >
+                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                    {totalUnscheduled} Route Stops
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-80 p-0 bg-white shadow-xl border border-slate-200" 
+                  align="end"
+                  sideOffset={8}
+                >
+                  <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                      <h3 className="font-semibold text-amber-800 text-sm">Unscheduled Stops</h3>
+                      <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">{totalUnscheduled}</span>
+                    </div>
+                    <button 
+                      onClick={() => setShowUnscheduledPanel(false)}
+                      className="text-amber-600 hover:text-amber-800 p-1"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <ScrollArea className="max-h-[400px]">
+                    <div className="p-3 space-y-3">
+                      {Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
+                        const dayOfWeek = Number(dayKey);
+                        const dayInfo = DAYS[dayOfWeek];
+                        return (
+                          <div key={dayKey}>
+                            <div className="text-xs font-medium text-slate-500 mb-2">{dayInfo.label}</div>
+                            {occurrences.map((occ) => (
+                              <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={dayOfWeek} />
+                            ))}
+                          </div>
+                        );
+                      })}
+                      {totalUnscheduled === 0 && (
+                        <div className="text-center py-8 text-slate-400 text-sm">
+                          No unscheduled stops
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
+
               <button 
-                onClick={() => setShowUnscheduledPanel(!showUnscheduledPanel)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-md text-amber-400 hover:bg-amber-500/30 text-xs font-medium transition-colors"
-                data-testid="btn-unscheduled"
+                onClick={() => setShowMapPanel(!showMapPanel)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  showMapPanel 
+                    ? "bg-blue-500/20 border border-blue-500/40 text-blue-400" 
+                    : "text-white/70 hover:text-white"
+                }`}
               >
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-                {totalUnscheduled} Route Stops
+                <Map className="h-3.5 w-3.5" />
+                {showMapPanel ? "Hide Map" : "Show Map"}
               </button>
 
               <div className="flex bg-[#1C2A4B] rounded-md p-0.5">
@@ -683,9 +740,11 @@ export default function Scheduling() {
 
           {/* Main Content */}
           {viewMode === "list" ? (
-            <div className="flex-1 overflow-hidden flex">
-              {/* Left side: Day Columns */}
-              <div className={`flex flex-col overflow-hidden ${dayViewMode === "week" ? "flex-1" : "w-1/2"}`}>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* Main area with day columns and optional side map */}
+              <div className={`flex overflow-hidden ${dayViewMode === "week" ? "flex-1" : "flex-1"}`}>
+                {/* Left side: Day Columns */}
+                <div className={`flex flex-col overflow-hidden ${dayViewMode === "week" ? "flex-1" : (showMapPanel ? "w-[40%]" : "flex-1")}`}>
                 {/* Day Navigation for 1-day and 2-day views */}
                 {dayViewMode !== "week" && (
                   <div className="bg-[#0F1B33] px-4 py-2 flex items-center justify-between border-b border-[#2A3A5B]">
@@ -1001,8 +1060,8 @@ export default function Scheduling() {
               </div>
 
               {/* Right side: Map for 1-day and 2-day views */}
-              {dayViewMode !== "week" && (
-                <div className="w-1/2 flex-shrink-0 rounded-lg overflow-hidden shadow-sm border border-slate-200">
+              {dayViewMode !== "week" && showMapPanel && (
+                <div className="w-[60%] flex-shrink-0 rounded-lg overflow-hidden shadow-sm border border-slate-200 m-2">
                   <MapContainer
                     center={defaultCenter}
                     zoom={10}
@@ -1063,6 +1122,69 @@ export default function Scheduling() {
                           </React.Fragment>
                         );
                       });
+                    })}
+                  </MapContainer>
+                </div>
+              )}
+              </div>
+
+              {/* Bottom Map for week view */}
+              {dayViewMode === "week" && showMapPanel && (
+                <div className="h-64 flex-shrink-0 border-t border-slate-200 bg-white">
+                  <MapContainer
+                    center={defaultCenter}
+                    zoom={10}
+                    style={{ height: "100%", width: "100%" }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {allRoutes.map((route, routeIndex) => {
+                      const routeCoords: [number, number][] = route.stops.map((stop, stopIndex) => {
+                        const baseLat = 33.7 + (routeIndex * 0.15);
+                        const baseLng = -117.3 - (routeIndex * 0.15);
+                        const lat = stop.lat || (baseLat + (stopIndex * 0.02));
+                        const lng = stop.lng || (baseLng + (stopIndex * 0.025));
+                        return [lat, lng] as [number, number];
+                      });
+
+                      return (
+                        <React.Fragment key={route.id}>
+                          {routeCoords.length > 1 && (
+                            <Polyline
+                              positions={routeCoords}
+                              pathOptions={{ 
+                                color: route.color, 
+                                weight: 3,
+                                opacity: 0.7
+                              }}
+                            />
+                          )}
+                          {route.stops.map((stop, stopIndex) => (
+                            <Marker
+                              key={stop.id}
+                              position={routeCoords[stopIndex]}
+                              icon={createMarkerIcon(route.color, stopIndex + 1)}
+                            >
+                              <Popup>
+                                <div className="p-1">
+                                  <p className="font-semibold">{stop.customerName || stop.propertyName}</p>
+                                  {stop.poolName && (
+                                    <p className="text-sm text-slate-600">{stop.poolName}</p>
+                                  )}
+                                  {stop.address && (
+                                    <p className="text-xs text-slate-500">{stop.address}</p>
+                                  )}
+                                  <p className="text-xs mt-1">
+                                    Stop #{stopIndex + 1} on {route.name}
+                                  </p>
+                                </div>
+                              </Popup>
+                            </Marker>
+                          ))}
+                        </React.Fragment>
+                      );
                     })}
                   </MapContainer>
                 </div>
@@ -1156,46 +1278,6 @@ export default function Scheduling() {
                   })}
                 </MapContainer>
               </div>
-            </div>
-          )}
-
-          {/* Unscheduled Panel (Slide-out) */}
-          {showUnscheduledPanel && (
-            <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl z-50 border-l border-slate-200">
-              <div className="p-4 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                  <h3 className="font-semibold text-amber-800">Unscheduled Stops</h3>
-                  <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">{totalUnscheduled}</span>
-                </div>
-                <button 
-                  onClick={() => setShowUnscheduledPanel(false)}
-                  className="text-amber-600 hover:text-amber-800"
-                >
-                  ×
-                </button>
-              </div>
-              <ScrollArea className="h-[calc(100%-60px)]">
-                <div className="p-3 space-y-3">
-                  {Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
-                    const dayOfWeek = Number(dayKey);
-                    const dayInfo = DAYS[dayOfWeek];
-                    return (
-                      <div key={dayKey}>
-                        <div className="text-xs font-medium text-slate-500 mb-2">{dayInfo.label}</div>
-                        {occurrences.map((occ) => (
-                          <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={dayOfWeek} />
-                        ))}
-                      </div>
-                    );
-                  })}
-                  {totalUnscheduled === 0 && (
-                    <div className="text-center py-8 text-slate-400 text-sm">
-                      No unscheduled stops
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
             </div>
           )}
 
