@@ -662,34 +662,10 @@ export default function Scheduling() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
-            {workDays.map((day) => {
-              const dayInfo = DAYS.find(d => d.value === day)!;
-              const routeCount = (routesByDay[day] || []).length;
-              const isToday = new Date().getDay() === day;
-              return (
-                <Button
-                  key={day}
-                  variant={selectedDay === day ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setSelectedDay(day)}
-                  className={`flex-col h-auto py-2 px-3 ${selectedDay === day ? "bg-blue-600" : ""} ${isToday && selectedDay !== day ? "ring-2 ring-blue-300" : ""}`}
-                >
-                  <span className="font-semibold">{dayInfo.short}</span>
-                  {routeCount > 0 && (
-                    <span className="text-[10px] mt-0.5 opacity-75">{routeCount} routes</span>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
         {viewMode === "list" ? (
-            <div className="h-[calc(100vh-180px)] overflow-auto">
-              {/* Day Columns Layout */}
-              <div className="flex gap-2 pb-4 min-w-0">
+            <div className="h-[calc(100vh-140px)] overflow-auto">
+              {/* Day Columns Layout - fits screen */}
+              <div className="grid grid-cols-5 gap-3 pb-4">
                 {workDays.map((day) => {
                   const dayInfo = DAYS.find(d => d.value === day)!;
                   const dayRoutesForColumn = routesByDay[day] || [];
@@ -697,20 +673,20 @@ export default function Scheduling() {
                   const isToday = new Date().getDay() === day;
                   
                   return (
-                    <div key={day} className="flex-1 min-w-[220px]">
+                    <div key={day} className="min-w-0">
                       {/* Day Header */}
                       <div className={`${isToday ? "bg-blue-700" : "bg-blue-600"} text-white rounded-t-lg px-4 py-3 text-center`}>
-                        <div className="text-base font-bold">{dayInfo.label}</div>
+                        <div className="text-lg font-bold">{dayInfo.label}</div>
                         {isToday && <div className="text-xs opacity-75">Today</div>}
                       </div>
                       
                       {/* Unscheduled for this day - droppable area */}
                       <DroppableUnscheduledArea dayOfWeek={day}>
-                        <div className={`bg-amber-50 border-x border-amber-200 p-2 space-y-1 min-h-[40px] ${dayUnscheduled.length === 0 ? "flex items-center justify-center" : ""}`}>
+                        <div className={`bg-amber-50 border-x border-amber-200 p-2 space-y-1 min-h-[48px] ${dayUnscheduled.length === 0 ? "flex items-center justify-center" : ""}`}>
                           {dayUnscheduled.length > 0 ? (
                             <>
-                              <div className="flex items-center gap-1 text-[10px] text-amber-700 font-medium mb-1">
-                                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                              <div className="flex items-center gap-1 text-xs text-amber-700 font-medium mb-1">
+                                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                                 Unscheduled ({dayUnscheduled.length})
                               </div>
                               {dayUnscheduled.map((occ) => (
@@ -718,15 +694,15 @@ export default function Scheduling() {
                               ))}
                             </>
                           ) : (
-                            <div className="text-[10px] text-amber-400">Drop here to unschedule</div>
+                            <div className="text-xs text-amber-400">Drop here to unschedule</div>
                           )}
                         </div>
                       </DroppableUnscheduledArea>
                       
                       {/* Technician Route Cards */}
-                      <div className="bg-slate-100 rounded-b-lg p-3 min-h-[250px] space-y-3">
+                      <div className="bg-slate-100 rounded-b-lg p-3 min-h-[300px] space-y-3">
                         {dayRoutesForColumn.length === 0 ? (
-                          <div className="text-center py-6 text-slate-400 text-sm">
+                          <div className="text-center py-8 text-slate-400 text-sm">
                             No routes
                           </div>
                         ) : (
@@ -745,19 +721,19 @@ export default function Scheduling() {
                                   onClick={() => toggleRouteExpanded(route.id)}
                                   data-testid={`route-card-${route.id}`}
                                 >
-                              <div className="p-3">
-                                <div className="flex items-center gap-3">
+                              <div className="p-4">
+                                <div className="flex items-start gap-3">
                                   <div 
-                                    className="w-10 h-10 rounded-md flex items-center justify-center text-white font-bold text-sm"
+                                    className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-base flex-shrink-0"
                                     style={{ backgroundColor: route.color }}
                                   >
                                     {initials}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-slate-900 text-sm truncate">{route.name}</h3>
-                                    <p className="text-xs text-slate-500">{route.technicianName || "Unassigned"}</p>
+                                    <h3 className="font-bold text-slate-900 text-base leading-tight">{route.name}</h3>
+                                    <p className="text-sm text-slate-500 mt-0.5">{route.technicianName || "Unassigned"}</p>
                                   </div>
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap-1 flex-shrink-0">
                                     <MapPin className="h-4 w-4 text-amber-500" />
                                     <span className="font-bold text-slate-700 text-sm">{stopCount}</span>
                                   </div>
@@ -809,17 +785,17 @@ export default function Scheduling() {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
-                                <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
                                   <span className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
+                                    <Clock className="h-4 w-4" />
                                     {formatTime(totalTime)}
                                   </span>
                                   <span className="flex items-center gap-1">
-                                    <Navigation className="h-3 w-3" />
+                                    <Navigation className="h-4 w-4" />
                                     {miles.toFixed(1)}mi
                                   </span>
                                   <span className="flex items-center gap-1">
-                                    <Timer className="h-3 w-3" />
+                                    <Timer className="h-4 w-4" />
                                     {formatTime(driveTime)}
                                   </span>
                                 </div>
