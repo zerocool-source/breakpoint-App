@@ -3422,6 +3422,27 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Unassign occurrence from route (return to unscheduled)
+  app.post("/api/occurrences/:id/unassign", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify occurrence exists
+      const occurrence = await storage.getServiceOccurrence(id);
+      if (!occurrence) {
+        return res.status(404).json({ error: "Occurrence not found" });
+      }
+      
+      // Unassign the occurrence from the route
+      const updated = await storage.unassignOccurrenceFromRoute(id);
+      
+      res.json({ occurrence: updated });
+    } catch (error: any) {
+      console.error("Error unassigning occurrence from route:", error);
+      res.status(500).json({ error: "Failed to unassign occurrence from route" });
+    }
+  });
+
   // Get unscheduled service occurrences by date range
   app.get("/api/unscheduled", async (req: any, res: any) => {
     try {

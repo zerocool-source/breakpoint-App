@@ -422,6 +422,19 @@ export default function Scheduling() {
     },
   });
 
+  const unassignStopMutation = useMutation({
+    mutationFn: async (occurrenceId: string) => {
+      const response = await fetch(`/api/occurrences/${occurrenceId}/unassign`, { method: "POST" });
+      if (!response.ok) throw new Error("Failed to unassign stop");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["unscheduled", dateRange.start, dateRange.end] });
+      toast({ title: "Stop Unassigned", description: "Visit returned to Route Stops." });
+    },
+  });
+
   const assignToRouteMutation = useMutation({
     mutationFn: async ({ occurrenceId, routeId }: { occurrenceId: string; routeId: string }) => {
       const response = await fetch(`/api/occurrences/${occurrenceId}/assign`, {
@@ -1021,8 +1034,8 @@ export default function Scheduling() {
                                                   className="p-1 text-slate-400 hover:text-red-500 transition-colors"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (confirm("Remove this stop?")) {
-                                                      deleteStopMutation.mutate(stop.id);
+                                                    if (confirm("Remove this stop from route?")) {
+                                                      unassignStopMutation.mutate(stop.id);
                                                     }
                                                   }}
                                                 >

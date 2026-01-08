@@ -100,6 +100,7 @@ export interface IStorage {
   bulkCreateServiceOccurrences(occurrences: InsertServiceOccurrence[]): Promise<ServiceOccurrence[]>;
   updateServiceOccurrenceStatus(id: string, status: string): Promise<ServiceOccurrence | undefined>;
   assignOccurrenceToRoute(id: string, routeId: string, technicianId?: string): Promise<ServiceOccurrence | undefined>;
+  unassignOccurrenceFromRoute(id: string): Promise<ServiceOccurrence | undefined>;
   deleteServiceOccurrencesBySchedule(scheduleId: string): Promise<void>;
 
   // Pools
@@ -536,6 +537,18 @@ export class DbStorage implements IStorage {
         status: "scheduled", 
         routeId,
         technicianId: technicianId || null
+      })
+      .where(eq(serviceOccurrences.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async unassignOccurrenceFromRoute(id: string): Promise<ServiceOccurrence | undefined> {
+    const result = await db.update(serviceOccurrences)
+      .set({ 
+        status: "unscheduled", 
+        routeId: null,
+        technicianId: null
       })
       .where(eq(serviceOccurrences.id, id))
       .returning();
