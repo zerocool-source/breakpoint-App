@@ -572,6 +572,33 @@ export default function Scheduling() {
                 </CollapsibleContent>
               </Collapsible>
             )}
+
+            <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
+              <Button
+                variant={dayViewMode === "1day" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDayViewMode("1day")}
+                className={dayViewMode === "1day" ? "bg-slate-700" : ""}
+              >
+                1 Day
+              </Button>
+              <Button
+                variant={dayViewMode === "2day" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDayViewMode("2day")}
+                className={dayViewMode === "2day" ? "bg-slate-700" : ""}
+              >
+                2 Day
+              </Button>
+              <Button
+                variant={dayViewMode === "week" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setDayViewMode("week")}
+                className={dayViewMode === "week" ? "bg-slate-700" : ""}
+              >
+                Week
+              </Button>
+            </div>
             
             <div className="flex items-center bg-white rounded-lg border p-1">
               <Button
@@ -605,33 +632,6 @@ export default function Scheduling() {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
-            <Button
-              variant={dayViewMode === "1day" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setDayViewMode("1day")}
-              className={dayViewMode === "1day" ? "bg-slate-700" : ""}
-            >
-              1 Day
-            </Button>
-            <Button
-              variant={dayViewMode === "2day" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setDayViewMode("2day")}
-              className={dayViewMode === "2day" ? "bg-slate-700" : ""}
-            >
-              2 Day
-            </Button>
-            <Button
-              variant={dayViewMode === "week" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setDayViewMode("week")}
-              className={dayViewMode === "week" ? "bg-slate-700" : ""}
-            >
-              Week
-            </Button>
-          </div>
-          
           <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
             {workDays.map((day) => {
               const dayInfo = DAYS.find(d => d.value === day)!;
