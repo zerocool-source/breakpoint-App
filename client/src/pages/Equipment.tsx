@@ -107,9 +107,11 @@ export default function Equipment() {
     notes: "",
   });
 
-  const { data: customers = [], isLoading: customersLoading } = useQuery<CustomerWithEquipment[]>({
+  const { data: customersData, isLoading: customersLoading } = useQuery<{ customers: CustomerWithEquipment[] }>({
     queryKey: ["/api/poolbrain/customers-equipment"],
   });
+  
+  const customers = customersData?.customers || [];
 
   const { data: pmSchedules = [] } = useQuery<EquipmentPmSchedule[]>({
     queryKey: ["/api/pm/schedules"],
