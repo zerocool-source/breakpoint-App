@@ -1591,6 +1591,151 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Get all customers with equipment from Pool Brain API
+  app.get("/api/poolbrain/customers-equipment", async (req: any, res: any) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch customers and pool details with equipment
+      const [customersData, poolsData] = await Promise.all([
+        client.getCustomerDetail({ limit: 2000 }).catch(() => ({ data: [] })),
+        client.getCustomerPoolDetails({ limit: 2000 }).catch(() => ({ data: [] })),
+      ]);
+
+      // Build customer map
+      const customerMap: Record<string, any> = {};
+      if (customersData.data && Array.isArray(customersData.data)) {
+        customersData.data.forEach((c: any) => {
+          const id = String(c.RecordID || c.CustomerID);
+          if (id) {
+            customerMap[id] = {
+              id,
+              name: c.Name || c.CustomerName || `${c.FirstName || ''} ${c.LastName || ''}`.trim() || 'Unknown',
+              address: c.Address || c.Street || null,
+              city: c.City || null,
+              state: c.State || null,
+              zip: c.Zip || c.ZipCode || null,
+              email: c.Email || null,
+              phone: c.Phone || c.PhoneNumber || null,
+              pools: [],
+            };
+          }
+        });
+      }
+
+      // Map pools with equipment to customers
+      const pools = poolsData.data || [];
+      for (const pool of pools) {
+        const customerId = String(pool.CustomerID || pool.customerId);
+        if (!customerMap[customerId]) {
+          // Create customer entry if not found
+          customerMap[customerId] = {
+            id: customerId,
+            name: pool.CustomerName || 'Unknown Customer',
+            address: null,
+            pools: [],
+          };
+        }
+
+        // Extract equipment info from pool data
+        const equipment = [];
+        
+        // Filter
+        if (pool.Filter || pool.FilterType) {
+          equipment.push({
+            category: 'filter',
+            type: pool.Filter || pool.FilterType || 'Unknown',
+            notes: pool.FilterNotes || null,
+          });
+        }
+        
+        // Pump
+        if (pool.Pump || pool.PumpType) {
+          equipment.push({
+            category: 'pump',
+            type: pool.Pump || pool.PumpType || 'Unknown',
+            notes: pool.PumpNotes || null,
+          });
+        }
+        
+        // Heater
+        if (pool.Heater || pool.HeaterType) {
+          equipment.push({
+            category: 'heater',
+            type: pool.Heater || pool.HeaterType || 'Unknown',
+            notes: pool.HeaterNotes || null,
+          });
+        }
+        
+        // Chlorinator
+        if (pool.Chlorinator || pool.ChlorinatorType) {
+          equipment.push({
+            category: 'chlorinator',
+            type: pool.Chlorinator || pool.ChlorinatorType || 'Unknown',
+            notes: pool.ChlorinatorNotes || null,
+          });
+        }
+        
+        // Controller/Automation
+        if (pool.Controller || pool.Automation) {
+          equipment.push({
+            category: 'controller',
+            type: pool.Controller || pool.Automation || 'Unknown',
+            notes: pool.ControllerNotes || pool.AutomationNotes || null,
+          });
+        }
+        
+        // Cleaner
+        if (pool.Cleaner || pool.CleanerType) {
+          equipment.push({
+            category: 'cleaner',
+            type: pool.Cleaner || pool.CleanerType || 'Unknown',
+            notes: pool.CleanerNotes || null,
+          });
+        }
+
+        // Timer
+        if (pool.Timer || pool.TimerType) {
+          equipment.push({
+            category: 'timer',
+            type: pool.Timer || pool.TimerType || 'Unknown',
+            notes: pool.TimerNotes || null,
+          });
+        }
+
+        customerMap[customerId].pools.push({
+          id: pool.RecordID || pool.PoolID,
+          name: pool.PoolName || pool.Name || 'Pool',
+          type: pool.PoolType || pool.Type || 'Pool',
+          address: pool.PoolAddress || pool.Address || null,
+          waterType: pool.WaterType || null,
+          serviceLevel: pool.ServiceLevel || null,
+          equipment,
+          notes: pool.Notes || pool.PoolNotes || null,
+        });
+      }
+
+      // Convert to array and filter out customers without pools
+      const customers = Object.values(customerMap).filter((c: any) => c.pools.length > 0);
+
+      res.json({ customers });
+    } catch (error: any) {
+      console.error("Error fetching Pool Brain customers with equipment:", error);
+      res.status(500).json({ error: "Failed to fetch customers with equipment", message: error.message });
+    }
+  });
+
   // Get customer detail with pools from Pool Brain
   app.get("/api/customers/:customerId/detail", async (req: any, res: any) => {
     try {
