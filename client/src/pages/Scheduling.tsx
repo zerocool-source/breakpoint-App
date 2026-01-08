@@ -626,20 +626,22 @@ export default function Scheduling() {
               <Plus className="h-4 w-4 mr-1" />
               Add Route
             </Button>
-            {/* Collapsible Unscheduled Queue - after Add Route */}
-            {unscheduledOccurrences.length > 0 && (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100">
-                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mr-2" />
-                    Unscheduled
-                    <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{unscheduledOccurrences.length}</span>
-                    <ChevronDown className="h-3 w-3 ml-1" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="absolute right-4 top-20 z-50 w-80 bg-white rounded-lg shadow-xl border border-amber-200 p-3 max-h-96 overflow-y-auto">
-                  <div className="space-y-2">
-                    {Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
+            {/* Collapsible Unscheduled Queue - after Add Route - always visible */}
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse mr-2" />
+                  Unscheduled
+                  <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5">{unscheduledOccurrences.length}</span>
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="absolute right-4 top-20 z-50 w-80 bg-white rounded-lg shadow-xl border border-amber-200 p-3 max-h-96 overflow-y-auto">
+                <div className="space-y-2">
+                  {unscheduledOccurrences.length === 0 ? (
+                    <div className="text-center text-slate-400 text-sm py-4">No unscheduled items</div>
+                  ) : (
+                    Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
                       const dayOfWeek = Number(dayKey);
                       const dayInfo = DAYS[dayOfWeek];
                       return (
@@ -652,11 +654,11 @@ export default function Scheduling() {
                           </div>
                         </DroppableUnscheduledArea>
                       );
-                    })}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
+                    })
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         </div>
 
@@ -695,11 +697,11 @@ export default function Scheduling() {
                   const isToday = new Date().getDay() === day;
                   
                   return (
-                    <div key={day} className="flex-1 min-w-[180px]">
+                    <div key={day} className="flex-1 min-w-[220px]">
                       {/* Day Header */}
-                      <div className={`${isToday ? "bg-blue-700" : "bg-blue-600"} text-white rounded-t-lg px-3 py-2 text-center`}>
-                        <div className="text-sm font-semibold">{dayInfo.label}</div>
-                        {isToday && <div className="text-[10px] opacity-75">Today</div>}
+                      <div className={`${isToday ? "bg-blue-700" : "bg-blue-600"} text-white rounded-t-lg px-4 py-3 text-center`}>
+                        <div className="text-base font-bold">{dayInfo.label}</div>
+                        {isToday && <div className="text-xs opacity-75">Today</div>}
                       </div>
                       
                       {/* Unscheduled for this day - droppable area */}
@@ -722,9 +724,9 @@ export default function Scheduling() {
                       </DroppableUnscheduledArea>
                       
                       {/* Technician Route Cards */}
-                      <div className="bg-slate-100 rounded-b-lg p-2 min-h-[200px] space-y-2">
+                      <div className="bg-slate-100 rounded-b-lg p-3 min-h-[250px] space-y-3">
                         {dayRoutesForColumn.length === 0 ? (
-                          <div className="text-center py-4 text-slate-400 text-xs">
+                          <div className="text-center py-6 text-slate-400 text-sm">
                             No routes
                           </div>
                         ) : (
@@ -743,21 +745,21 @@ export default function Scheduling() {
                                   onClick={() => toggleRouteExpanded(route.id)}
                                   data-testid={`route-card-${route.id}`}
                                 >
-                              <div className="p-2">
-                                <div className="flex items-center gap-2">
+                              <div className="p-3">
+                                <div className="flex items-center gap-3">
                                   <div 
-                                    className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-xs"
+                                    className="w-10 h-10 rounded-md flex items-center justify-center text-white font-bold text-sm"
                                     style={{ backgroundColor: route.color }}
                                   >
                                     {initials}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-slate-900 text-xs truncate">{route.name}</h3>
-                                    <p className="text-[10px] text-slate-500">{route.technicianName || "Unassigned"}</p>
+                                    <h3 className="font-semibold text-slate-900 text-sm truncate">{route.name}</h3>
+                                    <p className="text-xs text-slate-500">{route.technicianName || "Unassigned"}</p>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3 text-amber-500" />
-                                    <span className="font-bold text-slate-700 text-xs">{stopCount}</span>
+                                    <MapPin className="h-4 w-4 text-amber-500" />
+                                    <span className="font-bold text-slate-700 text-sm">{stopCount}</span>
                                   </div>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -807,17 +809,17 @@ export default function Scheduling() {
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
-                                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
-                                  <span className="flex items-center gap-0.5">
-                                    <Clock className="h-2.5 w-2.5" />
+                                <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
                                     {formatTime(totalTime)}
                                   </span>
-                                  <span className="flex items-center gap-0.5">
-                                    <Navigation className="h-2.5 w-2.5" />
+                                  <span className="flex items-center gap-1">
+                                    <Navigation className="h-3 w-3" />
                                     {miles.toFixed(1)}mi
                                   </span>
-                                  <span className="flex items-center gap-0.5">
-                                    <Timer className="h-2.5 w-2.5" />
+                                  <span className="flex items-center gap-1">
+                                    <Timer className="h-3 w-3" />
                                     {formatTime(driveTime)}
                                   </span>
                                 </div>
