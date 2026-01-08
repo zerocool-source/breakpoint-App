@@ -914,6 +914,56 @@ export const PM_SERVICE_REASONS = [
 
 export type PmServiceReason = typeof PM_SERVICE_REASONS[number];
 
+// Equipment Types for PM Tracking
+export const PM_EQUIPMENT_TYPES = [
+  "Heater",
+  "Filter", 
+  "Pump",
+  "Controller",
+  "Salt System",
+  "UV System",
+  "Ozone",
+  "Other",
+] as const;
+
+export type PmEquipmentType = typeof PM_EQUIPMENT_TYPES[number];
+
+// Equipment Applications
+export const PM_EQUIPMENT_APPLICATIONS = [
+  "Pool",
+  "Spa",
+  "Wader",
+  "Splash Pad",
+  "Fountain",
+  "Other",
+] as const;
+
+export type PmEquipmentApplication = typeof PM_EQUIPMENT_APPLICATIONS[number];
+
+// Equipment Brands by Type
+export const PM_EQUIPMENT_BRANDS: Record<string, readonly string[]> = {
+  heater: ["Raypak", "Pentair", "Hayward", "Jandy", "Laars", "Lochinvar", "Other"],
+  filter: ["Pentair", "Hayward", "Jandy", "Waterway", "Sta-Rite", "Other"],
+  pump: ["Pentair", "Hayward", "Jandy", "Sta-Rite", "Waterway", "Other"],
+  controller: ["Pentair", "Hayward", "Jandy", "Chemtrol", "Other"],
+  "salt system": ["Pentair", "Hayward", "Jandy", "AutoPilot", "Other"],
+  "uv system": ["Delta UV", "Spectralight", "Other"],
+  ozone: ["DEL Ozone", "ClearWater", "Other"],
+  other: ["Other"],
+};
+
+// Equipment Models by Type
+export const PM_EQUIPMENT_MODELS: Record<string, readonly string[]> = {
+  heater: ["R207A", "R267A", "R337A", "R407A", "MasterTemp 250", "MasterTemp 400", "H-Series", "Other"],
+  filter: ["TR100", "TR140", "TR200", "DE4820", "DE6020", "CL220", "Other"],
+  pump: ["IntelliFlo VSF", "IntelliFlo3", "SuperFlo VS", "WhisperFlo", "EcoStar", "Other"],
+  controller: ["IntelliChem", "ProLogic", "AquaLink", "Other"],
+  "salt system": ["IntelliChlor", "AquaRite", "Other"],
+  "uv system": ["E-80", "E-46", "Other"],
+  ozone: ["Eclipse", "Solar", "Other"],
+  other: ["Other"],
+};
+
 // Fleet Truck Statuses
 export const FLEET_TRUCK_STATUSES = [
   "Active",

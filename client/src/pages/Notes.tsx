@@ -43,7 +43,17 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { PM_SERVICE_REASONS, type EquipmentPmSchedule, type PmServiceType, type PmServiceRecord, type PmIntervalSetting } from "@shared/schema";
+import { 
+  PM_SERVICE_REASONS, 
+  PM_EQUIPMENT_TYPES,
+  PM_EQUIPMENT_APPLICATIONS,
+  PM_EQUIPMENT_BRANDS,
+  PM_EQUIPMENT_MODELS,
+  type EquipmentPmSchedule, 
+  type PmServiceType, 
+  type PmServiceRecord, 
+  type PmIntervalSetting 
+} from "@shared/schema";
 
 interface PoolEquipment {
   category: string;
@@ -496,7 +506,15 @@ export default function Notes() {
   const [addEquipmentModal, setAddEquipmentModal] = useState<{ customerId: string; poolId: string; poolName: string } | null>(null);
   const [editingInterval, setEditingInterval] = useState<string | null>(null);
   const [intervalForm, setIntervalForm] = useState({ recommended: 12, minimum: 9, maximum: 24, warning: 30 });
-  const [newEquipment, setNewEquipment] = useState({ category: "", type: "", notes: "" });
+  const [newEquipment, setNewEquipment] = useState({ 
+    category: "", 
+    application: "", 
+    brand: "", 
+    model: "", 
+    customBrand: "",
+    customModel: "",
+    notes: "" 
+  });
   const [_, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -626,7 +644,7 @@ export default function Notes() {
       queryClient.invalidateQueries({ queryKey: ["/api/pm/schedules"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pm/stats"] });
       setAddEquipmentModal(null);
-      setNewEquipment({ category: "", type: "", notes: "" });
+      resetEquipmentForm();
     },
   });
 
@@ -726,7 +744,13 @@ export default function Notes() {
 
   // Handle adding new equipment with PM schedule
   const handleAddEquipment = () => {
-    if (!addEquipmentModal || !newEquipment.category || !newEquipment.type) return;
+    if (!addEquipmentModal || !newEquipment.category || !newEquipment.application) return;
+    
+    // Get brand and model (use custom values if "Other" selected)
+    const brand = newEquipment.brand === "Other" ? newEquipment.customBrand : newEquipment.brand;
+    const model = newEquipment.model === "Other" ? newEquipment.customModel : newEquipment.model;
+    
+    if (!brand || !model) return;
     
     // Get first service type for this equipment category
     const matchingServiceType = serviceTypes.find(st => 
@@ -743,18 +767,46 @@ export default function Notes() {
     const nextDue = new Date();
     nextDue.setMonth(nextDue.getMonth() + months);
 
+    // Determine water type from application
+    const waterType = newEquipment.application.toLowerCase() === "spa" ? "spa" : "pool";
+
     addEquipmentMutation.mutate({
       equipmentId: `manual-${Date.now()}`,
-      equipmentName: `${newEquipment.category} - ${newEquipment.type}`,
+      equipmentName: `${brand} ${model}`,
       equipmentType: newEquipment.category,
       propertyId: addEquipmentModal.customerId,
       propertyName: addEquipmentModal.poolName,
       bodyOfWaterId: addEquipmentModal.poolId,
-      waterType: "pool",
+      waterType,
       pmServiceTypeId: matchingServiceType.id,
       nextDueDate: nextDue.toISOString().split('T')[0],
       status: "current",
     });
+  };
+  
+  // Reset new equipment form
+  const resetEquipmentForm = () => {
+    setNewEquipment({ 
+      category: "", 
+      application: "", 
+      brand: "", 
+      model: "", 
+      customBrand: "",
+      customModel: "",
+      notes: "" 
+    });
+  };
+  
+  // Get brands for selected category
+  const getEquipmentBrands = () => {
+    const categoryKey = newEquipment.category.toLowerCase();
+    return PM_EQUIPMENT_BRANDS[categoryKey] || PM_EQUIPMENT_BRANDS["other"] || ["Other"];
+  };
+  
+  // Get models for selected category
+  const getEquipmentModels = () => {
+    const categoryKey = newEquipment.category.toLowerCase();
+    return PM_EQUIPMENT_MODELS[categoryKey] || PM_EQUIPMENT_MODELS["other"] || ["Other"];
   };
 
   // Record service mutation
@@ -1310,82 +1362,189 @@ export default function Notes() {
         </Dialog>
 
         {/* Add Equipment Modal */}
-        <Dialog open={!!addEquipmentModal} onOpenChange={() => setAddEquipmentModal(null)}>
-          <DialogContent className="sm:max-w-md">
+        <Dialog open={!!addEquipmentModal} onOpenChange={(open) => {
+          if (!open) {
+            setAddEquipmentModal(null);
+            resetEquipmentForm();
+          }
+        }}>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5 text-blue-600" />
-                Add Equipment with PM Schedule
+                Add New Equipment
               </DialogTitle>
             </DialogHeader>
             {addEquipmentModal && (
               <div className="space-y-4">
-                <div className="bg-slate-50 p-3 rounded-lg">
-                  <p className="text-sm text-slate-600">Adding equipment to:</p>
-                  <p className="font-medium text-slate-800">{addEquipmentModal.poolName}</p>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-600">Adding equipment to:</p>
+                  <p className="font-semibold text-blue-800">{addEquipmentModal.poolName}</p>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Equipment Type */}
                   <div>
-                    <Label htmlFor="equipment-category">Equipment Category</Label>
+                    <Label className="text-xs text-slate-600">Type *</Label>
                     <Select
                       value={newEquipment.category}
-                      onValueChange={(value) => setNewEquipment({ ...newEquipment, category: value })}
+                      onValueChange={(value) => setNewEquipment({ 
+                        ...newEquipment, 
+                        category: value,
+                        brand: "",
+                        model: "",
+                        customBrand: "",
+                        customModel: ""
+                      })}
                     >
-                      <SelectTrigger id="equipment-category" data-testid="select-equipment-category">
-                        <SelectValue placeholder="Select category..." />
+                      <SelectTrigger data-testid="select-equipment-type">
+                        <SelectValue placeholder="Select type..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="filter">Filter</SelectItem>
-                        <SelectItem value="pump">Pump</SelectItem>
-                        <SelectItem value="heater">Heater</SelectItem>
-                        <SelectItem value="controller">Controller</SelectItem>
-                        <SelectItem value="chlorinator">Chlorinator</SelectItem>
-                        <SelectItem value="cleaner">Cleaner</SelectItem>
-                        <SelectItem value="timer">Timer</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {PM_EQUIPMENT_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
 
+                  {/* Application */}
                   <div>
-                    <Label htmlFor="equipment-type">Equipment Type/Model</Label>
-                    <Input
-                      id="equipment-type"
-                      placeholder="e.g., Pentair IntelliFlo, Hayward DE Filter..."
-                      value={newEquipment.type}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, type: e.target.value })}
-                      data-testid="input-equipment-type"
-                    />
+                    <Label className="text-xs text-slate-600">Application *</Label>
+                    <Select
+                      value={newEquipment.application}
+                      onValueChange={(value) => setNewEquipment({ ...newEquipment, application: value })}
+                    >
+                      <SelectTrigger data-testid="select-equipment-application">
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PM_EQUIPMENT_APPLICATIONS.map((app) => (
+                          <SelectItem key={app} value={app}>{app}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-
-                  <div>
-                    <Label htmlFor="equipment-notes">Notes (Optional)</Label>
-                    <Textarea
-                      id="equipment-notes"
-                      placeholder="Any additional notes about this equipment..."
-                      value={newEquipment.notes}
-                      onChange={(e) => setNewEquipment({ ...newEquipment, notes: e.target.value })}
-                      data-testid="input-equipment-notes"
-                    />
-                  </div>
-
-                  {serviceTypes.length > 0 && (
-                    <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-                      <p className="font-medium mb-1">PM Schedule will be created:</p>
-                      <p>A preventative maintenance schedule will be automatically created based on the equipment category with recommended service intervals.</p>
-                    </div>
-                  )}
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Brand */}
+                  <div>
+                    <Label className="text-xs text-slate-600">Brand *</Label>
+                    {newEquipment.brand === "Other" ? (
+                      <div className="flex gap-1">
+                        <Input
+                          placeholder="Type brand..."
+                          value={newEquipment.customBrand}
+                          onChange={(e) => setNewEquipment({ ...newEquipment, customBrand: e.target.value })}
+                          data-testid="input-custom-brand"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => setNewEquipment({ ...newEquipment, brand: "", customBrand: "" })}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={newEquipment.brand}
+                        onValueChange={(value) => setNewEquipment({ ...newEquipment, brand: value })}
+                        disabled={!newEquipment.category}
+                      >
+                        <SelectTrigger data-testid="select-equipment-brand">
+                          <SelectValue placeholder="Select brand..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getEquipmentBrands().map((brand) => (
+                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <Label className="text-xs text-slate-600">Model *</Label>
+                    {newEquipment.model === "Other" ? (
+                      <div className="flex gap-1">
+                        <Input
+                          placeholder="Type model..."
+                          value={newEquipment.customModel}
+                          onChange={(e) => setNewEquipment({ ...newEquipment, customModel: e.target.value })}
+                          data-testid="input-custom-model"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => setNewEquipment({ ...newEquipment, model: "", customModel: "" })}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={newEquipment.model}
+                        onValueChange={(value) => setNewEquipment({ ...newEquipment, model: value })}
+                        disabled={!newEquipment.category}
+                      >
+                        <SelectTrigger data-testid="select-equipment-model">
+                          <SelectValue placeholder="Select model..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getEquipmentModels().map((model) => (
+                            <SelectItem key={model} value={model}>{model}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-slate-600">Notes (Optional)</Label>
+                  <Textarea
+                    placeholder="Any additional notes about this equipment..."
+                    value={newEquipment.notes}
+                    onChange={(e) => setNewEquipment({ ...newEquipment, notes: e.target.value })}
+                    rows={2}
+                    data-testid="input-equipment-notes"
+                  />
+                </div>
+
+                {serviceTypes.length > 0 && newEquipment.category && (
+                  <div className="bg-green-50 p-3 rounded-lg border border-green-200 text-sm">
+                    <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      PM Schedule will be created
+                    </div>
+                    <p className="text-green-600 text-xs">
+                      A preventative maintenance schedule will be automatically created for this {newEquipment.category.toLowerCase()} with recommended service intervals based on the application type.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddEquipmentModal(null)}>
+              <Button variant="outline" onClick={() => {
+                setAddEquipmentModal(null);
+                resetEquipmentForm();
+              }}>
                 Cancel
               </Button>
               <Button 
                 onClick={handleAddEquipment} 
-                disabled={!newEquipment.category || !newEquipment.type || addEquipmentMutation.isPending}
+                disabled={
+                  !newEquipment.category || 
+                  !newEquipment.application || 
+                  (!newEquipment.brand && !newEquipment.customBrand) ||
+                  (!newEquipment.model && !newEquipment.customModel) ||
+                  (newEquipment.brand === "Other" && !newEquipment.customBrand) ||
+                  (newEquipment.model === "Other" && !newEquipment.customModel) ||
+                  addEquipmentMutation.isPending
+                }
                 data-testid="button-add-equipment-submit"
               >
                 {addEquipmentMutation.isPending ? 'Adding...' : 'Add Equipment'}
