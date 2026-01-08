@@ -710,14 +710,14 @@ function AddEquipmentModal({
             <div className="space-y-2">
               <Label>Body of Water</Label>
               <Select
-                value={formData.poolId}
-                onValueChange={(value) => setFormData({ ...formData, poolId: value })}
+                value={formData.poolId || "none"}
+                onValueChange={(value) => setFormData({ ...formData, poolId: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Link to pool/spa (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {pools.map((pool) => (
                     <SelectItem key={pool.id} value={String(pool.id)}>
                       {pool.name} ({pool.poolType})
