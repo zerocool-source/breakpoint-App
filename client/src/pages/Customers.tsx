@@ -1016,6 +1016,19 @@ function CustomerDetailPanel({
     enabled: !!selectedPropertyId,
   });
 
+  const { data: upcomingVisitsData } = useQuery<{ visits: { id: string; date: string; status: string; routeId: string | null; routeName: string | null; technicianName: string | null; routeColor: string | null }[] }>({
+    queryKey: ["/api/properties", selectedPropertyId, "upcoming-visits"],
+    queryFn: async () => {
+      if (!selectedPropertyId) return { visits: [] };
+      const res = await fetch(`/api/properties/${selectedPropertyId}/upcoming-visits`);
+      if (!res.ok) return { visits: [] };
+      return res.json();
+    },
+    enabled: !!selectedPropertyId,
+  });
+
+  const upcomingVisits = upcomingVisitsData?.visits || [];
+
   useEffect(() => {
     if (routeScheduleData?.schedule) {
       const s = routeScheduleData.schedule;
@@ -1607,6 +1620,52 @@ function CustomerDetailPanel({
                   />
                 </CardContent>
               </Card>
+
+              {upcomingVisits.length > 0 && (
+                <Card className="bg-white">
+                  <CardContent className="p-4">
+                    <h4 className="font-medium text-slate-700 mb-3">Scheduled Visits</h4>
+                    <p className="text-xs text-slate-500 mb-3">Upcoming service visits with assigned routes</p>
+                    <div className="space-y-2">
+                      {upcomingVisits.map((visit) => {
+                        const visitDate = new Date(visit.date);
+                        const dayName = visitDate.toLocaleDateString("en-US", { weekday: "short" });
+                        const dateStr = visitDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                        return (
+                          <div 
+                            key={visit.id} 
+                            className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50"
+                            data-testid={`visit-${visit.id}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-xs",
+                                visit.status === "scheduled" ? "bg-green-500" : visit.status === "completed" ? "bg-blue-500" : "bg-amber-500"
+                              )}>
+                                {dayName}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-slate-700">{dateStr}</p>
+                                <p className="text-xs text-slate-500">
+                                  {visit.status === "scheduled" ? "Scheduled" : visit.status === "completed" ? "Completed" : "Unscheduled"}
+                                </p>
+                              </div>
+                            </div>
+                            {visit.routeName ? (
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-blue-600">{visit.routeName}</p>
+                                <p className="text-xs text-slate-500">{visit.technicianName || "Unassigned"}</p>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">Not assigned to route</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Button 
                 onClick={handleSaveRouteSchedule}

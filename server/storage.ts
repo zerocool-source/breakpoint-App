@@ -217,6 +217,7 @@ export interface IStorage {
 
   // Route Stops
   getRouteStops(routeId: string): Promise<RouteStop[]>;
+  getRouteAssignedOccurrences(routeId: string): Promise<{ id: string; propertyId: string; date: Date; status: string; customerName: string; addressLine1: string | null; city: string | null; state: string | null; zip: string | null; sortOrder: number }[]>;
   getRouteStop(id: string): Promise<RouteStop | undefined>;
   createRouteStop(stop: InsertRouteStop): Promise<RouteStop>;
   updateRouteStop(id: string, updates: Partial<InsertRouteStop>): Promise<RouteStop | undefined>;
@@ -1226,6 +1227,32 @@ export class DbStorage implements IStorage {
     return db.select().from(routeStops)
       .where(eq(routeStops.routeId, routeId))
       .orderBy(routeStops.sortOrder);
+  }
+
+  async getRouteAssignedOccurrences(routeId: string): Promise<{ id: string; propertyId: string; date: Date; status: string; customerName: string; addressLine1: string | null; city: string | null; state: string | null; zip: string | null; sortOrder: number }[]> {
+    const result = await db
+      .select({
+        id: serviceOccurrences.id,
+        propertyId: serviceOccurrences.propertyId,
+        date: serviceOccurrences.date,
+        status: serviceOccurrences.status,
+        customerName: customers.name,
+        addressLine1: customerAddresses.addressLine1,
+        city: customerAddresses.city,
+        state: customerAddresses.state,
+        zip: customerAddresses.zip,
+      })
+      .from(serviceOccurrences)
+      .innerJoin(customerAddresses, eq(serviceOccurrences.propertyId, customerAddresses.id))
+      .innerJoin(customers, eq(customerAddresses.customerId, customers.id))
+      .where(eq(serviceOccurrences.routeId, routeId))
+      .orderBy(serviceOccurrences.date);
+    
+    return result.map((r, index) => ({
+      ...r,
+      status: r.status || "scheduled",
+      sortOrder: index + 1
+    }));
   }
 
   async getRouteStop(id: string): Promise<RouteStop | undefined> {

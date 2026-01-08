@@ -1737,6 +1737,56 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Get upcoming scheduled visits for a property with route/technician info
+  app.get("/api/properties/:propertyId/upcoming-visits", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const occurrences = await storage.getServiceOccurrencesByProperty(propertyId);
+      
+      // Get all routes to look up route names/technicians
+      const allRoutes = await storage.getRoutes();
+      const routeMap = new Map<string, { name: string; technicianName: string | null; color: string }>();
+      for (const route of allRoutes) {
+        routeMap.set(route.id, { 
+          name: route.name, 
+          technicianName: route.technicianName, 
+          color: route.color 
+        });
+      }
+      
+      // Filter to recent and upcoming visits (within 2 weeks before and 4 weeks ahead)
+      const now = new Date();
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const fourWeeksAhead = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+      
+      const filteredOccurrences = occurrences.filter(occ => {
+        const occDate = new Date(occ.date);
+        return occDate >= twoWeeksAgo && occDate <= fourWeeksAhead;
+      });
+      
+      // Enrich occurrences with route info and sort by date
+      const enrichedVisits = filteredOccurrences
+        .map(occ => {
+          const routeInfo = occ.routeId ? routeMap.get(occ.routeId) : null;
+          return {
+            id: occ.id,
+            date: occ.date,
+            status: occ.status,
+            routeId: occ.routeId,
+            routeName: routeInfo?.name || null,
+            technicianName: routeInfo?.technicianName || null,
+            routeColor: routeInfo?.color || null,
+          };
+        })
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      res.json({ visits: enrichedVisits });
+    } catch (error: any) {
+      console.error("Error fetching upcoming visits:", error);
+      res.status(500).json({ error: "Failed to fetch upcoming visits" });
+    }
+  });
+
   app.put("/api/properties/:propertyId/route-schedule", async (req: any, res: any) => {
     try {
       const { propertyId } = req.params;
@@ -3491,11 +3541,36 @@ function setupRoutes(app: any) {
       const dayOfWeek = req.query.dayOfWeek !== undefined ? parseInt(req.query.dayOfWeek) : undefined;
       const routesList = await storage.getRoutes(dayOfWeek);
       
-      // Fetch stops for each route
+      // Fetch stops for each route (including assigned occurrences)
       const routesWithStops = await Promise.all(
         routesList.map(async (route) => {
-          const stops = await storage.getRouteStops(route.id);
-          return { ...route, stops };
+          const [manualStops, assignedOccurrences] = await Promise.all([
+            storage.getRouteStops(route.id),
+            storage.getRouteAssignedOccurrences(route.id)
+          ]);
+          
+          // Transform assigned occurrences to match stop format
+          const occurrenceStops = assignedOccurrences.map((occ, index) => ({
+            id: occ.id,
+            routeId: route.id,
+            propertyId: occ.propertyId,
+            propertyName: occ.addressLine1 || "Property",
+            customerId: null,
+            customerName: occ.customerName,
+            address: `${occ.addressLine1 || ""}, ${occ.city || ""} ${occ.state || ""} ${occ.zip || ""}`.trim(),
+            city: occ.city,
+            state: occ.state,
+            zip: occ.zip,
+            sortOrder: manualStops.length + index + 1,
+            estimatedTime: 30,
+            status: occ.status,
+            date: occ.date,
+            isOccurrence: true, // Flag to distinguish from manual stops
+          }));
+          
+          // Combine manual stops and assigned occurrences
+          const allStops = [...manualStops, ...occurrenceStops];
+          return { ...route, stops: allStops };
         })
       );
       
