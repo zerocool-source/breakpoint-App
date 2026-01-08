@@ -239,7 +239,6 @@ export default function Scheduling() {
     color: ROUTE_COLORS[0],
     technicianName: "",
     dayOfWeek: 1,
-    date: new Date().toISOString().split("T")[0],
   });
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
@@ -293,11 +292,11 @@ export default function Scheduling() {
   const unscheduledOccurrences = unscheduledData?.occurrences || [];
 
   const unscheduledByDay = useMemo(() => {
-    const grouped: Record<string, UnscheduledOccurrence[]> = {};
+    const grouped: Record<number, UnscheduledOccurrence[]> = {};
     for (const occ of unscheduledOccurrences) {
-      const dateKey = new Date(occ.date).toISOString().split("T")[0];
-      if (!grouped[dateKey]) grouped[dateKey] = [];
-      grouped[dateKey].push(occ);
+      const dayOfWeek = new Date(occ.date).getDay();
+      if (!grouped[dayOfWeek]) grouped[dayOfWeek] = [];
+      grouped[dayOfWeek].push(occ);
     }
     return grouped;
   }, [unscheduledOccurrences]);
@@ -316,7 +315,7 @@ export default function Scheduling() {
       queryClient.invalidateQueries({ queryKey: ["all-routes"] });
       toast({ title: "Route Created", description: "New route has been added." });
       setShowCreateRouteDialog(false);
-      setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "", dayOfWeek: 1, date: new Date().toISOString().split("T")[0] });
+      setNewRoute({ name: "", color: ROUTE_COLORS[0], technicianName: "", dayOfWeek: 1 });
       setSelectedCustomerIds([]);
     },
   });
@@ -557,19 +556,15 @@ export default function Scheduling() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="absolute right-4 top-20 z-50 w-80 bg-white rounded-lg shadow-xl border border-amber-200 p-3 max-h-96 overflow-y-auto">
                   <div className="space-y-2">
-                    {Object.entries(unscheduledByDay).sort().map(([dateKey, occurrences]) => {
-                      const date = new Date(dateKey + "T00:00:00");
-                      const dayName = DAYS[date.getDay()].short;
-                      const formattedDate = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+                    {Object.entries(unscheduledByDay).sort(([a], [b]) => Number(a) - Number(b)).map(([dayKey, occurrences]) => {
+                      const dayOfWeek = Number(dayKey);
+                      const dayInfo = DAYS[dayOfWeek];
                       return (
-                        <div key={dateKey} className="border-b border-slate-100 pb-2 last:border-0">
-                          <div className="text-xs font-medium text-slate-600 mb-1">{formattedDate} {dayName}</div>
-                          {occurrences.map((occ) => {
-                            const occDayOfWeek = new Date(occ.date + "T00:00:00").getDay();
-                            return (
-                              <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={occDayOfWeek} />
-                            );
-                          })}
+                        <div key={dayKey} className="border-b border-slate-100 pb-2 last:border-0">
+                          <div className="text-xs font-medium text-slate-600 mb-1">{dayInfo.label}</div>
+                          {occurrences.map((occ) => (
+                            <DraggableUnscheduledItem key={occ.id} occurrence={occ} dayOfWeek={dayOfWeek} />
+                          ))}
                         </div>
                       );
                     })}
@@ -640,17 +635,16 @@ export default function Scheduling() {
           <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border">
             {workDays.map((day) => {
               const dayInfo = DAYS.find(d => d.value === day)!;
-              const dateStr = getDateForDay(day);
               const routeCount = (routesByDay[day] || []).length;
+              const isToday = new Date().getDay() === day;
               return (
                 <Button
                   key={day}
                   variant={selectedDay === day ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setSelectedDay(day)}
-                  className={`flex-col h-auto py-2 px-3 ${selectedDay === day ? "bg-blue-600" : ""}`}
+                  className={`flex-col h-auto py-2 px-3 ${selectedDay === day ? "bg-blue-600" : ""} ${isToday && selectedDay !== day ? "ring-2 ring-blue-300" : ""}`}
                 >
-                  <span className="text-xs opacity-75">{dateStr}</span>
                   <span className="font-semibold">{dayInfo.short}</span>
                   {routeCount > 0 && (
                     <span className="text-[10px] mt-0.5 opacity-75">{routeCount} routes</span>
@@ -667,15 +661,16 @@ export default function Scheduling() {
               <div className="flex gap-2 pb-4 min-w-0">
                 {workDays.map((day) => {
                   const dayInfo = DAYS.find(d => d.value === day)!;
-                  const dateStr = getDateForDay(day);
                   const dayRoutesForColumn = routesByDay[day] || [];
-                  const dayUnscheduled = unscheduledByDay[getFullDateForDay(day)] || [];
+                  const dayUnscheduled = unscheduledByDay[day] || [];
+                  const isToday = new Date().getDay() === day;
                   
                   return (
                     <div key={day} className="flex-1 min-w-[180px]">
                       {/* Day Header */}
-                      <div className="bg-blue-600 text-white rounded-t-lg px-3 py-2 text-center">
-                        <div className="text-sm font-semibold">{dateStr} {dayInfo.label}</div>
+                      <div className={`${isToday ? "bg-blue-700" : "bg-blue-600"} text-white rounded-t-lg px-3 py-2 text-center`}>
+                        <div className="text-sm font-semibold">{dayInfo.label}</div>
+                        {isToday && <div className="text-[10px] opacity-75">Today</div>}
                       </div>
                       
                       {/* Unscheduled for this day */}
@@ -745,7 +740,6 @@ export default function Scheduling() {
                                             color: route.color,
                                             technicianName: route.technicianName || "",
                                             dayOfWeek: route.dayOfWeek,
-                                            date: new Date().toISOString().split("T")[0],
                                           });
                                           setShowEditRouteDialog(true);
                                         }}
@@ -975,21 +969,6 @@ export default function Scheduling() {
                   value={newRoute.technicianName}
                   onChange={(e) => setNewRoute({ ...newRoute, technicianName: e.target.value })}
                   placeholder="e.g., Alan Bateman"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Route Date</Label>
-                <Input
-                  type="date"
-                  value={newRoute.date}
-                  onChange={(e) => {
-                    const date = new Date(e.target.value + "T00:00:00");
-                    setNewRoute({ 
-                      ...newRoute, 
-                      date: e.target.value,
-                      dayOfWeek: date.getDay()
-                    });
-                  }}
                 />
               </div>
               <div className="space-y-2">
