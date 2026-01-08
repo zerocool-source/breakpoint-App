@@ -703,17 +703,20 @@ export default function Scheduling() {
                 </PopoverContent>
               </Popover>
 
-              <button 
-                onClick={() => setShowMapPanel(!showMapPanel)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                  showMapPanel 
-                    ? "bg-blue-500/20 border border-blue-500/40 text-blue-400" 
-                    : "text-white/70 hover:text-white"
-                }`}
-              >
-                <Map className="h-3.5 w-3.5" />
-                {showMapPanel ? "Hide Map" : "Show Map"}
-              </button>
+              {/* Map toggle only visible in 1-day view */}
+              {dayViewMode === "1day" && (
+                <button 
+                  onClick={() => setShowMapPanel(!showMapPanel)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                    showMapPanel 
+                      ? "bg-blue-500/20 border border-blue-500/40 text-blue-400" 
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <Map className="h-3.5 w-3.5" />
+                  {showMapPanel ? "Hide Map" : "Show Map"}
+                </button>
+              )}
 
               <div className="flex bg-[#1C2A4B] rounded-md p-0.5">
                 <button
@@ -744,7 +747,7 @@ export default function Scheduling() {
               {/* Main area with day columns and optional side map */}
               <div className={`flex overflow-hidden ${dayViewMode === "week" ? "flex-1" : "flex-1"}`}>
                 {/* Left side: Day Columns */}
-                <div className={`flex flex-col overflow-hidden ${dayViewMode === "week" ? "flex-1" : (showMapPanel ? "w-[40%]" : "flex-1")}`}>
+                <div className={`flex flex-col overflow-hidden ${dayViewMode === "1day" && showMapPanel ? "w-[40%]" : "flex-1"}`}>
                 {/* Day Navigation for 1-day and 2-day views */}
                 {dayViewMode !== "week" && (
                   <div className="bg-[#0F1B33] px-4 py-2 flex items-center justify-between border-b border-[#2A3A5B]">
@@ -1059,9 +1062,9 @@ export default function Scheduling() {
               </div>
               </div>
 
-              {/* Right side: Map for 1-day and 2-day views */}
-              {dayViewMode !== "week" && showMapPanel && (
-                <div className="w-[60%] flex-shrink-0 rounded-lg overflow-hidden shadow-sm border border-slate-200 m-2">
+              {/* Right side: Map ONLY for 1-day view */}
+              {dayViewMode === "1day" && showMapPanel && (
+                <div className="flex-1 min-h-0 rounded-lg overflow-hidden shadow-sm border border-slate-200 m-2">
                   <MapContainer
                     center={defaultCenter}
                     zoom={10}
@@ -1128,67 +1131,6 @@ export default function Scheduling() {
               )}
               </div>
 
-              {/* Bottom Map for week view */}
-              {dayViewMode === "week" && showMapPanel && (
-                <div className="h-64 flex-shrink-0 border-t border-slate-200 bg-white">
-                  <MapContainer
-                    center={defaultCenter}
-                    zoom={10}
-                    style={{ height: "100%", width: "100%" }}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    {allRoutes.map((route, routeIndex) => {
-                      const routeCoords: [number, number][] = route.stops.map((stop, stopIndex) => {
-                        const baseLat = 33.7 + (routeIndex * 0.15);
-                        const baseLng = -117.3 - (routeIndex * 0.15);
-                        const lat = stop.lat || (baseLat + (stopIndex * 0.02));
-                        const lng = stop.lng || (baseLng + (stopIndex * 0.025));
-                        return [lat, lng] as [number, number];
-                      });
-
-                      return (
-                        <React.Fragment key={route.id}>
-                          {routeCoords.length > 1 && (
-                            <Polyline
-                              positions={routeCoords}
-                              pathOptions={{ 
-                                color: route.color, 
-                                weight: 3,
-                                opacity: 0.7
-                              }}
-                            />
-                          )}
-                          {route.stops.map((stop, stopIndex) => (
-                            <Marker
-                              key={stop.id}
-                              position={routeCoords[stopIndex]}
-                              icon={createMarkerIcon(route.color, stopIndex + 1)}
-                            >
-                              <Popup>
-                                <div className="p-1">
-                                  <p className="font-semibold">{stop.customerName || stop.propertyName}</p>
-                                  {stop.poolName && (
-                                    <p className="text-sm text-slate-600">{stop.poolName}</p>
-                                  )}
-                                  {stop.address && (
-                                    <p className="text-xs text-slate-500">{stop.address}</p>
-                                  )}
-                                  <p className="text-xs mt-1">
-                                    Stop #{stopIndex + 1} on {route.name}
-                                  </p>
-                                </div>
-                              </Popup>
-                            </Marker>
-                          ))}
-                        </React.Fragment>
-                      );
-                    })}
-                  </MapContainer>
-                </div>
-              )}
             </div>
           ) : (
             /* Map View */
