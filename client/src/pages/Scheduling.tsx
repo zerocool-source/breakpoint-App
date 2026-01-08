@@ -305,9 +305,20 @@ export default function Scheduling() {
   const customers = customersData?.customers || [];
 
   const getDateRange = () => {
+    // Get the Monday of the current week as start date
     const today = new Date();
-    const start = today.toISOString().split("T")[0];
-    const end = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const currentJsDayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
+    const daysSinceMonday = currentJsDayOfWeek === 0 ? 6 : currentJsDayOfWeek - 1;
+    const weekStartMonday = new Date(today);
+    weekStartMonday.setDate(today.getDate() - daysSinceMonday);
+    weekStartMonday.setHours(0, 0, 0, 0);
+    
+    // End date is Sunday of current week
+    const weekEndSunday = new Date(weekStartMonday);
+    weekEndSunday.setDate(weekStartMonday.getDate() + 6);
+    
+    const start = weekStartMonday.toISOString().split("T")[0];
+    const end = weekEndSunday.toISOString().split("T")[0];
     return { start, end };
   };
 

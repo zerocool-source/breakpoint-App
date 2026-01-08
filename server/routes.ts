@@ -1769,24 +1769,26 @@ function setupRoutes(app: any) {
         };
         
         // Generate service occurrences for each visit day
-        // Get next occurrence of each day
+        // Calculate the Monday of the current scheduling week
         const today = new Date();
-        const currentDayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
+        const currentJsDayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
+        // Calculate days since Monday (if Sunday, it's 6 days since Monday)
+        const daysSinceMonday = currentJsDayOfWeek === 0 ? 6 : currentJsDayOfWeek - 1;
+        const weekStartMonday = new Date(today);
+        weekStartMonday.setDate(today.getDate() - daysSinceMonday);
+        weekStartMonday.setHours(0, 0, 0, 0);
         
         const occurrencesToCreate = schedule.visitDays.map((dayName: string) => {
-          const targetDay = dayNameToNumber[dayName] ?? 0;
-          // Convert to JS day of week (0=Sunday) from our format (0=Monday)
-          const jsDayOfWeek = (targetDay + 1) % 7;
-          let daysUntil = jsDayOfWeek - currentDayOfWeek;
-          if (daysUntil <= 0) daysUntil += 7; // Next week if today or past
-          const nextDate = new Date(today);
-          nextDate.setDate(today.getDate() + daysUntil);
-          nextDate.setHours(8, 0, 0, 0); // Set to 8 AM
+          const targetDay = dayNameToNumber[dayName] ?? 0; // 0=Monday, 1=Tuesday, etc.
+          // Calculate the date for this day within the current week
+          const occurrenceDate = new Date(weekStartMonday);
+          occurrenceDate.setDate(weekStartMonday.getDate() + targetDay);
+          occurrenceDate.setHours(8, 0, 0, 0); // Set to 8 AM
           
           return {
             sourceScheduleId: schedule.id,
             propertyId: propertyId,
-            date: nextDate,
+            date: occurrenceDate,
             status: "unscheduled",
             routeId: null,
             technicianId: null,
