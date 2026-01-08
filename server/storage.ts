@@ -233,7 +233,7 @@ export interface IStorage {
   deleteRouteMove(id: string): Promise<void>;
 
   // Scheduling Reset
-  resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number }>;
+  resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number; occurrencesDeleted: number; schedulesDeleted: number }>;
 }
 
 export class DbStorage implements IStorage {
@@ -1302,17 +1302,21 @@ export class DbStorage implements IStorage {
     await db.delete(routeMoves).where(eq(routeMoves.id, id));
   }
 
-  async resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number }> {
+  async resetSchedulingData(): Promise<{ routesDeleted: number; stopsDeleted: number; movesDeleted: number; unscheduledDeleted: number; occurrencesDeleted: number; schedulesDeleted: number }> {
     const stopsResult = await db.delete(routeStops).returning();
     const routesResult = await db.delete(routes).returning();
     const movesResult = await db.delete(routeMoves).returning();
     const unscheduledResult = await db.delete(unscheduledStops).returning();
+    const occurrencesResult = await db.delete(serviceOccurrences).returning();
+    const schedulesResult = await db.delete(routeSchedules).returning();
     
     return {
       routesDeleted: routesResult.length,
       stopsDeleted: stopsResult.length,
       movesDeleted: movesResult.length,
       unscheduledDeleted: unscheduledResult.length,
+      occurrencesDeleted: occurrencesResult.length,
+      schedulesDeleted: schedulesResult.length,
     };
   }
 }

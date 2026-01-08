@@ -144,7 +144,12 @@ function formatDateRange(dates: { date: Date }[]) {
   const start = dates[0].date;
   const end = dates[dates.length - 1].date;
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${start.getDate()} - ${end.getDate()} ${months[start.getMonth()]}, ${start.getFullYear()}`;
+  
+  if (start.getMonth() === end.getMonth()) {
+    return `${start.getDate()} - ${end.getDate()} ${months[start.getMonth()]}, ${start.getFullYear()}`;
+  } else {
+    return `${start.getDate()} ${months[start.getMonth()]} - ${end.getDate()} ${months[end.getMonth()]}, ${end.getFullYear()}`;
+  }
 }
 
 function createMarkerIcon(color: string, number: number) {
