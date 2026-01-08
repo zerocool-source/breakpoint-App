@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 interface EnrichedAlert {
   alertId: number;
@@ -92,20 +92,13 @@ export default function Operations() {
   }, [alerts]);
 
   return (
-    <div className="flex h-screen bg-slate-50">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">Operations</h1>
-              <p className="text-slate-500 text-sm">Manage repairs, issues, and service alerts</p>
-            </div>
-          </div>
-        </header>
+    <AppLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-800">Operations</h1>
+        <p className="text-slate-500 text-sm">Manage repairs, issues, and service alerts</p>
+      </div>
 
-        <div className="p-6 space-y-6 overflow-auto">
+      <div className="space-y-6">
           <div className="grid grid-cols-4 gap-4">
             <Card className="bg-white">
               <CardContent className="p-4">
@@ -304,8 +297,7 @@ export default function Operations() {
               </div>
             </ScrollArea>
           )}
-        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
