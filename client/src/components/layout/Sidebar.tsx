@@ -181,7 +181,6 @@ export function Sidebar() {
       children: [
         { label: "Repairs", href: "/property-repairs" },
         { label: "Visits", href: "/visits" },
-        { label: "Equipment Notes", href: "/notes" },
         { label: "Equipment Tracker", href: "/equipment" },
       ]
     },
