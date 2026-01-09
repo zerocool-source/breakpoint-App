@@ -28,6 +28,30 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// CORS middleware for sync endpoints (field tech app)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Allow requests from Replit domains (for field tech app)
+  if (origin && (
+    origin.endsWith('.replit.dev') || 
+    origin.endsWith('.replit.app') ||
+    origin.endsWith('.repl.co')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
