@@ -26,8 +26,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ChevronDown, Plus, Image, Trash2 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Search, ChevronDown, Plus, Image, Trash2, Clock, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface Technician {
   id: string;
@@ -320,6 +328,133 @@ function EditTechnicianModal({
   );
 }
 
+interface FieldEntry {
+  id: string;
+  technicianId: string | null;
+  technicianName: string | null;
+  entryType: string;
+  payload: string | null;
+  submittedAt: string;
+}
+
+function ServiceLogSidebar({
+  technician,
+  onClose,
+}: {
+  technician: Technician | null;
+  onClose: () => void;
+}) {
+  const { data, isLoading } = useQuery<{ entries: FieldEntry[] }>({
+    queryKey: ["/api/technicians", technician?.id, "entries"],
+    queryFn: async () => {
+      const res = await fetch(`/api/technicians/${technician?.id}/entries`);
+      if (!res.ok) throw new Error("Failed to fetch entries");
+      return res.json();
+    },
+    enabled: !!technician,
+  });
+
+  const entries = data?.entries || [];
+
+  const parsePayload = (payload: string | null) => {
+    if (!payload) return {};
+    try {
+      return JSON.parse(payload);
+    } catch {
+      return { raw: payload };
+    }
+  };
+
+  const fullName = technician
+    ? `${technician.firstName} ${technician.lastName}`.trim()
+    : "";
+  const initials = technician
+    ? getInitials(technician.firstName, technician.lastName)
+    : "";
+  const avatarColor = getAvatarColor(fullName);
+
+  return (
+    <Sheet open={!!technician} onOpenChange={() => onClose()}>
+      <SheetContent className="w-[450px] sm:w-[500px] p-0">
+        <SheetHeader className="bg-blue-600 text-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold",
+                avatarColor
+              )}
+            >
+              {initials}
+            </div>
+            <div>
+              <SheetTitle className="text-white text-lg">{fullName}</SheetTitle>
+              <p className="text-blue-100 text-sm">Service Log</p>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <ScrollArea className="h-[calc(100vh-100px)]">
+          <div className="p-6 space-y-4">
+            {isLoading ? (
+              <div className="text-center py-12 text-slate-500">
+                Loading service entries...
+              </div>
+            ) : entries.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <p>No service entries found</p>
+                <p className="text-sm mt-1">
+                  Entries will appear here when synced from the field app
+                </p>
+              </div>
+            ) : (
+              entries.map((entry) => {
+                const payload = parsePayload(entry.payload);
+                const submittedDate = new Date(entry.submittedAt);
+
+                return (
+                  <div
+                    key={entry.id}
+                    className="bg-slate-50 border border-slate-200 rounded-lg p-4"
+                    data-testid={`entry-${entry.id}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                        {entry.entryType}
+                      </span>
+                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        {format(submittedDate, "MMM d, yyyy h:mm a")}
+                      </div>
+                    </div>
+                    {payload.notes && (
+                      <p className="text-sm text-slate-700 mt-2">
+                        {payload.notes}
+                      </p>
+                    )}
+                    {payload.raw && (
+                      <p className="text-sm text-slate-700 mt-2">
+                        {payload.raw}
+                      </p>
+                    )}
+                    {Object.keys(payload).length > 0 &&
+                      !payload.notes &&
+                      !payload.raw && (
+                        <pre className="text-xs text-slate-600 mt-2 bg-white p-2 rounded border overflow-auto">
+                          {JSON.stringify(payload, null, 2)}
+                        </pre>
+                      )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 const ITEMS_PER_PAGE = 11;
 
 export default function RepairTechs() {
@@ -327,6 +462,7 @@ export default function RepairTechs() {
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTech, setEditingTech] = useState<Technician | null>(null);
+  const [viewingTech, setViewingTech] = useState<Technician | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
@@ -541,7 +677,11 @@ export default function RepairTechs() {
                           )}>
                             {initials}
                           </div>
-                          <span className="font-medium text-blue-600 hover:underline cursor-pointer">
+                          <span 
+                            className="font-medium text-blue-600 hover:underline cursor-pointer"
+                            onClick={() => setViewingTech(tech)}
+                            data-testid={`link-tech-name-${tech.id}`}
+                          >
                             {fullName || "Unknown"}
                           </span>
                         </div>
@@ -665,6 +805,11 @@ export default function RepairTechs() {
         technician={editingTech}
         onSave={(id, data) => updateTechnicianMutation.mutate({ id, data })}
         onDelete={(id) => deleteTechnicianMutation.mutate(id)}
+      />
+
+      <ServiceLogSidebar
+        technician={viewingTech}
+        onClose={() => setViewingTech(null)}
       />
     </AppLayout>
   );

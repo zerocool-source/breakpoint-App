@@ -1855,6 +1855,12 @@ export class DbStorage implements IStorage {
       .returning();
     return result[0];
   }
+
+  async getFieldEntriesByTechnician(technicianId: string): Promise<FieldEntry[]> {
+    return db.select().from(fieldEntries)
+      .where(eq(fieldEntries.technicianId, technicianId))
+      .orderBy(desc(fieldEntries.submittedAt));
+  }
 }
 
 export const storage = new DbStorage();

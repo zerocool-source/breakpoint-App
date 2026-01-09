@@ -4656,6 +4656,18 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Get field entries for a specific technician (for service log sidebar)
+  app.get('/api/technicians/:id/entries', async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const entries = await storage.getFieldEntriesByTechnician(id);
+      res.json({ entries });
+    } catch (error: any) {
+      console.error('Error fetching technician entries:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Endpoint for field tech app to pull technicians
   app.get('/api/sync/technicians', async (req: any, res: any) => {
     try {
