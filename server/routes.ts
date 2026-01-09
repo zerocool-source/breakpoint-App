@@ -4641,6 +4641,144 @@ function setupRoutes(app: any) {
       res.status(500).json({ error: "Failed to delete inventory item" });
     }
   });
+
+  // ==================== FIELD TECH SYNC ENDPOINTS ====================
+  // These endpoints allow the BP Field Tech app to sync data
+
+  // Endpoint for field tech app to pull properties
+  app.get('/api/sync/properties', async (req: any, res: any) => {
+    try {
+      const properties = await storage.getProperties();
+      res.json({ properties });
+    } catch (error: any) {
+      console.error('Error fetching properties for sync:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint for field tech app to pull technicians
+  app.get('/api/sync/technicians', async (req: any, res: any) => {
+    try {
+      const technicians = await storage.getTechnicians();
+      res.json({ technicians });
+    } catch (error: any) {
+      console.error('Error fetching technicians for sync:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint for field tech app to pull routes
+  app.get('/api/sync/routes', async (req: any, res: any) => {
+    try {
+      const routes = await storage.getRoutes();
+      res.json({ routes });
+    } catch (error: any) {
+      console.error('Error fetching routes for sync:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Endpoint for field tech app to pull route stops
+  app.get('/api/sync/route-stops', async (req: any, res: any) => {
+    try {
+      const date = req.query.date as string | undefined;
+      const stops = date 
+        ? await storage.getRouteStopsByDate(date)
+        : await storage.getAllRouteStops();
+      res.json({ stops });
+    } catch (error: any) {
+      console.error('Error fetching route stops for sync:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Receive field entries from field tech app
+  app.post('/api/sync/field-entries', async (req: any, res: any) => {
+    try {
+      const { entry } = req.body;
+      if (!entry) {
+        return res.status(400).json({ error: 'entry required' });
+      }
+      
+      // Validate required field
+      const entryType = entry.entryType || entry.entry_type;
+      if (!entryType) {
+        return res.status(400).json({ error: 'entryType is required' });
+      }
+      
+      // Map camelCase fields to DB schema
+      const mappedEntry = {
+        routeStopId: entry.routeStopId || entry.route_stop_id || null,
+        propertyId: entry.propertyId || entry.property_id || null,
+        technicianId: entry.technicianId || entry.technician_id || null,
+        technicianName: entry.technicianName || entry.technician_name || null,
+        entryType: entryType,
+        payload: typeof entry.payload === 'string' ? entry.payload : JSON.stringify(entry.payload || {}),
+        syncStatus: 'synced',
+      };
+      
+      // Check if entry already exists (by id)
+      if (entry.id) {
+        const existing = await storage.getFieldEntry(entry.id);
+        if (existing) {
+          await storage.updateFieldEntry(entry.id, mappedEntry);
+          return res.json({ success: true, action: 'updated', id: entry.id });
+        }
+      }
+      
+      // Create new entry
+      const created = await storage.createFieldEntry(mappedEntry);
+      res.json({ success: true, action: 'created', id: created.id });
+    } catch (error: any) {
+      console.error('Error receiving field entry:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Receive estimates from field tech app
+  app.post('/api/sync/estimates', async (req: any, res: any) => {
+    try {
+      const { estimate } = req.body;
+      if (!estimate) {
+        return res.status(400).json({ error: 'estimate required' });
+      }
+      
+      // Map camelCase fields to DB schema (only include safe fields)
+      const mappedEstimate: Record<string, any> = {};
+      if (estimate.propertyId || estimate.property_id) mappedEstimate.propertyId = estimate.propertyId || estimate.property_id;
+      if (estimate.propertyName || estimate.property_name) mappedEstimate.propertyName = estimate.propertyName || estimate.property_name;
+      if (estimate.customerId || estimate.customer_id) mappedEstimate.customerId = estimate.customerId || estimate.customer_id;
+      if (estimate.customerName || estimate.customer_name) mappedEstimate.customerName = estimate.customerName || estimate.customer_name;
+      if (estimate.title) mappedEstimate.title = estimate.title;
+      if (estimate.description) mappedEstimate.description = estimate.description;
+      if (estimate.status) mappedEstimate.status = estimate.status;
+      if (estimate.totalAmount || estimate.total_amount) mappedEstimate.totalAmount = estimate.totalAmount || estimate.total_amount;
+      if (estimate.laborCost || estimate.labor_cost) mappedEstimate.laborCost = estimate.laborCost || estimate.labor_cost;
+      if (estimate.materialsCost || estimate.materials_cost) mappedEstimate.materialsCost = estimate.materialsCost || estimate.materials_cost;
+      if (estimate.techNotes || estimate.tech_notes) mappedEstimate.techNotes = estimate.techNotes || estimate.tech_notes;
+      if (estimate.lineItems || estimate.line_items) {
+        mappedEstimate.lineItems = typeof estimate.lineItems === 'string' 
+          ? estimate.lineItems 
+          : JSON.stringify(estimate.lineItems || estimate.line_items);
+      }
+      
+      // Check if estimate already exists (by id)
+      if (estimate.id) {
+        const existing = await storage.getEstimate(estimate.id);
+        if (existing) {
+          await storage.updateEstimate(estimate.id, mappedEstimate);
+          return res.json({ success: true, action: 'updated' });
+        }
+      }
+      
+      // Create new estimate
+      await storage.createEstimate(mappedEstimate);
+      res.json({ success: true, action: 'created' });
+    } catch (error: any) {
+      console.error('Error receiving estimate:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 }
 
   

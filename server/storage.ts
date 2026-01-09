@@ -34,13 +34,16 @@ import {
   type FleetTruck, type InsertFleetTruck,
   type FleetMaintenanceRecord, type InsertFleetMaintenanceRecord,
   type TruckInventory, type InsertTruckInventory,
+  type Property, type InsertProperty,
+  type FieldEntry, type InsertFieldEntry,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
   estimates, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
-  fleetTrucks, fleetMaintenanceRecords, truckInventory
+  fleetTrucks, fleetMaintenanceRecords, truckInventory,
+  properties, fieldEntries
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -281,6 +284,22 @@ export interface IStorage {
 
   // PM Seed Data
   seedPmDefaults(): Promise<{ serviceTypesCreated: number; intervalsCreated: number }>;
+
+  // Properties (for Field Tech sync)
+  getProperties(): Promise<Property[]>;
+  getProperty(id: string): Promise<Property | undefined>;
+  createProperty(property: InsertProperty): Promise<Property>;
+  updateProperty(id: string, updates: Partial<InsertProperty>): Promise<Property | undefined>;
+
+  // Route Stops (additional methods for Field Tech sync)
+  getAllRouteStops(): Promise<RouteStop[]>;
+  getRouteStopsByDate(date: string): Promise<RouteStop[]>;
+
+  // Field Entries (for Field Tech sync)
+  getFieldEntries(): Promise<FieldEntry[]>;
+  getFieldEntry(id: string): Promise<FieldEntry | undefined>;
+  createFieldEntry(entry: InsertFieldEntry): Promise<FieldEntry>;
+  updateFieldEntry(id: string, updates: Partial<InsertFieldEntry>): Promise<FieldEntry | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -1761,6 +1780,80 @@ export class DbStorage implements IStorage {
   async getLowStockItems(): Promise<TruckInventory[]> {
     const all = await this.getAllTruckInventory();
     return all.filter(item => item.quantity <= (item.minQuantity || 0));
+  }
+
+  // Properties (for Field Tech sync)
+  async getProperties(): Promise<Property[]> {
+    return db.select().from(properties).orderBy(properties.name);
+  }
+
+  async getProperty(id: string): Promise<Property | undefined> {
+    const result = await db.select().from(properties).where(eq(properties.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createProperty(property: InsertProperty): Promise<Property> {
+    const result = await db.insert(properties).values(property as any).returning();
+    return result[0];
+  }
+
+  async updateProperty(id: string, updates: Partial<InsertProperty>): Promise<Property | undefined> {
+    const result = await db.update(properties)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(properties.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Route Stops (additional methods for Field Tech sync)
+  async getAllRouteStops(): Promise<RouteStop[]> {
+    return db.select().from(routeStops).orderBy(routeStops.sortOrder);
+  }
+
+  async getRouteStopsByDate(date: string): Promise<RouteStop[]> {
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const routesForDate = await db.select().from(routes)
+      .where(and(
+        gte(routes.date, startOfDay),
+        lte(routes.date, endOfDay)
+      ));
+    
+    if (routesForDate.length === 0) {
+      return [];
+    }
+    
+    const routeIds = routesForDate.map(r => r.id);
+    return db.select().from(routeStops)
+      .where(inArray(routeStops.routeId, routeIds))
+      .orderBy(routeStops.sortOrder);
+  }
+
+  // Field Entries (for Field Tech sync)
+  async getFieldEntries(): Promise<FieldEntry[]> {
+    return db.select().from(fieldEntries).orderBy(desc(fieldEntries.submittedAt));
+  }
+
+  async getFieldEntry(id: string): Promise<FieldEntry | undefined> {
+    const result = await db.select().from(fieldEntries).where(eq(fieldEntries.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createFieldEntry(entry: InsertFieldEntry): Promise<FieldEntry> {
+    const result = await db.insert(fieldEntries).values(entry as any).returning();
+    return result[0];
+  }
+
+  async updateFieldEntry(id: string, updates: Partial<InsertFieldEntry>): Promise<FieldEntry | undefined> {
+    const result = await db.update(fieldEntries)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(fieldEntries.id, id))
+      .returning();
+    return result[0];
   }
 }
 

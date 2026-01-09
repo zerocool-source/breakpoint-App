@@ -1072,3 +1072,59 @@ export const insertTruckInventorySchema = createInsertSchema(truckInventory).omi
 
 export type InsertTruckInventory = z.infer<typeof insertTruckInventorySchema>;
 export type TruckInventory = typeof truckInventory.$inferSelect;
+
+// Properties (Service addresses/locations for field tech sync)
+export const properties = pgTable("properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: text("external_id"), // Pool Brain PropertyID/AddressID
+  customerId: text("customer_id"),
+  customerName: text("customer_name"),
+  name: text("name").notNull(),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  zip: text("zip"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
+  poolCount: integer("pool_count").default(0),
+  serviceLevel: text("service_level"),
+  status: text("status").default("active"), // active, inactive, lead
+  notes: text("notes"),
+  gateCode: text("gate_code"),
+  accessInstructions: text("access_instructions"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertySchema = createInsertSchema(properties).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertProperty = z.infer<typeof insertPropertySchema>;
+export type Property = typeof properties.$inferSelect;
+
+// Field Entries (Technician submissions from field tech app)
+export const fieldEntries = pgTable("field_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  routeStopId: text("route_stop_id"),
+  propertyId: text("property_id"),
+  technicianId: text("technician_id"),
+  technicianName: text("technician_name"),
+  entryType: text("entry_type").notNull(), // service, repair, reading, note
+  payload: text("payload"), // JSON data
+  submittedAt: timestamp("submitted_at").defaultNow(),
+  syncStatus: text("sync_status").default("synced"), // pending, synced, failed
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFieldEntrySchema = createInsertSchema(fieldEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFieldEntry = z.infer<typeof insertFieldEntrySchema>;
+export type FieldEntry = typeof fieldEntries.$inferSelect;
