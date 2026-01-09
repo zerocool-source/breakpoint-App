@@ -597,11 +597,15 @@ export const estimates = pgTable("estimates", {
   description: text("description"),
   items: json("items").$type<{
     description: string;
+    sku?: string;
     quantity: number;
     unitPrice: number;
     total: number;
     type: "part" | "labor";
   }[]>().default([]),
+  
+  // Photos
+  photos: text("photos").array(), // Array of photo URLs/base64 data
   
   // Totals
   partsTotal: integer("parts_total").default(0),
@@ -614,11 +618,16 @@ export const estimates = pgTable("estimates", {
   // People involved
   createdByTechId: text("created_by_tech_id"),
   createdByTechName: text("created_by_tech_name"),
+  repairTechId: text("repair_tech_id"),
+  repairTechName: text("repair_tech_name"),
+  serviceTechId: text("service_tech_id"),
+  serviceTechName: text("service_tech_name"),
   approvedByManagerId: text("approved_by_manager_id"),
   approvedByManagerName: text("approved_by_manager_name"),
   
   // Dates
   createdAt: timestamp("created_at").defaultNow(),
+  reportedDate: timestamp("reported_date"), // When issue was first reported
   sentForApprovalAt: timestamp("sent_for_approval_at"),
   approvedAt: timestamp("approved_at"),
   rejectedAt: timestamp("rejected_at"),

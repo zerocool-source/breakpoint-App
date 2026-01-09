@@ -15,11 +15,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   FileText, Plus, Clock, CheckCircle2, XCircle, Calendar, DollarSign, 
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
-  ArrowRight, Mail, Receipt
+  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight,
+  Wrench, UserCircle2, MapPin, Package
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface EstimateItem {
   description: string;
+  sku?: string;
   quantity: number;
   unitPrice: number;
   total: number;
@@ -36,15 +46,21 @@ interface Estimate {
   title: string;
   description: string | null;
   items: EstimateItem[];
+  photos: string[] | null;
   partsTotal: number | null;
   laborTotal: number | null;
   totalAmount: number | null;
   status: string;
   createdByTechId: string | null;
   createdByTechName: string | null;
+  repairTechId: string | null;
+  repairTechName: string | null;
+  serviceTechId: string | null;
+  serviceTechName: string | null;
   approvedByManagerId: string | null;
   approvedByManagerName: string | null;
   createdAt: string;
+  reportedDate: string | null;
   sentForApprovalAt: string | null;
   approvedAt: string | null;
   rejectedAt: string | null;
@@ -79,6 +95,8 @@ export default function Estimates() {
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve");
   const [rejectionReason, setRejectionReason] = useState("");
   const [managerNotes, setManagerNotes] = useState("");
+  const [showPhotoLightbox, setShowPhotoLightbox] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   const [newEstimate, setNewEstimate] = useState({
     propertyId: "",
@@ -729,123 +747,289 @@ export default function Estimates() {
         </Dialog>
 
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Estimate Details</DialogTitle>
-            </DialogHeader>
-            {selectedEstimate && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-900">{selectedEstimate.title}</h3>
-                    <p className="text-slate-600">{selectedEstimate.propertyName}</p>
-                  </div>
-                  <Badge className={`${statusConfig[selectedEstimate.status]?.color} border`}>
+              <DialogTitle className="flex items-center justify-between">
+                <span>Estimate Details</span>
+                {selectedEstimate && (
+                  <Badge className={`${statusConfig[selectedEstimate.status]?.color} border ml-4`}>
                     {statusConfig[selectedEstimate.status]?.label}
                   </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-500">Customer</p>
-                    <p className="font-medium">{selectedEstimate.customerName || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Email</p>
-                    <p className="font-medium">{selectedEstimate.customerEmail || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Address</p>
-                    <p className="font-medium">{selectedEstimate.address || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Created By</p>
-                    <p className="font-medium">{selectedEstimate.createdByTechName || "N/A"}</p>
-                  </div>
-                </div>
-
-                {selectedEstimate.description && (
-                  <div>
-                    <p className="text-slate-500 text-sm">Description</p>
-                    <p className="text-slate-800">{selectedEstimate.description}</p>
-                  </div>
                 )}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedEstimate && (
+              <div className="space-y-6">
+                {/* Header Section */}
+                <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4">
+                  <h3 className="text-xl font-bold text-slate-900">{selectedEstimate.title}</h3>
+                  {selectedEstimate.description && (
+                    <p className="text-slate-600 mt-1">{selectedEstimate.description}</p>
+                  )}
+                </div>
 
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-semibold mb-3">Line Items</h4>
+                {/* Property & People Info Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Property Info */}
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-2 text-blue-700 mb-2">
+                      <Building2 className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Property / Location</span>
+                    </div>
+                    <p className="font-medium text-slate-900">{selectedEstimate.propertyName}</p>
+                    {selectedEstimate.address && (
+                      <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3" />
+                        {selectedEstimate.address}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Customer */}
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                    <div className="flex items-center gap-2 text-purple-700 mb-2">
+                      <User className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Customer / HOA</span>
+                    </div>
+                    <p className="font-medium text-slate-900">{selectedEstimate.customerName || "N/A"}</p>
+                    {selectedEstimate.customerEmail && (
+                      <p className="text-sm text-slate-600">{selectedEstimate.customerEmail}</p>
+                    )}
+                  </div>
+
+                  {/* Reported Date */}
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                    <div className="flex items-center gap-2 text-amber-700 mb-2">
+                      <Calendar className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Reported Date</span>
+                    </div>
+                    <p className="font-medium text-slate-900">
+                      {formatDate(selectedEstimate.reportedDate) || formatDate(selectedEstimate.createdAt)}
+                    </p>
+                  </div>
+
+                  {/* Repair Tech */}
+                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+                    <div className="flex items-center gap-2 text-orange-700 mb-2">
+                      <Wrench className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Repair Tech</span>
+                    </div>
+                    <p className="font-medium text-slate-900">
+                      {selectedEstimate.repairTechName || selectedEstimate.createdByTechName || "Not Assigned"}
+                    </p>
+                  </div>
+
+                  {/* Service Tech */}
+                  <div className="p-4 bg-cyan-50 rounded-lg border border-cyan-100">
+                    <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                      <UserCircle2 className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Service Tech</span>
+                    </div>
+                    <p className="font-medium text-slate-900">
+                      {selectedEstimate.serviceTechName || "Not Assigned"}
+                    </p>
+                  </div>
+
+                  {/* Created By */}
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex items-center gap-2 text-slate-700 mb-2">
+                      <FileText className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Created</span>
+                    </div>
+                    <p className="font-medium text-slate-900">{formatDate(selectedEstimate.createdAt)}</p>
+                    {selectedEstimate.createdByTechName && (
+                      <p className="text-sm text-slate-600">by {selectedEstimate.createdByTechName}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Line Items Table */}
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-slate-100 px-4 py-3 border-b">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Line Items
+                    </h4>
+                  </div>
                   {selectedEstimate.items && selectedEstimate.items.length > 0 ? (
-                    <div className="space-y-2">
-                      {selectedEstimate.items.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-sm py-1 border-b last:border-0">
-                          <span>{item.description}</span>
-                          <span className="font-medium">
-                            {item.quantity} x ${item.unitPrice} = ${item.total}
-                          </span>
-                        </div>
-                      ))}
-                      <div className="pt-2 text-right">
-                        <p className="text-sm text-slate-600">
-                          Parts: {formatCurrency(selectedEstimate.partsTotal)} | 
-                          Labor: {formatCurrency(selectedEstimate.laborTotal)}
-                        </p>
-                        <p className="text-xl font-bold text-[#0891b2]">
-                          Total: {formatCurrency(selectedEstimate.totalAmount)}
-                        </p>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="font-semibold">Product / Description</TableHead>
+                          <TableHead className="font-semibold">SKU</TableHead>
+                          <TableHead className="font-semibold text-center w-20">Qty</TableHead>
+                          <TableHead className="font-semibold text-right w-24">Rate</TableHead>
+                          <TableHead className="font-semibold text-right w-28">Amount</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedEstimate.items.map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {item.type === "part" ? "Part" : "Labor"}
+                                </Badge>
+                                <span>{item.description}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-slate-500">{item.sku || "-"}</TableCell>
+                            <TableCell className="text-center">{item.quantity}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="p-6 text-center text-slate-500">
+                      No line items added
+                    </div>
+                  )}
+                  
+                  {/* Totals */}
+                  <div className="bg-slate-50 border-t px-4 py-3">
+                    <div className="flex justify-end gap-8">
+                      <div className="text-right">
+                        <p className="text-sm text-slate-500">Parts Subtotal</p>
+                        <p className="font-medium">{formatCurrency(selectedEstimate.partsTotal)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-slate-500">Labor Subtotal</p>
+                        <p className="font-medium">{formatCurrency(selectedEstimate.laborTotal)}</p>
+                      </div>
+                      <div className="text-right pl-6 border-l border-slate-300">
+                        <p className="text-sm text-slate-500">Total Amount</p>
+                        <p className="text-2xl font-bold text-[#0891b2]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-slate-500 text-sm">No line items</p>
-                  )}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-500">Created</p>
-                    <p className="font-medium">{formatDate(selectedEstimate.createdAt)}</p>
+                {/* Photos Section */}
+                {selectedEstimate.photos && selectedEstimate.photos.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-slate-100 px-4 py-3 border-b">
+                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        Photos ({selectedEstimate.photos.length})
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {selectedEstimate.photos.map((photo, idx) => (
+                          <div 
+                            key={idx}
+                            className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#0891b2] transition-all"
+                            onClick={() => {
+                              setCurrentPhotoIndex(idx);
+                              setShowPhotoLightbox(true);
+                            }}
+                            data-testid={`photo-thumbnail-${idx}`}
+                          >
+                            <img 
+                              src={photo} 
+                              alt={`Estimate photo ${idx + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <Eye className="w-6 h-6 text-white opacity-0 hover:opacity-100" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  {selectedEstimate.sentForApprovalAt && (
+                )}
+
+                {/* Status Timeline */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-3">Status Timeline</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-slate-500">Sent for Approval</p>
-                      <p className="font-medium">{formatDate(selectedEstimate.sentForApprovalAt)}</p>
+                      <p className="text-slate-500">Created</p>
+                      <p className="font-medium">{formatDate(selectedEstimate.createdAt)}</p>
+                    </div>
+                    {selectedEstimate.sentForApprovalAt && (
+                      <div>
+                        <p className="text-slate-500">Sent for Approval</p>
+                        <p className="font-medium">{formatDate(selectedEstimate.sentForApprovalAt)}</p>
+                      </div>
+                    )}
+                    {selectedEstimate.approvedAt && (
+                      <div>
+                        <p className="text-slate-500">Approved</p>
+                        <p className="font-medium">{formatDate(selectedEstimate.approvedAt)}</p>
+                        {selectedEstimate.approvedByManagerName && (
+                          <p className="text-xs text-slate-400">by {selectedEstimate.approvedByManagerName}</p>
+                        )}
+                      </div>
+                    )}
+                    {selectedEstimate.rejectedAt && (
+                      <div>
+                        <p className="text-slate-500 text-red-600">Rejected</p>
+                        <p className="font-medium">{formatDate(selectedEstimate.rejectedAt)}</p>
+                      </div>
+                    )}
+                    {selectedEstimate.scheduledDate && (
+                      <div>
+                        <p className="text-slate-500">Scheduled</p>
+                        <p className="font-medium">{formatDate(selectedEstimate.scheduledDate)}</p>
+                      </div>
+                    )}
+                    {selectedEstimate.completedAt && (
+                      <div>
+                        <p className="text-slate-500">Completed</p>
+                        <p className="font-medium">{formatDate(selectedEstimate.completedAt)}</p>
+                      </div>
+                    )}
+                    {selectedEstimate.invoicedAt && (
+                      <div>
+                        <p className="text-slate-500">Invoiced</p>
+                        <p className="font-medium">{formatDate(selectedEstimate.invoicedAt)}</p>
+                        {selectedEstimate.invoiceId && (
+                          <p className="text-xs text-slate-400">{selectedEstimate.invoiceId}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes Section */}
+                <div className="space-y-3">
+                  {selectedEstimate.rejectionReason && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                        <XCircle className="w-4 h-4" />
+                        Rejection Reason
+                      </p>
+                      <p className="text-red-600 mt-1">{selectedEstimate.rejectionReason}</p>
                     </div>
                   )}
-                  {selectedEstimate.approvedAt && (
-                    <div>
-                      <p className="text-slate-500">Approved</p>
-                      <p className="font-medium">{formatDate(selectedEstimate.approvedAt)} by {selectedEstimate.approvedByManagerName}</p>
+
+                  {selectedEstimate.techNotes && (
+                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                      <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <Wrench className="w-4 h-4" />
+                        Tech Notes
+                      </p>
+                      <p className="text-slate-600 mt-1">{selectedEstimate.techNotes}</p>
                     </div>
                   )}
-                  {selectedEstimate.rejectedAt && (
-                    <div>
-                      <p className="text-slate-500">Rejected</p>
-                      <p className="font-medium">{formatDate(selectedEstimate.rejectedAt)}</p>
+
+                  {selectedEstimate.managerNotes && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Manager Notes
+                      </p>
+                      <p className="text-green-600 mt-1">{selectedEstimate.managerNotes}</p>
                     </div>
                   )}
                 </div>
-
-                {selectedEstimate.rejectionReason && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm font-semibold text-red-700">Rejection Reason</p>
-                    <p className="text-red-600">{selectedEstimate.rejectionReason}</p>
-                  </div>
-                )}
-
-                {selectedEstimate.techNotes && (
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <p className="text-sm font-semibold text-slate-700">Tech Notes</p>
-                    <p className="text-slate-600">{selectedEstimate.techNotes}</p>
-                  </div>
-                )}
-
-                {selectedEstimate.managerNotes && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm font-semibold text-green-700">Manager Notes</p>
-                    <p className="text-green-600">{selectedEstimate.managerNotes}</p>
-                  </div>
-                )}
               </div>
             )}
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               {selectedEstimate?.status === "draft" && (
                 <Button
                   variant="destructive"
@@ -860,6 +1044,66 @@ export default function Estimates() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Photo Lightbox */}
+        {showPhotoLightbox && selectedEstimate?.photos && selectedEstimate.photos.length > 0 && (
+          <div 
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
+            onClick={() => setShowPhotoLightbox(false)}
+          >
+            <button
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+              onClick={() => setShowPhotoLightbox(false)}
+              data-testid="button-close-lightbox"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            
+            {selectedEstimate.photos.length > 1 && (
+              <>
+                <button
+                  className="absolute left-4 text-white hover:text-gray-300 p-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentPhotoIndex((prev) => 
+                      prev === 0 ? selectedEstimate.photos!.length - 1 : prev - 1
+                    );
+                  }}
+                  data-testid="button-prev-photo"
+                >
+                  <ChevronLeft className="w-10 h-10" />
+                </button>
+                <button
+                  className="absolute right-4 text-white hover:text-gray-300 p-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentPhotoIndex((prev) => 
+                      prev === selectedEstimate.photos!.length - 1 ? 0 : prev + 1
+                    );
+                  }}
+                  data-testid="button-next-photo"
+                >
+                  <ChevronRight className="w-10 h-10" />
+                </button>
+              </>
+            )}
+            
+            <div 
+              className="max-w-[90vw] max-h-[90vh] relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img 
+                src={selectedEstimate.photos[currentPhotoIndex]}
+                alt={`Estimate photo ${currentPhotoIndex + 1}`}
+                className="max-w-full max-h-[90vh] object-contain"
+                data-testid="lightbox-image"
+              />
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full text-white text-sm">
+                {currentPhotoIndex + 1} / {selectedEstimate.photos.length}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
