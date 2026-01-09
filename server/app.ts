@@ -32,21 +32,32 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Allow requests from Replit domains (for field tech app)
-  if (origin && (
+  // For sync endpoints, allow all Replit domains
+  const isSyncEndpoint = req.path.startsWith('/api/sync/');
+  
+  // Allow requests from Replit domains or for sync endpoints allow any origin
+  const isAllowedOrigin = origin && (
     origin.endsWith('.replit.dev') || 
     origin.endsWith('.replit.app') ||
-    origin.endsWith('.repl.co')
-  )) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    origin.endsWith('.repl.co') ||
+    origin.includes('replit')
+  );
+  
+  if (isAllowedOrigin || isSyncEndpoint) {
+    // Set origin to the requesting origin, or '*' for sync endpoints without origin
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
   }
   
-  // Handle preflight requests
+  // Handle preflight requests immediately
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    return res.sendStatus(204);
   }
   
   next();
