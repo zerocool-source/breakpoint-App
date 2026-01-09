@@ -4715,7 +4715,7 @@ function setupRoutes(app: any) {
     }
   });
 
-  // Receive field entries from field tech app
+  // Receive field entries from field tech app (service visits, readings, notes)
   app.post('/api/sync/field-entries', async (req: any, res: any) => {
     try {
       const { entry } = req.body;
@@ -4723,21 +4723,33 @@ function setupRoutes(app: any) {
         return res.status(400).json({ error: 'entry required' });
       }
       
-      // Validate required field
-      const entryType = entry.entryType || entry.entry_type;
-      if (!entryType) {
-        return res.status(400).json({ error: 'entryType is required' });
+      // Determine entry type - default to 'service' for service visits
+      const entryType = entry.entryType || entry.entry_type || entry.serviceType || entry.service_type || 'service';
+      
+      // Build payload from entry data
+      const payloadData: Record<string, any> = {};
+      if (entry.notes) payloadData.notes = entry.notes;
+      if (entry.serviceType || entry.service_type) payloadData.serviceType = entry.serviceType || entry.service_type;
+      if (entry.propertyName || entry.property_name) payloadData.propertyName = entry.propertyName || entry.property_name;
+      if (entry.readings) payloadData.readings = entry.readings;
+      if (entry.photos) payloadData.photos = entry.photos;
+      if (entry.timestamp) payloadData.timestamp = entry.timestamp;
+      
+      // If entry already has a payload object, merge it
+      if (entry.payload && typeof entry.payload === 'object') {
+        Object.assign(payloadData, entry.payload);
       }
       
-      // Map camelCase fields to DB schema
+      // Map fields to DB schema
       const mappedEntry = {
         routeStopId: entry.routeStopId || entry.route_stop_id || null,
         propertyId: entry.propertyId || entry.property_id || null,
         technicianId: entry.technicianId || entry.technician_id || null,
         technicianName: entry.technicianName || entry.technician_name || null,
         entryType: entryType,
-        payload: typeof entry.payload === 'string' ? entry.payload : JSON.stringify(entry.payload || {}),
+        payload: JSON.stringify(payloadData),
         syncStatus: 'synced',
+        submittedAt: entry.timestamp ? new Date(entry.timestamp) : new Date(),
       };
       
       // Check if entry already exists (by id)
@@ -4777,23 +4789,65 @@ function setupRoutes(app: any) {
         return res.status(400).json({ error: 'estimate required' });
       }
       
-      // Map camelCase fields to DB schema (only include safe fields)
-      const mappedEstimate: Record<string, any> = {};
-      if (estimate.propertyId || estimate.property_id) mappedEstimate.propertyId = estimate.propertyId || estimate.property_id;
-      if (estimate.propertyName || estimate.property_name) mappedEstimate.propertyName = estimate.propertyName || estimate.property_name;
-      if (estimate.customerId || estimate.customer_id) mappedEstimate.customerId = estimate.customerId || estimate.customer_id;
-      if (estimate.customerName || estimate.customer_name) mappedEstimate.customerName = estimate.customerName || estimate.customer_name;
-      if (estimate.title) mappedEstimate.title = estimate.title;
+      // Required fields
+      const propertyId = estimate.propertyId || estimate.property_id;
+      const propertyName = estimate.propertyName || estimate.property_name;
+      
+      if (!propertyId || !propertyName) {
+        return res.status(400).json({ error: 'propertyId and propertyName are required' });
+      }
+      
+      // Build mapped estimate with all fields from field app
+      const mappedEstimate: Record<string, any> = {
+        propertyId,
+        propertyName,
+        title: estimate.title || 'Field Estimate',
+        status: estimate.status || 'draft', // draft, pending, approved, rejected, scheduled, completed
+      };
+      
+      // Optional customer fields
+      if (estimate.customerName || estimate.customer_name) {
+        mappedEstimate.customerName = estimate.customerName || estimate.customer_name;
+      }
+      if (estimate.customerEmail || estimate.customer_email) {
+        mappedEstimate.customerEmail = estimate.customerEmail || estimate.customer_email;
+      }
+      if (estimate.address) {
+        mappedEstimate.address = estimate.address;
+      }
+      
+      // Technician info (who created the estimate)
+      if (estimate.technicianId || estimate.technician_id || estimate.createdByTechId) {
+        mappedEstimate.createdByTechId = estimate.technicianId || estimate.technician_id || estimate.createdByTechId;
+      }
+      if (estimate.technicianName || estimate.technician_name || estimate.createdByTechName) {
+        mappedEstimate.createdByTechName = estimate.technicianName || estimate.technician_name || estimate.createdByTechName;
+      }
+      
+      // Estimate details
       if (estimate.description) mappedEstimate.description = estimate.description;
-      if (estimate.status) mappedEstimate.status = estimate.status;
-      if (estimate.totalAmount || estimate.total_amount) mappedEstimate.totalAmount = estimate.totalAmount || estimate.total_amount;
-      if (estimate.laborCost || estimate.labor_cost) mappedEstimate.laborCost = estimate.laborCost || estimate.labor_cost;
-      if (estimate.materialsCost || estimate.materials_cost) mappedEstimate.materialsCost = estimate.materialsCost || estimate.materials_cost;
-      if (estimate.techNotes || estimate.tech_notes) mappedEstimate.techNotes = estimate.techNotes || estimate.tech_notes;
-      if (estimate.lineItems || estimate.line_items) {
-        mappedEstimate.lineItems = typeof estimate.lineItems === 'string' 
-          ? estimate.lineItems 
-          : JSON.stringify(estimate.lineItems || estimate.line_items);
+      
+      // Line items - handle both array and JSON string
+      const lineItems = estimate.lineItems || estimate.line_items || estimate.items;
+      if (lineItems) {
+        mappedEstimate.items = Array.isArray(lineItems) ? lineItems : 
+          (typeof lineItems === 'string' ? JSON.parse(lineItems) : []);
+      }
+      
+      // Totals
+      if (estimate.totalAmount !== undefined || estimate.total_amount !== undefined) {
+        mappedEstimate.totalAmount = parseInt(estimate.totalAmount || estimate.total_amount || 0);
+      }
+      if (estimate.partsTotal !== undefined || estimate.parts_total !== undefined) {
+        mappedEstimate.partsTotal = parseInt(estimate.partsTotal || estimate.parts_total || 0);
+      }
+      if (estimate.laborTotal !== undefined || estimate.labor_total !== undefined) {
+        mappedEstimate.laborTotal = parseInt(estimate.laborTotal || estimate.labor_total || 0);
+      }
+      
+      // If status is 'pending', set sentForApprovalAt
+      if (mappedEstimate.status === 'pending') {
+        mappedEstimate.sentForApprovalAt = new Date();
       }
       
       // Check if estimate already exists (by id)
@@ -4801,13 +4855,13 @@ function setupRoutes(app: any) {
         const existing = await storage.getEstimate(estimate.id);
         if (existing) {
           await storage.updateEstimate(estimate.id, mappedEstimate);
-          return res.json({ success: true, action: 'updated' });
+          return res.json({ success: true, action: 'updated', id: estimate.id });
         }
       }
       
       // Create new estimate
-      await storage.createEstimate(mappedEstimate);
-      res.json({ success: true, action: 'created' });
+      const created = await storage.createEstimate(mappedEstimate);
+      res.json({ success: true, action: 'created', id: created.id });
     } catch (error: any) {
       console.error('Error receiving estimate:', error);
       res.status(500).json({ error: error.message });
