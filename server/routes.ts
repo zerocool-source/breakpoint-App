@@ -4704,6 +4704,17 @@ function setupRoutes(app: any) {
     }
   });
 
+  // Get all field entries for sync
+  app.get('/api/sync/field-entries', async (req: any, res: any) => {
+    try {
+      const entries = await storage.getFieldEntries();
+      res.json({ entries });
+    } catch (error: any) {
+      console.error('Error fetching field entries for sync:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Receive field entries from field tech app
   app.post('/api/sync/field-entries', async (req: any, res: any) => {
     try {
@@ -4743,6 +4754,17 @@ function setupRoutes(app: any) {
       res.json({ success: true, action: 'created', id: created.id });
     } catch (error: any) {
       console.error('Error receiving field entry:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all estimates for sync
+  app.get('/api/sync/estimates', async (req: any, res: any) => {
+    try {
+      const estimates = await storage.getEstimates();
+      res.json({ estimates });
+    } catch (error: any) {
+      console.error('Error fetching estimates for sync:', error);
       res.status(500).json({ error: error.message });
     }
   });
