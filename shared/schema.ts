@@ -592,42 +592,78 @@ export const estimates = pgTable("estimates", {
   customerEmail: text("customer_email"),
   address: text("address"),
   
+  // QuickBooks-compatible fields
+  estimateNumber: text("estimate_number"), // Auto-generated estimate number
+  estimateDate: timestamp("estimate_date").defaultNow(),
+  expirationDate: timestamp("expiration_date"),
+  acceptedBy: text("accepted_by"), // Customer name who accepted
+  acceptedDate: timestamp("accepted_date"),
+  location: text("location"), // Service location/job site
+  tags: text("tags").array(), // Tags for categorization
+  
   // Estimate details
   title: text("title").notNull(),
   description: text("description"),
   items: json("items").$type<{
+    lineNumber: number;
+    serviceDate?: string;
+    productService: string;
     description: string;
     sku?: string;
     quantity: number;
-    unitPrice: number;
-    total: number;
-    type: "part" | "labor";
+    rate: number;
+    amount: number;
+    taxable: boolean;
+    class?: string;
   }[]>().default([]),
   
-  // Photos
-  photos: text("photos").array(), // Array of photo URLs/base64 data
+  // Photos/Attachments
+  photos: text("photos").array(),
+  attachments: json("attachments").$type<{
+    name: string;
+    url: string;
+    size: number;
+  }[]>().default([]),
   
-  // Totals
+  // Totals (QuickBooks format - stored in cents)
+  subtotal: integer("subtotal").default(0),
+  discountType: text("discount_type").default("percent"), // "percent" or "fixed"
+  discountValue: real("discount_value").default(0),
+  discountAmount: integer("discount_amount").default(0),
+  taxableSubtotal: integer("taxable_subtotal").default(0),
+  salesTaxRate: real("sales_tax_rate").default(0),
+  salesTaxAmount: integer("sales_tax_amount").default(0),
+  depositType: text("deposit_type").default("percent"), // "percent" or "fixed"
+  depositValue: real("deposit_value").default(0),
+  depositAmount: integer("deposit_amount").default(0),
+  totalAmount: integer("total_amount").default(0),
+  
+  // Legacy totals (keep for backward compatibility)
   partsTotal: integer("parts_total").default(0),
   laborTotal: integer("labor_total").default(0),
-  totalAmount: integer("total_amount").default(0),
   
   // Status tracking
   status: text("status").notNull().default("draft"),
   
-  // People involved
+  // People involved (QuickBooks-compatible)
   createdByTechId: text("created_by_tech_id"),
   createdByTechName: text("created_by_tech_name"),
   repairTechId: text("repair_tech_id"),
   repairTechName: text("repair_tech_name"),
   serviceTechId: text("service_tech_id"),
   serviceTechName: text("service_tech_name"),
+  fieldSupervisorId: text("field_supervisor_id"),
+  fieldSupervisorName: text("field_supervisor_name"),
+  officeMemberId: text("office_member_id"),
+  officeMemberName: text("office_member_name"),
+  repairForemanId: text("repair_foreman_id"),
+  repairForemanName: text("repair_foreman_name"),
   approvedByManagerId: text("approved_by_manager_id"),
   approvedByManagerName: text("approved_by_manager_name"),
   
   // Dates
   createdAt: timestamp("created_at").defaultNow(),
-  reportedDate: timestamp("reported_date"), // When issue was first reported
+  reportedDate: timestamp("reported_date"),
   sentForApprovalAt: timestamp("sent_for_approval_at"),
   approvedAt: timestamp("approved_at"),
   rejectedAt: timestamp("rejected_at"),
@@ -635,10 +671,12 @@ export const estimates = pgTable("estimates", {
   completedAt: timestamp("completed_at"),
   invoicedAt: timestamp("invoiced_at"),
   
-  // Notes
+  // Notes (QuickBooks-compatible)
   techNotes: text("tech_notes"),
   managerNotes: text("manager_notes"),
   rejectionReason: text("rejection_reason"),
+  customerNote: text("customer_note"), // Note to customer (visible on estimate)
+  memoOnStatement: text("memo_on_statement"), // Internal memo (not visible to customer)
   
   // Link to job once scheduled
   jobId: text("job_id"),
