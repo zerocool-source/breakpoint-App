@@ -1,0 +1,810 @@
+import { Request, Response } from "express";
+import { storage } from "../storage";
+import { PoolBrainClient } from "../poolbrain-client";
+
+export function registerSchedulingRoutes(app: any) {
+  // Route Schedule endpoints
+  app.get("/api/properties/:propertyId/route-schedule", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const schedule = await storage.getRouteScheduleByProperty(propertyId);
+      res.json({ schedule: schedule || null });
+    } catch (error: any) {
+      console.error("Error fetching route schedule:", error);
+      res.status(500).json({ error: "Failed to fetch route schedule" });
+    }
+  });
+
+  // Get upcoming scheduled visits for a property with route/technician info
+  app.get("/api/properties/:propertyId/upcoming-visits", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const occurrences = await storage.getServiceOccurrencesByProperty(propertyId);
+      
+      // Get all routes to look up route names/technicians
+      const allRoutes = await storage.getRoutes();
+      const routeMap = new Map<string, { name: string; technicianName: string | null; color: string }>();
+      for (const route of allRoutes) {
+        routeMap.set(route.id, { 
+          name: route.name, 
+          technicianName: route.technicianName, 
+          color: route.color 
+        });
+      }
+      
+      // Filter to recent and upcoming visits (within 2 weeks before and 4 weeks ahead)
+      const now = new Date();
+      const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const fourWeeksAhead = new Date(now.getTime() + 28 * 24 * 60 * 60 * 1000);
+      
+      const filteredOccurrences = occurrences.filter(occ => {
+        const occDate = new Date(occ.date);
+        return occDate >= twoWeeksAgo && occDate <= fourWeeksAhead;
+      });
+      
+      // Enrich occurrences with route info and sort by date
+      const enrichedVisits = filteredOccurrences
+        .map(occ => {
+          const routeInfo = occ.routeId ? routeMap.get(occ.routeId) : null;
+          return {
+            id: occ.id,
+            date: occ.date,
+            status: occ.status,
+            routeId: occ.routeId,
+            routeName: routeInfo?.name || null,
+            technicianName: routeInfo?.technicianName || null,
+            routeColor: routeInfo?.color || null,
+          };
+        })
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      res.json({ visits: enrichedVisits });
+    } catch (error: any) {
+      console.error("Error fetching upcoming visits:", error);
+      res.status(500).json({ error: "Failed to fetch upcoming visits" });
+    }
+  });
+
+  app.put("/api/properties/:propertyId/route-schedule", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const scheduleData = req.body;
+      const schedule = await storage.upsertRouteSchedule(propertyId, scheduleData);
+      
+      // Delete existing unscheduled service occurrences for this schedule
+      await storage.deleteServiceOccurrencesBySchedule(schedule.id);
+      
+      // If schedule is active and has visit days, generate service occurrences
+      if (schedule.isActive && schedule.visitDays && schedule.visitDays.length > 0) {
+        // Get property info for customer name
+        const property = await storage.getCustomerAddress(propertyId);
+        let customerName = "";
+        if (property && property.customerId) {
+          const customer = await storage.getCustomer(property.customerId);
+          customerName = customer?.name || "";
+        }
+        
+        // Map day names to day of week numbers (0-6, Mon-Sun format used in scheduling)
+        // Keys are lowercase to match frontend values
+        const dayNameToNumber: Record<string, number> = {
+          "monday": 0,
+          "tuesday": 1,
+          "wednesday": 2,
+          "thursday": 3,
+          "friday": 4,
+          "saturday": 5,
+          "sunday": 6
+        };
+        
+        // Generate service occurrences for each visit day
+        // Calculate the Monday of the current scheduling week
+        const today = new Date();
+        const currentJsDayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, etc.
+        // Calculate days since Monday (if Sunday, it's 6 days since Monday)
+        const daysSinceMonday = currentJsDayOfWeek === 0 ? 6 : currentJsDayOfWeek - 1;
+        const weekStartMonday = new Date(today);
+        weekStartMonday.setDate(today.getDate() - daysSinceMonday);
+        weekStartMonday.setHours(0, 0, 0, 0);
+        
+        const occurrencesToCreate = schedule.visitDays.map((dayName: string) => {
+          const targetDay = dayNameToNumber[dayName] ?? 0; // 0=Monday, 1=Tuesday, etc.
+          // Calculate the date for this day within the current week
+          const occurrenceDate = new Date(weekStartMonday);
+          occurrenceDate.setDate(weekStartMonday.getDate() + targetDay);
+          occurrenceDate.setHours(8, 0, 0, 0); // Set to 8 AM
+          
+          return {
+            sourceScheduleId: schedule.id,
+            propertyId: propertyId,
+            date: occurrenceDate,
+            status: "unscheduled",
+            routeId: null,
+            technicianId: null,
+            isAutoGenerated: true
+          };
+        });
+        
+        if (occurrencesToCreate.length > 0) {
+          await storage.bulkCreateServiceOccurrences(occurrencesToCreate);
+        }
+      }
+      
+      res.json({ schedule });
+    } catch (error: any) {
+      console.error("Error saving route schedule:", error);
+      res.status(500).json({ error: "Failed to save route schedule" });
+    }
+  });
+
+  // Service occurrence endpoints
+  app.get("/api/properties/:propertyId/service-occurrences", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const occurrences = await storage.getServiceOccurrencesByProperty(propertyId);
+      res.json({ occurrences });
+    } catch (error: any) {
+      console.error("Error fetching service occurrences:", error);
+      res.status(500).json({ error: "Failed to fetch service occurrences" });
+    }
+  });
+
+  // ==================== ROUTES (Scheduling) ====================
+
+  // Assign occurrence to route
+  app.post("/api/occurrences/:id/assign", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { routeId, technicianId } = req.body;
+      
+      if (!routeId) {
+        return res.status(400).json({ error: "routeId is required" });
+      }
+      
+      // Verify occurrence exists
+      const occurrence = await storage.getServiceOccurrence(id);
+      if (!occurrence) {
+        return res.status(404).json({ error: "Occurrence not found" });
+      }
+      
+      // Verify route exists
+      const route = await storage.getRoute(routeId);
+      if (!route) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+      
+      // Assign the occurrence to the route
+      const updated = await storage.assignOccurrenceToRoute(id, routeId, technicianId || route.technicianId);
+      
+      res.json({ occurrence: updated });
+    } catch (error: any) {
+      console.error("Error assigning occurrence to route:", error);
+      res.status(500).json({ error: "Failed to assign occurrence to route" });
+    }
+  });
+
+  // Unassign occurrence from route (return to unscheduled)
+  app.post("/api/occurrences/:id/unassign", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Verify occurrence exists
+      const occurrence = await storage.getServiceOccurrence(id);
+      if (!occurrence) {
+        return res.status(404).json({ error: "Occurrence not found" });
+      }
+      
+      // Unassign the occurrence from the route
+      const updated = await storage.unassignOccurrenceFromRoute(id);
+      
+      res.json({ occurrence: updated });
+    } catch (error: any) {
+      console.error("Error unassigning occurrence from route:", error);
+      res.status(500).json({ error: "Failed to unassign occurrence from route" });
+    }
+  });
+
+  // Get unscheduled service occurrences by date range
+  app.get("/api/unscheduled", async (req: Request, res: Response) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ error: "start and end date parameters are required (YYYY-MM-DD)" });
+      }
+      
+      const startDate = new Date(start + "T00:00:00.000Z");
+      const endDate = new Date(end + "T23:59:59.999Z");
+      
+      // Auto-generate occurrences from active route schedules
+      const activeSchedules = await storage.getActiveRouteSchedules();
+      const dayNameToIndex: { [key: string]: number } = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6
+      };
+      
+      // Get all addresses with customer data in one efficient query
+      const allAddresses = await storage.getAllAddressesWithCustomers();
+      const addressMap = new Map<string, { propertyName: string; customerName: string; address: string }>();
+      
+      for (const addr of allAddresses) {
+        addressMap.set(addr.id, {
+          propertyName: addr.addressLine1 || "Property",
+          customerName: addr.customerName,
+          address: `${addr.addressLine1 || ""}, ${addr.city || ""}, ${addr.state || ""} ${addr.zip || ""}`.trim()
+        });
+      }
+      
+      // Generate occurrences for each active schedule
+      for (const schedule of activeSchedules) {
+        if (!schedule.visitDays || schedule.visitDays.length === 0) continue;
+        
+        const existingOccurrences = await storage.getServiceOccurrencesByProperty(schedule.propertyId);
+        const existingDates = new Set(existingOccurrences.map(o => o.date.toISOString().split("T")[0]));
+        
+        // Iterate through each day in the date range
+        const current = new Date(startDate);
+        const occurrencesToCreate: any[] = [];
+        
+        while (current <= endDate) {
+          const dayIndex = current.getDay();
+          const dayName = Object.keys(dayNameToIndex).find(k => dayNameToIndex[k] === dayIndex);
+          
+          if (dayName && schedule.visitDays.includes(dayName)) {
+            const dateStr = current.toISOString().split("T")[0];
+            if (!existingDates.has(dateStr)) {
+              occurrencesToCreate.push({
+                propertyId: schedule.propertyId,
+                date: new Date(dateStr + "T00:00:00.000Z"),
+                status: "unscheduled",
+                sourceScheduleId: schedule.id,
+              });
+              existingDates.add(dateStr);
+            }
+          }
+          current.setDate(current.getDate() + 1);
+        }
+        
+        if (occurrencesToCreate.length > 0) {
+          await storage.bulkCreateServiceOccurrences(occurrencesToCreate);
+        }
+      }
+      
+      // Now get all unscheduled occurrences
+      const occurrences = await storage.getUnscheduledOccurrences(startDate, endDate);
+      
+      // Enrich with property/customer data
+      const enrichedOccurrences = occurrences.map((occ) => {
+        const addrInfo = addressMap.get(occ.propertyId);
+        return {
+          ...occ,
+          propertyName: addrInfo?.propertyName || occ.propertyId,
+          customerName: addrInfo?.customerName || "",
+          address: addrInfo?.address || "",
+        };
+      });
+      
+      res.json({ occurrences: enrichedOccurrences });
+    } catch (error: any) {
+      console.error("Error getting unscheduled occurrences:", error);
+      res.status(500).json({ error: "Failed to get unscheduled occurrences" });
+    }
+  });
+
+  // Get routes by date range
+  app.get("/api/routes/by-date", async (req: Request, res: Response) => {
+    try {
+      const { start, end } = req.query;
+      if (!start || !end) {
+        return res.status(400).json({ error: "start and end date parameters are required (YYYY-MM-DD)" });
+      }
+      
+      const startDate = new Date(start + "T00:00:00.000Z");
+      const endDate = new Date(end + "T23:59:59.999Z");
+      
+      const routesList = await storage.getRoutesByDateRange(startDate, endDate);
+      
+      // Fetch stops for each route
+      const routesWithStops = await Promise.all(
+        routesList.map(async (route) => {
+          const stops = await storage.getRouteStops(route.id);
+          return { ...route, stops };
+        })
+      );
+      
+      res.json({ routes: routesWithStops });
+    } catch (error: any) {
+      console.error("Error getting routes by date:", error);
+      res.status(500).json({ error: "Failed to get routes by date" });
+    }
+  });
+
+  // Get all routes (optionally filter by day of week)
+  app.get("/api/routes", async (req: Request, res: Response) => {
+    try {
+      const dayOfWeek = req.query.dayOfWeek !== undefined ? parseInt(req.query.dayOfWeek as string) : undefined;
+      const routesList = await storage.getRoutes(dayOfWeek);
+      
+      // Fetch stops for each route (including assigned occurrences)
+      const routesWithStops = await Promise.all(
+        routesList.map(async (route) => {
+          const [manualStops, assignedOccurrences] = await Promise.all([
+            storage.getRouteStops(route.id),
+            storage.getRouteAssignedOccurrences(route.id)
+          ]);
+          
+          // Transform assigned occurrences to match stop format
+          const occurrenceStops = assignedOccurrences.map((occ, index) => ({
+            id: occ.id,
+            routeId: route.id,
+            propertyId: occ.propertyId,
+            propertyName: occ.addressLine1 || "Property",
+            customerId: null,
+            customerName: occ.customerName,
+            address: `${occ.addressLine1 || ""}, ${occ.city || ""} ${occ.state || ""} ${occ.zip || ""}`.trim(),
+            city: occ.city,
+            state: occ.state,
+            zip: occ.zip,
+            sortOrder: manualStops.length + index + 1,
+            estimatedTime: 30,
+            status: occ.status,
+            date: occ.date,
+            isOccurrence: true, // Flag to distinguish from manual stops
+          }));
+          
+          // Combine manual stops and assigned occurrences
+          const allStops = [...manualStops, ...occurrenceStops];
+          return { ...route, stops: allStops };
+        })
+      );
+      
+      res.json({ routes: routesWithStops });
+    } catch (error: any) {
+      console.error("Error getting routes:", error);
+      res.status(500).json({ error: "Failed to get routes" });
+    }
+  });
+
+  // Get single route with stops
+  app.get("/api/routes/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const route = await storage.getRoute(id);
+      if (!route) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+      const stops = await storage.getRouteStops(id);
+      res.json({ route: { ...route, stops } });
+    } catch (error: any) {
+      console.error("Error getting route:", error);
+      res.status(500).json({ error: "Failed to get route" });
+    }
+  });
+
+  // Create new route
+  app.post("/api/routes", async (req: Request, res: Response) => {
+    try {
+      const { customerIds, date, ...routeData } = req.body;
+      
+      // Convert date string to Date object if provided
+      const routeToCreate = {
+        ...routeData,
+        date: date ? new Date(date + "T00:00:00.000Z") : null,
+      };
+      
+      const route = await storage.createRoute(routeToCreate);
+      
+      // If customers were selected, create stops for each
+      if (customerIds && Array.isArray(customerIds) && customerIds.length > 0) {
+        for (let i = 0; i < customerIds.length; i++) {
+          const customerId = customerIds[i];
+          const customer = await storage.getCustomer(customerId);
+          if (customer) {
+            // Get first property for the customer if any
+            const properties = await storage.getCustomerAddresses(customerId);
+            const property = properties[0];
+            
+            await storage.createRouteStop({
+              routeId: route.id,
+              propertyId: property?.id || customerId,
+              propertyName: property?.addressLine1 || customer.name,
+              customerId: customer.externalId || customer.id,
+              customerName: customer.name,
+              address: property ? `${property.addressLine1 || ""}, ${property.city || ""} ${property.state || ""} ${property.zip || ""}`.trim() : customer.address || "",
+              city: property?.city || "",
+              state: property?.state || "",
+              zip: property?.zip || "",
+              sortOrder: i + 1,
+              estimatedTime: 30,
+            });
+          }
+        }
+      }
+      
+      res.json({ route });
+    } catch (error: any) {
+      console.error("Error creating route:", error);
+      res.status(500).json({ error: "Failed to create route" });
+    }
+  });
+
+  // Update route
+  app.put("/api/routes/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { date, ...updates } = req.body;
+      
+      // Convert date string to Date object if provided
+      const routeUpdates = {
+        ...updates,
+        ...(date !== undefined ? { date: date ? new Date(date + "T00:00:00.000Z") : null } : {}),
+      };
+      
+      const route = await storage.updateRoute(id, routeUpdates);
+      if (!route) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+      res.json({ route });
+    } catch (error: any) {
+      console.error("Error updating route:", error);
+      res.status(500).json({ error: "Failed to update route" });
+    }
+  });
+
+  // Delete route
+  app.delete("/api/routes/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteRoute(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting route:", error);
+      res.status(500).json({ error: "Failed to delete route" });
+    }
+  });
+
+  // Reorder routes
+  app.put("/api/routes/reorder", async (req: Request, res: Response) => {
+    try {
+      const { routeIds } = req.body;
+      await storage.reorderRoutes(routeIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reordering routes:", error);
+      res.status(500).json({ error: "Failed to reorder routes" });
+    }
+  });
+
+  // ==================== ROUTE STOPS ====================
+
+  // Get stops for a route
+  app.get("/api/routes/:routeId/stops", async (req: Request, res: Response) => {
+    try {
+      const { routeId } = req.params;
+      const stops = await storage.getRouteStops(routeId);
+      res.json({ stops });
+    } catch (error: any) {
+      console.error("Error getting route stops:", error);
+      res.status(500).json({ error: "Failed to get route stops" });
+    }
+  });
+
+  // Create route stop
+  app.post("/api/routes/:routeId/stops", async (req: Request, res: Response) => {
+    try {
+      const { routeId } = req.params;
+      const stop = await storage.createRouteStop({ ...req.body, routeId });
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error creating route stop:", error);
+      res.status(500).json({ error: "Failed to create route stop" });
+    }
+  });
+
+  // Update route stop
+  app.put("/api/route-stops/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const stop = await storage.updateRouteStop(id, req.body);
+      if (!stop) {
+        return res.status(404).json({ error: "Route stop not found" });
+      }
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error updating route stop:", error);
+      res.status(500).json({ error: "Failed to update route stop" });
+    }
+  });
+
+  // Delete route stop
+  app.delete("/api/route-stops/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteRouteStop(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting route stop:", error);
+      res.status(500).json({ error: "Failed to delete route stop" });
+    }
+  });
+
+  // Move stop to different route
+  app.post("/api/route-stops/:id/move", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { newRouteId, isPermanent, moveDate } = req.body;
+      const stop = await storage.moveStopToRoute(id, newRouteId, isPermanent, moveDate ? new Date(moveDate) : undefined);
+      if (!stop) {
+        return res.status(404).json({ error: "Route stop not found" });
+      }
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error moving route stop:", error);
+      res.status(500).json({ error: "Failed to move route stop" });
+    }
+  });
+
+  // Reorder stops within a route
+  app.put("/api/routes/:routeId/stops/reorder", async (req: Request, res: Response) => {
+    try {
+      const { stopIds } = req.body;
+      await storage.reorderRouteStops(stopIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error reordering route stops:", error);
+      res.status(500).json({ error: "Failed to reorder route stops" });
+    }
+  });
+
+  // Reset all scheduling data (routes, stops, moves, unscheduled)
+  app.post("/api/scheduling/reset", async (req: Request, res: Response) => {
+    try {
+      const result = await storage.resetSchedulingData();
+      res.json({ 
+        success: true, 
+        message: "Scheduling data reset successfully",
+        ...result
+      });
+    } catch (error: any) {
+      console.error("Error resetting scheduling data:", error);
+      res.status(500).json({ error: "Failed to reset scheduling data" });
+    }
+  });
+
+  // ==================== UNSCHEDULED STOPS ====================
+
+  // Get unscheduled stops
+  app.get("/api/unscheduled-stops", async (req: Request, res: Response) => {
+    try {
+      const stops = await storage.getUnscheduledStops();
+      res.json({ stops });
+    } catch (error: any) {
+      console.error("Error getting unscheduled stops:", error);
+      res.status(500).json({ error: "Failed to get unscheduled stops" });
+    }
+  });
+
+  // Create unscheduled stop
+  app.post("/api/unscheduled-stops", async (req: Request, res: Response) => {
+    try {
+      const stop = await storage.createUnscheduledStop(req.body);
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error creating unscheduled stop:", error);
+      res.status(500).json({ error: "Failed to create unscheduled stop" });
+    }
+  });
+
+  // Delete unscheduled stop
+  app.delete("/api/unscheduled-stops/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteUnscheduledStop(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting unscheduled stop:", error);
+      res.status(500).json({ error: "Failed to delete unscheduled stop" });
+    }
+  });
+
+  // Move unscheduled stop to route
+  app.post("/api/unscheduled-stops/:id/assign", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { routeId } = req.body;
+      const stop = await storage.moveUnscheduledToRoute(id, routeId);
+      res.json({ stop });
+    } catch (error: any) {
+      console.error("Error assigning unscheduled stop:", error);
+      res.status(500).json({ error: "Failed to assign unscheduled stop" });
+    }
+  });
+
+  // ==================== POOL BRAIN ROUTE IMPORT ====================
+
+  // Get technician route details from Pool Brain API
+  app.get("/api/poolbrain/technician-routes", async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const [routeData, technicianData, poolData, customerData] = await Promise.all([
+        client.getTechnicianRouteDetail({ limit: 1000 }),
+        client.getTechnicianDetail({ limit: 100 }),
+        client.getPoolsList({ limit: 1000 }),
+        client.getCustomerDetail({ limit: 1000 }),
+      ]);
+
+      res.json({
+        routes: routeData,
+        technicians: technicianData,
+        pools: poolData,
+        customers: customerData,
+      });
+    } catch (error: any) {
+      console.error("Error fetching Pool Brain routes:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch routes from Pool Brain" });
+    }
+  });
+
+  // Import routes from Pool Brain into scheduling system
+  app.post("/api/routes/import-from-poolbrain", async (req: Request, res: Response) => {
+    try {
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+      const { clearExisting } = req.body || {};
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      // Clear existing routes if requested
+      if (clearExisting) {
+        await storage.clearAllRoutes();
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch route and technician data (required), pools and customers are optional
+      const [routeData, technicianData] = await Promise.all([
+        client.getTechnicianRouteDetail({ limit: 2000 }),
+        client.getTechnicianDetail({ limit: 500 }),
+      ]);
+
+      // Fetch pools and customers separately with error handling
+      let poolData: any = { data: [] };
+      let customerData: any = { data: [] };
+      
+      try {
+        poolData = await client.getPoolsList({ limit: 2000 });
+      } catch (e) {
+        console.log("Could not fetch pools list, continuing without pool data");
+      }
+      
+      try {
+        customerData = await client.getCustomerDetail({ limit: 2000 });
+      } catch (e) {
+        console.log("Could not fetch customer details, continuing without customer data");
+      }
+
+      const technicians = technicianData?.technicians || technicianData?.data || [];
+      const routes = routeData?.routes || routeData?.data || routeData || [];
+      const pools = poolData?.pools || poolData?.data || [];
+      const customers = customerData?.customers || customerData?.data || [];
+      
+      console.log(`Pool Brain import: ${routes.length} route entries, ${technicians.length} technicians, ${pools.length} pools, ${customers.length} customers`);
+
+      const poolMap = new Map<number, any>();
+      for (const pool of pools) {
+        poolMap.set(pool.PoolID || pool.poolId || pool.id, pool);
+      }
+
+      const customerMap = new Map<number, any>();
+      for (const customer of customers) {
+        customerMap.set(customer.CustomerID || customer.customerId || customer.id, customer);
+      }
+
+      const techMap = new Map<number, any>();
+      for (const tech of technicians) {
+        techMap.set(tech.TechnicianID || tech.technicianId || tech.id, tech);
+      }
+
+      const ROUTE_COLORS = ["#0891b2", "#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a", "#ca8a04"];
+      const dayMapping: Record<string, number> = {
+        "monday": 1, "tuesday": 2, "wednesday": 3, "thursday": 4, "friday": 5, "saturday": 6, "sunday": 0,
+        "mon": 1, "tue": 2, "wed": 3, "thu": 4, "fri": 5, "sat": 6, "sun": 0,
+      };
+
+      let createdRoutes = 0;
+      let createdStops = 0;
+
+      const routeGroups = new Map<string, any[]>();
+
+      for (const routeEntry of routes) {
+        const techId = routeEntry.TechnicianID || routeEntry.technicianId;
+        const dayName = (routeEntry.Day || routeEntry.day || routeEntry.DayOfWeek || "monday").toLowerCase();
+        const dayOfWeek = dayMapping[dayName] ?? 1;
+        
+        const groupKey = `${techId}-${dayOfWeek}`;
+        if (!routeGroups.has(groupKey)) {
+          routeGroups.set(groupKey, []);
+        }
+        routeGroups.get(groupKey)?.push(routeEntry);
+      }
+
+      let colorIndex = 0;
+      for (const [groupKey, stops] of Array.from(routeGroups.entries())) {
+        const [techIdStr, dayOfWeekStr] = groupKey.split("-");
+        const techId = parseInt(techIdStr);
+        const dayOfWeek = parseInt(dayOfWeekStr);
+        
+        const tech = techMap.get(techId);
+        const techName = tech ? `${tech.FirstName || tech.firstName || ""} ${tech.LastName || tech.lastName || ""}`.trim() : `Tech ${techId}`;
+
+        const route = await storage.createRoute({
+          name: `${techName} - ${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][dayOfWeek]}`,
+          externalId: stops[0]?.RouteID ? String(stops[0].RouteID) : null,
+          dayOfWeek,
+          color: ROUTE_COLORS[colorIndex % ROUTE_COLORS.length],
+          technicianId: String(techId),
+          technicianName: techName,
+        });
+        createdRoutes++;
+        colorIndex++;
+
+        let sortOrder = 0;
+        for (const stopEntry of stops) {
+          const poolId = stopEntry.PoolID || stopEntry.poolId;
+          const pool = poolMap.get(poolId);
+          const customerId = pool?.CustomerID || pool?.customerId || stopEntry.CustomerID || stopEntry.customerId;
+          const customer = customerMap.get(customerId);
+
+          const propertyName = pool?.PoolName || pool?.poolName || pool?.Name || pool?.name || `Pool ${poolId}`;
+          const customerName = customer ? `${customer.FirstName || customer.firstName || ""} ${customer.LastName || customer.lastName || ""}`.trim() : null;
+          const address = customer?.Address || customer?.address || pool?.Address || pool?.address || null;
+
+          await storage.createRouteStop({
+            routeId: route.id,
+            externalId: stopEntry.RouteStopID ? String(stopEntry.RouteStopID) : null,
+            propertyId: String(poolId),
+            propertyName,
+            customerId: customerId ? String(customerId) : null,
+            customerName,
+            poolId: poolId ? String(poolId) : null,
+            address,
+            city: customer?.City || customer?.city || pool?.City || pool?.city || null,
+            state: customer?.State || customer?.state || pool?.State || pool?.state || null,
+            zip: customer?.Zip || customer?.zip || pool?.Zip || pool?.zip || null,
+            poolName: propertyName,
+            sortOrder,
+            estimatedTime: stopEntry.EstimatedTime || stopEntry.estimatedTime || 30,
+            frequency: stopEntry.Frequency || stopEntry.frequency || "weekly",
+          });
+          createdStops++;
+          sortOrder++;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Imported ${createdRoutes} routes with ${createdStops} stops from Pool Brain`,
+        createdRoutes,
+        createdStops,
+      });
+    } catch (error: any) {
+      console.error("Error importing routes from Pool Brain:", error);
+      res.status(500).json({ error: error.message || "Failed to import routes from Pool Brain" });
+    }
+  });
+}

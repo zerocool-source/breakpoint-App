@@ -360,7 +360,7 @@ function ServiceLogSidebar({
     if (!payload) return {};
     try {
       return JSON.parse(payload);
-    } catch {
+    } catch (_e) {
       return { raw: payload };
     }
   };
