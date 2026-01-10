@@ -909,7 +909,7 @@ export class DbStorage implements IStorage {
   }
 
   async createThreadMessage(message: InsertThreadMessage): Promise<ThreadMessage> {
-    const result = await db.insert(threadMessages).values({
+    const values = {
       threadId: message.threadId,
       authorId: message.authorId,
       authorName: message.authorName,
@@ -920,7 +920,8 @@ export class DbStorage implements IStorage {
       taggedRoles: message.taggedRoles ?? [],
       visibility: message.visibility ?? 'all',
       pinned: message.pinned ?? false
-    }).returning();
+    };
+    const result = await db.insert(threadMessages).values(values as any).returning();
     
     // Update thread's updatedAt
     await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, message.threadId));
@@ -1056,7 +1057,7 @@ export class DbStorage implements IStorage {
   }
 
   async createChannelMessage(message: InsertChannelMessage): Promise<ChannelMessage> {
-    const result = await db.insert(channelMessages).values({
+    const values = {
       channelId: message.channelId,
       authorId: message.authorId,
       authorName: message.authorName,
@@ -1066,7 +1067,8 @@ export class DbStorage implements IStorage {
       attachments: message.attachments ?? [],
       mentions: message.mentions ?? [],
       isPinned: message.isPinned ?? false
-    }).returning();
+    };
+    const result = await db.insert(channelMessages).values(values as any).returning();
     
     // Update channel's updatedAt
     await db.update(propertyChannels)

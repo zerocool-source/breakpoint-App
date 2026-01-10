@@ -4859,8 +4859,8 @@ function setupRoutes(app: any) {
         }
       }
       
-      // Create new estimate
-      const created = await storage.createEstimate(mappedEstimate);
+      // Create new estimate - cast to InsertEstimate type
+      const created = await storage.createEstimate(mappedEstimate as any);
       res.json({ success: true, action: 'created', id: created.id });
     } catch (error: any) {
       console.error('Error receiving estimate:', error);
