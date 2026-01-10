@@ -47,11 +47,22 @@ Preferred communication style: Simple, everyday language.
 - Production: Static build with Express serving bundled assets
 - Session Management: connect-pg-simple for PostgreSQL-backed sessions
 
-**API Routes:**
-- `/api/alerts/enriched` - Fetches alerts from Pool Brain and enriches with customer/pool data
-- `/api/alerts/chemical-order-email` - Generates formatted chemical order emails
-- `/api/chat` - Proxies requests to external AI service (ace-breakpoint-app)
-- `/api/settings` - Manages Pool Brain API credentials and configuration
+**API Routes (Modular Structure):**
+Routes are organized into domain-specific modules in `server/routes/`:
+- `alerts.ts` - Alert CRUD, enriched alerts, chemical order emails, Outlook integration
+- `jobs.ts` - Job management, repairs extraction, scheduling
+- `customers.ts` - Customer CRUD, properties, contacts, equipment, pools
+- `technicians.ts` - Technician management, Pool Brain sync
+- `chat.ts` - AI chat proxy, conversation history
+- `fleet.ts` - Fleet trucks, maintenance records, inventory
+- `scheduling.ts` - Route scheduling, stops, unscheduled items
+- `payroll.ts` - Pay periods, payroll entries
+- `channels.ts` - Communication channels, threads, messages
+- `pm.ts` - Preventive maintenance schedules, service types
+- `sync.ts` - Field Tech Sync API for mobile app
+- `properties.ts` - Property repair summaries
+- `settings.ts` - API configuration
+- `estimates.ts` - Estimate management
 
 **Data Flow:**
 1. Pool Brain API client fetches raw alerts, customers, and pool data
