@@ -18,53 +18,52 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
-function exportJobsExcel(jobs: any[], technicians: any[], summary: any) {
+async function exportJobsExcel(jobs: any[], technicians: any[], summary: any) {
   const now = new Date();
+  const wb = new ExcelJS.Workbook();
   
-  const summaryData = [
-    { Metric: "Total Jobs", Value: summary.totalJobs },
-    { Metric: "Completed Jobs", Value: summary.completedJobs },
-    { Metric: "Pending Jobs", Value: summary.pendingJobs },
-    { Metric: "Total Value", Value: summary.totalValue },
-    { Metric: "Total Technicians", Value: technicians.length },
+  // Summary sheet
+  const wsSummary = wb.addWorksheet("Summary");
+  wsSummary.columns = [{ header: "Metric", key: "metric" }, { header: "Value", key: "value" }];
+  wsSummary.addRow({ metric: "Total Jobs", value: summary.totalJobs });
+  wsSummary.addRow({ metric: "Completed Jobs", value: summary.completedJobs });
+  wsSummary.addRow({ metric: "Pending Jobs", value: summary.pendingJobs });
+  wsSummary.addRow({ metric: "Total Value", value: summary.totalValue });
+  wsSummary.addRow({ metric: "Total Technicians", value: technicians.length });
+  
+  // Jobs sheet
+  const wsJobs = wb.addWorksheet("All Jobs");
+  wsJobs.columns = [
+    { header: "Job ID", key: "jobId" }, { header: "Title", key: "title" },
+    { header: "Customer", key: "customer" }, { header: "Pool", key: "pool" },
+    { header: "Address", key: "address" }, { header: "Technician", key: "tech" },
+    { header: "Price", key: "price" }, { header: "Status", key: "status" },
+    { header: "Scheduled Date", key: "scheduled" }, { header: "Created Date", key: "created" }
   ];
-  
-  const jobsData = jobs.map((j: any) => ({
-    "Job ID": j.jobId,
-    "Title": j.title,
-    "Customer": j.customerName || "N/A",
-    "Pool": j.poolName || "N/A",
-    "Address": j.address || "N/A",
-    "Technician": j.technicianName || "Unassigned",
-    "Price": j.price || 0,
-    "Status": j.isCompleted ? "Completed" : "Pending",
-    "Scheduled Date": j.scheduledDate ? new Date(j.scheduledDate).toLocaleDateString() : "N/A",
-    "Created Date": j.createdDate ? new Date(j.createdDate).toLocaleDateString() : "N/A"
+  jobs.forEach((j: any) => wsJobs.addRow({
+    jobId: j.jobId, title: j.title, customer: j.customerName || "N/A",
+    pool: j.poolName || "N/A", address: j.address || "N/A",
+    tech: j.technicianName || "Unassigned", price: j.price || 0,
+    status: j.isCompleted ? "Completed" : "Pending",
+    scheduled: j.scheduledDate ? new Date(j.scheduledDate).toLocaleDateString() : "N/A",
+    created: j.createdDate ? new Date(j.createdDate).toLocaleDateString() : "N/A"
   }));
   
-  const techData = technicians.map((t: any) => ({
-    "Technician ID": t.techId,
-    "Name": t.name,
-    "Phone": t.phone || "N/A",
-    "Email": t.email || "N/A"
+  // Technicians sheet
+  const wsTechs = wb.addWorksheet("Technicians");
+  wsTechs.columns = [
+    { header: "Technician ID", key: "id" }, { header: "Name", key: "name" },
+    { header: "Phone", key: "phone" }, { header: "Email", key: "email" }
+  ];
+  technicians.forEach((t: any) => wsTechs.addRow({
+    id: t.techId, name: t.name, phone: t.phone || "N/A", email: t.email || "N/A"
   }));
   
-  const wb = XLSX.utils.book_new();
-  
-  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-  
-  const wsJobs = XLSX.utils.json_to_sheet(jobsData);
-  XLSX.utils.book_append_sheet(wb, wsJobs, "All Jobs");
-  
-  const wsTechs = XLSX.utils.json_to_sheet(techData);
-  XLSX.utils.book_append_sheet(wb, wsTechs, "Technicians");
-  
-  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, `jobs-report-${now.toISOString().split('T')[0]}.xlsx`);
 }
 

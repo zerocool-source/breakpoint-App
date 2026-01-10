@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Wrench, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, Clock, CheckCircle2, Eye, EyeOff, Archive, ArchiveRestore, ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
 import { Link } from "wouter";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,47 +35,44 @@ interface EnrichedAlert {
   rawAlert?: any;
 }
 
-function exportRepairsExcel(alerts: EnrichedAlert[], completedIds: Set<string>) {
+async function exportRepairsExcel(alerts: EnrichedAlert[], completedIds: Set<string>) {
   const now = new Date();
+  const wb = new ExcelJS.Workbook();
   
   const pendingCount = alerts.filter(a => !completedIds.has(String(a.alertId))).length;
   const completedCount = alerts.filter(a => completedIds.has(String(a.alertId))).length;
   const urgentCount = alerts.filter(a => a.severity.toUpperCase() === "URGENT").length;
   
-  const summaryData = [
-    { Metric: "Total Repair Alerts", Value: alerts.length },
-    { Metric: "Pending", Value: pendingCount },
-    { Metric: "Completed", Value: completedCount },
-    { Metric: "Urgent", Value: urgentCount },
-  ];
+  // Summary sheet
+  const wsSummary = wb.addWorksheet("Summary");
+  wsSummary.columns = [{ header: "Metric", key: "metric" }, { header: "Value", key: "value" }];
+  wsSummary.addRow({ metric: "Total Repair Alerts", value: alerts.length });
+  wsSummary.addRow({ metric: "Pending", value: pendingCount });
+  wsSummary.addRow({ metric: "Completed", value: completedCount });
+  wsSummary.addRow({ metric: "Urgent", value: urgentCount });
   
-  const alertsData = alerts.map(a => ({
-    "Alert ID": a.alertId,
-    "Property": a.customerName,
-    "Pool": a.poolName,
-    "Message": a.message,
-    "Type": a.type,
-    "Severity": a.severity,
-    "Status": completedIds.has(String(a.alertId)) ? "Completed" : "Pending",
-    "Address": a.address || "N/A",
-    "Phone": a.phone || "N/A",
-    "Email": a.email || "N/A",
-    "Contact": a.contact || "N/A",
-    "Technician": a.techName || "Unassigned",
-    "Created": new Date(a.createdAt).toLocaleDateString(),
-    "Notes": a.notes || ""
+  // Alerts sheet
+  const wsAlerts = wb.addWorksheet("Repair Alerts");
+  wsAlerts.columns = [
+    { header: "Alert ID", key: "alertId" }, { header: "Property", key: "property" },
+    { header: "Pool", key: "pool" }, { header: "Message", key: "message" },
+    { header: "Type", key: "type" }, { header: "Severity", key: "severity" },
+    { header: "Status", key: "status" }, { header: "Address", key: "address" },
+    { header: "Phone", key: "phone" }, { header: "Email", key: "email" },
+    { header: "Contact", key: "contact" }, { header: "Technician", key: "tech" },
+    { header: "Created", key: "created" }, { header: "Notes", key: "notes" }
+  ];
+  alerts.forEach(a => wsAlerts.addRow({
+    alertId: a.alertId, property: a.customerName, pool: a.poolName,
+    message: a.message, type: a.type, severity: a.severity,
+    status: completedIds.has(String(a.alertId)) ? "Completed" : "Pending",
+    address: a.address || "N/A", phone: a.phone || "N/A", email: a.email || "N/A",
+    contact: a.contact || "N/A", tech: a.techName || "Unassigned",
+    created: new Date(a.createdAt).toLocaleDateString(), notes: a.notes || ""
   }));
   
-  const wb = XLSX.utils.book_new();
-  
-  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-  
-  const wsAlerts = XLSX.utils.json_to_sheet(alertsData);
-  XLSX.utils.book_append_sheet(wb, wsAlerts, "Repair Alerts");
-  
-  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, `repair-alerts-${now.toISOString().split('T')[0]}.xlsx`);
 }
 

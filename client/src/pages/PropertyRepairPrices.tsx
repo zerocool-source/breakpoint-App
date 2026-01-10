@@ -12,7 +12,7 @@ import { PropertyRepairSummary } from "@shared/schema";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
 interface PropertyRepairsResponse {
@@ -45,58 +45,55 @@ function formatMonth(monthKey: string): string {
 type SortField = "totalSpend" | "totalRepairs" | "propertyName" | "lastServiceDate";
 type SortDirection = "asc" | "desc";
 
-function exportPropertyRepairsExcel(properties: PropertyRepairSummary[], summary: PropertyRepairsResponse['summary']) {
+async function exportPropertyRepairsExcel(properties: PropertyRepairSummary[], summary: PropertyRepairsResponse['summary']) {
   const now = new Date();
+  const wb = new ExcelJS.Workbook();
   
-  const summaryData = [
-    { Metric: "Total Properties", Value: summary.totalProperties },
-    { Metric: "Total Repairs", Value: summary.totalRepairs },
-    { Metric: "Total Spend", Value: summary.totalSpend },
-    { Metric: "Average per Property", Value: summary.averageSpendPerProperty },
-    { Metric: "Top Spender", Value: summary.topSpender?.name || "N/A" },
-    { Metric: "Top Spender Amount", Value: summary.topSpender?.spend || 0 },
+  // Summary sheet
+  const wsSummary = wb.addWorksheet("Summary");
+  wsSummary.columns = [{ header: "Metric", key: "metric" }, { header: "Value", key: "value" }];
+  wsSummary.addRow({ metric: "Total Properties", value: summary.totalProperties });
+  wsSummary.addRow({ metric: "Total Repairs", value: summary.totalRepairs });
+  wsSummary.addRow({ metric: "Total Spend", value: summary.totalSpend });
+  wsSummary.addRow({ metric: "Average per Property", value: summary.averageSpendPerProperty });
+  wsSummary.addRow({ metric: "Top Spender", value: summary.topSpender?.name || "N/A" });
+  wsSummary.addRow({ metric: "Top Spender Amount", value: summary.topSpender?.spend || 0 });
+  
+  // Properties sheet
+  const wsProperties = wb.addWorksheet("Properties");
+  wsProperties.columns = [
+    { header: "Property Name", key: "name" }, { header: "Address", key: "address" },
+    { header: "Total Repairs", key: "totalRepairs" }, { header: "Completed", key: "completed" },
+    { header: "Pending", key: "pending" }, { header: "Total Spend", key: "totalSpend" },
+    { header: "Average Cost", key: "avgCost" }, { header: "Last Service", key: "lastService" },
+    { header: "Technicians", key: "techs" }, { header: "Pools", key: "pools" }
   ];
-  
-  const propertiesData = properties.map(p => ({
-    "Property Name": p.propertyName,
-    "Address": p.address || "N/A",
-    "Total Repairs": p.totalRepairs,
-    "Completed": p.completedRepairs,
-    "Pending": p.pendingRepairs,
-    "Total Spend": p.totalSpend,
-    "Average Cost": p.averageRepairCost,
-    "Last Service": p.lastServiceDate ? new Date(p.lastServiceDate).toLocaleDateString() : "N/A",
-    "Technicians": p.technicians.join(", ") || "N/A",
-    "Pools": p.poolNames.join(", ") || "N/A"
+  properties.forEach(p => wsProperties.addRow({
+    name: p.propertyName, address: p.address || "N/A",
+    totalRepairs: p.totalRepairs, completed: p.completedRepairs, pending: p.pendingRepairs,
+    totalSpend: p.totalSpend, avgCost: p.averageRepairCost,
+    lastService: p.lastServiceDate ? new Date(p.lastServiceDate).toLocaleDateString() : "N/A",
+    techs: p.technicians.join(", ") || "N/A", pools: p.poolNames.join(", ") || "N/A"
   }));
   
-  const repairsData: any[] = [];
+  // All Repairs sheet
+  const wsRepairs = wb.addWorksheet("All Repairs");
+  wsRepairs.columns = [
+    { header: "Property", key: "property" }, { header: "Job Title", key: "title" },
+    { header: "Price", key: "price" }, { header: "Status", key: "status" },
+    { header: "Date", key: "date" }, { header: "Technician", key: "tech" }
+  ];
   properties.forEach(p => {
-    p.repairs.forEach(r => {
-      repairsData.push({
-        "Property": p.propertyName,
-        "Job Title": r.title,
-        "Price": r.price,
-        "Status": r.isCompleted ? "Completed" : "Pending",
-        "Date": r.scheduledDate ? new Date(r.scheduledDate).toLocaleDateString() : "N/A",
-        "Technician": r.technician || "Unassigned"
-      });
-    });
+    p.repairs.forEach(r => wsRepairs.addRow({
+      property: p.propertyName, title: r.title, price: r.price,
+      status: r.isCompleted ? "Completed" : "Pending",
+      date: r.scheduledDate ? new Date(r.scheduledDate).toLocaleDateString() : "N/A",
+      tech: r.technician || "Unassigned"
+    }));
   });
   
-  const wb = XLSX.utils.book_new();
-  
-  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-  
-  const wsProperties = XLSX.utils.json_to_sheet(propertiesData);
-  XLSX.utils.book_append_sheet(wb, wsProperties, "Properties");
-  
-  const wsRepairs = XLSX.utils.json_to_sheet(repairsData);
-  XLSX.utils.book_append_sheet(wb, wsRepairs, "All Repairs");
-  
-  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-  const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, `property-repairs-${now.toISOString().split('T')[0]}.xlsx`);
 }
 
