@@ -419,7 +419,8 @@ export default function Estimates() {
     
     const taxableItems = formData.items.filter(item => item.taxable);
     const taxableSubtotalRaw = taxableItems.reduce((sum, item) => sum + item.amount, 0);
-    const taxableSubtotal = Math.max(0, taxableSubtotalRaw - (taxableSubtotalRaw / subtotal * discountAmount || 0));
+    const discountProportion = subtotal > 0 ? (taxableSubtotalRaw / subtotal) : 0;
+    const taxableSubtotal = Math.max(0, taxableSubtotalRaw - (discountProportion * discountAmount));
     
     const salesTaxAmount = taxableSubtotal * (formData.salesTaxRate / 100);
     const totalAmount = subtotal - discountAmount + salesTaxAmount;
@@ -596,7 +597,6 @@ export default function Estimates() {
             mode="single"
             selected={value}
             onSelect={onChange}
-            initialFocus
           />
         </PopoverContent>
       </Popover>
@@ -615,8 +615,12 @@ export default function Estimates() {
     <div className="space-y-1">
       <Label className="text-xs text-slate-500">{label}</Label>
       <Select
-        value={value}
+        value={value || "__none__"}
         onValueChange={(id) => {
+          if (id === "__none__") {
+            onChange("", "");
+            return;
+          }
           const tech = technicians.find((t: any) => t.id === id);
           onChange(id, tech ? `${tech.firstName} ${tech.lastName}` : "");
         }}
@@ -625,7 +629,7 @@ export default function Estimates() {
           <SelectValue placeholder="Select..." />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">None</SelectItem>
+          <SelectItem value="__none__">None</SelectItem>
           {technicians.map((tech: any) => (
             <SelectItem key={tech.id} value={tech.id}>
               {tech.firstName} {tech.lastName}
@@ -1223,6 +1227,7 @@ export default function Estimates() {
                                 size="icon"
                                 className="h-6 w-6"
                                 onClick={() => setFormData(prev => ({ ...prev, discountType: "percent" }))}
+                                data-testid="button-discount-percent"
                               >
                                 <Percent className="w-3 h-3" />
                               </Button>
@@ -1231,6 +1236,7 @@ export default function Estimates() {
                                 size="icon"
                                 className="h-6 w-6"
                                 onClick={() => setFormData(prev => ({ ...prev, discountType: "fixed" }))}
+                                data-testid="button-discount-fixed"
                               >
                                 <DollarSign className="w-3 h-3" />
                               </Button>
@@ -1243,8 +1249,9 @@ export default function Estimates() {
                               onChange={(e) => setFormData(prev => ({ ...prev, discountValue: parseFloat(e.target.value) || 0 }))}
                               className="h-8 text-sm"
                               min={0}
+                              data-testid="input-discount-value"
                             />
-                            <span className="text-sm text-slate-500 w-24 text-right">
+                            <span className="text-sm text-slate-500 w-24 text-right" data-testid="text-discount-amount">
                               -{formatCurrency(calculateTotals.discountAmount)}
                             </span>
                           </div>
@@ -1286,6 +1293,7 @@ export default function Estimates() {
                                 size="icon"
                                 className="h-6 w-6"
                                 onClick={() => setFormData(prev => ({ ...prev, depositType: "percent" }))}
+                                data-testid="button-deposit-percent"
                               >
                                 <Percent className="w-3 h-3" />
                               </Button>
@@ -1294,6 +1302,7 @@ export default function Estimates() {
                                 size="icon"
                                 className="h-6 w-6"
                                 onClick={() => setFormData(prev => ({ ...prev, depositType: "fixed" }))}
+                                data-testid="button-deposit-fixed"
                               >
                                 <DollarSign className="w-3 h-3" />
                               </Button>
@@ -1306,8 +1315,9 @@ export default function Estimates() {
                               onChange={(e) => setFormData(prev => ({ ...prev, depositValue: parseFloat(e.target.value) || 0 }))}
                               className="h-8 text-sm"
                               min={0}
+                              data-testid="input-deposit-value"
                             />
-                            <span className="text-sm text-slate-500 w-24 text-right">
+                            <span className="text-sm text-slate-500 w-24 text-right" data-testid="text-deposit-amount">
                               {formatCurrency(calculateTotals.depositAmount)}
                             </span>
                           </div>
