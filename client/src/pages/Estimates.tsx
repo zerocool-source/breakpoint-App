@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -12,11 +12,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { 
-  FileText, Plus, Clock, CheckCircle2, XCircle, Calendar, DollarSign, 
+  FileText, Plus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight,
-  Wrench, UserCircle2, MapPin, Package
+  Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
+  Users, ClipboardList
 } from "lucide-react";
 import {
   Table,
@@ -27,13 +33,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface EstimateItem {
+interface EstimateLineItem {
+  lineNumber: number;
+  serviceDate?: string;
+  productService: string;
   description: string;
   sku?: string;
   quantity: number;
-  unitPrice: number;
-  total: number;
-  type: "part" | "labor";
+  rate: number;
+  amount: number;
+  taxable: boolean;
+  class?: string;
+}
+
+interface Attachment {
+  name: string;
+  url: string;
+  size: number;
 }
 
 interface Estimate {
@@ -43,13 +59,31 @@ interface Estimate {
   customerName: string | null;
   customerEmail: string | null;
   address: string | null;
+  estimateNumber: string | null;
+  estimateDate: string | null;
+  expirationDate: string | null;
+  acceptedBy: string | null;
+  acceptedDate: string | null;
+  location: string | null;
+  tags: string[] | null;
   title: string;
   description: string | null;
-  items: EstimateItem[];
+  items: EstimateLineItem[];
   photos: string[] | null;
+  attachments: Attachment[] | null;
+  subtotal: number | null;
+  discountType: string | null;
+  discountValue: number | null;
+  discountAmount: number | null;
+  taxableSubtotal: number | null;
+  salesTaxRate: number | null;
+  salesTaxAmount: number | null;
+  depositType: string | null;
+  depositValue: number | null;
+  depositAmount: number | null;
+  totalAmount: number | null;
   partsTotal: number | null;
   laborTotal: number | null;
-  totalAmount: number | null;
   status: string;
   createdByTechId: string | null;
   createdByTechName: string | null;
@@ -57,6 +91,12 @@ interface Estimate {
   repairTechName: string | null;
   serviceTechId: string | null;
   serviceTechName: string | null;
+  fieldSupervisorId: string | null;
+  fieldSupervisorName: string | null;
+  officeMemberId: string | null;
+  officeMemberName: string | null;
+  repairForemanId: string | null;
+  repairForemanName: string | null;
   approvedByManagerId: string | null;
   approvedByManagerName: string | null;
   createdAt: string;
@@ -70,8 +110,49 @@ interface Estimate {
   techNotes: string | null;
   managerNotes: string | null;
   rejectionReason: string | null;
+  customerNote: string | null;
+  memoOnStatement: string | null;
   jobId: string | null;
   invoiceId: string | null;
+}
+
+interface EstimateFormData {
+  propertyId: string;
+  propertyName: string;
+  customerName: string;
+  customerEmail: string;
+  address: string;
+  estimateNumber: string;
+  estimateDate: Date | undefined;
+  expirationDate: Date | undefined;
+  acceptedBy: string;
+  acceptedDate: Date | undefined;
+  location: string;
+  tags: string[];
+  title: string;
+  description: string;
+  status: string;
+  repairTechId: string;
+  repairTechName: string;
+  serviceTechId: string;
+  serviceTechName: string;
+  fieldSupervisorId: string;
+  fieldSupervisorName: string;
+  officeMemberId: string;
+  officeMemberName: string;
+  repairForemanId: string;
+  repairForemanName: string;
+  reportedDate: Date | undefined;
+  items: EstimateLineItem[];
+  discountType: "percent" | "fixed";
+  discountValue: number;
+  salesTaxRate: number;
+  depositType: "percent" | "fixed";
+  depositValue: number;
+  customerNote: string;
+  memoOnStatement: string;
+  techNotes: string;
+  attachments: Attachment[];
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -79,16 +160,62 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   pending_approval: { label: "Pending Approval", color: "bg-amber-100 text-amber-700 border-amber-300", icon: Clock },
   approved: { label: "Approved", color: "bg-green-100 text-green-700 border-green-300", icon: CheckCircle2 },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-300", icon: XCircle },
-  scheduled: { label: "Scheduled", color: "bg-blue-100 text-blue-700 border-blue-300", icon: Calendar },
+  scheduled: { label: "Scheduled", color: "bg-blue-100 text-blue-700 border-blue-300", icon: CalendarIcon },
   completed: { label: "Completed", color: "bg-cyan-100 text-cyan-700 border-cyan-300", icon: CheckCircle2 },
   invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-300", icon: Receipt },
 };
+
+const emptyFormData: EstimateFormData = {
+  propertyId: "",
+  propertyName: "",
+  customerName: "",
+  customerEmail: "",
+  address: "",
+  estimateNumber: "",
+  estimateDate: new Date(),
+  expirationDate: undefined,
+  acceptedBy: "",
+  acceptedDate: undefined,
+  location: "",
+  tags: [],
+  title: "",
+  description: "",
+  status: "draft",
+  repairTechId: "",
+  repairTechName: "",
+  serviceTechId: "",
+  serviceTechName: "",
+  fieldSupervisorId: "",
+  fieldSupervisorName: "",
+  officeMemberId: "",
+  officeMemberName: "",
+  repairForemanId: "",
+  repairForemanName: "",
+  reportedDate: undefined,
+  items: [],
+  discountType: "percent",
+  discountValue: 0,
+  salesTaxRate: 0,
+  depositType: "percent",
+  depositValue: 0,
+  customerNote: "",
+  memoOnStatement: "",
+  techNotes: "",
+  attachments: [],
+};
+
+function generateEstimateNumber(): string {
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+  return `EST-${year}${random}`;
+}
 
 export default function Estimates() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("all");
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showFormDialog, setShowFormDialog] = useState(false);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
@@ -97,19 +224,9 @@ export default function Estimates() {
   const [managerNotes, setManagerNotes] = useState("");
   const [showPhotoLightbox, setShowPhotoLightbox] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [newEstimate, setNewEstimate] = useState({
-    propertyId: "",
-    propertyName: "",
-    customerName: "",
-    customerEmail: "",
-    address: "",
-    title: "",
-    description: "",
-    techNotes: "",
-    items: [] as EstimateItem[],
-  });
-  const [newItem, setNewItem] = useState({ description: "", quantity: 1, unitPrice: 0, type: "part" as "part" | "labor" });
+  const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
   const { data: estimatesData, isLoading } = useQuery({
     queryKey: ["estimates"],
@@ -120,6 +237,27 @@ export default function Estimates() {
     },
     refetchInterval: 10000,
   });
+
+  const { data: techniciansData } = useQuery({
+    queryKey: ["technicians"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians");
+      if (!response.ok) return { technicians: [] };
+      return response.json();
+    },
+  });
+
+  const { data: customersData } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const response = await fetch("/api/customers");
+      if (!response.ok) return { customers: [] };
+      return response.json();
+    },
+  });
+
+  const technicians = techniciansData?.technicians || [];
+  const customers = customersData?.customers || [];
 
   const createMutation = useMutation({
     mutationFn: async (estimate: any) => {
@@ -133,12 +271,33 @@ export default function Estimates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
-      toast({ title: "Estimate Created", description: "Your estimate has been saved as a draft." });
-      setShowCreateDialog(false);
-      resetNewEstimate();
+      toast({ title: "Estimate Created", description: "Your estimate has been saved." });
+      setShowFormDialog(false);
+      resetForm();
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create estimate.", variant: "destructive" });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/estimates/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update estimate");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      toast({ title: "Estimate Updated", description: "Your estimate has been updated." });
+      setShowFormDialog(false);
+      resetForm();
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update estimate.", variant: "destructive" });
     },
   });
 
@@ -193,57 +352,151 @@ export default function Estimates() {
     invoiced: estimates.filter(e => e.status === "invoiced").length,
   };
 
-  const resetNewEstimate = () => {
-    setNewEstimate({
-      propertyId: "",
-      propertyName: "",
-      customerName: "",
-      customerEmail: "",
-      address: "",
-      title: "",
-      description: "",
-      techNotes: "",
-      items: [],
+  const resetForm = () => {
+    setFormData({
+      ...emptyFormData,
+      estimateNumber: generateEstimateNumber(),
+      estimateDate: new Date(),
     });
-    setNewItem({ description: "", quantity: 1, unitPrice: 0, type: "part" });
+    setIsEditing(false);
   };
 
-  const addItem = () => {
-    if (newItem.description && newItem.unitPrice > 0) {
-      const item: EstimateItem = {
-        ...newItem,
-        total: newItem.quantity * newItem.unitPrice,
-      };
-      setNewEstimate(prev => ({
-        ...prev,
-        items: [...prev.items, item],
-      }));
-      setNewItem({ description: "", quantity: 1, unitPrice: 0, type: "part" });
-    }
+  const openCreateDialog = () => {
+    resetForm();
+    setShowFormDialog(true);
   };
 
-  const removeItem = (index: number) => {
-    setNewEstimate(prev => ({
+  const openEditDialog = (estimate: Estimate) => {
+    setIsEditing(true);
+    setFormData({
+      propertyId: estimate.propertyId,
+      propertyName: estimate.propertyName,
+      customerName: estimate.customerName || "",
+      customerEmail: estimate.customerEmail || "",
+      address: estimate.address || "",
+      estimateNumber: estimate.estimateNumber || "",
+      estimateDate: estimate.estimateDate ? new Date(estimate.estimateDate) : new Date(),
+      expirationDate: estimate.expirationDate ? new Date(estimate.expirationDate) : undefined,
+      acceptedBy: estimate.acceptedBy || "",
+      acceptedDate: estimate.acceptedDate ? new Date(estimate.acceptedDate) : undefined,
+      location: estimate.location || "",
+      tags: estimate.tags || [],
+      title: estimate.title,
+      description: estimate.description || "",
+      status: estimate.status,
+      repairTechId: estimate.repairTechId || "",
+      repairTechName: estimate.repairTechName || "",
+      serviceTechId: estimate.serviceTechId || "",
+      serviceTechName: estimate.serviceTechName || "",
+      fieldSupervisorId: estimate.fieldSupervisorId || "",
+      fieldSupervisorName: estimate.fieldSupervisorName || "",
+      officeMemberId: estimate.officeMemberId || "",
+      officeMemberName: estimate.officeMemberName || "",
+      repairForemanId: estimate.repairForemanId || "",
+      repairForemanName: estimate.repairForemanName || "",
+      reportedDate: estimate.reportedDate ? new Date(estimate.reportedDate) : undefined,
+      items: estimate.items || [],
+      discountType: (estimate.discountType as "percent" | "fixed") || "percent",
+      discountValue: estimate.discountValue || 0,
+      salesTaxRate: estimate.salesTaxRate || 0,
+      depositType: (estimate.depositType as "percent" | "fixed") || "percent",
+      depositValue: estimate.depositValue || 0,
+      customerNote: estimate.customerNote || "",
+      memoOnStatement: estimate.memoOnStatement || "",
+      techNotes: estimate.techNotes || "",
+      attachments: estimate.attachments || [],
+    });
+    setSelectedEstimate(estimate);
+    setShowFormDialog(true);
+  };
+
+  const calculateTotals = useMemo(() => {
+    const subtotal = formData.items.reduce((sum, item) => sum + item.amount, 0);
+    
+    const discountAmount = formData.discountType === "percent"
+      ? subtotal * (formData.discountValue / 100)
+      : formData.discountValue * 100;
+    
+    const taxableItems = formData.items.filter(item => item.taxable);
+    const taxableSubtotalRaw = taxableItems.reduce((sum, item) => sum + item.amount, 0);
+    const taxableSubtotal = Math.max(0, taxableSubtotalRaw - (taxableSubtotalRaw / subtotal * discountAmount || 0));
+    
+    const salesTaxAmount = taxableSubtotal * (formData.salesTaxRate / 100);
+    const totalAmount = subtotal - discountAmount + salesTaxAmount;
+    
+    const depositAmount = formData.depositType === "percent"
+      ? totalAmount * (formData.depositValue / 100)
+      : formData.depositValue * 100;
+
+    return {
+      subtotal,
+      discountAmount,
+      taxableSubtotal,
+      salesTaxAmount,
+      totalAmount,
+      depositAmount,
+    };
+  }, [formData.items, formData.discountType, formData.discountValue, formData.salesTaxRate, formData.depositType, formData.depositValue]);
+
+  const addLineItem = () => {
+    const newItem: EstimateLineItem = {
+      lineNumber: formData.items.length + 1,
+      productService: "",
+      description: "",
+      quantity: 1,
+      rate: 0,
+      amount: 0,
+      taxable: false,
+    };
+    setFormData(prev => ({
       ...prev,
-      items: prev.items.filter((_, i) => i !== index),
+      items: [...prev.items, newItem],
     }));
   };
 
-  const calculateTotals = (items: EstimateItem[]) => {
-    const partsTotal = items.filter(i => i.type === "part").reduce((sum, i) => sum + i.total, 0);
-    const laborTotal = items.filter(i => i.type === "labor").reduce((sum, i) => sum + i.total, 0);
-    return { partsTotal, laborTotal, totalAmount: partsTotal + laborTotal };
+  const updateLineItem = (index: number, updates: Partial<EstimateLineItem>) => {
+    setFormData(prev => {
+      const newItems = [...prev.items];
+      const item = { ...newItems[index], ...updates };
+      item.amount = item.quantity * item.rate * 100;
+      newItems[index] = item;
+      return { ...prev, items: newItems };
+    });
   };
 
-  const handleCreateEstimate = () => {
-    const totals = calculateTotals(newEstimate.items);
-    createMutation.mutate({
-      ...newEstimate,
-      ...totals,
-      status: "draft",
+  const removeLineItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index).map((item, i) => ({ ...item, lineNumber: i + 1 })),
+    }));
+  };
+
+  const clearAllLines = () => {
+    setFormData(prev => ({ ...prev, items: [] }));
+  };
+
+  const handleSaveEstimate = () => {
+    const estimateData = {
+      ...formData,
+      estimateDate: formData.estimateDate?.toISOString(),
+      expirationDate: formData.expirationDate?.toISOString(),
+      acceptedDate: formData.acceptedDate?.toISOString(),
+      reportedDate: formData.reportedDate?.toISOString(),
+      subtotal: calculateTotals.subtotal,
+      discountAmount: calculateTotals.discountAmount,
+      taxableSubtotal: calculateTotals.taxableSubtotal,
+      salesTaxAmount: calculateTotals.salesTaxAmount,
+      totalAmount: calculateTotals.totalAmount,
+      depositAmount: calculateTotals.depositAmount,
       createdByTechId: "tech-1",
       createdByTechName: "Service Tech",
-    });
+    };
+
+    if (isEditing && selectedEstimate) {
+      updateMutation.mutate({ id: selectedEstimate.id, data: estimateData });
+    } else {
+      createMutation.mutate(estimateData);
+    }
   };
 
   const handleSendForApproval = (estimate: Estimate) => {
@@ -307,13 +560,81 @@ export default function Estimates() {
   };
 
   const formatCurrency = (amount: number | null) => {
-    return `$${(amount || 0).toLocaleString()}`;
+    return `$${((amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (date: string | null) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString();
   };
+
+  const DatePickerField = ({ 
+    label, 
+    value, 
+    onChange,
+    placeholder = "Pick a date"
+  }: { 
+    label: string; 
+    value: Date | undefined; 
+    onChange: (date: Date | undefined) => void;
+    placeholder?: string;
+  }) => (
+    <div className="space-y-1">
+      <Label className="text-xs text-slate-500">{label}</Label>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left font-normal h-9"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value ? format(value, "MM/dd/yyyy") : <span className="text-slate-400">{placeholder}</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={value}
+            onSelect={onChange}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+
+  const TechnicianSelect = ({
+    label,
+    value,
+    onChange,
+  }: {
+    label: string;
+    value: string;
+    onChange: (id: string, name: string) => void;
+  }) => (
+    <div className="space-y-1">
+      <Label className="text-xs text-slate-500">{label}</Label>
+      <Select
+        value={value}
+        onValueChange={(id) => {
+          const tech = technicians.find((t: any) => t.id === id);
+          onChange(id, tech ? `${tech.firstName} ${tech.lastName}` : "");
+        }}
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue placeholder="Select..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">None</SelectItem>
+          {technicians.map((tech: any) => (
+            <SelectItem key={tech.id} value={tech.id}>
+              {tech.firstName} {tech.lastName}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 
   return (
     <AppLayout>
@@ -324,7 +645,7 @@ export default function Estimates() {
             <p className="text-slate-600">Manage repair estimates and HOA approvals</p>
           </div>
           <Button
-            onClick={() => setShowCreateDialog(true)}
+            onClick={openCreateDialog}
             className="bg-[#0891b2] hover:bg-[#0891b2]/90"
             data-testid="button-create-estimate"
           >
@@ -368,7 +689,7 @@ export default function Estimates() {
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>No estimates found</p>
                 {activeTab === "all" && (
-                  <Button onClick={() => setShowCreateDialog(true)} variant="link" className="mt-2 text-[#0891b2]">
+                  <Button onClick={openCreateDialog} variant="link" className="mt-2 text-[#0891b2]">
                     Create your first estimate
                   </Button>
                 )}
@@ -395,6 +716,9 @@ export default function Estimates() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-slate-900 truncate">{estimate.title}</h3>
+                              {estimate.estimateNumber && (
+                                <span className="text-xs text-slate-500">#{estimate.estimateNumber}</span>
+                              )}
                               <Badge className={`${config.color} border text-xs`}>
                                 {config.label}
                               </Badge>
@@ -411,19 +735,28 @@ export default function Estimates() {
                                 </span>
                               )}
                               <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(estimate.createdAt)}
+                                <CalendarIcon className="w-3 h-3" />
+                                {formatDate(estimate.estimateDate || estimate.createdAt)}
                               </span>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className="text-lg font-bold text-[#0891b2]">{formatCurrency(estimate.totalAmount)}</p>
-                            <p className="text-xs text-slate-500">
-                              Parts: {formatCurrency(estimate.partsTotal)} | Labor: {formatCurrency(estimate.laborTotal)}
-                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 ml-4">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(estimate);
+                            }}
+                            data-testid={`button-edit-${estimate.id}`}
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Edit
+                          </Button>
                           {estimate.status === "draft" && (
                             <Button
                               size="sm"
@@ -476,7 +809,7 @@ export default function Estimates() {
                               className="bg-blue-600 hover:bg-blue-700"
                               data-testid={`button-schedule-${estimate.id}`}
                             >
-                              <Calendar className="w-3 h-3 mr-1" />
+                              <CalendarIcon className="w-3 h-3 mr-1" />
                               Schedule Job
                             </Button>
                           )}
@@ -518,168 +851,487 @@ export default function Estimates() {
           </CardContent>
         </Card>
 
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Estimate</DialogTitle>
-              <DialogDescription>
-                Create a repair estimate to send to the HOA manager for approval.
-              </DialogDescription>
+        <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+            <DialogHeader className="border-b pb-4 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-2xl font-bold text-slate-900">ESTIMATE</DialogTitle>
+                  <p className="text-sm text-slate-500">{isEditing ? "Edit Estimate" : "Create New Estimate"}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-slate-500">Amount</p>
+                  <p className="text-3xl font-bold text-[#0891b2]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                </div>
+              </div>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Property Name</Label>
-                  <Input
-                    value={newEstimate.propertyName}
-                    onChange={(e) => setNewEstimate(prev => ({ ...prev, propertyName: e.target.value, propertyId: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                    placeholder="e.g., Sunset Gardens HOA"
-                    data-testid="input-property-name"
-                  />
-                </div>
-                <div>
-                  <Label>Customer/HOA Name</Label>
-                  <Input
-                    value={newEstimate.customerName}
-                    onChange={(e) => setNewEstimate(prev => ({ ...prev, customerName: e.target.value }))}
-                    placeholder="e.g., HOA Manager Name"
-                    data-testid="input-customer-name"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Customer Email</Label>
-                  <Input
-                    type="email"
-                    value={newEstimate.customerEmail}
-                    onChange={(e) => setNewEstimate(prev => ({ ...prev, customerEmail: e.target.value }))}
-                    placeholder="manager@hoa.com"
-                    data-testid="input-customer-email"
-                  />
-                </div>
-                <div>
-                  <Label>Address</Label>
-                  <Input
-                    value={newEstimate.address}
-                    onChange={(e) => setNewEstimate(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="123 Pool Lane"
-                    data-testid="input-address"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Estimate Title</Label>
-                <Input
-                  value={newEstimate.title}
-                  onChange={(e) => setNewEstimate(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g., Pool Pump Replacement"
-                  data-testid="input-title"
-                />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea
-                  value={newEstimate.description}
-                  onChange={(e) => setNewEstimate(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe the repair work..."
-                  rows={3}
-                  data-testid="input-description"
-                />
-              </div>
 
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold text-slate-900">Line Items</h4>
-                <div className="flex gap-2">
-                  <Input
-                    value={newItem.description}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Item description"
-                    className="flex-1"
-                    data-testid="input-item-description"
-                  />
-                  <Input
-                    type="number"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                    className="w-20"
-                    min={1}
-                    data-testid="input-item-quantity"
-                  />
-                  <Input
-                    type="number"
-                    value={newItem.unitPrice || ""}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
-                    placeholder="Price"
-                    className="w-24"
-                    data-testid="input-item-price"
-                  />
-                  <Select value={newItem.type} onValueChange={(v: "part" | "labor") => setNewItem(prev => ({ ...prev, type: v }))}>
-                    <SelectTrigger className="w-24" data-testid="select-item-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="part">Part</SelectItem>
-                      <SelectItem value="labor">Labor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" onClick={addItem} size="icon" data-testid="button-add-item">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                {newEstimate.items.length > 0 && (
-                  <div className="space-y-2">
-                    {newEstimate.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-slate-50 rounded text-sm">
-                        <span>{item.description}</span>
-                        <div className="flex items-center gap-4">
-                          <Badge variant="outline">{item.type}</Badge>
-                          <span>{item.quantity} x ${item.unitPrice} = ${item.total}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => removeItem(idx)}
-                            data-testid={`button-remove-item-${idx}`}
-                          >
-                            <Trash2 className="w-3 h-3 text-red-500" />
+            <ScrollArea className="flex-1 -mx-6">
+              <div className="px-6 py-4">
+                <div className="flex gap-6">
+                  <div className="flex-1 space-y-6">
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border">
+                      <div className="col-span-2">
+                        <Label className="text-xs text-slate-500">Customer / Property</Label>
+                        <Select
+                          value={formData.propertyId}
+                          onValueChange={(id) => {
+                            const customer = customers.find((c: any) => c.id === id);
+                            setFormData(prev => ({
+                              ...prev,
+                              propertyId: id,
+                              propertyName: customer?.name || "",
+                              customerName: customer?.name || "",
+                              customerEmail: customer?.email || "",
+                              address: customer?.address || "",
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select customer/property..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.map((customer: any) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-slate-500">Estimate no.</Label>
+                        <Input
+                          value={formData.estimateNumber}
+                          onChange={(e) => setFormData(prev => ({ ...prev, estimateNumber: e.target.value }))}
+                          className="h-9"
+                          data-testid="input-estimate-number"
+                        />
+                      </div>
+                      <DatePickerField
+                        label="Estimate date"
+                        value={formData.estimateDate}
+                        onChange={(date) => setFormData(prev => ({ ...prev, estimateDate: date }))}
+                      />
+                      <DatePickerField
+                        label="Expiration date"
+                        value={formData.expirationDate}
+                        onChange={(date) => setFormData(prev => ({ ...prev, expirationDate: date }))}
+                      />
+                      <div>
+                        <Label className="text-xs text-slate-500">Accepted by</Label>
+                        <Input
+                          value={formData.acceptedBy}
+                          onChange={(e) => setFormData(prev => ({ ...prev, acceptedBy: e.target.value }))}
+                          placeholder="Customer name"
+                          className="h-9"
+                          data-testid="input-accepted-by"
+                        />
+                      </div>
+                      <DatePickerField
+                        label="Accepted date"
+                        value={formData.acceptedDate}
+                        onChange={(date) => setFormData(prev => ({ ...prev, acceptedDate: date }))}
+                      />
+                      <div>
+                        <Label className="text-xs text-slate-500">Status</Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(statusConfig).map(([key, config]) => (
+                              <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg border">
+                      <TechnicianSelect
+                        label="Repair Tech"
+                        value={formData.repairTechId}
+                        onChange={(id, name) => setFormData(prev => ({ ...prev, repairTechId: id, repairTechName: name }))}
+                      />
+                      <TechnicianSelect
+                        label="Field Supervisor"
+                        value={formData.fieldSupervisorId}
+                        onChange={(id, name) => setFormData(prev => ({ ...prev, fieldSupervisorId: id, fieldSupervisorName: name }))}
+                      />
+                      <TechnicianSelect
+                        label="Office Member"
+                        value={formData.officeMemberId}
+                        onChange={(id, name) => setFormData(prev => ({ ...prev, officeMemberId: id, officeMemberName: name }))}
+                      />
+                      <TechnicianSelect
+                        label="Service Tech"
+                        value={formData.serviceTechId}
+                        onChange={(id, name) => setFormData(prev => ({ ...prev, serviceTechId: id, serviceTechName: name }))}
+                      />
+                      <DatePickerField
+                        label="Reported date"
+                        value={formData.reportedDate}
+                        onChange={(date) => setFormData(prev => ({ ...prev, reportedDate: date }))}
+                      />
+                      <TechnicianSelect
+                        label="Repair Foreman"
+                        value={formData.repairForemanId}
+                        onChange={(id, name) => setFormData(prev => ({ ...prev, repairForemanId: id, repairForemanName: name }))}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border">
+                      <div>
+                        <Label className="text-xs text-slate-500">Tags</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={formData.tags.join(", ")}
+                            onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) }))}
+                            placeholder="Enter tags, separated by comma"
+                            className="h-9"
+                          />
+                          <Button variant="link" className="text-xs text-[#0891b2] px-0">
+                            Manage tags
                           </Button>
                         </div>
                       </div>
-                    ))}
-                    <div className="text-right pt-2 border-t">
-                      <p className="text-sm text-slate-600">
-                        Parts: ${calculateTotals(newEstimate.items).partsTotal} | 
-                        Labor: ${calculateTotals(newEstimate.items).laborTotal}
-                      </p>
-                      <p className="text-lg font-bold text-[#0891b2]">
-                        Total: ${calculateTotals(newEstimate.items).totalAmount}
-                      </p>
+                      <div>
+                        <Label className="text-xs text-slate-500">Location</Label>
+                        <Input
+                          value={formData.location}
+                          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                          placeholder="Job site location"
+                          className="h-9"
+                          data-testid="input-location"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-3 border-b flex items-center justify-between">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                          <ClipboardList className="w-4 h-4" />
+                          Line Items
+                        </h4>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={clearAllLines}
+                            disabled={formData.items.length === 0}
+                            data-testid="button-clear-lines"
+                          >
+                            Clear all lines
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={addLineItem}
+                            className="bg-[#0891b2] hover:bg-[#0891b2]/90"
+                            data-testid="button-add-line"
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add product or service
+                          </Button>
+                        </div>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="w-10 font-semibold">#</TableHead>
+                            <TableHead className="w-28 font-semibold">Service Date</TableHead>
+                            <TableHead className="font-semibold">Product/Service</TableHead>
+                            <TableHead className="w-24 font-semibold">SKU</TableHead>
+                            <TableHead className="font-semibold">Description</TableHead>
+                            <TableHead className="w-16 font-semibold text-center">Qty</TableHead>
+                            <TableHead className="w-24 font-semibold text-right">Rate</TableHead>
+                            <TableHead className="w-24 font-semibold text-right">Amount</TableHead>
+                            <TableHead className="w-12 font-semibold text-center">Tax</TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {formData.items.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={10} className="text-center py-8 text-slate-400">
+                                No line items yet. Click "Add product or service" to add items.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            formData.items.map((item, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell className="text-center font-medium text-slate-500">{item.lineNumber}</TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="date"
+                                    value={item.serviceDate || ""}
+                                    onChange={(e) => updateLineItem(idx, { serviceDate: e.target.value })}
+                                    className="h-8 text-xs"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    value={item.productService}
+                                    onChange={(e) => updateLineItem(idx, { productService: e.target.value })}
+                                    placeholder="Product/Service"
+                                    className="h-8 text-sm"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    value={item.sku || ""}
+                                    onChange={(e) => updateLineItem(idx, { sku: e.target.value })}
+                                    placeholder="SKU"
+                                    className="h-8 text-xs"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(idx, { description: e.target.value })}
+                                    placeholder="Description"
+                                    className="h-8 text-sm"
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateLineItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
+                                    className="h-8 text-sm text-center"
+                                    min={0}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    value={item.rate}
+                                    onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
+                                    className="h-8 text-sm text-right"
+                                    min={0}
+                                    step={0.01}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right font-medium">
+                                  {formatCurrency(item.amount)}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Checkbox
+                                    checked={item.taxable}
+                                    onCheckedChange={(checked) => updateLineItem(idx, { taxable: !!checked })}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => removeLineItem(idx)}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    <div className="space-y-4 p-4 bg-slate-50 rounded-lg border">
+                      <div>
+                        <Label className="text-xs text-slate-500">Customer payment options</Label>
+                        <p className="text-sm text-slate-600 italic">Customer can pay online via ACH, credit card, or check.</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Note to customer (visible on estimate)</Label>
+                        <Textarea
+                          value={formData.customerNote}
+                          onChange={(e) => setFormData(prev => ({ ...prev, customerNote: e.target.value }))}
+                          placeholder="Add a note that will be visible to the customer..."
+                          rows={2}
+                          data-testid="input-customer-note"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Memo on statement (internal, not visible to customer)</Label>
+                        <Textarea
+                          value={formData.memoOnStatement}
+                          onChange={(e) => setFormData(prev => ({ ...prev, memoOnStatement: e.target.value }))}
+                          placeholder="Internal memo..."
+                          rows={2}
+                          data-testid="input-memo"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Tech Notes (internal)</Label>
+                        <Textarea
+                          value={formData.techNotes}
+                          onChange={(e) => setFormData(prev => ({ ...prev, techNotes: e.target.value }))}
+                          placeholder="Internal notes for the team..."
+                          rows={2}
+                          data-testid="input-tech-notes"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500 flex items-center gap-2">
+                          <Paperclip className="w-3 h-3" />
+                          Attachments
+                        </Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Button variant="outline" size="sm">
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add attachment
+                          </Button>
+                          <span className="text-xs text-slate-400">Max 20 MB per file</span>
+                        </div>
+                        {formData.attachments.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {formData.attachments.map((att, idx) => (
+                              <div key={idx} className="flex items-center gap-2 text-sm">
+                                <Paperclip className="w-3 h-3 text-slate-400" />
+                                <span>{att.name}</span>
+                                <span className="text-xs text-slate-400">({(att.size / 1024).toFixed(1)} KB)</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div>
-                <Label>Tech Notes (internal)</Label>
-                <Textarea
-                  value={newEstimate.techNotes}
-                  onChange={(e) => setNewEstimate(prev => ({ ...prev, techNotes: e.target.value }))}
-                  placeholder="Internal notes for the team..."
-                  rows={2}
-                  data-testid="input-tech-notes"
-                />
+                  <div className="w-72 flex-shrink-0">
+                    <div className="sticky top-0 space-y-4 p-4 bg-slate-100 rounded-lg border">
+                      <h4 className="font-semibold text-slate-900 text-sm">Totals</h4>
+                      
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Subtotal</span>
+                          <span className="font-medium">{formatCurrency(calculateTotals.subtotal)}</span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600">Discount</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant={formData.discountType === "percent" ? "default" : "outline"}
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setFormData(prev => ({ ...prev, discountType: "percent" }))}
+                              >
+                                <Percent className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant={formData.discountType === "fixed" ? "default" : "outline"}
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setFormData(prev => ({ ...prev, discountType: "fixed" }))}
+                              >
+                                <DollarSign className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              value={formData.discountValue}
+                              onChange={(e) => setFormData(prev => ({ ...prev, discountValue: parseFloat(e.target.value) || 0 }))}
+                              className="h-8 text-sm"
+                              min={0}
+                            />
+                            <span className="text-sm text-slate-500 w-24 text-right">
+                              -{formatCurrency(calculateTotals.discountAmount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between text-sm border-t pt-2">
+                          <span className="text-slate-600">Taxable subtotal</span>
+                          <span className="font-medium">{formatCurrency(calculateTotals.taxableSubtotal)}</span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-xs text-slate-500">Sales tax rate (%)</Label>
+                          <Input
+                            type="number"
+                            value={formData.salesTaxRate}
+                            onChange={(e) => setFormData(prev => ({ ...prev, salesTaxRate: parseFloat(e.target.value) || 0 }))}
+                            className="h-8 text-sm"
+                            min={0}
+                            step={0.01}
+                          />
+                        </div>
+
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Sales tax</span>
+                          <span className="font-medium">{formatCurrency(calculateTotals.salesTaxAmount)}</span>
+                        </div>
+
+                        <div className="flex justify-between text-lg font-bold border-t pt-3 border-slate-300">
+                          <span>Estimate total</span>
+                          <span className="text-[#0891b2]">{formatCurrency(calculateTotals.totalAmount)}</span>
+                        </div>
+
+                        <div className="space-y-1 border-t pt-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600">Deposit request</span>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant={formData.depositType === "percent" ? "default" : "outline"}
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setFormData(prev => ({ ...prev, depositType: "percent" }))}
+                              >
+                                <Percent className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant={formData.depositType === "fixed" ? "default" : "outline"}
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setFormData(prev => ({ ...prev, depositType: "fixed" }))}
+                              >
+                                <DollarSign className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              value={formData.depositValue}
+                              onChange={(e) => setFormData(prev => ({ ...prev, depositValue: parseFloat(e.target.value) || 0 }))}
+                              className="h-8 text-sm"
+                              min={0}
+                            />
+                            <span className="text-sm text-slate-500 w-24 text-right">
+                              {formatCurrency(calculateTotals.depositAmount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <Button variant="link" className="text-xs text-[#0891b2] p-0 h-auto">
+                          Edit totals
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
+            </ScrollArea>
+
+            <DialogFooter className="border-t pt-4 flex-shrink-0">
+              <Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancel</Button>
               <Button
-                onClick={handleCreateEstimate}
-                disabled={!newEstimate.title || !newEstimate.propertyName || newEstimate.items.length === 0}
+                onClick={handleSaveEstimate}
+                disabled={!formData.propertyName}
                 className="bg-[#0891b2] hover:bg-[#0891b2]/90"
                 data-testid="button-save-estimate"
               >
-                Save as Draft
+                {isEditing ? "Save Changes" : "Save Estimate"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -760,17 +1412,25 @@ export default function Estimates() {
             </DialogHeader>
             {selectedEstimate && (
               <div className="space-y-6">
-                {/* Header Section */}
                 <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4">
-                  <h3 className="text-xl font-bold text-slate-900">{selectedEstimate.title}</h3>
-                  {selectedEstimate.description && (
-                    <p className="text-slate-600 mt-1">{selectedEstimate.description}</p>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-900">{selectedEstimate.title}</h3>
+                      {selectedEstimate.estimateNumber && (
+                        <p className="text-sm text-slate-500">#{selectedEstimate.estimateNumber}</p>
+                      )}
+                      {selectedEstimate.description && (
+                        <p className="text-slate-600 mt-1">{selectedEstimate.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-slate-500">Total Amount</p>
+                      <p className="text-3xl font-bold text-[#0891b2]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Property & People Info Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Property Info */}
                   <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                     <div className="flex items-center gap-2 text-blue-700 mb-2">
                       <Building2 className="w-4 h-4" />
@@ -785,7 +1445,6 @@ export default function Estimates() {
                     )}
                   </div>
 
-                  {/* Customer */}
                   <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
                     <div className="flex items-center gap-2 text-purple-700 mb-2">
                       <User className="w-4 h-4" />
@@ -797,29 +1456,29 @@ export default function Estimates() {
                     )}
                   </div>
 
-                  {/* Reported Date */}
                   <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
                     <div className="flex items-center gap-2 text-amber-700 mb-2">
-                      <Calendar className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Reported Date</span>
+                      <CalendarIcon className="w-4 h-4" />
+                      <span className="font-semibold text-sm">Estimate Date</span>
                     </div>
                     <p className="font-medium text-slate-900">
-                      {formatDate(selectedEstimate.reportedDate) || formatDate(selectedEstimate.createdAt)}
+                      {formatDate(selectedEstimate.estimateDate)}
                     </p>
+                    {selectedEstimate.expirationDate && (
+                      <p className="text-xs text-slate-500">Expires: {formatDate(selectedEstimate.expirationDate)}</p>
+                    )}
                   </div>
 
-                  {/* Repair Tech */}
                   <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
                     <div className="flex items-center gap-2 text-orange-700 mb-2">
                       <Wrench className="w-4 h-4" />
                       <span className="font-semibold text-sm">Repair Tech</span>
                     </div>
                     <p className="font-medium text-slate-900">
-                      {selectedEstimate.repairTechName || selectedEstimate.createdByTechName || "Not Assigned"}
+                      {selectedEstimate.repairTechName || "Not Assigned"}
                     </p>
                   </div>
 
-                  {/* Service Tech */}
                   <div className="p-4 bg-cyan-50 rounded-lg border border-cyan-100">
                     <div className="flex items-center gap-2 text-cyan-700 mb-2">
                       <UserCircle2 className="w-4 h-4" />
@@ -830,7 +1489,6 @@ export default function Estimates() {
                     </p>
                   </div>
 
-                  {/* Created By */}
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                     <div className="flex items-center gap-2 text-slate-700 mb-2">
                       <FileText className="w-4 h-4" />
@@ -843,7 +1501,6 @@ export default function Estimates() {
                   </div>
                 </div>
 
-                {/* Line Items Table */}
                 <div className="border rounded-lg overflow-hidden">
                   <div className="bg-slate-100 px-4 py-3 border-b">
                     <h4 className="font-semibold text-slate-900 flex items-center gap-2">
@@ -855,28 +1512,34 @@ export default function Estimates() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-slate-50">
+                          <TableHead className="w-10 font-semibold">#</TableHead>
                           <TableHead className="font-semibold">Product / Description</TableHead>
                           <TableHead className="font-semibold">SKU</TableHead>
-                          <TableHead className="font-semibold text-center w-20">Qty</TableHead>
+                          <TableHead className="font-semibold text-center w-16">Qty</TableHead>
                           <TableHead className="font-semibold text-right w-24">Rate</TableHead>
                           <TableHead className="font-semibold text-right w-28">Amount</TableHead>
+                          <TableHead className="font-semibold text-center w-12">Tax</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedEstimate.items.map((item, idx) => (
                           <TableRow key={idx}>
+                            <TableCell className="text-center text-slate-500">{item.lineNumber}</TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {item.type === "part" ? "Part" : "Labor"}
-                                </Badge>
-                                <span>{item.description}</span>
+                              <div>
+                                <span className="font-medium">{item.productService}</span>
+                                {item.description && (
+                                  <p className="text-sm text-slate-500">{item.description}</p>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className="text-slate-500">{item.sku || "-"}</TableCell>
                             <TableCell className="text-center">{item.quantity}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
-                            <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.rate * 100)}</TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
+                            <TableCell className="text-center">
+                              {item.taxable && <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -887,222 +1550,130 @@ export default function Estimates() {
                     </div>
                   )}
                   
-                  {/* Totals */}
                   <div className="bg-slate-50 border-t px-4 py-3">
                     <div className="flex justify-end gap-8">
                       <div className="text-right">
-                        <p className="text-sm text-slate-500">Parts Subtotal</p>
-                        <p className="font-medium">{formatCurrency(selectedEstimate.partsTotal)}</p>
+                        <p className="text-sm text-slate-500">Subtotal</p>
+                        <p className="font-medium">{formatCurrency(selectedEstimate.subtotal)}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-slate-500">Labor Subtotal</p>
-                        <p className="font-medium">{formatCurrency(selectedEstimate.laborTotal)}</p>
-                      </div>
+                      {(selectedEstimate.discountAmount || 0) > 0 && (
+                        <div className="text-right">
+                          <p className="text-sm text-slate-500">Discount</p>
+                          <p className="font-medium text-red-600">-{formatCurrency(selectedEstimate.discountAmount)}</p>
+                        </div>
+                      )}
+                      {(selectedEstimate.salesTaxAmount || 0) > 0 && (
+                        <div className="text-right">
+                          <p className="text-sm text-slate-500">Sales Tax ({selectedEstimate.salesTaxRate}%)</p>
+                          <p className="font-medium">{formatCurrency(selectedEstimate.salesTaxAmount)}</p>
+                        </div>
+                      )}
                       <div className="text-right pl-6 border-l border-slate-300">
                         <p className="text-sm text-slate-500">Total Amount</p>
                         <p className="text-2xl font-bold text-[#0891b2]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                       </div>
                     </div>
+                    {(selectedEstimate.depositAmount || 0) > 0 && (
+                      <div className="flex justify-end mt-2 pt-2 border-t border-slate-200">
+                        <div className="text-right">
+                          <p className="text-sm text-slate-500">Deposit Requested</p>
+                          <p className="font-medium text-green-600">{formatCurrency(selectedEstimate.depositAmount)}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Photos Section */}
-                {selectedEstimate.photos && selectedEstimate.photos.length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-slate-100 px-4 py-3 border-b">
-                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                        <Camera className="w-4 h-4" />
-                        Photos ({selectedEstimate.photos.length})
-                      </h4>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {selectedEstimate.photos.map((photo, idx) => (
-                          <div 
-                            key={idx}
-                            className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#0891b2] transition-all"
-                            onClick={() => {
-                              setCurrentPhotoIndex(idx);
-                              setShowPhotoLightbox(true);
-                            }}
-                            data-testid={`photo-thumbnail-${idx}`}
-                          >
-                            <img 
-                              src={photo} 
-                              alt={`Estimate photo ${idx + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
-                              <Eye className="w-6 h-6 text-white opacity-0 hover:opacity-100" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                {selectedEstimate.customerNote && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Note to Customer
+                    </p>
+                    <p className="text-slate-700 mt-1">{selectedEstimate.customerNote}</p>
                   </div>
                 )}
 
-                {/* Status Timeline */}
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-semibold text-slate-900 mb-3">Status Timeline</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-slate-500">Created</p>
-                      <p className="font-medium">{formatDate(selectedEstimate.createdAt)}</p>
-                    </div>
-                    {selectedEstimate.sentForApprovalAt && (
-                      <div>
-                        <p className="text-slate-500">Sent for Approval</p>
-                        <p className="font-medium">{formatDate(selectedEstimate.sentForApprovalAt)}</p>
-                      </div>
-                    )}
-                    {selectedEstimate.approvedAt && (
-                      <div>
-                        <p className="text-slate-500">Approved</p>
-                        <p className="font-medium">{formatDate(selectedEstimate.approvedAt)}</p>
-                        {selectedEstimate.approvedByManagerName && (
-                          <p className="text-xs text-slate-400">by {selectedEstimate.approvedByManagerName}</p>
-                        )}
-                      </div>
-                    )}
-                    {selectedEstimate.rejectedAt && (
-                      <div>
-                        <p className="text-slate-500 text-red-600">Rejected</p>
-                        <p className="font-medium">{formatDate(selectedEstimate.rejectedAt)}</p>
-                      </div>
-                    )}
-                    {selectedEstimate.scheduledDate && (
-                      <div>
-                        <p className="text-slate-500">Scheduled</p>
-                        <p className="font-medium">{formatDate(selectedEstimate.scheduledDate)}</p>
-                      </div>
-                    )}
-                    {selectedEstimate.completedAt && (
-                      <div>
-                        <p className="text-slate-500">Completed</p>
-                        <p className="font-medium">{formatDate(selectedEstimate.completedAt)}</p>
-                      </div>
-                    )}
-                    {selectedEstimate.invoicedAt && (
-                      <div>
-                        <p className="text-slate-500">Invoiced</p>
-                        <p className="font-medium">{formatDate(selectedEstimate.invoicedAt)}</p>
-                        {selectedEstimate.invoiceId && (
-                          <p className="text-xs text-slate-400">{selectedEstimate.invoiceId}</p>
-                        )}
-                      </div>
-                    )}
+                {selectedEstimate.techNotes && (
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                      <Wrench className="w-4 h-4" />
+                      Tech Notes
+                    </p>
+                    <p className="text-slate-600 mt-1">{selectedEstimate.techNotes}</p>
                   </div>
-                </div>
+                )}
 
-                {/* Notes Section */}
-                <div className="space-y-3">
-                  {selectedEstimate.rejectionReason && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
-                        <XCircle className="w-4 h-4" />
-                        Rejection Reason
-                      </p>
-                      <p className="text-red-600 mt-1">{selectedEstimate.rejectionReason}</p>
-                    </div>
-                  )}
+                {selectedEstimate.rejectionReason && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                      <XCircle className="w-4 h-4" />
+                      Rejection Reason
+                    </p>
+                    <p className="text-red-600 mt-1">{selectedEstimate.rejectionReason}</p>
+                  </div>
+                )}
 
-                  {selectedEstimate.techNotes && (
-                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                      <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <Wrench className="w-4 h-4" />
-                        Tech Notes
-                      </p>
-                      <p className="text-slate-600 mt-1">{selectedEstimate.techNotes}</p>
-                    </div>
-                  )}
-
-                  {selectedEstimate.managerNotes && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Manager Notes
-                      </p>
-                      <p className="text-green-600 mt-1">{selectedEstimate.managerNotes}</p>
-                    </div>
-                  )}
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowDetailDialog(false);
+                      openEditDialog(selectedEstimate);
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => deleteMutation.mutate(selectedEstimate.id)}
+                    data-testid="button-delete-estimate"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
                 </div>
               </div>
             )}
-            <DialogFooter className="gap-2">
-              {selectedEstimate?.status === "draft" && (
-                <Button
-                  variant="destructive"
-                  onClick={() => deleteMutation.mutate(selectedEstimate.id)}
-                  data-testid="button-delete-estimate"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => setShowDetailDialog(false)}>Close</Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Photo Lightbox */}
-        {showPhotoLightbox && selectedEstimate?.photos && selectedEstimate.photos.length > 0 && (
-          <div 
-            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
-            onClick={() => setShowPhotoLightbox(false)}
-          >
-            <button
-              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
-              onClick={() => setShowPhotoLightbox(false)}
-              data-testid="button-close-lightbox"
-            >
-              <X className="w-8 h-8" />
-            </button>
-            
-            {selectedEstimate.photos.length > 1 && (
-              <>
-                <button
-                  className="absolute left-4 text-white hover:text-gray-300 p-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentPhotoIndex((prev) => 
-                      prev === 0 ? selectedEstimate.photos!.length - 1 : prev - 1
-                    );
-                  }}
-                  data-testid="button-prev-photo"
-                >
-                  <ChevronLeft className="w-10 h-10" />
-                </button>
-                <button
-                  className="absolute right-4 text-white hover:text-gray-300 p-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentPhotoIndex((prev) => 
-                      prev === selectedEstimate.photos!.length - 1 ? 0 : prev + 1
-                    );
-                  }}
-                  data-testid="button-next-photo"
-                >
-                  <ChevronRight className="w-10 h-10" />
-                </button>
-              </>
-            )}
-            
-            <div 
-              className="max-w-[90vw] max-h-[90vh] relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img 
-                src={selectedEstimate.photos[currentPhotoIndex]}
-                alt={`Estimate photo ${currentPhotoIndex + 1}`}
-                className="max-w-full max-h-[90vh] object-contain"
-                data-testid="lightbox-image"
-              />
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full text-white text-sm">
-                {currentPhotoIndex + 1} / {selectedEstimate.photos.length}
+        {showPhotoLightbox && selectedEstimate?.photos && (
+          <Dialog open={showPhotoLightbox} onOpenChange={setShowPhotoLightbox}>
+            <DialogContent className="max-w-4xl">
+              <div className="relative">
+                <img 
+                  src={selectedEstimate.photos[currentPhotoIndex]} 
+                  alt={`Photo ${currentPhotoIndex + 1}`}
+                  className="w-full h-auto max-h-[70vh] object-contain"
+                />
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                  {currentPhotoIndex + 1} / {selectedEstimate.photos.length}
+                </div>
+                {selectedEstimate.photos.length > 1 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70"
+                      onClick={() => setCurrentPhotoIndex(prev => prev === 0 ? selectedEstimate.photos!.length - 1 : prev - 1)}
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70"
+                      onClick={() => setCurrentPhotoIndex(prev => prev === selectedEstimate.photos!.length - 1 ? 0 : prev + 1)}
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </Button>
+                  </>
+                )}
               </div>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
     </AppLayout>
