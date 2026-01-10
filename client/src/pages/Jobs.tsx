@@ -1,4 +1,4 @@
-import React, { useState, useMemo, createContext, useContext } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calendar, Clock, User, MapPin, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, ChevronDown, ChevronRight, Settings, Mail, TrendingUp, Trophy, BarChart3, HardHat, AlertTriangle, Archive, ArchiveRestore, Trash2, FileDown, ArrowLeft, RefreshCw, Plus, MessageCircle } from "lucide-react";
+import { Calendar, Clock, User, AlertCircle, CheckCircle2, Loader2, DollarSign, Building2, Wrench, Settings, TrendingUp, Trophy, BarChart3, HardHat, Archive, FileDown, ArrowLeft, RefreshCw, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,1251 +14,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 
-async function exportJobsExcel(jobs: any[], technicians: any[], summary: any) {
-  const now = new Date();
-  const wb = new ExcelJS.Workbook();
-  
-  // Summary sheet
-  const wsSummary = wb.addWorksheet("Summary");
-  wsSummary.columns = [{ header: "Metric", key: "metric" }, { header: "Value", key: "value" }];
-  wsSummary.addRow({ metric: "Total Jobs", value: summary.totalJobs });
-  wsSummary.addRow({ metric: "Completed Jobs", value: summary.completedJobs });
-  wsSummary.addRow({ metric: "Pending Jobs", value: summary.pendingJobs });
-  wsSummary.addRow({ metric: "Total Value", value: summary.totalValue });
-  wsSummary.addRow({ metric: "Total Technicians", value: technicians.length });
-  
-  // Jobs sheet
-  const wsJobs = wb.addWorksheet("All Jobs");
-  wsJobs.columns = [
-    { header: "Job ID", key: "jobId" }, { header: "Title", key: "title" },
-    { header: "Customer", key: "customer" }, { header: "Pool", key: "pool" },
-    { header: "Address", key: "address" }, { header: "Technician", key: "tech" },
-    { header: "Price", key: "price" }, { header: "Status", key: "status" },
-    { header: "Scheduled Date", key: "scheduled" }, { header: "Created Date", key: "created" }
-  ];
-  jobs.forEach((j: any) => wsJobs.addRow({
-    jobId: j.jobId, title: j.title, customer: j.customerName || "N/A",
-    pool: j.poolName || "N/A", address: j.address || "N/A",
-    tech: j.technicianName || "Unassigned", price: j.price || 0,
-    status: j.isCompleted ? "Completed" : "Pending",
-    scheduled: j.scheduledDate ? new Date(j.scheduledDate).toLocaleDateString() : "N/A",
-    created: j.createdDate ? new Date(j.createdDate).toLocaleDateString() : "N/A"
-  }));
-  
-  // Technicians sheet
-  const wsTechs = wb.addWorksheet("Technicians");
-  wsTechs.columns = [
-    { header: "Technician ID", key: "id" }, { header: "Name", key: "name" },
-    { header: "Phone", key: "phone" }, { header: "Email", key: "email" }
-  ];
-  technicians.forEach((t: any) => wsTechs.addRow({
-    id: t.techId, name: t.name, phone: t.phone || "N/A", email: t.email || "N/A"
-  }));
-  
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `jobs-report-${now.toISOString().split('T')[0]}.xlsx`);
-}
-
-function exportRepairTechsPDF(repairTechs: any[], monthlyQuota: number) {
-  const doc = new jsPDF();
-  const now = new Date();
-  const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  
-  doc.setFontSize(20);
-  doc.setTextColor(8, 145, 178);
-  doc.text("Repair Technician Performance Report", 14, 20);
-  
-  doc.setFontSize(12);
-  doc.setTextColor(100);
-  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
-  doc.text(`Monthly Quota: $${monthlyQuota.toLocaleString()}`, 14, 35);
-  
-  const tableData = repairTechs.map(tech => [
-    tech.name,
-    tech.jobs.length.toString(),
-    `$${tech.totalValue.toLocaleString()}`,
-    `$${tech.monthlyValue?.toLocaleString() || '0'}`,
-    `${tech.quotaPercent || 0}%`,
-    `$${tech.commission10?.toLocaleString() || '0'}`,
-    `$${tech.commission15?.toLocaleString() || '0'}`
-  ]);
-
-  autoTable(doc, {
-    startY: 42,
-    head: [['Technician', 'Jobs', 'Total Value', 'This Month', 'Quota %', '10% Comm', '15% Comm']],
-    body: tableData,
-    theme: 'striped',
-    headStyles: { fillColor: [8, 145, 178], textColor: 255 },
-    styles: { fontSize: 9 }
-  });
-
-  let yPos = (doc as any).lastAutoTable?.finalY + 15 || 100;
-  
-  repairTechs.forEach(tech => {
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.setTextColor(8, 145, 178);
-    doc.text(tech.name, 14, yPos);
-    yPos += 8;
-    
-    const jobsData = tech.jobs.slice(0, 10).map((job: any) => [
-      job.title?.substring(0, 30) || 'N/A',
-      job.customerName?.substring(0, 25) || 'N/A',
-      `$${job.price?.toLocaleString() || '0'}`,
-      job.isCompleted ? 'Complete' : 'Pending',
-      job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
-    ]);
-    
-    if (jobsData.length > 0) {
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Job Title', 'Customer', 'Price', 'Status', 'Date']],
-        body: jobsData,
-        theme: 'grid',
-        headStyles: { fillColor: [100, 100, 100], textColor: 255 },
-        styles: { fontSize: 8 },
-        margin: { left: 14, right: 14 }
-      });
-      yPos = (doc as any).lastAutoTable?.finalY + 15 || yPos + 50;
-    }
-  });
-
-  doc.save(`repair-techs-report-${now.toISOString().split('T')[0]}.pdf`);
-}
-
-function exportSRJobsPDF(srJobs: any[]) {
-  const doc = new jsPDF();
-  const now = new Date();
-  const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  
-  // Group jobs by technician
-  const jobsByTech: Record<string, any[]> = {};
-  srJobs.forEach(job => {
-    const techName = job.technicianName || "Unassigned";
-    if (!jobsByTech[techName]) {
-      jobsByTech[techName] = [];
-    }
-    jobsByTech[techName].push(job);
-  });
-  
-  // Calculate tech stats
-  const techStats = Object.entries(jobsByTech).map(([name, jobs]) => {
-    const totalValue = jobs.reduce((sum, j) => sum + (j.price || 0), 0);
-    const completedCount = jobs.filter(j => j.isCompleted).length;
-    return {
-      name,
-      jobs,
-      totalValue,
-      completedCount,
-      jobCount: jobs.length
-    };
-  }).sort((a, b) => b.totalValue - a.totalValue);
-  
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(8, 145, 178);
-  doc.text("SR Jobs - Technician Report", 14, 20);
-  
-  doc.setFontSize(12);
-  doc.setTextColor(100);
-  doc.text(`Generated: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 14, 28);
-  doc.text(`Total SR Jobs: ${srJobs.length} | Total Value: $${srJobs.reduce((s, j) => s + (j.price || 0), 0).toLocaleString()}`, 14, 35);
-  
-  // Summary table
-  const summaryData = techStats.map(tech => [
-    tech.name,
-    tech.jobCount.toString(),
-    `${tech.completedCount}/${tech.jobCount}`,
-    `$${tech.totalValue.toLocaleString()}`,
-    `$${Math.round(tech.totalValue * 0.10).toLocaleString()}`,
-    `$${Math.round(tech.totalValue * 0.15).toLocaleString()}`
-  ]);
-
-  autoTable(doc, {
-    startY: 42,
-    head: [['Technician', 'Total Jobs', 'Completed', 'Total Value', '10% Comm', '15% Comm']],
-    body: summaryData,
-    theme: 'striped',
-    headStyles: { fillColor: [8, 145, 178], textColor: 255 },
-    styles: { fontSize: 9 }
-  });
-
-  let yPos = (doc as any).lastAutoTable?.finalY + 15 || 100;
-  
-  // Detail pages for each tech
-  techStats.forEach(tech => {
-    if (yPos > 220) {
-      doc.addPage();
-      yPos = 20;
-    }
-    
-    doc.setFontSize(14);
-    doc.setTextColor(8, 145, 178);
-    doc.text(`${tech.name} - ${tech.jobCount} jobs ($${tech.totalValue.toLocaleString()})`, 14, yPos);
-    yPos += 8;
-    
-    const jobsData = tech.jobs.map((job: any) => [
-      job.title?.substring(0, 35) || 'SR Job',
-      job.customerName?.substring(0, 20) || 'N/A',
-      `$${(job.price || 0).toLocaleString()}`,
-      job.isCompleted ? 'Complete' : 'Pending',
-      job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'
-    ]);
-    
-    if (jobsData.length > 0) {
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Job Title', 'Customer', 'Price', 'Status', 'Date']],
-        body: jobsData,
-        theme: 'grid',
-        headStyles: { fillColor: [100, 100, 100], textColor: 255 },
-        styles: { fontSize: 8 },
-        margin: { left: 14, right: 14 }
-      });
-      yPos = (doc as any).lastAutoTable?.finalY + 15 || yPos + 50;
-    }
-  });
-
-  doc.save(`sr-jobs-report-${now.toISOString().split('T')[0]}.pdf`);
-}
-
-function exportSRAccountsPDF(srByTechnician: Record<string, any[]>) {
-  const doc = new jsPDF({ orientation: 'landscape' });
-  const now = new Date();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  
-  const COMMISSION_RATE = 0.15;
-  
-  // Collect ALL SR jobs and group by account
-  const allJobs: any[] = [];
-  Object.values(srByTechnician).forEach(jobs => {
-    allJobs.push(...jobs);
-  });
-  
-  const isJobEligible = (job: any) => {
-    const status = job.status?.toLowerCase()?.trim() || '';
-    return job.isCompleted === true || 
-           status === 'closed' || 
-           status === 'completed' || 
-           status.includes('closed') || 
-           status.includes('complete');
-  };
-  
-  const accountsMap: Record<string, { jobs: any[]; totalValue: number; totalCommission: number; completedCount: number; technicians: Set<string>; techCommissions: Record<string, number> }> = {};
-  allJobs.forEach((job: any) => {
-    const accountName = job.customerName || "Unknown";
-    const eligible = isJobEligible(job);
-    const jobCommission = eligible ? (job.price || 0) * COMMISSION_RATE : 0;
-    const techName = job.technicianName || 'Unassigned';
-    
-    if (!accountsMap[accountName]) {
-      accountsMap[accountName] = { jobs: [], totalValue: 0, totalCommission: 0, completedCount: 0, technicians: new Set(), techCommissions: {} };
-    }
-    accountsMap[accountName].jobs.push({ ...job, commission: jobCommission, earnedCommission: eligible });
-    accountsMap[accountName].totalValue += job.price || 0;
-    if (eligible) {
-      accountsMap[accountName].totalCommission += jobCommission;
-    }
-    if (eligible) accountsMap[accountName].completedCount++;
-    if (job.technicianName) accountsMap[accountName].technicians.add(job.technicianName);
-    
-    if (!accountsMap[accountName].techCommissions[techName]) {
-      accountsMap[accountName].techCommissions[techName] = 0;
-    }
-    if (eligible) {
-      accountsMap[accountName].techCommissions[techName] += jobCommission;
-    }
-  });
-  
-  const accounts = Object.entries(accountsMap)
-    .map(([name, data]) => ({
-      name,
-      ...data,
-      technicianList: Array.from(data.technicians).join(", "),
-      jobCount: data.jobs.length,
-      readyToInvoice: data.completedCount === data.jobs.length && data.jobs.length > 0,
-      over500: data.totalValue >= 500
-    }))
-    .sort((a, b) => b.totalValue - a.totalValue);
-  
-  // Compact Header
-  doc.setFontSize(16);
-  doc.setTextColor(51, 65, 85);
-  doc.text("SR JOBS - ACCOUNT INVOICE REPORT", 10, 12);
-  
-  doc.setFontSize(9);
-  doc.setTextColor(100);
-  doc.text(`${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, pageWidth - 10, 12, { align: 'right' });
-  
-  const totalValue = allJobs.reduce((s, j) => s + (j.price || 0), 0);
-  const eligibleJobs = allJobs.filter(isJobEligible);
-  const completedValue = eligibleJobs.reduce((s, j) => s + (j.price || 0), 0);
-  const totalCommission = completedValue * COMMISSION_RATE;
-  const readyAccounts = accounts.filter(a => a.readyToInvoice);
-  const readyValue = readyAccounts.reduce((s, a) => s + a.totalValue, 0);
-  const over500Count = accounts.filter(a => a.over500).length;
-  
-  // Summary line
-  doc.setFontSize(8);
-  doc.setTextColor(60);
-  doc.text(`${accounts.length} Accounts | ${allJobs.length} Jobs | Total: $${totalValue.toLocaleString()} | Ready: $${readyValue.toLocaleString()} | Over $500: ${over500Count}`, 10, 18);
-  doc.setTextColor(16, 150, 100);
-  doc.text(`Commissions (15% on ${eligibleJobs.length} done): $${totalCommission.toFixed(2)}`, pageWidth - 10, 18, { align: 'right' });
-  
-  // Thin separator line
-  doc.setDrawColor(200);
-  doc.setLineWidth(0.3);
-  doc.line(10, 21, pageWidth - 10, 21);
-  
-  let yPos = 25;
-  
-  accounts.forEach(account => {
-    if (yPos > 180) {
-      doc.addPage();
-      yPos = 12;
-    }
-    
-    // Compact account header - one line
-    doc.setFontSize(10);
-    doc.setTextColor(51, 65, 85);
-    doc.setFont('helvetica', 'bold');
-    doc.text(account.name, 10, yPos);
-    
-    let badgeX = 10 + doc.getTextWidth(account.name) + 3;
-    doc.setFont('helvetica', 'normal');
-    
-    if (account.over500) {
-      doc.setFillColor(220, 38, 38);
-      doc.roundedRect(badgeX, yPos - 3, 18, 4, 0.5, 0.5, 'F');
-      doc.setFontSize(6);
-      doc.setTextColor(255);
-      doc.text("OVER $500", badgeX + 1.5, yPos - 0.5);
-      badgeX += 20;
-    }
-    
-    if (account.readyToInvoice) {
-      doc.setFillColor(16, 185, 129);
-      doc.roundedRect(badgeX, yPos - 3, 22, 4, 0.5, 0.5, 'F');
-      doc.setFontSize(6);
-      doc.setTextColor(255);
-      doc.text("READY TO INVOICE", badgeX + 1, yPos - 0.5);
-    }
-    
-    // Account summary - same line, right aligned
-    doc.setFontSize(8);
-    doc.setTextColor(80);
-    const summaryText = `${account.completedCount}/${account.jobCount} done | $${account.totalValue.toLocaleString()} | Comm: $${account.totalCommission.toFixed(2)}`;
-    doc.text(summaryText, pageWidth - 10, yPos, { align: 'right' });
-    
-    yPos += 4;
-    
-    // Jobs table - tight and clean
-    const jobsData: any[] = [];
-    
-    account.jobs.forEach((job: any) => {
-      const items = job.items || [];
-      const productsText = items.length > 0 
-        ? items.map((item: any) => `${item.productName || 'Item'} x${item.qty}`).join(', ')
-        : '-';
-      
-      const officeNotes = job.officeNotes || '';
-      const instructions = job.instructions || '';
-      const notesText = [officeNotes, instructions].filter(Boolean).join(' | ') || '-';
-      
-      jobsData.push([
-        job.title || 'SR Job',
-        job.technicianName || '-',
-        productsText,
-        notesText,
-        `$${(job.price || 0).toLocaleString()}`,
-        job.earnedCommission ? `$${(job.commission || 0).toFixed(2)}` : '-',
-        job.isCompleted ? 'Done' : (job.status || 'Pending')
-      ]);
-    });
-    
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Job Title', 'Tech', 'Products', 'Office Notes', 'Price', 'Comm', 'Status']],
-      body: jobsData,
-      theme: 'striped',
-      headStyles: { fillColor: [71, 85, 105], textColor: 255, fontSize: 7, cellPadding: 1.5, fontStyle: 'bold' },
-      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', lineColor: [220, 220, 220], lineWidth: 0.1 },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      columnStyles: {
-        0: { cellWidth: 38 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 130 },
-        4: { cellWidth: 18, halign: 'right' },
-        5: { cellWidth: 16, halign: 'right' },
-        6: { cellWidth: 18, halign: 'center' }
-      },
-      didParseCell: (data: any) => {
-        if (data.column.index === 6 && data.cell.raw === 'Done') {
-          data.cell.styles.textColor = [16, 150, 100];
-          data.cell.styles.fontStyle = 'bold';
-        }
-        if (data.column.index === 5 && data.section === 'body' && data.cell.raw !== '-') {
-          data.cell.styles.textColor = [16, 150, 100];
-        }
-        if (data.column.index === 3 && data.section === 'body' && data.cell.raw !== '-') {
-          data.cell.styles.textColor = [140, 70, 10];
-          data.cell.styles.fontSize = 6;
-        }
-      },
-      margin: { left: 5, right: 5 },
-      tableWidth: 'auto'
-    });
-    
-    yPos = (doc as any).lastAutoTable?.finalY + 6 || yPos + 20;
-  });
-  
-  doc.save(`sr-accounts-invoice-report-${now.toISOString().split('T')[0]}.pdf`);
-}
-
-interface ArchiveContext {
-  archivedIds: Set<string>;
-  showArchived: boolean;
-  archiveJob: (jobId: string) => void;
-  unarchiveJob: (jobId: string) => void;
-  deleteJob: (jobId: string) => void;
-}
-
-const ArchiveContext = createContext<ArchiveContext | null>(null);
-
-function useArchive() {
-  const ctx = useContext(ArchiveContext);
-  if (!ctx) throw new Error("useArchive must be used within ArchiveContext");
-  return ctx;
-}
-
-interface Job {
-  jobId: string;
-  title: string;
-  description: string;
-  status: string;
-  isCompleted: boolean;
-  scheduledDate: string | null;
-  scheduledTime: string | null;
-  createdDate: string | null;
-  technicianId: string;
-  technicianName: string;
-  customerId: string;
-  customerName: string;
-  poolName: string;
-  address: string;
-  price: number;
-  items: { productId: string; qty: number; unitCost: number; taxable: number }[];
-  raw?: any;
-}
-
-interface Account {
-  accountId: string;
-  accountName: string;
-  address: string;
-  totalJobs: number;
-  completedJobs: number;
-  totalValue: number;
-  jobs: Job[];
-}
-
-interface Technician {
-  techId: string;
-  name: string;
-  phone: string;
-  email: string;
-  totalJobs: number;
-  completedJobs: number;
-  totalValue: number;
-  commission10: number;
-  commission15: number;
-  jobs: Job[];
-}
-
-interface JobsData {
-  jobs: Job[];
-  accounts: Account[];
-  technicians: Technician[];
-  techsWithJobs: Technician[];
-  techsWithoutJobs: Technician[];
-  completedJobs: Job[];
-  pendingJobs: Job[];
-  summary: {
-    totalJobs: number;
-    completedCount: number;
-    pendingCount: number;
-    totalValue: number;
-    accountCount: number;
-    technicianCount: number;
-    techsWithJobsCount: number;
-  };
-}
-
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
-}
-
-function PriceDisplay({ price, productName, testId }: { price: number; productName?: string; testId?: string }) {
-  if (!price || price === 0) {
-    return (
-      <span className="text-amber-400 font-ui text-sm" data-testid={testId}>
-        <span className="animate-pulse font-semibold">⚠ Need Estimate</span>
-        {productName && (
-          <span className="block text-xs text-amber-400/80 mt-0.5">
-            → Look up: {productName}
-          </span>
-        )}
-      </span>
-    );
-  }
-  return (
-    <span className="font-ui font-bold text-sky-300" data-testid={testId}>
-      {formatPrice(price)}
-    </span>
-  );
-}
-
-function ExpandableJobCard({ job }: { job: Job }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const archive = useContext(ArchiveContext);
-  
-  const isPastDue = (() => {
-    const isClosed = job.status?.toLowerCase() === 'closed';
-    if (job.isCompleted || isClosed || !job.scheduledDate) return false;
-    const scheduled = new Date(job.scheduledDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    scheduled.setHours(0, 0, 0, 0);
-    return scheduled < today;
-  })();
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className={`bg-slate-800/60 hover:border-sky-400/50 transition-all duration-200 ${isPastDue ? 'border-red-500/50' : 'border-slate-600/50'}`} data-testid={`job-card-${job.jobId}`}>
-        <CollapsibleTrigger className="w-full">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isOpen ? (
-                  <ChevronDown className="w-5 h-5 text-sky-400" />
-                ) : (
-                  <ChevronRight className="w-5 h-5 text-slate-400" />
-                )}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                  job.isCompleted ? 'bg-sky-500/30' : isPastDue ? 'bg-red-500/30' : 'bg-amber-500/30'
-                }`}>
-                  {job.isCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-sky-400" />
-                  ) : isPastDue ? (
-                    <AlertTriangle className="w-4 h-4 text-red-400" />
-                  ) : (
-                    <Clock className="w-4 h-4 text-amber-400" />
-                  )}
-                </div>
-                <div className="text-left">
-                  <p className="font-medium text-white" data-testid={`job-title-${job.jobId}`}>
-                    {job.title || "Service Job"}
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    {job.customerName} • {job.technicianName}
-                  </p>
-                  {isPastDue && (
-                    <p className="text-xs text-red-400 font-semibold animate-pulse mt-1">
-                      ⚠ Did not do repair - needs rescheduling
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                {isPastDue && (
-                  <Badge className="bg-red-500/30 text-red-300 border-red-500/50 animate-pulse">
-                    Past Due
-                  </Badge>
-                )}
-                <Badge variant="outline" className={
-                  job.isCompleted ? "border-sky-400/50 text-sky-300" : isPastDue ? "border-red-500/50 text-red-400" : "border-amber-500/50 text-amber-400"
-                }>
-                  {job.status}
-                </Badge>
-                <span className="text-lg text-white font-semibold" data-testid={`job-price-${job.jobId}`}>
-                  <PriceDisplay price={job.price} productName={job.title} />
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="pt-0 pb-4 px-4 border-t border-slate-600/50 mt-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Customer</p>
-                  <Link href={`/accounts/${job.customerId}`}>
-                    <p className="text-sm font-medium text-sky-400 hover:text-sky-300 cursor-pointer flex items-center gap-1">
-                      {job.customerName}
-                      <MessageCircle className="w-3 h-3" />
-                    </p>
-                  </Link>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Technician</p>
-                  <p className="text-sm font-medium text-white">{job.technicianName}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Pool</p>
-                  <p className="text-sm font-medium text-white">{job.poolName || "N/A"}</p>
-                </div>
-                {job.address && (
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Service Address</p>
-                    <p className="text-sm font-medium text-white flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-sky-400" />
-                      {job.address}
-                    </p>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Job ID</p>
-                  <p className="text-sm font-medium text-white">{job.jobId}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Status</p>
-                  <Badge className={
-                    job.isCompleted ? "bg-sky-500/30 text-sky-300 border-sky-400/50" : "bg-amber-500/30 text-amber-300 border-amber-400/50"
-                  }>
-                    {job.status}
-                  </Badge>
-                </div>
-                {job.scheduledDate && (
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">Scheduled Date</p>
-                    <p className="text-sm font-medium text-white flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-sky-400" />
-                      {new Date(job.scheduledDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Price</p>
-                  <p className="text-lg"><PriceDisplay price={job.price} productName={job.title} /></p>
-                </div>
-              </div>
-            </div>
-            {job.description && (
-              <div className="mt-4 pt-4 border-t border-slate-600/50">
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Description / Notes</p>
-                <p className="text-sm text-slate-200 bg-slate-700/50 p-3 rounded-lg">{job.description}</p>
-              </div>
-            )}
-            {((job as any).officeNotes || (job as any).instructions) && (
-              <div className="mt-4 pt-4 border-t border-slate-600/50">
-                <p className="text-xs text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Office Notes & Instructions
-                </p>
-                <div className="bg-amber-900/30 border-2 border-amber-500/50 p-4 rounded-lg space-y-3 min-h-[80px]">
-                  {(job as any).officeNotes && (
-                    <div>
-                      <p className="text-xs text-amber-400 font-semibold uppercase mb-1">Office Notes:</p>
-                      <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{(job as any).officeNotes}</p>
-                    </div>
-                  )}
-                  {(job as any).instructions && (
-                    <div>
-                      <p className="text-xs text-amber-400 font-semibold uppercase mb-1">Instructions:</p>
-                      <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{(job as any).instructions}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {job.items && job.items.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-600/50">
-                <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Line Items</p>
-                <div className="space-y-2">
-                  {job.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-sm bg-slate-700/50 p-2 rounded text-slate-200">
-                      <span>Product #{item.productId}</span>
-                      <span>Qty: {item.qty} @ {formatPrice(item.unitCost)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {archive && (
-              <div className="mt-4 pt-4 border-t border-slate-600/50 flex justify-end gap-2">
-                {archive.showArchived ? (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={() => archive.unarchiveJob(String(job.jobId))}
-                      className="gap-1 bg-sky-500 text-white hover:bg-sky-400 shadow-md"
-                      data-testid={`btn-unarchive-${job.jobId}`}
-                    >
-                      <ArchiveRestore className="w-3 h-3" />
-                      Restore
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        if (confirm("Permanently delete this job? This cannot be undone.")) {
-                          archive.deleteJob(String(job.jobId));
-                        }
-                      }}
-                      className="gap-1 text-red-400 border-red-500/50 hover:bg-red-500/20"
-                      data-testid={`btn-delete-${job.jobId}`}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Delete
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => archive.archiveJob(String(job.jobId))}
-                    className="gap-1 bg-slate-600 text-slate-200 hover:bg-slate-500 border border-slate-500/50 shadow-sm"
-                    data-testid={`btn-archive-${job.jobId}`}
-                  >
-                    <Archive className="w-3 h-3" />
-                    Archive Job
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-}
-
-function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
-  return (
-    <div 
-      className="flex items-center justify-between py-3 px-4 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:border-sky-400/50 transition-colors cursor-pointer"
-      data-testid={`job-row-${job.jobId}`}
-      onClick={onClick}
-    >
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          job.isCompleted ? 'bg-sky-500/30' : 'bg-amber-500/30'
-        }`}>
-          {job.isCompleted ? (
-            <CheckCircle2 className="w-4 h-4 text-sky-400" />
-          ) : (
-            <Clock className="w-4 h-4 text-amber-400" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate" data-testid={`job-title-${job.jobId}`}>
-            {job.title || "Service Job"}
-          </p>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            {job.scheduledDate && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {new Date(job.scheduledDate).toLocaleDateString()}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <User className="w-3 h-3" />
-              {job.technicianName}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-4 shrink-0">
-        <Badge variant="outline" className={
-          job.isCompleted ? "border-sky-400/50 text-sky-300" : "border-amber-400/50 text-amber-400"
-        }>
-          {job.isCompleted ? "Complete" : "Pending"}
-        </Badge>
-        <span className="min-w-[80px] text-right" data-testid={`job-price-${job.jobId}`}>
-          <PriceDisplay price={job.price} productName={job.title} />
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function AccountCard({ account }: { account: Account }) {
-  const completionPercent = account.totalJobs > 0 
-    ? Math.round((account.completedJobs / account.totalJobs) * 100) 
-    : 0;
-
-  return (
-    <Card className="bg-card/50 border-border/50 hover:border-primary/30 transition-colors" data-testid={`account-card-${account.accountId}`}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-ui text-lg text-foreground" data-testid={`account-name-${account.accountId}`}>
-                {account.accountName}
-              </p>
-              {account.address && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3 h-3" />
-                  {account.address.substring(0, 50)}...
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="font-ui font-bold text-xl text-primary" data-testid={`account-value-${account.accountId}`}>
-              {formatPrice(account.totalValue)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {account.completedJobs}/{account.totalJobs} complete ({completionPercent}%)
-            </p>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="w-full bg-background/30 rounded-full h-2 mb-4">
-          <div 
-            className="bg-primary h-2 rounded-full transition-all duration-300"
-            style={{ width: `${completionPercent}%` }}
-          />
-        </div>
-        <div className="space-y-2">
-          {account.jobs.map((job) => (
-            <ExpandableJobCard key={job.jobId} job={job} />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TechnicianCard({ tech }: { tech: Technician }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const completionPercent = tech.totalJobs > 0 
-    ? Math.round((tech.completedJobs / tech.totalJobs) * 100) 
-    : 0;
-
-  return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className={`bg-card/50 border-border/50 hover:border-primary/30 transition-colors ${tech.totalJobs === 0 ? 'opacity-60' : ''}`} data-testid={`tech-card-${tech.techId}`}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {tech.totalJobs > 0 ? (
-                  isExpanded ? (
-                    <ChevronDown className="w-5 h-5 text-primary" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                  )
-                ) : null}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  tech.totalJobs > 0 ? 'bg-primary/20' : 'bg-muted/20'
-                }`}>
-                  <User className={`w-5 h-5 ${tech.totalJobs > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
-                </div>
-                <div>
-                  <p className="font-ui text-lg text-foreground" data-testid={`tech-name-${tech.techId}`}>
-                    {tech.name}
-                  </p>
-                  {(tech.phone || tech.email) && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {tech.phone || tech.email}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2">
-                  <Badge className="bg-primary/20 text-primary border-primary/50" data-testid={`tech-commission10-${tech.techId}`}>
-                    10%: {formatPrice(tech.commission10 || 0)}
-                  </Badge>
-                  <Badge className="bg-primary/20 text-primary border-primary/50" data-testid={`tech-commission15-${tech.techId}`}>
-                    15%: {formatPrice(tech.commission15 || 0)}
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <p className="font-ui font-bold text-xl text-primary" data-testid={`tech-value-${tech.techId}`}>
-                    {formatPrice(tech.totalValue)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tech.totalJobs} jobs ({completionPercent}% done)
-                  </p>
-                </div>
-              </div>
-            </CardTitle>
-            {tech.totalJobs > 0 && (
-              <div className="w-full bg-background/30 rounded-full h-2 mt-3">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${completionPercent}%` }}
-                />
-              </div>
-            )}
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            {tech.totalJobs > 0 && (
-              <div className="space-y-2 border-t border-border/30 pt-4">
-                {tech.jobs.map((job) => (
-                  <ExpandableJobCard key={job.jobId} job={job} />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </CollapsibleContent>
-        {tech.totalJobs === 0 && (
-          <CardContent className="pt-0">
-            <p className="text-center text-muted-foreground/60 py-4 text-sm">
-              No jobs assigned
-            </p>
-          </CardContent>
-        )}
-      </Card>
-    </Collapsible>
-  );
-}
-
-function SRAccountSubfolder({ accountName, jobs }: { accountName: string; jobs: Job[] }) {
-  const [isOpen, setIsOpen] = useState(true);
-  const completedCount = jobs.filter(j => j.isCompleted).length;
-  const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
-  const readyToInvoice = totalValue >= 500;
-  
-  // Get Office Notes and Instructions from jobs
-  const jobWithOfficeNotes = jobs.find(j => (j as any).officeNotes);
-  const jobWithInstructions = jobs.find(j => (j as any).instructions);
-  const officeNotes = jobWithOfficeNotes ? (jobWithOfficeNotes as any).officeNotes : '';
-  const instructions = jobWithInstructions ? (jobWithInstructions as any).instructions : '';
-  const hasNotes = !!(officeNotes || instructions);
-
-  const handleSendInvoice = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const jobDetails = jobs.map(j => `• ${j.title}: ${formatPrice(j.price)}`).join('%0D%0A');
-    const subject = encodeURIComponent(`Invoice Ready: ${accountName} - SR Repairs Total ${formatPrice(totalValue)}`);
-    const body = encodeURIComponent(
-      `Invoice Summary for ${accountName}\n\n` +
-      `Total Amount: ${formatPrice(totalValue)}\n` +
-      `Completed: ${completedCount}/${jobs.length} jobs\n\n` +
-      `Job Details:\n` +
-      jobs.map(j => `• ${j.title}: ${formatPrice(j.price)} - ${j.isCompleted ? 'Complete' : 'Pending'}`).join('\n') +
-      `\n\nPlease process this invoice at your earliest convenience.`
-    );
-    window.open(`https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`, '_blank');
-  };
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className={`border rounded-lg bg-slate-700/50 overflow-hidden ${readyToInvoice ? 'border-sky-400' : 'border-slate-600/50'}`}>
-        <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-slate-600/50 transition-colors">
-          <div className="flex items-center gap-2">
-            {isOpen ? (
-              <ChevronDown className="w-4 h-4 text-sky-400" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-sky-300" />
-            )}
-            <Building2 className="w-4 h-4 text-sky-400" />
-            <span className="font-ui font-medium text-white">{accountName}</span>
-            <Badge className="text-xs bg-slate-600/50 text-slate-300 border-slate-500/50">
-              {jobs.length} jobs
-            </Badge>
-            {hasNotes && (
-              <Badge className="bg-amber-500/30 text-amber-300 border-amber-400/50 text-xs">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Notes
-              </Badge>
-            )}
-            {readyToInvoice && (
-              <Badge className="bg-sky-500 text-white border-sky-400 animate-pulse text-xs shadow-sm">
-                Ready to Invoice
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-slate-400">{completedCount}/{jobs.length} done</span>
-            <span className={`font-ui font-bold ${readyToInvoice ? 'text-sky-300' : 'text-white'}`}>
-              {formatPrice(totalValue)}
-            </span>
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="p-3 pt-0 space-y-2 border-t border-slate-600/50">
-            {/* Office Notes Section */}
-            {hasNotes && (
-              <div className="mb-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
-                <p className="text-xs text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Office Notes
-                </p>
-                {officeNotes && (
-                  <p className="text-sm text-white">{officeNotes}</p>
-                )}
-                {instructions && (
-                  <p className="text-sm text-slate-300 mt-1">
-                    <span className="text-amber-400">Instructions:</span> {instructions}
-                  </p>
-                )}
-              </div>
-            )}
-            {readyToInvoice && (
-              <button
-                onClick={handleSendInvoice}
-                className="w-full mb-3 py-2 px-4 bg-sky-500 hover:bg-sky-400 border border-sky-400 rounded-lg text-white font-ui font-semibold text-sm flex items-center justify-center gap-2 transition-colors shadow-md"
-                data-testid={`send-invoice-${accountName}`}
-              >
-                <Mail className="w-4 h-4" />
-                Send Invoice ({formatPrice(totalValue)})
-              </button>
-            )}
-            {jobs.map((job) => (
-              <ExpandableJobCard key={job.jobId} job={job} />
-            ))}
-          </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
-  );
-}
-
-function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: Job[] }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const completedCount = jobs.filter(j => j.isCompleted).length;
-  const totalValue = jobs.reduce((sum, j) => sum + j.price, 0);
-  const completionPercent = jobs.length > 0 ? Math.round((completedCount / jobs.length) * 100) : 0;
-  const commission10 = Math.round(totalValue * 0.10 * 100) / 100;
-  const commission15 = Math.round(totalValue * 0.15 * 100) / 100;
-
-  const jobsByAccount = useMemo(() => {
-    const grouped: Record<string, Job[]> = {};
-    jobs.forEach(job => {
-      const accountName = job.customerName || "Unknown Account";
-      if (!grouped[accountName]) {
-        grouped[accountName] = [];
-      }
-      grouped[accountName].push(job);
-    });
-    return Object.entries(grouped).sort((a, b) => b[1].length - a[1].length);
-  }, [jobs]);
-
-  return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 hover:border-sky-300/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`sr-tech-${techName}`}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-lg">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-sky-400" />
-                ) : (
-                  <ChevronRight className="w-5 h-5 text-sky-300" />
-                )}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/40 to-sky-600/30 flex items-center justify-center border border-sky-400/50 shadow-md">
-                  <Settings className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-ui text-lg font-bold text-white">{techName}</p>
-                    <Badge className="bg-sky-500 text-white border-sky-400 shadow-sm">SR</Badge>
-                  </div>
-                  <p className="text-xs text-sky-300/80 mt-0.5">
-                    Service Repairs (&lt;$500) • {jobsByAccount.length} accounts
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2">
-                  <Badge className="bg-sky-500/30 text-sky-200 border-sky-400/50 text-xs shadow-sm" data-testid={`sr-commission10-${techName}`}>
-                    10%: {formatPrice(commission10)}
-                  </Badge>
-                  <Badge className="bg-sky-600/30 text-sky-100 border-sky-300/50 text-xs shadow-sm" data-testid={`sr-commission15-${techName}`}>
-                    15%: {formatPrice(commission15)}
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <p className="font-ui font-bold text-xl text-white">
-                    {formatPrice(totalValue)}
-                  </p>
-                  <p className="text-xs text-sky-300/80">
-                    {completedCount}/{jobs.length} complete ({completionPercent}%)
-                  </p>
-                </div>
-              </div>
-            </CardTitle>
-            <div className="w-full bg-slate-600 rounded-full h-2 mt-3">
-              <div 
-                className="bg-sky-400 h-2 rounded-full transition-all duration-300 shadow-sm"
-                style={{ width: `${completionPercent}%` }}
-              />
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-sky-400/20">
-            <div className="space-y-3 pt-4">
-              {jobsByAccount.map(([accountName, accountJobs]) => (
-                <SRAccountSubfolder key={accountName} accountName={accountName} jobs={accountJobs} />
-              ))}
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-}
-
-interface RepairTechData {
-  name: string;
-  jobs: Job[];
-  totalValue: number;
-  completedCount: number;
-  commission10: number;
-  commission15: number;
-  repairTypes: Record<string, { count: number; value: number }>;
-  monthlyValue: number;
-  dailyValues: Record<number, number>;
-  quotaPercent: number;
-  daysInMonth: number;
-}
-
-function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; monthlyQuota: number }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  return (
-    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 hover:border-sky-300/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`repair-tech-${tech.name}`}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="pb-2 cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-lg">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-sky-400" />
-                ) : (
-                  <ChevronRight className="w-5 h-5 text-sky-300" />
-                )}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/40 to-sky-600/30 flex items-center justify-center border border-sky-400/50 shadow-md">
-                  <HardHat className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-ui text-lg font-bold text-white">{tech.name}</p>
-                  <p className="text-xs text-sky-300/80">
-                    {tech.completedCount}/{tech.jobs.length} completed
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2">
-                  <Badge className="bg-sky-500/30 text-sky-200 border-sky-400/50 text-xs shadow-sm">
-                    10%: {formatPrice(tech.commission10)}
-                  </Badge>
-                  <Badge className="bg-sky-600/30 text-sky-100 border-sky-300/50 text-xs shadow-sm">
-                    15%: {formatPrice(tech.commission15)}
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <p className="font-ui font-bold text-2xl text-white">{formatPrice(tech.totalValue)}</p>
-                </div>
-              </div>
-            </CardTitle>
-            <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600/50 mt-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-slate-400 uppercase tracking-wider">Monthly Quota Progress</span>
-                <span className="text-sm font-ui">
-                  <span className={tech.quotaPercent >= 100 ? "text-sky-400 font-bold" : "text-slate-200"}>
-                    {formatPrice(tech.monthlyValue)}
-                  </span>
-                  <span className="text-slate-500"> / {formatPrice(monthlyQuota)}</span>
-                </span>
-              </div>
-              <Progress 
-                value={tech.quotaPercent} 
-                className="h-2 bg-slate-600"
-              />
-              <div className="flex justify-between mt-1">
-                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-sky-400' : 'text-slate-300'}`}>
-                  {tech.quotaPercent}%
-                </span>
-                <span className="text-xs text-slate-400">
-                  {tech.quotaPercent >= 100 ? '✓ Quota Met!' : `${formatPrice(monthlyQuota - tech.monthlyValue)} to go`}
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-sky-400/20">
-            <div className="mt-3 pt-3">
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
-              <div className="flex flex-wrap gap-1 mb-4">
-                {Array.from({ length: tech.daysInMonth }, (_, i) => i + 1).map(day => {
-                  const value = tech.dailyValues[day] || 0;
-                  const hasActivity = value > 0;
-                  const intensity = hasActivity ? Math.min(1, value / 1000) : 0;
-                  return (
-                    <div
-                      key={day}
-                      className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
-                        hasActivity 
-                          ? intensity > 0.7 ? 'bg-sky-500 text-white' 
-                          : intensity > 0.3 ? 'bg-sky-500/60 text-white' 
-                          : 'bg-sky-500/30 text-sky-300'
-                          : 'bg-slate-700 text-slate-500'
-                      }`}
-                      title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Repair Types</p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {Object.entries(tech.repairTypes).slice(0, 6).map(([type, data]) => (
-                  <Badge key={type} variant="outline" className="text-xs border-slate-500/50 text-slate-200 bg-slate-700/50">
-                    {type.length > 25 ? type.substring(0, 25) + '...' : type}
-                    <span className="ml-1 text-slate-400">({data.count}x, {formatPrice(data.value)})</span>
-                  </Badge>
-                ))}
-                {Object.keys(tech.repairTypes).length > 6 && (
-                  <Badge variant="outline" className="text-xs border-slate-600 text-slate-400">
-                    +{Object.keys(tech.repairTypes).length - 6} more
-                  </Badge>
-                )}
-              </div>
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Jobs ({tech.jobs.length})</p>
-              <div className="space-y-2">
-                {tech.jobs.map((job) => (
-                  <ExpandableJobCard key={job.jobId} job={job} />
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
-  );
-}
+import {
+  Job,
+  JobsData,
+  RepairTechData,
+  ArchiveContext,
+  ArchiveContextType,
+  formatPrice,
+} from "@/components/jobs/JobTypes";
+import {
+  exportJobsExcel,
+  exportRepairTechsPDF,
+  exportSRJobsPDF,
+  exportSRAccountsPDF,
+} from "@/components/jobs/JobExportFunctions";
+import { ExpandableJobCard } from "@/components/jobs/JobCard";
+import { SRTechnicianCard } from "@/components/jobs/SRTechnicianCard";
+import { RepairTechCard } from "@/components/jobs/RepairTechCard";
+import { AccountCard, TechnicianCard } from "@/components/jobs/TechnicianStats";
 
 export default function Jobs() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showArchived, setShowArchived] = useState(false);
-  const [isArchiving, setIsArchiving] = useState(false);
   const [createJobOpen, setCreateJobOpen] = useState(false);
   const [newJob, setNewJob] = useState({
     customerId: "",
@@ -1329,7 +107,6 @@ export default function Jobs() {
     },
   });
 
-  // Fetch extracted repairs data from office notes
   interface RepairLineItem {
     type: 'part' | 'labor';
     description: string;
@@ -1374,7 +151,7 @@ export default function Jobs() {
       commission15: number;
     };
   }
-  const { data: repairsData, isLoading: repairsLoading } = useQuery<RepairsData>({
+  const { data: repairsData } = useQuery<RepairsData>({
     queryKey: ["/api/jobs/repairs"],
     queryFn: async () => {
       const res = await fetch("/api/jobs/repairs");
@@ -1405,7 +182,7 @@ export default function Jobs() {
     onMutate: async ({ jobId, archive }) => {
       await queryClient.cancelQueries({ queryKey: ["archivedAlerts", "job"] });
       const previousData = queryClient.getQueryData(["archivedAlerts", "job"]);
-      queryClient.setQueryData(["archivedAlerts", "job"], (old: any) => {
+      queryClient.setQueryData(["archivedAlerts", "job"], (old: { archivedIds?: string[] }) => {
         const currentIds = new Set<string>((old?.archivedIds || []).map(String));
         if (archive) {
           currentIds.add(jobId);
@@ -1439,7 +216,7 @@ export default function Jobs() {
     },
   });
 
-  const archiveContextValue: ArchiveContext = {
+  const archiveContextValue: ArchiveContextType = {
     archivedIds,
     showArchived,
     archiveJob: (jobId: string) => archiveMutation.mutate({ jobId, archive: true }),
@@ -1452,7 +229,7 @@ export default function Jobs() {
 
     const allSrJobs = data.jobs.filter(job => {
       const title = job.title?.toUpperCase() || "";
-      const template = job.raw?.Template?.toUpperCase() || "";
+      const template = (job.raw as Record<string, string>)?.Template?.toUpperCase() || "";
       
       const isSR = (
         title.startsWith("SR ") ||
@@ -1494,7 +271,7 @@ export default function Jobs() {
   const MONTHLY_QUOTA = 27000;
   
   const repairTechData = useMemo(() => {
-    if (!data?.jobs) return { repairTechs: [], totalJobs: 0, totalValue: 0, topEarner: null, mostJobs: null };
+    if (!data?.jobs) return { repairTechs: [], totalJobs: 0, totalValue: 0, topEarner: null as RepairTechData | null, mostJobs: null as RepairTechData | null };
 
     const REPAIR_TECH_NAMES = new Set([
       "Alan Bateman",
@@ -1512,19 +289,7 @@ export default function Jobs() {
     const currentYear = now.getFullYear();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-    const techMap: Record<string, {
-      name: string;
-      jobs: Job[];
-      totalValue: number;
-      completedCount: number;
-      commission10: number;
-      commission15: number;
-      repairTypes: Record<string, { count: number; value: number }>;
-      monthlyValue: number;
-      dailyValues: Record<number, number>;
-      quotaPercent: number;
-      daysInMonth: number;
-    }> = {};
+    const techMap: Record<string, RepairTechData> = {};
 
     repairJobs.forEach(job => {
       const name = job.technicianName;
@@ -1577,11 +342,9 @@ export default function Jobs() {
     return { repairTechs, totalJobs, totalValue, topEarner, mostJobs };
   }, [data?.jobs]);
 
-  // Job status tracking (Not Started / In Progress)
   const jobStatusData = useMemo(() => {
     if (!data?.jobs) return { notStartedCount: 0, inProgressCount: 0, notStartedJobs: [], inProgressJobs: [] };
     
-    // Define explicit status mappings for clarity
     const NOT_STARTED_STATUSES = new Set(['not started', 'new', 'open']);
     const IN_PROGRESS_STATUSES = new Set(['in progress', 'in-progress', 'started', 'working', 'active']);
     
@@ -1605,14 +368,12 @@ export default function Jobs() {
     };
   }, [data?.jobs]);
 
-  // Quotes tracking by repair tech
   const quotesData = useMemo(() => {
-    if (!data?.jobs) return { quotesByTech: {}, totalQuotes: 0, openQuotes: 0, closedQuotes: 0, totalValue: 0, openQuotesList: [], closedQuotesList: [] };
+    if (!data?.jobs) return { quotesByTech: {} as Record<string, { name: string; total: number; open: number; closed: number; value: number; jobs: Job[] }>, totalQuotes: 0, openQuotes: 0, closedQuotes: 0, totalValue: 0, openQuotesList: [] as Job[], closedQuotesList: [] as Job[] };
     
-    // Filter for quote jobs
     const quoteJobs = data.jobs.filter(job => {
       const title = job.title?.toLowerCase() || '';
-      const template = job.raw?.Template?.toLowerCase() || '';
+      const template = (job.raw as Record<string, string>)?.Template?.toLowerCase() || '';
       return title.includes('quote') || title.includes('estimate') || template.includes('quote') || template.includes('estimate');
     });
     
@@ -1622,7 +383,7 @@ export default function Jobs() {
       open: number; 
       closed: number; 
       value: number;
-      jobs: typeof quoteJobs 
+      jobs: Job[]
     }> = {};
     
     quoteJobs.forEach(job => {
@@ -1656,29 +417,26 @@ export default function Jobs() {
     };
   }, [data?.jobs]);
 
-  // Commission tracking - SR jobs by service tech (completed/closed earn commissions)
   const COMMISSION_RATE = 0.15;
   const commissionData = useMemo(() => {
     if (!data?.jobs) return { 
-      commissionEligibleJobs: [], 
-      allSRJobs: [],
+      commissionEligibleJobs: [] as Job[], 
+      allSRJobs: [] as Job[],
       totalCommission: 0, 
-      byTechnician: {} as Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number; accounts: Record<string, { name: string; notes: string; jobs: any[] }> }>,
-      byAccount: {} as Record<string, { name: string; notes: string; entryNotes: string; jobs: any[]; technicians: Set<string>; totalValue: number; completedValue: number; commission: number }>,
+      byTechnician: {} as Record<string, { name: string; allJobs: Job[]; completedJobs: Job[]; totalValue: number; completedValue: number; commission: number; accounts: Record<string, { name: string; notes: string; jobs: Job[] }> }>,
+      byAccount: {} as Record<string, { name: string; notes: string; entryNotes: string; jobs: Job[]; technicians: Set<string>; totalValue: number; completedValue: number; commission: number }>,
       completedCount: 0,
       totalValue: 0,
       allJobsCount: 0
     };
     
-    // Filter for ALL SR jobs
     const allSRJobs = data.jobs.filter(job => {
       const title = job.title?.toLowerCase() || '';
-      const template = job.raw?.Template?.toLowerCase() || '';
+      const template = (job.raw as Record<string, string>)?.Template?.toLowerCase() || '';
       return title.includes('sr') || title.includes('service repair') || template.includes('sr') || template.includes('service repair');
     });
     
-    // Jobs earning commission: completed OR closed status (check multiple variations)
-    const isJobEligible = (job: any) => {
+    const isJobEligible = (job: Job) => {
       const status = job.status?.toLowerCase()?.trim() || '';
       return job.isCompleted === true || 
              status === 'closed' || 
@@ -1689,39 +447,33 @@ export default function Jobs() {
     
     const commissionEligibleJobs = allSRJobs.filter(isJobEligible);
     
-    // Group ALL SR jobs by technician, track completed separately for commission
-    const byTechnician: Record<string, { name: string; allJobs: any[]; completedJobs: any[]; totalValue: number; completedValue: number; commission: number; accounts: Record<string, { name: string; notes: string; jobs: any[] }> }> = {};
+    const byTechnician: Record<string, { name: string; allJobs: Job[]; completedJobs: Job[]; totalValue: number; completedValue: number; commission: number; accounts: Record<string, { name: string; notes: string; jobs: Job[] }> }> = {};
     
-    // Group by account with notes
-    const byAccount: Record<string, { name: string; notes: string; entryNotes: string; jobs: any[]; technicians: Set<string>; totalValue: number; completedValue: number; commission: number }> = {};
+    const byAccount: Record<string, { name: string; notes: string; entryNotes: string; jobs: Job[]; technicians: Set<string>; totalValue: number; completedValue: number; commission: number }> = {};
     
     allSRJobs.forEach(job => {
       const techName = job.technicianName || 'Unassigned';
       const accountName = job.customerName || 'Unknown';
-      const jobNotes = (job as any).notes || '';
-      const entryNotes = (job as any).entryNotes || '';
+      const jobNotes = job.notes || '';
+      const entryNotes = job.entryNotes || '';
       
-      // Group by technician
       if (!byTechnician[techName]) {
         byTechnician[techName] = { name: techName, allJobs: [], completedJobs: [], totalValue: 0, completedValue: 0, commission: 0, accounts: {} };
       }
       byTechnician[techName].allJobs.push(job);
       byTechnician[techName].totalValue += job.price || 0;
       
-      // Track accounts within technician
       if (!byTechnician[techName].accounts[accountName]) {
         byTechnician[techName].accounts[accountName] = { name: accountName, notes: jobNotes, jobs: [] };
       }
       byTechnician[techName].accounts[accountName].jobs.push(job);
       
-      // Track completed/closed jobs separately for commission
       if (isJobEligible(job)) {
         byTechnician[techName].completedJobs.push(job);
         byTechnician[techName].completedValue += job.price || 0;
         byTechnician[techName].commission += (job.price || 0) * COMMISSION_RATE;
       }
       
-      // Group by account
       if (!byAccount[accountName]) {
         byAccount[accountName] = { name: accountName, notes: jobNotes, entryNotes: entryNotes, jobs: [], technicians: new Set(), totalValue: 0, completedValue: 0, commission: 0 };
       }
@@ -1732,7 +484,6 @@ export default function Jobs() {
         byAccount[accountName].completedValue += job.price || 0;
         byAccount[accountName].commission += (job.price || 0) * COMMISSION_RATE;
       }
-      // Update notes if we find more
       if (jobNotes && !byAccount[accountName].notes) byAccount[accountName].notes = jobNotes;
       if (entryNotes && !byAccount[accountName].entryNotes) byAccount[accountName].entryNotes = entryNotes;
     });
@@ -1805,7 +556,7 @@ export default function Jobs() {
                         <SelectValue placeholder="Select a customer..." />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-800 border-slate-600">
-                        {(customersData?.customers || []).map((c: any) => (
+                        {(customersData?.customers || []).map((c: { id: string | number; name: string }) => (
                           <SelectItem key={c.id} value={String(c.id)} className="text-white hover:bg-slate-700">
                             {c.name}
                           </SelectItem>
@@ -1843,7 +594,7 @@ export default function Jobs() {
                           <SelectValue placeholder="Optional..." />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-800 border-slate-600">
-                          {(techniciansData?.technicians || []).map((t: any) => (
+                          {(techniciansData?.technicians || []).map((t: { id: string | number; name: string }) => (
                             <SelectItem key={t.id} value={String(t.id)} className="text-white hover:bg-slate-700">
                               {t.name}
                             </SelectItem>
@@ -1911,7 +662,7 @@ export default function Jobs() {
             </Dialog>
             <Button
               variant="outline"
-              onClick={() => data && exportJobsExcel(data.jobs, data.technicians, data.summary)}
+              onClick={() => data && exportJobsExcel(data.jobs, data.technicians, { totalJobs: data.summary.totalJobs, completedJobs: data.summary.completedCount, pendingJobs: data.summary.pendingCount, totalValue: data.summary.totalValue })}
               disabled={!data}
               className="gap-2 text-primary border-primary/30 hover:bg-primary/10"
               data-testid="btn-export-excel"
@@ -2362,585 +1113,220 @@ export default function Jobs() {
                           </div>
                         </CardContent>
                       </Card>
-                      <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-400/50 shadow-lg">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <Wrench className="w-8 h-8 text-slate-300" />
-                            <div>
-                              <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Most Jobs</p>
-                              <p className="text-xl font-ui font-bold text-white">{repairTechData.mostJobs?.name}</p>
+                      {repairTechData.mostJobs && (
+                        <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-400/50 shadow-lg">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Wrench className="w-8 h-8 text-slate-300" />
+                              <div>
+                                <p className="text-xs text-slate-300 uppercase tracking-wider font-semibold">Most Jobs</p>
+                                <p className="text-xl font-ui font-bold text-white">{repairTechData.mostJobs.name}</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex gap-4 text-sm">
-                            <span className="text-slate-200 font-semibold">{repairTechData.mostJobs?.jobs.length} jobs</span>
-                            <span className="text-slate-400">{formatPrice(repairTechData.mostJobs?.totalValue || 0)}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
+                            <div className="flex gap-4 text-sm">
+                              <span className="text-slate-200 font-semibold">{repairTechData.mostJobs.jobs.length} jobs</span>
+                              <span className="text-slate-400">{formatPrice(repairTechData.mostJobs.totalValue)}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
                     </div>
                   )}
 
                   <ScrollArea className="h-[550px]">
                     <div className="space-y-4">
-                      {repairTechData.repairTechs.length === 0 ? (
-                        <Card className="bg-card/50 border-border/50">
-                          <CardContent className="p-8 text-center text-muted-foreground">
-                            No jobs found for repair technicians
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        filteredRepairTechs.map((tech) => (
-                          <RepairTechCard key={tech.name} tech={tech} monthlyQuota={MONTHLY_QUOTA} />
-                        ))
-                      )}
+                      {filteredRepairTechs.map(tech => (
+                        <RepairTechCard key={tech.name} tech={tech} monthlyQuota={MONTHLY_QUOTA} />
+                      ))}
                     </div>
                   </ScrollArea>
                 </div>
               </TabsContent>
 
               <TabsContent value="accounts" className="mt-4">
-                <ScrollArea className="h-[700px]">
-                  {data.accounts.length === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        No accounts with jobs found
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      {data.accounts.map((account) => (
-                        <AccountCard key={account.accountId || account.accountName} account={account} />
-                      ))}
-                    </div>
-                  )}
+                <ScrollArea className="h-[650px]">
+                  <div className="space-y-4">
+                    {data.accounts.map((account) => (
+                      <AccountCard key={account.accountId} account={account} />
+                    ))}
+                  </div>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="technicians" className="mt-4">
-                <ScrollArea className="h-[700px]">
-                  {data.techsWithJobs.length === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        No technicians with jobs found
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      {data.techsWithJobs.map((tech) => (
-                        <TechnicianCard key={tech.techId || tech.name} tech={tech} />
-                      ))}
-                    </div>
-                  )}
+                <ScrollArea className="h-[650px]">
+                  <div className="space-y-4">
+                    {data.techsWithJobs.map((tech) => (
+                      <TechnicianCard key={tech.techId} tech={tech} />
+                    ))}
+                    {data.techsWithoutJobs.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-4 py-2">
+                          <div className="flex-1 h-px bg-border/30" />
+                          <span className="text-xs text-muted-foreground">Technicians without jobs</span>
+                          <div className="flex-1 h-px bg-border/30" />
+                        </div>
+                        {data.techsWithoutJobs.map((tech) => (
+                          <TechnicianCard key={tech.techId} tech={tech} />
+                        ))}
+                      </>
+                    )}
+                  </div>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="completed" className="mt-4">
-                <ScrollArea className="h-[700px]">
-                  {data.completedJobs.length === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        <Clock className="w-12 h-12 mx-auto mb-4 text-secondary" />
-                        <p>No completed jobs yet</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-2">
-                      {data.completedJobs.map((job) => (
-                        <ExpandableJobCard key={job.jobId} job={job} />
-                      ))}
-                    </div>
-                  )}
+                <ScrollArea className="h-[650px]">
+                  <div className="space-y-3">
+                    {data.completedJobs.map((job) => (
+                      <ExpandableJobCard key={job.jobId} job={job} />
+                    ))}
+                  </div>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="pending" className="mt-4">
-                <ScrollArea className="h-[700px]">
-                  {data.pendingJobs.length === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-primary" />
-                        <p>All jobs are completed!</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-2">
-                      {data.pendingJobs.map((job) => (
-                        <ExpandableJobCard key={job.jobId} job={job} />
-                      ))}
-                    </div>
-                  )}
+                <ScrollArea className="h-[650px]">
+                  <div className="space-y-3">
+                    {data.pendingJobs.map((job) => (
+                      <ExpandableJobCard key={job.jobId} job={job} />
+                    ))}
+                  </div>
                 </ScrollArea>
               </TabsContent>
 
               <TabsContent value="quotes" className="mt-4">
-                <div className="mb-4 p-4 bg-gradient-to-r from-purple-900/40 to-slate-900/90 border border-purple-400/40 rounded-lg shadow-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileDown className="w-5 h-5 text-purple-400" />
-                    <h3 className="font-ui font-semibold text-white">Quotes Tracking</h3>
-                  </div>
-                  <p className="text-sm text-slate-300 mb-2">
-                    Track quotes and estimates by repair technician. See who's generating quotes and how many are still open.
-                  </p>
-                  <div className="flex gap-4 text-sm">
-                    <span className="text-purple-300 font-semibold">{quotesData.totalQuotes} Total Quotes</span>
-                    <span className="text-amber-300 font-semibold">{quotesData.openQuotes} Open</span>
-                    <span className="text-emerald-300 font-semibold">{quotesData.closedQuotes} Closed</span>
-                    <span className="text-sky-300 font-semibold">{formatPrice(quotesData.totalValue)} Value</span>
-                  </div>
-                </div>
-                
-                <ScrollArea className="h-[600px]">
-                  {quotesData.totalQuotes === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        <FileDown className="w-12 h-12 mx-auto mb-4 text-purple-400/50" />
-                        <p>No quotes found</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* All Open Quotes Section */}
-                      <div>
-                        <h4 className="text-lg font-ui font-semibold text-amber-300 mb-3 flex items-center gap-2">
-                          <Clock className="w-5 h-5" />
-                          All Open Quotes ({quotesData.openQuotes})
-                        </h4>
-                        {quotesData.openQuotesList.length === 0 ? (
-                          <Card className="bg-slate-800/50 border-slate-600/50">
-                            <CardContent className="p-4 text-center text-slate-400">
-                              No open quotes
-                            </CardContent>
-                          </Card>
-                        ) : (
-                          <div className="space-y-2">
-                            {quotesData.openQuotesList.map((job: any) => (
-                              <Card key={job.jobId} className="bg-gradient-to-br from-amber-900/30 to-slate-900/80 border-amber-400/40 shadow-md">
-                                <CardContent className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <Clock className="w-4 h-4 text-amber-400" />
-                                        <span className="font-semibold text-white">{job.title || 'Quote'}</span>
-                                        <Badge className="bg-amber-500/20 text-amber-300 border border-amber-400/50 text-xs">
-                                          Open
-                                        </Badge>
-                                      </div>
-                                      <div className="flex items-center gap-4 text-sm text-slate-400">
-                                        <span>{job.customerName || 'N/A'}</span>
-                                        <span>Tech: {job.technicianName || 'Unassigned'}</span>
-                                        {job.scheduledDate && (
-                                          <span>{new Date(job.scheduledDate).toLocaleDateString()}</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <span className="text-xl font-bold text-purple-300">{formatPrice(job.price || 0)}</span>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Quotes by Technician Section */}
-                      <div>
-                        <h4 className="text-lg font-ui font-semibold text-purple-300 mb-3 flex items-center gap-2">
-                          <User className="w-5 h-5" />
-                          Quotes by Technician
-                        </h4>
-                        <div className="space-y-4">
-                          {Object.values(quotesData.quotesByTech)
-                            .sort((a, b) => b.total - a.total)
-                            .map(tech => (
-                              <Card key={tech.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-purple-400/40 shadow-lg">
-                                <CardHeader className="pb-2">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center border border-purple-400/50">
-                                        <User className="w-5 h-5 text-purple-400" />
-                                      </div>
-                                      <div>
-                                        <CardTitle className="text-lg font-ui text-white">{tech.name}</CardTitle>
-                                        <p className="text-sm text-slate-400">{tech.total} quotes | {formatPrice(tech.value)} total value</p>
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Badge className="bg-amber-500/20 text-amber-300 border border-amber-400/50">
-                                        {tech.open} Open
-                                      </Badge>
-                                      <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/50">
-                                        {tech.closed} Closed
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </CardHeader>
-                                <CardContent className="pt-2">
-                                  <div className="space-y-2">
-                                    {tech.jobs.slice(0, 5).map((job: any) => (
-                                      <div key={job.jobId} className="flex items-center justify-between p-2 bg-slate-700/50 rounded border border-slate-600/50">
-                                        <div className="flex items-center gap-2">
-                                          {job.isCompleted || job.status?.toLowerCase() === 'closed' ? (
-                                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                          ) : (
-                                            <Clock className="w-4 h-4 text-amber-400" />
-                                          )}
-                                          <span className="text-sm text-white">{job.title || 'Quote'}</span>
-                                          <span className="text-xs text-slate-400">- {job.customerName || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-semibold text-purple-300">{formatPrice(job.price || 0)}</span>
-                                          {job.scheduledDate && (
-                                            <span className="text-xs text-slate-400">{new Date(job.scheduledDate).toLocaleDateString()}</span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                    {tech.jobs.length > 5 && (
-                                      <p className="text-xs text-slate-400 text-center mt-2">
-                                        + {tech.jobs.length - 5} more quotes
-                                      </p>
-                                    )}
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                        </div>
-                      </div>
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-purple-900/50 to-slate-900/90 border border-purple-400/40 rounded-lg shadow-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileDown className="w-5 h-5 text-purple-400" />
+                      <h3 className="font-ui font-semibold text-white">Quotes & Estimates</h3>
                     </div>
-                  )}
-                </ScrollArea>
+                    <div className="flex gap-4 text-sm">
+                      <span className="text-purple-300 font-semibold">{quotesData.totalQuotes} Total</span>
+                      <span className="text-emerald-300">{quotesData.openQuotes} Open</span>
+                      <span className="text-slate-400">{quotesData.closedQuotes} Closed</span>
+                      <span className="text-purple-300 font-semibold">{formatPrice(quotesData.totalValue)} Value</span>
+                    </div>
+                  </div>
+                  <ScrollArea className="h-[550px]">
+                    <div className="space-y-3">
+                      {quotesData.openQuotesList.length > 0 && (
+                        <>
+                          <h4 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider">Open Quotes</h4>
+                          {quotesData.openQuotesList.map((job) => (
+                            <ExpandableJobCard key={job.jobId} job={job} />
+                          ))}
+                        </>
+                      )}
+                      {quotesData.closedQuotesList.length > 0 && (
+                        <>
+                          <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-6">Closed Quotes</h4>
+                          {quotesData.closedQuotesList.map((job) => (
+                            <ExpandableJobCard key={job.jobId} job={job} />
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="commissions" className="mt-4">
-                <div className="mb-4 p-4 bg-gradient-to-r from-emerald-900/40 to-slate-900/90 border border-emerald-400/40 rounded-lg shadow-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-emerald-400" />
-                      <h3 className="font-ui font-semibold text-white">Commission Payout - Completed SR Jobs</h3>
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-emerald-900/50 to-slate-900/90 border border-emerald-400/40 rounded-lg shadow-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-emerald-400" />
+                        <h3 className="font-ui font-semibold text-white">Commission Tracking (15%)</h3>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          exportSRAccountsPDF(srData.srByTechnician);
-                        }}
-                        className="bg-emerald-600/80 text-white border border-emerald-400/50 hover:bg-emerald-500/80"
-                        data-testid="btn-export-commission-pdf"
-                      >
-                        <FileDown className="w-3 h-3 mr-1" />
-                        Export PDF
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={isArchiving || commissionData.completedCount === 0}
-                        onClick={async () => {
-                          // Archive all completed SR jobs for monthly reset
-                          setIsArchiving(true);
-                          try {
-                            const jobIds = commissionData.commissionEligibleJobs.map((job: any) => job.jobId?.toString() || '').filter(Boolean);
-                            for (const jobId of jobIds) {
-                              await fetch(`/api/alerts/${jobId}/archive`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ archive: true })
-                              });
-                            }
-                            await queryClient.invalidateQueries({ queryKey: ["archivedAlerts", "job"] });
-                            await queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
-                            toast({
-                              title: "Jobs Archived",
-                              description: `${jobIds.length} completed SR jobs have been archived for monthly payout reset.`,
-                            });
-                          } catch (error) {
-                            toast({
-                              title: "Archive Failed",
-                              description: "Failed to archive some jobs. Please try again.",
-                              variant: "destructive",
-                            });
-                          } finally {
-                            setIsArchiving(false);
-                          }
-                        }}
-                        className="bg-red-600/80 text-white border border-red-400/50 hover:bg-red-500/80"
-                        data-testid="btn-archive-paid-jobs"
-                      >
-                        {isArchiving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
-                        Archive Paid Jobs ({commissionData.completedCount})
-                      </Button>
+                    <p className="text-sm text-slate-300 mb-2">
+                      Only completed or closed SR jobs earn commission. Track progress toward payable amounts.
+                    </p>
+                    <div className="flex gap-4 text-sm">
+                      <span className="text-slate-400">{commissionData.allJobsCount} Total SR Jobs</span>
+                      <span className="text-emerald-300 font-semibold">{commissionData.completedCount} Completed</span>
+                      <span className="text-emerald-400 font-bold">{formatPrice(commissionData.totalCommission)} Earned</span>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-300 mb-2">
-                    Only completed/closed SR jobs earn commissions ({(COMMISSION_RATE * 100).toFixed(0)}% rate). Jobs not started or in progress are excluded. Archive paid jobs after monthly payout to reset.
-                  </p>
-                  <div className="flex gap-4 text-sm">
-                    <span className="text-slate-300 font-semibold">{commissionData.allJobsCount} Total SR Jobs</span>
-                    <span className="text-emerald-300 font-semibold">{commissionData.completedCount} Completed/Closed</span>
-                    <span className="text-sky-300 font-semibold">{formatPrice(commissionData.totalValue)} Total Value</span>
-                    <span className="text-amber-300 font-semibold">{formatPrice(commissionData.totalCommission)} Commission</span>
-                  </div>
-                </div>
-                
-                <ScrollArea className="h-[600px]">
-                  {commissionData.allJobsCount === 0 ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        <DollarSign className="w-12 h-12 mx-auto mb-4 text-emerald-400/50" />
-                        <p>No SR jobs found</p>
-                        <p className="text-sm mt-2">SR jobs will appear here grouped by service tech</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
+                  <ScrollArea className="h-[550px]">
                     <div className="space-y-4">
-                      {/* All SR Jobs by Technician */}
                       {Object.values(commissionData.byTechnician)
                         .sort((a, b) => b.commission - a.commission)
                         .map(tech => (
-                          <Card key={tech.name} className="bg-gradient-to-br from-emerald-900/30 to-slate-900/80 border-emerald-400/40 shadow-lg">
+                          <Card key={tech.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-emerald-400/40 shadow-lg">
                             <CardHeader className="pb-2">
-                              <div className="flex items-center justify-between">
+                              <CardTitle className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center border border-emerald-400/50">
                                     <User className="w-5 h-5 text-emerald-400" />
                                   </div>
                                   <div>
-                                    <CardTitle className="text-lg font-ui text-white">{tech.name}</CardTitle>
-                                    <p className="text-sm text-slate-400">{tech.allJobs?.length || 0} total jobs | {tech.completedJobs?.length || 0} completed/closed</p>
+                                    <p className="font-ui text-lg font-bold text-white">{tech.name}</p>
+                                    <p className="text-xs text-slate-400">
+                                      {tech.completedJobs.length}/{tech.allJobs.length} completed
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-xl font-bold text-emerald-300">{formatPrice(tech.commission)}</p>
-                                  <p className="text-xs text-slate-400">Commission ({(COMMISSION_RATE * 100).toFixed(0)}% of {formatPrice(tech.completedValue)})</p>
+                                  <p className="font-ui font-bold text-2xl text-emerald-400">{formatPrice(tech.commission)}</p>
+                                  <p className="text-xs text-slate-400">from {formatPrice(tech.completedValue)}</p>
                                 </div>
-                              </div>
+                              </CardTitle>
                             </CardHeader>
-                            <CardContent className="pt-2">
-                              <div className="space-y-2">
-                                {(tech.allJobs || []).map((job: any) => {
-                                  const isEligible = job.isCompleted === true || job.status?.toLowerCase() === 'closed' || job.status?.toLowerCase() === 'completed';
-                                  return (
-                                    <div key={job.jobId} className={`flex items-center justify-between p-2 rounded border ${isEligible ? 'bg-emerald-900/30 border-emerald-600/50' : 'bg-slate-700/50 border-slate-600/50'}`}>
-                                      <div className="flex items-center gap-2">
-                                        {isEligible ? (
-                                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                                        ) : (
-                                          <Clock className="w-4 h-4 text-amber-400" />
-                                        )}
-                                        <span className="text-sm text-white">{job.title || 'SR Job'}</span>
-                                        <span className="text-xs text-slate-400">- {job.customerName || 'N/A'}</span>
-                                        {!isEligible && (
-                                          <Badge className="text-xs bg-amber-500/20 text-amber-300 border border-amber-400/50">
-                                            {job.status || 'Pending'}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-3">
-                                        <span className="text-sm text-slate-400">{formatPrice(job.price || 0)}</span>
-                                        {isEligible ? (
-                                          <span className="text-sm font-semibold text-emerald-300">{formatPrice((job.price || 0) * COMMISSION_RATE)}</span>
-                                        ) : (
-                                          <span className="text-xs text-slate-500">No commission</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </CardContent>
                           </Card>
                         ))}
-                      
-                      {/* Accounts with Notes Section */}
-                      <div className="mt-6 pt-4 border-t border-slate-600/50">
-                        <h4 className="text-lg font-ui font-semibold text-sky-300 mb-3 flex items-center gap-2">
-                          <Building2 className="w-5 h-5" />
-                          Accounts with SR Jobs & Notes
-                        </h4>
-                        <div className="space-y-3">
-                          {Object.values(commissionData.byAccount)
-                            .sort((a, b) => b.totalValue - a.totalValue)
-                            .map(account => (
-                              <Card key={account.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
-                                <CardHeader className="pb-2">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                                        <Building2 className="w-5 h-5 text-sky-400" />
-                                      </div>
-                                      <div>
-                                        <CardTitle className="text-lg font-ui text-white">{account.name}</CardTitle>
-                                        <p className="text-sm text-slate-400">
-                                          {account.jobs.length} SR jobs | {Array.from(account.technicians).join(', ')}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="text-lg font-bold text-sky-300">{formatPrice(account.totalValue)}</p>
-                                      <p className="text-xs text-emerald-400">Commission: {formatPrice(account.commission)}</p>
-                                    </div>
-                                  </div>
-                                </CardHeader>
-                                <CardContent className="pt-2">
-                                  {/* Account Notes */}
-                                  {(account.notes || account.entryNotes) && (
-                                    <div className="mb-3 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
-                                      <p className="text-xs text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        Account Notes
-                                      </p>
-                                      {account.notes && (
-                                        <p className="text-sm text-white">{account.notes}</p>
-                                      )}
-                                      {account.entryNotes && (
-                                        <p className="text-sm text-slate-300 mt-1">
-                                          <span className="text-amber-400">Entry:</span> {account.entryNotes}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                  {/* Jobs for this account */}
-                                  <div className="space-y-1">
-                                    {account.jobs.map((job: any) => {
-                                      const isEligible = job.isCompleted === true || job.status?.toLowerCase()?.includes('closed') || job.status?.toLowerCase()?.includes('complete');
-                                      return (
-                                        <div key={job.jobId} className={`flex items-center justify-between p-2 rounded text-sm ${isEligible ? 'bg-emerald-900/20 border border-emerald-600/30' : 'bg-slate-700/30 border border-slate-600/30'}`}>
-                                          <div className="flex items-center gap-2">
-                                            {isEligible ? (
-                                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                                            ) : (
-                                              <Clock className="w-3 h-3 text-amber-400" />
-                                            )}
-                                            <span className="text-white">{job.title || 'SR Job'}</span>
-                                            <span className="text-xs text-slate-400">({job.technicianName || 'Unassigned'})</span>
-                                          </div>
-                                          <span className={isEligible ? 'text-emerald-300' : 'text-slate-400'}>{formatPrice(job.price || 0)}</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                        </div>
-                      </div>
                     </div>
-                  )}
-                </ScrollArea>
+                  </ScrollArea>
+                </div>
               </TabsContent>
 
               <TabsContent value="repairs-extracted" className="mt-4">
-                <div className="mb-4 p-4 bg-gradient-to-r from-orange-900/40 to-slate-900/90 border border-orange-400/40 rounded-lg shadow-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-orange-900/50 to-slate-900/90 border border-orange-400/40 rounded-lg shadow-lg">
+                    <div className="flex items-center gap-2 mb-2">
                       <Wrench className="w-5 h-5 text-orange-400" />
-                      <h3 className="font-ui font-semibold text-white">Extracted Repairs from Office Notes</h3>
+                      <h3 className="font-ui font-semibold text-white">Extracted Repairs (from Office Notes)</h3>
+                    </div>
+                    <p className="text-sm text-slate-300 mb-2">
+                      Repairs parsed from office notes with line items, labor, and parts breakdowns.
+                    </p>
+                    <div className="flex gap-4 text-sm">
+                      <span className="text-orange-300 font-semibold">{repairsData?.summary.totalRepairs || 0} Repairs</span>
+                      <span className="text-slate-400">Labor: {formatPrice(repairsData?.summary.totalLabor || 0)}</span>
+                      <span className="text-slate-400">Parts: {formatPrice(repairsData?.summary.totalParts || 0)}</span>
+                      <span className="text-orange-400 font-bold">Total: {formatPrice(repairsData?.summary.totalRepairValue || 0)}</span>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-300">
-                    Service tech repairs parsed from office notes with parts, labor, and prices.
-                  </p>
-                  {repairsData?.summary && (
-                    <div className="flex gap-4 mt-2 text-sm flex-wrap">
-                      <span className="text-orange-300 font-semibold">{repairsData.summary.totalRepairs} Repairs Found</span>
-                      <span className="text-sky-300 font-semibold">{formatPrice(repairsData.summary.totalParts)} Parts</span>
-                      <span className="text-purple-300 font-semibold">{formatPrice(repairsData.summary.totalLabor)} Labor</span>
-                      <span className="text-emerald-300 font-semibold">{formatPrice(repairsData.summary.totalRepairValue)} Total</span>
-                      <span className="text-amber-300 font-semibold">{formatPrice(repairsData.summary.commission15)} (15% Commission)</span>
-                    </div>
-                  )}
-                </div>
-                
-                <ScrollArea className="h-[600px]">
-                  {repairsLoading ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-orange-400/50" />
-                        <p>Loading repairs data...</p>
-                      </CardContent>
-                    </Card>
-                  ) : !repairsData?.repairs?.length ? (
-                    <Card className="bg-card/50 border-border/50">
-                      <CardContent className="p-8 text-center text-muted-foreground">
-                        <Wrench className="w-12 h-12 mx-auto mb-4 text-orange-400/50" />
-                        <p>No repairs with parts/labor found in office notes</p>
-                        <p className="text-sm mt-2">Repairs will appear here when SR jobs have office notes with invoice details</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <div className="space-y-4">
-                      {repairsData.repairs.map((repair) => (
-                        <Card key={repair.jobId} className="bg-gradient-to-br from-orange-900/20 to-slate-900/80 border-orange-400/30 shadow-lg">
-                          <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-orange-500/30 flex items-center justify-center border border-orange-400/50">
-                                  <Wrench className="w-5 h-5 text-orange-400" />
-                                </div>
-                                <div>
-                                  <CardTitle className="text-lg font-ui text-white">{repair.title}</CardTitle>
-                                  <p className="text-sm text-slate-400">
-                                    {repair.technicianName} • {repair.customerName}
-                                    {repair.parsedRepair?.invoiceNumber && (
-                                      <span className="ml-2 text-orange-300">Invoice #{repair.parsedRepair.invoiceNumber}</span>
-                                    )}
-                                  </p>
-                                </div>
+                  <ScrollArea className="h-[550px]">
+                    <div className="space-y-3">
+                      {(repairsData?.repairs || []).map((repair) => (
+                        <Card key={repair.jobId} className="bg-slate-800/60 border-orange-400/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <p className="font-medium text-white">{repair.title}</p>
+                                <p className="text-sm text-slate-400">{repair.customerName} • {repair.technicianName}</p>
                               </div>
                               <div className="text-right">
-                                <p className="text-xl font-bold text-orange-300">{formatPrice(repair.totalRepairValue)}</p>
-                                <div className="flex gap-2 text-xs">
-                                  <Badge className={repair.isCompleted ? "bg-emerald-500/30 text-emerald-300 border-emerald-400/50" : "bg-amber-500/30 text-amber-300 border-amber-400/50"}>
-                                    {repair.status}
-                                  </Badge>
-                                </div>
+                                <p className="font-bold text-orange-400">{formatPrice(repair.totalRepairValue)}</p>
+                                <p className="text-xs text-slate-400">
+                                  Labor: {formatPrice(repair.laborAmount)} | Parts: {formatPrice(repair.partsAmount)}
+                                </p>
                               </div>
                             </div>
-                          </CardHeader>
-                          <CardContent className="pt-2">
-                            {repair.parsedRepair?.items && repair.parsedRepair.items.length > 0 ? (
-                              <div className="space-y-2">
-                                <div className="grid grid-cols-5 gap-2 text-xs text-slate-400 uppercase tracking-wider px-2 pb-1 border-b border-slate-600/50">
-                                  <span>Type</span>
-                                  <span className="col-span-2">Description</span>
-                                  <span className="text-center">Qty x Unit</span>
-                                  <span className="text-right">Extended</span>
-                                </div>
-                                {repair.parsedRepair.items.map((item, idx) => (
-                                  <div key={idx} className={`grid grid-cols-5 gap-2 p-2 rounded ${item.type === 'labor' ? 'bg-purple-900/30 border border-purple-600/30' : 'bg-sky-900/20 border border-sky-600/30'}`}>
-                                    <Badge className={item.type === 'labor' ? 'bg-purple-500/30 text-purple-300 border-purple-400/50 w-fit' : 'bg-sky-500/30 text-sky-300 border-sky-400/50 w-fit'}>
-                                      {item.type === 'labor' ? 'Labor' : 'Part'}
-                                    </Badge>
-                                    <div className="col-span-2">
-                                      <span className="text-sm text-white">{item.description}</span>
-                                      {item.partNumber && (
-                                        <span className="text-xs text-slate-400 ml-2">#{item.partNumber}</span>
-                                      )}
+                            {repair.parsedRepair?.items && repair.parsedRepair.items.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-slate-600/50">
+                                <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Line Items</p>
+                                <div className="space-y-1">
+                                  {repair.parsedRepair.items.map((item, idx) => (
+                                    <div key={idx} className="flex justify-between text-sm">
+                                      <span className="text-slate-300">
+                                        {item.description} {item.partNumber && `(${item.partNumber})`} x{item.quantity}
+                                      </span>
+                                      <span className="text-white">{formatPrice(item.extendedPrice)}</span>
                                     </div>
-                                    <div className="text-center">
-                                      <span className="text-xs text-slate-400">{item.quantity} x </span>
-                                      <span className="text-sm text-slate-300">{formatPrice(item.unitPrice)}</span>
-                                    </div>
-                                    <span className="text-sm text-right font-semibold text-white">{formatPrice(item.extendedPrice)}</span>
-                                  </div>
-                                ))}
-                                <div className="flex justify-between pt-2 border-t border-slate-600/50 text-sm">
-                                  <div className="flex gap-4">
-                                    <span className="text-sky-300">Parts: {formatPrice(repair.partsAmount)}</span>
-                                    <span className="text-purple-300">Labor: {formatPrice(repair.laborAmount)}</span>
-                                  </div>
-                                  <span className="font-bold text-orange-300">Total: {formatPrice(repair.totalRepairValue)}</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="p-3 bg-slate-700/50 rounded border border-slate-600/50">
-                                <p className="text-xs text-slate-400 mb-1">Raw Office Notes:</p>
-                                <p className="text-sm text-white whitespace-pre-wrap">{repair.officeNotes}</p>
-                                <div className="mt-2 flex gap-2">
-                                  {repair.priceExtraction.prices.map((price, idx) => (
-                                    <Badge key={idx} className="bg-orange-500/30 text-orange-300 border-orange-400/50">
-                                      {formatPrice(price)}
-                                    </Badge>
                                   ))}
                                 </div>
                               </div>
@@ -2949,8 +1335,8 @@ export default function Jobs() {
                         </Card>
                       ))}
                     </div>
-                  )}
-                </ScrollArea>
+                  </ScrollArea>
+                </div>
               </TabsContent>
             </Tabs>
           </>
