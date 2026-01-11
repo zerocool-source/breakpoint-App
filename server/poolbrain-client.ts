@@ -381,11 +381,12 @@ export class PoolBrainClient {
    * Get route stops job list details
    * Endpoint: GET /v2/route_stops_job_list_details
    */
-  async getRouteStopsJobListDetails(params: { fromDate?: string; toDate?: string; offset?: number; limit?: number } = {}) {
+  async getRouteStopsJobListDetails(params: { fromDate?: string; toDate?: string; jobId?: number | string; offset?: number; limit?: number } = {}) {
     const url = new URL(`${this.baseUrl}/v2/route_stops_job_list_details`);
 
     if (params.fromDate) url.searchParams.append("fromDate", params.fromDate);
     if (params.toDate) url.searchParams.append("toDate", params.toDate);
+    if (params.jobId) url.searchParams.append("jobId", String(params.jobId));
     if (params.offset) url.searchParams.append("offset", params.offset.toString());
     if (params.limit) url.searchParams.append("limit", params.limit.toString());
 
@@ -408,6 +409,70 @@ export class PoolBrainClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * Get photos for a specific job from route stops or one-time job details
+   * Returns normalized photo URLs regardless of job type
+   */
+  async getJobPhotos(jobId: number | string): Promise<string[]> {
+    const photos: string[] = [];
+    
+    const extractPhotos = (obj: any) => {
+      if (!obj) return;
+      if (obj.photos && Array.isArray(obj.photos)) {
+        obj.photos.forEach((p: any) => {
+          const url = p.url || p.URL || p.imageUrl || p.ImageUrl || p.photoUrl || p.PhotoUrl;
+          if (url) photos.push(url);
+        });
+      }
+      if (obj.Pictures && Array.isArray(obj.Pictures)) {
+        obj.Pictures.forEach((p: any) => {
+          const url = p.url || p.URL || p.imageUrl || p.ImageUrl || p.photoUrl || p.PhotoUrl;
+          if (url) photos.push(url);
+        });
+      }
+      if (obj.images && Array.isArray(obj.images)) {
+        obj.images.forEach((p: any) => {
+          const url = p.url || p.URL || p.imageUrl || p.ImageUrl;
+          if (url) photos.push(url);
+        });
+      }
+    };
+    
+    try {
+      const routeStopData = await this.getRouteStopsJobListDetails({ jobId });
+      
+      if (routeStopData.data && Array.isArray(routeStopData.data)) {
+        routeStopData.data.forEach((routeStop: any) => {
+          extractPhotos(routeStop);
+          if (routeStop.jobEntries && Array.isArray(routeStop.jobEntries)) {
+            routeStop.jobEntries.forEach((entry: any) => extractPhotos(entry));
+          }
+          if (routeStop.workflowItems && Array.isArray(routeStop.workflowItems)) {
+            routeStop.workflowItems.forEach((item: any) => extractPhotos(item));
+          }
+        });
+      }
+    } catch (e) {
+      console.log("Route stop photos not found for job", jobId);
+    }
+    
+    try {
+      const oneTimeData = await this.getOneTimeJobDetail(jobId);
+      if (oneTimeData.data && Array.isArray(oneTimeData.data)) {
+        oneTimeData.data.forEach((job: any) => {
+          extractPhotos(job);
+          if (job.workflowItems && Array.isArray(job.workflowItems)) {
+            job.workflowItems.forEach((item: any) => extractPhotos(item));
+          }
+        });
+      }
+    } catch (e) {
+      console.log("One-time job photos not found for job", jobId);
+    }
+    
+    return Array.from(new Set(photos));
   }
 
   /**

@@ -59,6 +59,31 @@ export function registerAlertRoutes(app: any) {
     }
   });
 
+  // Get photos for a specific alert/job from Pool Brain
+  app.get("/api/alerts/:jobId/photos", async (req: Request, res: Response) => {
+    try {
+      const { jobId } = req.params;
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      const photos = await client.getJobPhotos(jobId);
+      res.json({ photos });
+    } catch (error: any) {
+      console.error("Error fetching alert photos:", error);
+      res.status(500).json({ error: "Failed to fetch photos", photos: [] });
+    }
+  });
+
   // Get enriched alerts with pool and customer information
   // Also exposed as /api/alerts_full for API consistency
   const getEnrichedAlerts = async (req: Request, res: Response) => {

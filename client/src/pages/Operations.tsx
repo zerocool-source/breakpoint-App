@@ -63,6 +63,8 @@ export default function Operations() {
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [repairNotes, setRepairNotes] = useState<Record<string, string>>({});
+  const [loadingPhotosFor, setLoadingPhotosFor] = useState<number | null>(null);
+  const [cachedPhotos, setCachedPhotos] = useState<Record<number, string[]>>({});
   const queryClient = useQueryClient();
 
   const { data: alertsData, isLoading } = useQuery<{ alerts: EnrichedAlert[] }>({
@@ -151,9 +153,28 @@ export default function Operations() {
     return { total: alerts.length, urgent, repairs, properties };
   }, [alerts, repairsNeededAlerts]);
 
-  const handleViewPhotos = (pictures: string[]) => {
-    setSelectedPhotos(pictures);
-    setShowPhotoDialog(true);
+  const handleViewPhotos = async (alertId: number) => {
+    if (cachedPhotos[alertId]) {
+      setSelectedPhotos(cachedPhotos[alertId]);
+      setShowPhotoDialog(true);
+      return;
+    }
+    
+    setLoadingPhotosFor(alertId);
+    try {
+      const response = await fetch(`/api/alerts/${alertId}/photos`);
+      const data = await response.json();
+      const photos = data.photos || [];
+      setCachedPhotos(prev => ({ ...prev, [alertId]: photos }));
+      setSelectedPhotos(photos);
+      setShowPhotoDialog(true);
+    } catch (error) {
+      console.error("Error fetching photos:", error);
+      setSelectedPhotos([]);
+      setShowPhotoDialog(true);
+    } finally {
+      setLoadingPhotosFor(null);
+    }
   };
 
   const handleDismissRepair = (alertId: number) => {
@@ -162,7 +183,7 @@ export default function Operations() {
 
   const renderRepairCard = (alert: EnrichedAlert) => {
     const techNote = alert.techNote || "";
-    const hasPictures = alert.pictures && alert.pictures.length > 0;
+    const isLoadingPhotos = loadingPhotosFor === alert.alertId;
 
     return (
       <Card key={alert.alertId} className="bg-white border-l-4 border-l-red-500" data-testid={`repair-card-${alert.alertId}`}>
@@ -173,18 +194,17 @@ export default function Operations() {
                 <Wrench className="h-3 w-3" />
                 Repair Needed
               </Badge>
-              {hasPictures && (
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-blue-600 gap-1 p-0 h-auto"
-                  onClick={() => handleViewPhotos(alert.pictures!)}
-                  data-testid={`button-view-photos-${alert.alertId}`}
-                >
-                  <Camera className="h-4 w-4" />
-                  View Pictures
-                </Button>
-              )}
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="text-blue-600 gap-1 p-0 h-auto"
+                onClick={() => handleViewPhotos(alert.alertId)}
+                disabled={isLoadingPhotos}
+                data-testid={`button-view-photos-${alert.alertId}`}
+              >
+                <Camera className="h-4 w-4" />
+                {isLoadingPhotos ? "Loading..." : "View Pictures"}
+              </Button>
             </div>
             <Button 
               variant="outline" 
@@ -480,17 +500,16 @@ export default function Operations() {
                                       {alert.type}
                                     </Badge>
                                     <span className="text-xs text-slate-500">{alert.poolName}</span>
-                                    {alert.pictures && alert.pictures.length > 0 && (
-                                      <Button 
-                                        variant="link" 
-                                        size="sm" 
-                                        className="h-5 px-0 text-blue-600 text-xs gap-1"
-                                        onClick={() => handleViewPhotos(alert.pictures!)}
-                                      >
-                                        <Camera className="h-3 w-3" />
-                                        {alert.pictures.length} Photos
-                                      </Button>
-                                    )}
+                                    <Button 
+                                      variant="link" 
+                                      size="sm" 
+                                      className="h-5 px-0 text-blue-600 text-xs gap-1"
+                                      onClick={() => handleViewPhotos(alert.alertId)}
+                                      disabled={loadingPhotosFor === alert.alertId}
+                                    >
+                                      <Camera className="h-3 w-3" />
+                                      {loadingPhotosFor === alert.alertId ? "Loading..." : "Photos"}
+                                    </Button>
                                   </div>
                                   
                                   <p className="text-sm font-medium text-slate-800 mb-1">
@@ -548,29 +567,40 @@ export default function Operations() {
               Repair Photos ({selectedPhotos.length})
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
-            {selectedPhotos.map((url, index) => (
-              <div key={index} className="relative aspect-video bg-slate-100 rounded-lg overflow-hidden">
-                <img 
-                  src={url} 
-                  alt={`Repair photo ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E";
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="absolute top-2 right-2 bg-white/90 hover:bg-white"
-                  onClick={() => window.open(url, "_blank")}
-                >
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
+          {selectedPhotos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Camera className="h-16 w-16 text-slate-300 mb-4" />
+              <h3 className="text-lg font-medium text-slate-600 mb-2">No Photos Available</h3>
+              <p className="text-sm text-slate-500 max-w-md">
+                No photos have been attached to this repair alert in Pool Brain. 
+                Photos will appear here when technicians add them to the job.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
+              {selectedPhotos.map((url, index) => (
+                <div key={index} className="relative aspect-video bg-slate-100 rounded-lg overflow-hidden">
+                  <img 
+                    src={url} 
+                    alt={`Repair photo ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='m21 15-5-5L5 21'/%3E%3C/svg%3E";
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute top-2 right-2 bg-white/90 hover:bg-white"
+                    onClick={() => window.open(url, "_blank")}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </AppLayout>
