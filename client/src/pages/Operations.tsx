@@ -40,6 +40,8 @@ interface EnrichedAlert {
   message: string;
   createdAt: string;
   status: string;
+  isRepairNeeded?: boolean;
+  techNote?: string;
   techName?: string;
   techPhone?: string;
   techEmail?: string;
@@ -94,17 +96,12 @@ export default function Operations() {
 
   const repairsNeededAlerts = useMemo(() => {
     return alerts.filter(alert => {
-      const msgLower = (alert.message || "").toLowerCase();
-      const typeLower = (alert.type || "").toLowerCase();
-      const isRepairNeeded = 
-        msgLower.includes("repair needed") ||
-        msgLower.includes("repairs needed") ||
-        typeLower.includes("repair") ||
-        msgLower.includes("needs repair") ||
-        msgLower.includes("need repair");
+      const isRepairAlert = alert.isRepairNeeded === true || 
+        alert.type === "RepairNeeded" ||
+        (alert.message || "").toLowerCase().includes("repair needed");
       
       const isNotDismissed = !completedIds.includes(String(alert.alertId));
-      return isRepairNeeded && isNotDismissed;
+      return isRepairAlert && isNotDismissed;
     });
   }, [alerts, completedIds]);
 
@@ -163,23 +160,8 @@ export default function Operations() {
     dismissMutation.mutate(alertId);
   };
 
-  const extractTechNote = (alert: EnrichedAlert): string => {
-    if (alert.rawAlert) {
-      const raw = alert.rawAlert;
-      return raw.TechNote || raw.techNote || raw.TechNotes || raw.Notes || raw.notes || "";
-    }
-    const msg = alert.message || "";
-    if (msg.includes(":")) {
-      const parts = msg.split(":");
-      if (parts.length > 1) {
-        return parts.slice(1).join(":").trim();
-      }
-    }
-    return msg;
-  };
-
   const renderRepairCard = (alert: EnrichedAlert) => {
-    const techNote = extractTechNote(alert);
+    const techNote = alert.techNote || "";
     const hasPictures = alert.pictures && alert.pictures.length > 0;
 
     return (

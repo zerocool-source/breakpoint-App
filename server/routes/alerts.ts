@@ -167,11 +167,23 @@ export function registerAlertRoutes(app: any) {
           let message = "Alert from Pool Brain";
           let severity = "Medium";
           let status = "Active";
+          let isRepairNeeded = false;
+          let techNote = "";
           const messages: string[] = [];
+
+          // Extract TechNote from the alert root level
+          techNote = pbAlert.TechNote || pbAlert.techNote || pbAlert.TechNotes || 
+                     pbAlert.Notes || pbAlert.notes || pbAlert.Description || "";
 
           // Parse AlertCategories - each category contains an array of alerts
           if (pbAlert.AlertCategories && Array.isArray(pbAlert.AlertCategories)) {
             pbAlert.AlertCategories.forEach((cat: any) => {
+              // Check if this category is "Repair Needed"
+              const catName = (cat.CategoryName || cat.Name || cat.alertCategory || "").toLowerCase();
+              if (catName.includes("repair")) {
+                isRepairNeeded = true;
+              }
+
               // System Issues
               if (cat.SystemIssue && Array.isArray(cat.SystemIssue) && cat.SystemIssue.length > 0) {
                 cat.SystemIssue.forEach((issue: any) => {
@@ -179,35 +191,89 @@ export function registerAlertRoutes(app: any) {
                   severity = issue.Severity || issue.severity || "URGENT";
                   const issueName = issue.AlertName || issue.alertName || issue.systemIssue || "";
                   const issueDesc = issue.Description || issue.description || issue.alertDescription || "";
+                  
+                  // Check if this issue is repair-related
+                  if (issueName.toLowerCase().includes("repair") || issueDesc.toLowerCase().includes("repair")) {
+                    isRepairNeeded = true;
+                  }
+                  
                   if (issueName || issueDesc) {
                     messages.push(issueName + (issueDesc ? `: ${issueDesc}` : ""));
                   }
                   if (issue.status === "Resolved" || issue.Status === "Resolved") status = "Resolved";
+                  
+                  // Extract tech note from issue if not already set
+                  if (!techNote && (issue.TechNote || issue.techNote || issue.Notes)) {
+                    techNote = issue.TechNote || issue.techNote || issue.Notes || "";
+                  }
                 });
               }
               
-              // Issue Reports
+              // Issue Reports - check for "Repair Needed" or "RepairNeeded" alert name
               if (cat.IssueReport && Array.isArray(cat.IssueReport) && cat.IssueReport.length > 0) {
                 cat.IssueReport.forEach((report: any) => {
-                  alertType = "IssueReport";
-                  severity = report.Severity || report.severity || "HIGH";
-                  const reportText = report.IssueReports || report.issueReports || report.AlertName || report.description || "";
+                  const alertName = report.AlertName || report.alertName || "";
+                  const alertNameLower = alertName.toLowerCase().replace(/\s+/g, "");
+                  const reportText = report.IssueReports || report.issueReports || alertName || report.description || "";
+                  
+                  // Check if this is a "RepairNeeded" alert (with or without space)
+                  if (alertNameLower === "repairneeded" || 
+                      alertNameLower.includes("repairneeded") ||
+                      alertName.toLowerCase().includes("repair needed") ||
+                      reportText.toLowerCase().includes("repair needed")) {
+                    isRepairNeeded = true;
+                    alertType = "RepairNeeded";
+                  } else {
+                    if (alertType !== "RepairNeeded") {
+                      alertType = "IssueReport";
+                    }
+                  }
+                  
+                  severity = report.Severity || report.severity || report.aiPriorityLevel || "HIGH";
                   if (reportText) messages.push(reportText);
                   if (report.status === "Resolved" || report.Status === "Resolved") status = "Resolved";
+                  
+                  // Extract tech note from report - the IssueReports field often contains the tech note
+                  if (!techNote) {
+                    techNote = report.TechNote || report.techNote || report.Notes || 
+                               report.Description || report.IssueReports || "";
+                  }
                 });
               }
               
               // Custom Alerts
               if (cat.CustomAlert && Array.isArray(cat.CustomAlert) && cat.CustomAlert.length > 0) {
                 cat.CustomAlert.forEach((custom: any) => {
-                  alertType = "CustomAlert";
+                  const alertName = custom.AlertName || custom.alertName || custom.message || custom.Message || "";
+                  
+                  // Check if this is a repair-related custom alert
+                  if (alertName.toLowerCase().includes("repair")) {
+                    isRepairNeeded = true;
+                    alertType = "RepairNeeded";
+                  } else {
+                    alertType = "CustomAlert";
+                  }
+                  
                   severity = custom.Severity || custom.severity || "Medium";
-                  const customMsg = custom.message || custom.Message || custom.AlertName || custom.alertName || "";
+                  const customMsg = custom.message || custom.Message || alertName || "";
                   if (customMsg) messages.push(customMsg);
                   if (custom.status === "Resolved" || custom.Status === "Resolved") status = "Resolved";
+                  
+                  // Extract tech note from custom alert if not already set
+                  if (!techNote && (custom.TechNote || custom.techNote || custom.Notes || custom.Description)) {
+                    techNote = custom.TechNote || custom.techNote || custom.Notes || custom.Description || "";
+                  }
                 });
               }
             });
+          }
+
+          // Also check top-level alert name and message for repair keywords
+          const topAlertName = pbAlert.AlertName || pbAlert.alertName || "";
+          if (topAlertName.toLowerCase().includes("repair needed") || 
+              topAlertName.toLowerCase().includes("repair")) {
+            isRepairNeeded = true;
+            alertType = "RepairNeeded";
           }
 
           // Combine all messages or use default
@@ -254,6 +320,8 @@ export function registerAlertRoutes(app: any) {
             type: alertType,
             severity,
             status,
+            isRepairNeeded,
+            techNote,
             createdAt: pbAlert.JobDate || pbAlert.Date || new Date().toISOString(),
             pictures,
             techName,
