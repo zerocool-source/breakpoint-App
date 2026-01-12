@@ -1509,6 +1509,16 @@ export default function Estimates() {
                       <p className="text-sm text-slate-600">by {selectedEstimate.createdByTechName}</p>
                     )}
                   </div>
+
+                  {selectedEstimate.reportedDate && (
+                    <div className="p-4 bg-rose-50 rounded-lg border border-rose-100">
+                      <div className="flex items-center gap-2 text-rose-700 mb-2">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="font-semibold text-sm">Reported Date</span>
+                      </div>
+                      <p className="font-medium text-slate-900">{formatDate(selectedEstimate.reportedDate)}</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border rounded-lg overflow-hidden">
@@ -1593,6 +1603,41 @@ export default function Estimates() {
                     )}
                   </div>
                 </div>
+
+                {selectedEstimate.photos && selectedEstimate.photos.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="bg-slate-100 px-4 py-3 border-b">
+                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        Photos ({selectedEstimate.photos.length})
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {selectedEstimate.photos.map((photo, idx) => (
+                          <div
+                            key={idx}
+                            className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-[#0891b2] hover:shadow-md transition-all group"
+                            onClick={() => {
+                              setCurrentPhotoIndex(idx);
+                              setShowPhotoLightbox(true);
+                            }}
+                            data-testid={`photo-thumbnail-${idx}`}
+                          >
+                            <img
+                              src={photo}
+                              alt={`Photo ${idx + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {selectedEstimate.customerNote && (
                   <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">

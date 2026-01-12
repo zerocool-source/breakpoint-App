@@ -177,37 +177,56 @@ export function registerSyncRoutes(app: any) {
         mappedEstimate.repairTechName = estimate.repairTechName || estimate.repair_tech_name;
       }
       
+      const dollarsToCents = (value: any): number => {
+        const num = Number(value || 0);
+        return Math.round(num * 100);
+      };
+      
+      const maybeConvertToCents = (value: any, alreadyCents?: boolean): number => {
+        if (alreadyCents) {
+          return Math.round(Number(value || 0));
+        }
+        return dollarsToCents(value);
+      };
+      
+      const valuesInCents = estimate.valuesInCents === true || estimate.values_in_cents === true;
+      
       const lineItems = estimate.lineItems || estimate.line_items || estimate.items;
       if (lineItems) {
         const rawItems = Array.isArray(lineItems) ? lineItems : 
           (typeof lineItems === 'string' ? JSON.parse(lineItems) : []);
         
-        mappedEstimate.items = rawItems.map((item: any, index: number) => ({
-          lineNumber: item.lineNumber || item.line_number || index + 1,
-          serviceDate: item.serviceDate || item.service_date || null,
-          productService: item.productService || item.product_service || item.name || item.description || '',
-          description: item.description || item.name || '',
-          sku: item.sku || item.SKU || '',
-          quantity: parseFloat(item.quantity || item.qty || 1),
-          rate: parseFloat(item.rate || item.unitPrice || item.unit_price || 0),
-          amount: parseFloat(item.amount || item.total || 0) || 
-                  (parseFloat(item.quantity || 1) * parseFloat(item.rate || item.unitPrice || 0)),
-          taxable: item.taxable !== undefined ? item.taxable : true,
-          class: item.class || '',
-        }));
+        mappedEstimate.items = rawItems.map((item: any, index: number) => {
+          const qty = Number(item.quantity || item.qty || 1);
+          const rate = Number(item.rate || item.unitPrice || item.unit_price || 0);
+          const amount = Number(item.amount || item.total || 0) || (qty * rate);
+          
+          return {
+            lineNumber: item.lineNumber || item.line_number || index + 1,
+            serviceDate: item.serviceDate || item.service_date || null,
+            productService: item.productService || item.product_service || item.name || item.description || '',
+            description: item.description || item.name || '',
+            sku: item.sku || item.SKU || '',
+            quantity: qty,
+            rate: rate,
+            amount: amount,
+            taxable: item.taxable !== undefined ? item.taxable : true,
+            class: item.class || '',
+          };
+        });
         
-        const subtotal = mappedEstimate.items.reduce((sum: number, item: any) => sum + (item.amount * 100), 0);
-        mappedEstimate.subtotal = Math.round(subtotal);
+        const subtotalDollars = mappedEstimate.items.reduce((sum: number, item: any) => sum + item.amount, 0);
+        mappedEstimate.subtotal = Math.round(subtotalDollars * 100);
       }
       
       if (estimate.totalAmount !== undefined || estimate.total_amount !== undefined) {
-        mappedEstimate.totalAmount = parseInt(estimate.totalAmount || estimate.total_amount || 0);
+        mappedEstimate.totalAmount = maybeConvertToCents(estimate.totalAmount || estimate.total_amount, valuesInCents);
       }
       if (estimate.partsTotal !== undefined || estimate.parts_total !== undefined) {
-        mappedEstimate.partsTotal = parseInt(estimate.partsTotal || estimate.parts_total || 0);
+        mappedEstimate.partsTotal = maybeConvertToCents(estimate.partsTotal || estimate.parts_total, valuesInCents);
       }
       if (estimate.laborTotal !== undefined || estimate.labor_total !== undefined) {
-        mappedEstimate.laborTotal = parseInt(estimate.laborTotal || estimate.labor_total || 0);
+        mappedEstimate.laborTotal = maybeConvertToCents(estimate.laborTotal || estimate.labor_total, valuesInCents);
       }
       
       if (estimate.techNotes || estimate.tech_notes) {
