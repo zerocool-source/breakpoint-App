@@ -153,10 +153,51 @@ export function registerSyncRoutes(app: any) {
       
       if (estimate.description) mappedEstimate.description = estimate.description;
       
+      if (estimate.photos || estimate.photo_urls) {
+        const photos = estimate.photos || estimate.photo_urls || [];
+        mappedEstimate.photos = Array.isArray(photos) ? photos : 
+          (typeof photos === 'string' ? JSON.parse(photos) : []);
+      }
+      
+      if (estimate.reportedDate || estimate.reported_date) {
+        mappedEstimate.reportedDate = new Date(estimate.reportedDate || estimate.reported_date);
+      }
+      
+      if (estimate.serviceTechId || estimate.service_tech_id) {
+        mappedEstimate.serviceTechId = estimate.serviceTechId || estimate.service_tech_id;
+      }
+      if (estimate.serviceTechName || estimate.service_tech_name) {
+        mappedEstimate.serviceTechName = estimate.serviceTechName || estimate.service_tech_name;
+      }
+      
+      if (estimate.repairTechId || estimate.repair_tech_id) {
+        mappedEstimate.repairTechId = estimate.repairTechId || estimate.repair_tech_id;
+      }
+      if (estimate.repairTechName || estimate.repair_tech_name) {
+        mappedEstimate.repairTechName = estimate.repairTechName || estimate.repair_tech_name;
+      }
+      
       const lineItems = estimate.lineItems || estimate.line_items || estimate.items;
       if (lineItems) {
-        mappedEstimate.items = Array.isArray(lineItems) ? lineItems : 
+        const rawItems = Array.isArray(lineItems) ? lineItems : 
           (typeof lineItems === 'string' ? JSON.parse(lineItems) : []);
+        
+        mappedEstimate.items = rawItems.map((item: any, index: number) => ({
+          lineNumber: item.lineNumber || item.line_number || index + 1,
+          serviceDate: item.serviceDate || item.service_date || null,
+          productService: item.productService || item.product_service || item.name || item.description || '',
+          description: item.description || item.name || '',
+          sku: item.sku || item.SKU || '',
+          quantity: parseFloat(item.quantity || item.qty || 1),
+          rate: parseFloat(item.rate || item.unitPrice || item.unit_price || 0),
+          amount: parseFloat(item.amount || item.total || 0) || 
+                  (parseFloat(item.quantity || 1) * parseFloat(item.rate || item.unitPrice || 0)),
+          taxable: item.taxable !== undefined ? item.taxable : true,
+          class: item.class || '',
+        }));
+        
+        const subtotal = mappedEstimate.items.reduce((sum: number, item: any) => sum + (item.amount * 100), 0);
+        mappedEstimate.subtotal = Math.round(subtotal);
       }
       
       if (estimate.totalAmount !== undefined || estimate.total_amount !== undefined) {
@@ -167,6 +208,13 @@ export function registerSyncRoutes(app: any) {
       }
       if (estimate.laborTotal !== undefined || estimate.labor_total !== undefined) {
         mappedEstimate.laborTotal = parseInt(estimate.laborTotal || estimate.labor_total || 0);
+      }
+      
+      if (estimate.techNotes || estimate.tech_notes) {
+        mappedEstimate.techNotes = estimate.techNotes || estimate.tech_notes;
+      }
+      if (estimate.customerNote || estimate.customer_note) {
+        mappedEstimate.customerNote = estimate.customerNote || estimate.customer_note;
       }
       
       if (mappedEstimate.status === 'pending') {
