@@ -1421,104 +1421,116 @@ export default function Estimates() {
               </DialogTitle>
             </DialogHeader>
             {selectedEstimate && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-slate-900">{selectedEstimate.title}</h3>
+                      <h3 className="text-xl font-bold text-gray-900">{selectedEstimate.title}</h3>
                       {selectedEstimate.estimateNumber && (
-                        <p className="text-sm text-slate-500">#{selectedEstimate.estimateNumber}</p>
-                      )}
-                      {selectedEstimate.description && (
-                        <p className="text-slate-600 mt-1">{selectedEstimate.description}</p>
+                        <p className="text-sm text-gray-500">#{selectedEstimate.estimateNumber}</p>
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-slate-500">Total Amount</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Total Amount</p>
                       <p className="text-3xl font-bold text-[#0891b2]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <div className="flex items-center gap-2 text-blue-700 mb-2">
-                      <Building2 className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Property / Location</span>
+                {selectedEstimate.description && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ClipboardList className="w-4 h-4 text-gray-500" />
+                      <span className="text-xs text-gray-500 uppercase tracking-wide font-medium">Quote Description</span>
                     </div>
-                    <p className="font-medium text-slate-900">{selectedEstimate.propertyName}</p>
-                    {selectedEstimate.address && (
-                      <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
-                        <MapPin className="w-3 h-3" />
-                        {selectedEstimate.address}
-                      </p>
-                    )}
+                    <p className="text-sm text-gray-700 leading-relaxed">{selectedEstimate.description}</p>
                   </div>
+                )}
 
-                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                    <div className="flex items-center gap-2 text-purple-700 mb-2">
-                      <User className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Customer / HOA</span>
-                    </div>
-                    <p className="font-medium text-slate-900">{selectedEstimate.customerName || "N/A"}</p>
-                    {selectedEstimate.customerEmail && (
-                      <p className="text-sm text-slate-600">{selectedEstimate.customerEmail}</p>
-                    )}
-                  </div>
-
-                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
-                    <div className="flex items-center gap-2 text-amber-700 mb-2">
-                      <CalendarIcon className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Estimate Date</span>
-                    </div>
-                    <p className="font-medium text-slate-900">
-                      {formatDate(selectedEstimate.estimateDate)}
-                    </p>
-                    {selectedEstimate.expirationDate && (
-                      <p className="text-xs text-slate-500">Expires: {formatDate(selectedEstimate.expirationDate)}</p>
-                    )}
-                  </div>
-
-                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-                    <div className="flex items-center gap-2 text-orange-700 mb-2">
-                      <Wrench className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Repair Tech</span>
-                    </div>
-                    <p className="font-medium text-slate-900">
-                      {selectedEstimate.repairTechName || "Not Assigned"}
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-cyan-50 rounded-lg border border-cyan-100">
-                    <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                      <UserCircle2 className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Service Tech</span>
-                    </div>
-                    <p className="font-medium text-slate-900">
-                      {selectedEstimate.serviceTechName || "Not Assigned"}
-                    </p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex items-center gap-2 text-slate-700 mb-2">
-                      <FileText className="w-4 h-4" />
-                      <span className="font-semibold text-sm">Created</span>
-                    </div>
-                    <p className="font-medium text-slate-900">{formatDate(selectedEstimate.createdAt)}</p>
-                    {selectedEstimate.createdByTechName && (
-                      <p className="text-sm text-slate-600">by {selectedEstimate.createdByTechName}</p>
-                    )}
-                  </div>
-
-                  {selectedEstimate.reportedDate && (
-                    <div className="p-4 bg-rose-50 rounded-lg border border-rose-100">
-                      <div className="flex items-center gap-2 text-rose-700 mb-2">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="font-semibold text-sm">Reported Date</span>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-blue-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Building2 className="w-3 h-3 text-blue-500" />
+                        <span className="text-xs text-gray-500">Property / Location</span>
                       </div>
-                      <p className="font-medium text-slate-900">{formatDate(selectedEstimate.reportedDate)}</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedEstimate.propertyName}</p>
+                      {selectedEstimate.address && (
+                        <p className="text-xs text-gray-500 mt-0.5">{selectedEstimate.address}</p>
+                      )}
                     </div>
-                  )}
+
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-purple-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <User className="w-3 h-3 text-purple-500" />
+                        <span className="text-xs text-gray-500">Customer / HOA</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{selectedEstimate.customerName || "N/A"}</p>
+                      {selectedEstimate.customerEmail && (
+                        <p className="text-xs text-gray-500 mt-0.5">{selectedEstimate.customerEmail}</p>
+                      )}
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-amber-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <CalendarIcon className="w-3 h-3 text-amber-500" />
+                        <span className="text-xs text-gray-500">Estimate Date</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{formatDate(selectedEstimate.estimateDate)}</p>
+                      {selectedEstimate.expirationDate && (
+                        <p className="text-xs text-gray-500 mt-0.5">Expires: {formatDate(selectedEstimate.expirationDate)}</p>
+                      )}
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-slate-400">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <FileText className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs text-gray-500">Created</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{formatDate(selectedEstimate.createdAt)}</p>
+                      {selectedEstimate.createdByTechName && (
+                        <p className="text-xs text-gray-500 mt-0.5">by {selectedEstimate.createdByTechName}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-orange-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Wrench className="w-3 h-3 text-orange-500" />
+                        <span className="text-xs text-gray-500">Repair Tech</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{selectedEstimate.repairTechName || "Not Assigned"}</p>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-cyan-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <UserCircle2 className="w-3 h-3 text-cyan-500" />
+                        <span className="text-xs text-gray-500">Service Tech</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">{selectedEstimate.serviceTechName || "Not Assigned"}</p>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-rose-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <AlertCircle className="w-3 h-3 text-rose-500" />
+                        <span className="text-xs text-gray-500">Reported Date</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {selectedEstimate.reportedDate ? formatDate(selectedEstimate.reportedDate) : "N/A"}
+                      </p>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-green-500">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                        <span className="text-xs text-gray-500">Status</span>
+                      </div>
+                      <Badge className={`${statusConfig[selectedEstimate.status]?.color} border text-xs`}>
+                        {statusConfig[selectedEstimate.status]?.label}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="border rounded-lg overflow-hidden">

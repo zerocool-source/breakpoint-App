@@ -163,9 +163,18 @@ export function registerSyncRoutes(app: any) {
       if (estimate.description) mappedEstimate.description = estimate.description;
       
       if (estimate.photos || estimate.photo_urls) {
-        const photos = estimate.photos || estimate.photo_urls || [];
-        mappedEstimate.photos = Array.isArray(photos) ? photos : 
-          (typeof photos === 'string' ? JSON.parse(photos) : []);
+        const rawPhotos = estimate.photos || estimate.photo_urls || [];
+        const photosArray = Array.isArray(rawPhotos) ? rawPhotos : 
+          (typeof rawPhotos === 'string' ? JSON.parse(rawPhotos) : []);
+        
+        mappedEstimate.photos = photosArray.map((photo: any) => {
+          if (typeof photo === 'string') {
+            return photo;
+          } else if (photo && typeof photo === 'object' && photo.url) {
+            return photo.url;
+          }
+          return null;
+        }).filter((url: any) => url !== null);
       }
       
       if (estimate.reportedDate || estimate.reported_date) {
