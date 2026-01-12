@@ -742,6 +742,24 @@ export default function Estimates() {
                                 <CalendarIcon className="w-3 h-3" />
                                 {formatDate(estimate.estimateDate || estimate.createdAt)}
                               </span>
+                              {estimate.createdByTechName && (
+                                <span className="flex items-center gap-1 text-slate-500">
+                                  <UserCircle2 className="w-3 h-3" />
+                                  {estimate.createdByTechName}
+                                </span>
+                              )}
+                              {estimate.photos && estimate.photos.length > 0 && 
+                               estimate.photos.some((p: string) => p && !p.includes('[object Object]')) ? (
+                                <span className="flex items-center gap-1 text-green-600" title="Has photos attached">
+                                  <Camera className="w-3 h-3" />
+                                  {estimate.photos.filter((p: string) => p && !p.includes('[object Object]')).length}
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-slate-400" title="No photos">
+                                  <Camera className="w-3 h-3" />
+                                  0
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
