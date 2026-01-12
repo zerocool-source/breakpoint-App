@@ -22,8 +22,15 @@ import {
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList
+  Users, ClipboardList, MoreVertical, Archive
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -163,6 +170,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#1E3A8A] border-[#93C5FD]", icon: CalendarIcon },
   completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
   invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Receipt },
+  archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
 
 const emptyFormData: EstimateFormData = {
@@ -339,14 +347,34 @@ export default function Estimates() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/estimates/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "archived" }),
+      });
+      if (!response.ok) throw new Error("Failed to archive estimate");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      toast({ title: "Archived", description: "Estimate has been archived." });
+      setShowDetailDialog(false);
+    },
+  });
+
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
+  // Filter out archived estimates from "all" tab, show archived only in archived tab
   const filteredEstimates = activeTab === "all" 
-    ? estimates 
+    ? estimates.filter(e => e.status !== "archived")
+    : activeTab === "archived"
+    ? estimates.filter(e => e.status === "archived")
     : estimates.filter(e => e.status === activeTab);
 
   const statusCounts = {
-    all: estimates.length,
+    all: estimates.filter(e => e.status !== "archived").length,
     draft: estimates.filter(e => e.status === "draft").length,
     pending_approval: estimates.filter(e => e.status === "pending_approval").length,
     approved: estimates.filter(e => e.status === "approved").length,
@@ -354,6 +382,7 @@ export default function Estimates() {
     scheduled: estimates.filter(e => e.status === "scheduled").length,
     completed: estimates.filter(e => e.status === "completed").length,
     invoiced: estimates.filter(e => e.status === "invoiced").length,
+    archived: estimates.filter(e => e.status === "archived").length,
   };
 
   const resetForm = () => {
@@ -763,6 +792,7 @@ Breakpoint Pool Service`);
                 <TabsTrigger value="approved" data-testid="tab-approved">Approved ({statusCounts.approved})</TabsTrigger>
                 <TabsTrigger value="scheduled" data-testid="tab-scheduled">Scheduled ({statusCounts.scheduled})</TabsTrigger>
                 <TabsTrigger value="completed" data-testid="tab-completed">Completed ({statusCounts.completed})</TabsTrigger>
+                <TabsTrigger value="archived" data-testid="tab-archived">Archived ({statusCounts.archived})</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardHeader>
@@ -966,6 +996,59 @@ Breakpoint Pool Service`);
                               Generate Invoice
                             </Button>
                           )}
+                          {estimate.status === "archived" && (
+                            <Badge className="bg-gray-100 text-gray-500 border-gray-200">
+                              <Archive className="w-3 h-3 mr-1" />
+                              Archived
+                            </Badge>
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" data-testid={`button-more-${estimate.id}`}>
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              {estimate.status !== "archived" && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    archiveMutation.mutate(estimate.id);
+                                  }}
+                                  data-testid={`menu-archive-${estimate.id}`}
+                                >
+                                  <Archive className="w-4 h-4 mr-2" />
+                                  Archive
+                                </DropdownMenuItem>
+                              )}
+                              {estimate.status === "archived" && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateStatusMutation.mutate({ id: estimate.id, status: "draft" });
+                                  }}
+                                  data-testid={`menu-restore-${estimate.id}`}
+                                >
+                                  <FileText className="w-4 h-4 mr-2" />
+                                  Restore to Draft
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm("Are you sure you want to delete this estimate? This action cannot be undone.")) {
+                                    deleteMutation.mutate(estimate.id);
+                                  }
+                                }}
+                                className="text-red-600 focus:text-red-600"
+                                data-testid={`menu-delete-${estimate.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     );
