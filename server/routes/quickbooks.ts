@@ -231,12 +231,15 @@ export function registerQuickbooksRoutes(app: Express) {
 
       let customerId = await findOrCreateCustomer(baseUrl, accessToken, customerName);
 
+      const defaultItemRef = await getOrCreateDefaultServiceItem(baseUrl, accessToken);
+      
       const invoiceLines = lineItems.map((item: any, index: number) => ({
         LineNum: index + 1,
         Amount: item.amount / 100,
         DetailType: "SalesItemLineDetail",
         Description: item.description || item.productService,
         SalesItemLineDetail: {
+          ItemRef: defaultItemRef,
           Qty: item.quantity,
           UnitPrice: item.rate / 100,
         },
@@ -278,6 +281,74 @@ export function registerQuickbooksRoutes(app: Express) {
       res.status(500).json({ error: "Failed to create invoice" });
     }
   });
+}
+
+async function getOrCreateDefaultServiceItem(baseUrl: string, accessToken: string): Promise<{ value: string; name: string }> {
+  const serviceName = "Pool Service";
+  
+  const queryResponse = await fetch(
+    `${baseUrl}/query?query=${encodeURIComponent(`SELECT * FROM Item WHERE Name = '${serviceName}' AND Type = 'Service'`)}`,
+    {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json",
+      },
+    }
+  );
+
+  if (queryResponse.ok) {
+    const queryData = await queryResponse.json();
+    if (queryData.QueryResponse?.Item?.length > 0) {
+      const item = queryData.QueryResponse.Item[0];
+      return { value: item.Id, name: item.Name };
+    }
+  }
+
+  const incomeAccountQuery = await fetch(
+    `${baseUrl}/query?query=${encodeURIComponent(`SELECT * FROM Account WHERE AccountType = 'Income' MAXRESULTS 1`)}`,
+    {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json",
+      },
+    }
+  );
+
+  let incomeAccountId = null;
+  if (incomeAccountQuery.ok) {
+    const accountData = await incomeAccountQuery.json();
+    if (accountData.QueryResponse?.Account?.length > 0) {
+      incomeAccountId = accountData.QueryResponse.Account[0].Id;
+    }
+  }
+
+  const createPayload: any = {
+    Name: serviceName,
+    Type: "Service",
+  };
+  
+  if (incomeAccountId) {
+    createPayload.IncomeAccountRef = { value: incomeAccountId };
+  }
+
+  const createResponse = await fetch(`${baseUrl}/item`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(createPayload),
+  });
+
+  if (!createResponse.ok) {
+    const errorData = await createResponse.text();
+    console.error("Failed to create service item:", errorData);
+    throw new Error("Failed to create service item in QuickBooks");
+  }
+
+  const createData = await createResponse.json();
+  return { value: createData.Item.Id, name: createData.Item.Name };
 }
 
 async function findOrCreateCustomer(baseUrl: string, accessToken: string, customerName: string): Promise<string> {

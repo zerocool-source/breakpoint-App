@@ -639,10 +639,13 @@ Breakpoint Pool Service`);
         });
 
         let invoiceData = null;
+        let invoiceError = null;
         if (invoiceResponse.ok) {
           invoiceData = await invoiceResponse.json();
         } else {
-          console.warn("QuickBooks invoice creation failed, continuing with approval");
+          const errorData = await invoiceResponse.json().catch(() => ({}));
+          invoiceError = errorData.error || "Failed to create QuickBooks invoice";
+          console.warn("QuickBooks invoice creation failed:", invoiceError);
         }
 
         updateStatusMutation.mutate({
@@ -661,6 +664,12 @@ Breakpoint Pool Service`);
               toast({ 
                 title: "Approved & Invoice Created", 
                 description: `QuickBooks Invoice #${invoiceData.invoiceNumber} created successfully.` 
+              });
+            } else if (invoiceError) {
+              toast({ 
+                title: "Approved (Invoice Failed)", 
+                description: `Estimate approved, but QuickBooks invoice creation failed: ${invoiceError}`,
+                variant: "destructive"
               });
             }
           }
