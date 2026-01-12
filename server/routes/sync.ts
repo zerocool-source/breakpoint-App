@@ -116,6 +116,15 @@ export function registerSyncRoutes(app: any) {
   app.post('/api/sync/estimates', async (req: Request, res: Response) => {
     try {
       const { estimate } = req.body;
+      
+      console.log('=== SYNC ESTIMATES: Incoming Request ===');
+      console.log('Raw request body:', JSON.stringify(req.body, null, 2));
+      console.log('Estimate object keys:', estimate ? Object.keys(estimate) : 'null');
+      console.log('Description field:', estimate?.description);
+      console.log('Photos field:', estimate?.photos);
+      console.log('Photo_urls field:', estimate?.photo_urls);
+      console.log('=== END SYNC ESTIMATES LOG ===');
+      
       if (!estimate) {
         return res.status(400).json({ error: 'estimate required' });
       }
