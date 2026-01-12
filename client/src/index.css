@@ -4,61 +4,66 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* Orbitron for main headers - Tech/Futuristic */
-  --font-display: "Orbitron", sans-serif;
-  /* Rajdhani for UI elements, numbers, charts */
-  --font-ui: "Rajdhani", sans-serif;
-  /* Inter for readable body text */
-  --font-sans: "Inter", sans-serif;
+  /* Inter for all text - clean and modern */
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-ui: "Inter", system-ui, sans-serif;
 
-  --radius-sm: 4px;
+  /* ClickUp-inspired border radius */
+  --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* Baby Blue Theme with Orange Accents */
-  --color-background: hsl(205 60% 92%); /* Baby Blue Background */
-  --color-foreground: hsl(215 30% 22%); /* Dark Blue-Gray Text */
+  /* ClickUp-inspired Color Palette */
+  --color-background: #FFFFFF;
+  --color-foreground: #1E293B;
 
-  --color-card: hsl(210 60% 97%); /* Very Light Blue Card */
-  --color-card-foreground: hsl(215 30% 22%);
+  --color-card: #FFFFFF;
+  --color-card-foreground: #1E293B;
 
-  --color-popover: hsl(210 60% 97%);
-  --color-popover-foreground: hsl(215 30% 22%);
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #1E293B;
 
-  --color-primary: hsl(205 78% 45%); /* Rich Sky Blue */
-  --color-primary-foreground: hsl(0 0% 100%);
+  /* Primary: Royal Blue */
+  --color-primary: #1E3A8A;
+  --color-primary-foreground: #FFFFFF;
 
-  --color-secondary: hsl(25 95% 53%); /* Vibrant Orange */
-  --color-secondary-foreground: hsl(0 0% 100%);
+  /* Secondary: Orange */
+  --color-secondary: #F97316;
+  --color-secondary-foreground: #FFFFFF;
 
-  --color-muted: hsl(205 40% 88%); /* Muted Blue */
-  --color-muted-foreground: hsl(215 20% 45%);
+  /* Muted: Light Gray Surface */
+  --color-muted: #F8FAFC;
+  --color-muted-foreground: #64748B;
 
-  --color-accent: hsl(205 78% 45%);
-  --color-accent-foreground: hsl(0 0% 100%);
+  /* Accent: Baby Blue */
+  --color-accent: #60A5FA;
+  --color-accent-foreground: #FFFFFF;
 
-  --color-destructive: hsl(0 72% 51%);
-  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
 
-  --color-border: hsl(205 35% 82%);
-  --color-input: hsl(205 40% 88%);
-  --color-ring: hsl(205 78% 45%);
+  --color-border: #E2E8F0;
+  --color-input: #F1F5F9;
+  --color-ring: #60A5FA;
 
-  --color-chart-1: hsl(205 78% 45%); /* Blue */
-  --color-chart-2: hsl(25 95% 53%);  /* Orange */
-  --color-chart-3: hsl(180 60% 45%); /* Teal */
-  --color-chart-4: hsl(45 93% 47%);  /* Gold */
-  --color-chart-5: hsl(142 71% 45%); /* Green */
+  /* Chart colors */
+  --color-chart-1: #1E3A8A;
+  --color-chart-2: #F97316;
+  --color-chart-3: #60A5FA;
+  --color-chart-4: #10B981;
+  --color-chart-5: #8B5CF6;
   
-  --color-sidebar: hsl(210 55% 96%); /* Light Blue Sidebar */
-  --color-sidebar-foreground: hsl(215 30% 22%);
-  --color-sidebar-primary: hsl(205 78% 45%);
-  --color-sidebar-primary-foreground: hsl(0 0% 100%);
-  --color-sidebar-accent: hsl(205 45% 90%);
-  --color-sidebar-accent-foreground: hsl(215 30% 22%);
-  --color-sidebar-border: hsl(205 35% 82%);
-  --color-sidebar-ring: hsl(205 78% 45%);
+  /* Sidebar */
+  --color-sidebar: #F8FAFC;
+  --color-sidebar-foreground: #1E293B;
+  --color-sidebar-primary: #1E3A8A;
+  --color-sidebar-primary-foreground: #FFFFFF;
+  --color-sidebar-accent: #EFF6FF;
+  --color-sidebar-accent-foreground: #1E3A8A;
+  --color-sidebar-border: #E2E8F0;
+  --color-sidebar-ring: #60A5FA;
 }
 
 @layer base {
@@ -66,69 +71,125 @@
     @apply border-border;
   }
   body {
-    @apply font-sans antialiased bg-background text-foreground min-h-screen overflow-x-hidden selection:bg-primary/30 selection:text-primary-foreground;
+    @apply font-sans antialiased bg-background text-foreground min-h-screen overflow-x-hidden;
   }
   
-  /* Clean Card Utilities */
-  .glass {
-    @apply bg-white backdrop-blur-sm border border-border shadow-sm;
+  /* ClickUp-style Card Utilities */
+  .clickup-card {
+    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200;
   }
   
-  .glass-card {
-    @apply bg-card border border-border shadow-md rounded-xl transition-all duration-300 hover:border-primary/50 hover:shadow-lg;
+  .clickup-card-hover {
+    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200 hover:shadow-md hover:border-accent/50;
+  }
+  
+  .clickup-card-interactive {
+    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200 hover:shadow-md hover:border-primary/30 cursor-pointer;
   }
 
-  /* Text Emphasis */
-  .text-glow {
-    color: hsl(199 89% 48%);
-    font-weight: 600;
+  /* Status badge styles */
+  .badge-primary {
+    @apply bg-primary/10 text-primary border-primary/20;
   }
   
-  .text-glow-purple {
-    color: hsl(262 83% 58%);
-    font-weight: 600;
+  .badge-accent {
+    @apply bg-accent/10 text-accent border-accent/20;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary/10 text-secondary border-secondary/20;
+  }
+  
+  .badge-success {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700 border-amber-200;
+  }
+  
+  .badge-danger {
+    @apply bg-red-50 text-red-700 border-red-200;
   }
 }
 
 @layer utilities {
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
+  /* Smooth transitions for all interactive elements */
+  .transition-clickup {
+    @apply transition-all duration-200 ease-out;
   }
   
-  @keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-    100% { transform: translateY(0px); }
+  /* Focus ring style */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2;
   }
 
-  .animate-marquee {
-    animation: marquee 30s linear infinite;
+  /* Hover highlight row */
+  .hover-row {
+    @apply hover:bg-accent/5 transition-colors duration-150;
+  }
+  
+  /* Text utilities */
+  .text-heading {
+    @apply text-foreground font-semibold;
+  }
+  
+  .text-body {
+    @apply text-foreground;
+  }
+  
+  .text-muted {
+    @apply text-muted-foreground;
   }
 
-  @keyframes marquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-50%); }
+  /* Scrollbar styling */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
-
-  .animate-pulse-subtle {
-    animation: pulse-subtle 3s ease-in-out infinite;
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
   }
-
-  @keyframes pulse-subtle {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
   }
   
   .scrollbar-hide::-webkit-scrollbar {
-      display: none;
+    display: none;
   }
 
-  .animate-shimmer {
-    animation: shimmer 3s ease-in-out infinite;
+  /* Micro-animations */
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
   }
-
-  @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.15s ease-out;
+  }
+  
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.2s ease-out;
+  }
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
   }
 }
