@@ -10,7 +10,7 @@ Breakpoint BI is a business intelligence and automation platform for commercial 
 - Database: PostgreSQL via Neon Serverless
 - ORM: Drizzle
 - UI: shadcn/ui components with Radix UI primitives
-- Styling: Tailwind CSS with custom "Antigravity Dark" theme
+- Styling: Tailwind CSS with ClickUp-inspired design system
 - AI: External chat API (ace-breakpoint-app proxy)
 
 ## User Preferences
@@ -24,7 +24,7 @@ Preferred communication style: Simple, everyday language.
 **Component Structure:**
 - **Layout System:** Fixed sidebar navigation with main content area, background image overlay with blur effect
 - **Page-Based Routing:** Using wouter for client-side routing
-- **Design System:** Custom "Antigravity Dark" theme with cyan/purple neon accents, three-font hierarchy (Orbitron for headers, Rajdhani for UI/numbers, Inter for body text)
+- **Design System:** ClickUp-inspired modern UI with Royal Blue (#1E3A8A) primary, Orange (#F97316) secondary, Baby Blue (#60A5FA) accent colors. Inter font family, clean white cards with subtle shadows, rounded-lg borders, and smooth 200ms transitions
 - **State Management:** TanStack Query (React Query) for server state, local React state for UI interactions
 - **Key Features:**
   - Dashboard with real-time alert feed

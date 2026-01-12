@@ -173,26 +173,26 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       
       <CardContent className="flex flex-col flex-1 pt-4 overflow-hidden">
         <Tabs value={selectedTab} onValueChange={(v) => { setSelectedTab(v); setShowAll(false); }} className="flex flex-col flex-1">
-          <TabsList className="grid grid-cols-7 mb-4 bg-slate-100 border border-slate-200">
-            <TabsTrigger value="all" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+          <TabsList className="grid grid-cols-7 mb-4 bg-[#F1F5F9] border border-[#E2E8F0]">
+            <TabsTrigger value="all" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               All ({categoryCounts.all})
             </TabsTrigger>
-            <TabsTrigger value="algae" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+            <TabsTrigger value="algae" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Algae ({categoryCounts.algae})
             </TabsTrigger>
-            <TabsTrigger value="repair" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+            <TabsTrigger value="repair" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Repair ({categoryCounts.repair})
             </TabsTrigger>
-            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Chem+ ({categoryCounts["chemicals-added"]})
             </TabsTrigger>
-            <TabsTrigger value="time" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+            <TabsTrigger value="time" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Time ({categoryCounts.time})
             </TabsTrigger>
-            <TabsTrigger value="system" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+            <TabsTrigger value="system" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               System ({categoryCounts.system})
             </TabsTrigger>
-            <TabsTrigger value="other" className="data-[state=active]:bg-[#0891b2] data-[state=active]:text-white text-slate-600 text-[10px] font-semibold">
+            <TabsTrigger value="other" className="data-[state=active]:bg-[#1E3A8A] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Other ({categoryCounts.other})
             </TabsTrigger>
           </TabsList>
@@ -214,7 +214,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
                   {displayedAlerts.map((alert: EnrichedAlert, idx: number) => (
                     <div 
                       key={`alert-${alert.poolId}-${alert.customerName}-${idx}`}
-                      className="group relative p-4 rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-[#0891b2] transition-all duration-200"
+                      className="group relative p-4 rounded-xl bg-white border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#60A5FA] transition-all duration-200"
                       data-testid={`alert-card-${alert.alertId}`}
                     >
                       {alert.status === "Active" && (
