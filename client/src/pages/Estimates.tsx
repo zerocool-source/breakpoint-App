@@ -156,13 +156,13 @@ interface EstimateFormData {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  draft: { label: "Draft", color: "bg-slate-100 text-slate-700 border-slate-300", icon: FileText },
-  pending_approval: { label: "Pending Approval", color: "bg-amber-100 text-amber-700 border-amber-300", icon: Clock },
-  approved: { label: "Approved", color: "bg-green-100 text-green-700 border-green-300", icon: CheckCircle2 },
-  rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-300", icon: XCircle },
-  scheduled: { label: "Scheduled", color: "bg-blue-100 text-blue-700 border-blue-300", icon: CalendarIcon },
-  completed: { label: "Completed", color: "bg-cyan-100 text-cyan-700 border-cyan-300", icon: CheckCircle2 },
-  invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-300", icon: Receipt },
+  draft: { label: "Draft", color: "bg-slate-100 text-slate-700 border-slate-200", icon: FileText },
+  pending_approval: { label: "Pending Approval", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: Clock },
+  approved: { label: "Approved", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
+  scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#1E3A8A] border-[#93C5FD]", icon: CalendarIcon },
+  completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
+  invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Receipt },
 };
 
 const emptyFormData: EstimateFormData = {
@@ -645,12 +645,11 @@ export default function Estimates() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Estimates</h1>
-            <p className="text-slate-600">Manage repair estimates and HOA approvals</p>
+            <h1 className="text-2xl font-semibold text-[#1E293B]">Estimates</h1>
+            <p className="text-[#64748B] text-sm">Manage repair estimates and HOA approvals</p>
           </div>
           <Button
             onClick={openCreateDialog}
-            className="bg-[#0891b2] hover:bg-[#0891b2]/90"
             data-testid="button-create-estimate"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -660,11 +659,11 @@ export default function Estimates() {
 
         <div className="grid grid-cols-7 gap-3">
           {Object.entries(statusConfig).map(([key, config]) => (
-            <Card key={key} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab(key)}>
+            <Card key={key} className="cursor-pointer hover:shadow-md hover:border-[#60A5FA]/50 transition-all" onClick={() => setActiveTab(key)}>
               <CardContent className="p-4 text-center">
-                <config.icon className="w-6 h-6 mx-auto mb-2 text-[#0891b2]" />
-                <p className="text-2xl font-bold text-slate-900">{statusCounts[key as keyof typeof statusCounts]}</p>
-                <p className="text-xs text-slate-600">{config.label}</p>
+                <config.icon className="w-6 h-6 mx-auto mb-2 text-[#1E3A8A]" />
+                <p className="text-2xl font-bold text-[#1E293B]">{statusCounts[key as keyof typeof statusCounts]}</p>
+                <p className="text-xs text-[#64748B]">{config.label}</p>
               </CardContent>
             </Card>
           ))}
@@ -673,7 +672,7 @@ export default function Estimates() {
         <Card>
           <CardHeader className="pb-3">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-slate-100">
+              <TabsList className="bg-[#F1F5F9]">
                 <TabsTrigger value="all" data-testid="tab-all">All ({statusCounts.all})</TabsTrigger>
                 <TabsTrigger value="draft" data-testid="tab-draft">Drafts ({statusCounts.draft})</TabsTrigger>
                 <TabsTrigger value="pending_approval" data-testid="tab-pending">Pending ({statusCounts.pending_approval})</TabsTrigger>
@@ -686,14 +685,14 @@ export default function Estimates() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0891b2]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
               </div>
             ) : filteredEstimates.length === 0 ? (
-              <div className="text-center py-12 text-slate-500">
+              <div className="text-center py-12 text-[#64748B]">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>No estimates found</p>
                 {activeTab === "all" && (
-                  <Button onClick={openCreateDialog} variant="link" className="mt-2 text-[#0891b2]">
+                  <Button onClick={openCreateDialog} variant="link" className="mt-2 text-[#60A5FA]">
                     Create your first estimate
                   </Button>
                 )}
@@ -706,7 +705,7 @@ export default function Estimates() {
                     return (
                       <div
                         key={estimate.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:border-[#0891b2]/50 transition-colors cursor-pointer"
+                        className="flex items-center justify-between p-4 rounded-lg border border-[#E2E8F0] bg-white hover:border-[#60A5FA]/50 hover:shadow-sm transition-all cursor-pointer"
                         onClick={() => {
                           setSelectedEstimate(estimate);
                           setShowDetailDialog(true);
@@ -714,12 +713,12 @@ export default function Estimates() {
                         data-testid={`estimate-row-${estimate.id}`}
                       >
                         <div className="flex items-center gap-4 flex-1">
-                          <div className="p-2 rounded-lg bg-slate-100">
-                            <config.icon className="w-5 h-5 text-[#0891b2]" />
+                          <div className="p-2 rounded-lg bg-[#EFF6FF]">
+                            <config.icon className="w-5 h-5 text-[#1E3A8A]" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-slate-900 truncate">{estimate.title}</h3>
+                              <h3 className="font-semibold text-[#1E293B] truncate">{estimate.title}</h3>
                               {estimate.estimateNumber && (
                                 <span className="text-xs text-slate-500">#{estimate.estimateNumber}</span>
                               )}
@@ -763,7 +762,7 @@ export default function Estimates() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-lg font-bold text-[#0891b2]">{formatCurrency(estimate.totalAmount)}</p>
+                            <p className="text-lg font-bold text-[#1E3A8A]">{formatCurrency(estimate.totalAmount)}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 ml-4">
@@ -786,7 +785,7 @@ export default function Estimates() {
                                 e.stopPropagation();
                                 handleSendForApproval(estimate);
                               }}
-                              className="bg-amber-500 hover:bg-amber-600"
+                              className="bg-[#F97316] hover:bg-[#F97316]/90"
                               data-testid={`button-send-approval-${estimate.id}`}
                             >
                               <Send className="w-3 h-3 mr-1" />
