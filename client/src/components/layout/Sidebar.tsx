@@ -15,6 +15,7 @@ import {
   Wrench,
   Package,
   Hammer,
+  Search,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -52,14 +53,11 @@ function NavItemComponent({
 
   if (item.disabled) {
     return (
-      <div className="flex items-center gap-2 px-2 py-1.5 text-slate-400 cursor-not-allowed text-sm">
-        <div className="w-4 h-4 flex items-center justify-center">
-          <div className="w-3 h-3 border border-slate-300 rounded-sm bg-slate-50" />
-        </div>
-        <item.icon className="w-4 h-4 text-slate-300" />
+      <div className="flex items-center gap-3 px-3 py-2 text-slate-400 cursor-not-allowed text-sm rounded-lg">
+        <item.icon className="w-4 h-4" />
         <span>{item.label}</span>
         {item.badge && (
-          <span className="ml-auto px-1.5 py-0.5 text-[8px] font-medium rounded bg-slate-100 text-slate-500 uppercase">
+          <span className="ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-500">
             {item.badge}
           </span>
         )}
@@ -72,24 +70,18 @@ function NavItemComponent({
       <Link 
         href={item.href}
         className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors",
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
           isActive 
-            ? "bg-blue-600 text-white" 
-            : "text-slate-700 hover:bg-slate-100"
+            ? "bg-[#1E3A8A] text-white shadow-sm" 
+            : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
         )}
       >
-        <div className="w-4 h-4 flex items-center justify-center">
-          <div className={cn(
-            "w-3 h-3 border rounded-sm",
-            isActive ? "border-white/50 bg-white/20" : "border-slate-400 bg-white"
-          )} />
-        </div>
-        <item.icon className={cn("w-4 h-4", isActive ? "text-white" : "text-blue-600")} />
+        <item.icon className={cn("w-4 h-4", isActive ? "text-white" : "text-[#1E3A8A]")} />
         <span>{item.label}</span>
         {item.badge && (
           <span className={cn(
-            "ml-auto px-1.5 py-0.5 text-[8px] font-medium rounded uppercase",
-            isActive ? "bg-white/20 text-white" : "bg-blue-100 text-blue-600"
+            "ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full",
+            isActive ? "bg-white/20 text-white" : "bg-[#F97316] text-white"
           )}>
             {item.badge}
           </span>
@@ -103,28 +95,22 @@ function NavItemComponent({
       <button
         onClick={onToggle}
         className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors w-full text-left",
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full text-left",
           hasActiveChild 
-            ? "bg-blue-50 text-blue-700" 
-            : "text-slate-700 hover:bg-slate-100"
+            ? "bg-[#EFF6FF] text-[#1E3A8A]" 
+            : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
         )}
       >
-        <div className="w-4 h-4 flex items-center justify-center">
-          <div className={cn(
-            "w-3 h-3 border rounded-sm",
-            hasActiveChild ? "border-blue-400 bg-blue-100" : "border-slate-400 bg-white"
-          )} />
-        </div>
-        <item.icon className={cn("w-4 h-4", hasActiveChild ? "text-blue-600" : "text-blue-600")} />
+        <item.icon className={cn("w-4 h-4", hasActiveChild ? "text-[#1E3A8A]" : "text-[#1E3A8A]")} />
         <span className="flex-1">{item.label}</span>
         <ChevronRight className={cn(
-          "w-3 h-3 transition-transform text-slate-400",
-          isExpanded && "rotate-90"
+          "w-4 h-4 transition-transform duration-200",
+          isExpanded ? "rotate-90 text-[#1E3A8A]" : "text-slate-400"
         )} />
       </button>
       
       {isExpanded && item.children && (
-        <div className="ml-6 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2">
+        <div className="ml-4 mt-1 space-y-0.5 pl-4 border-l-2 border-slate-200">
           {item.children.map((child) => {
             const isChildActive = location === child.href;
             return (
@@ -132,13 +118,12 @@ function NavItemComponent({
                 key={child.href}
                 href={child.href}
                 className={cn(
-                  "flex items-center gap-2 px-2 py-1 rounded text-sm transition-colors",
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
                   isChildActive 
-                    ? "bg-blue-600 text-white" 
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-[#1E3A8A] text-white shadow-sm" 
+                    : "text-slate-600 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
                 )}
               >
-                <ChevronRight className={cn("w-3 h-3", isChildActive ? "text-white/70" : "text-slate-400")} />
                 <span>{child.label}</span>
               </Link>
             );
@@ -266,21 +251,32 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-56 h-screen bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 flex flex-col fixed left-0 top-0 z-50">
-      <div className="p-4 border-b border-slate-200 bg-white">
-        <div className="flex flex-col items-center gap-1">
+    <aside className="w-60 h-screen bg-white border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-50 shadow-sm">
+      <div className="p-4 border-b border-[#E2E8F0]">
+        <div className="flex flex-col items-center gap-2">
           <img 
             src={BreakpointLogo} 
             alt="Breakpoint Intelligence" 
-            className="h-32 w-auto object-contain"
+            className="h-24 w-auto object-contain"
           />
-          <span className="px-2 py-0.5 text-[9px] font-bold bg-blue-600 text-white rounded-full uppercase tracking-wider">
+          <span className="px-3 py-1 text-[10px] font-semibold bg-[#F97316] text-white rounded-full uppercase tracking-wide">
             Beta
           </span>
         </div>
       </div>
+
+      <div className="px-3 py-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input 
+            type="text" 
+            placeholder="Search..."
+            className="w-full pl-9 pr-3 py-2 text-sm bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A5FA] focus:border-transparent transition-all"
+          />
+        </div>
+      </div>
       
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin">
         {navItems.map((item) => (
           <NavItemComponent
             key={item.key}
@@ -292,41 +288,29 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-2 border-t border-slate-200 bg-white">
+      <div className="p-3 border-t border-[#E2E8F0]">
         <Link 
           href="/customers"
           className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors mb-1",
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 mb-1",
             location === "/customers" 
-              ? "bg-blue-600 text-white" 
-              : "text-slate-700 hover:bg-slate-100"
+              ? "bg-[#1E3A8A] text-white shadow-sm" 
+              : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
           )}
         >
-          <div className="w-4 h-4 flex items-center justify-center">
-            <div className={cn(
-              "w-3 h-3 border rounded-sm",
-              location === "/customers" ? "border-white/50 bg-white/20" : "border-slate-400 bg-white"
-            )} />
-          </div>
-          <Users className={cn("w-4 h-4", location === "/customers" ? "text-white" : "text-blue-600")} />
+          <Users className={cn("w-4 h-4", location === "/customers" ? "text-white" : "text-[#1E3A8A]")} />
           <span>Customers</span>
         </Link>
         <Link 
           href="/settings"
           className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors",
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
             location === "/settings" 
-              ? "bg-blue-600 text-white" 
-              : "text-slate-700 hover:bg-slate-100"
+              ? "bg-[#1E3A8A] text-white shadow-sm" 
+              : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
           )}
         >
-          <div className="w-4 h-4 flex items-center justify-center">
-            <div className={cn(
-              "w-3 h-3 border rounded-sm",
-              location === "/settings" ? "border-white/50 bg-white/20" : "border-slate-400 bg-white"
-            )} />
-          </div>
-          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-white" : "text-blue-600")} />
+          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-white" : "text-[#1E3A8A]")} />
           <span>Settings</span>
         </Link>
       </div>

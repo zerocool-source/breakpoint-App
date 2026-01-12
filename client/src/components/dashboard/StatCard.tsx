@@ -13,44 +13,52 @@ interface StatCardProps {
 }
 
 export function StatCard({ title, value, change, trend, icon: Icon, color = "primary", delay = 0 }: StatCardProps) {
-  const colorStyles = {
-    primary: "text-white bg-[#0891b2] shadow-[#0891b2]/30",
-    secondary: "text-white bg-[#f5a962] shadow-[#f5a962]/30",
-    accent: "text-white bg-slate-600 shadow-slate-600/30",
-    destructive: "text-white bg-red-500 shadow-red-500/30",
+  const iconColors = {
+    primary: "bg-[#1E3A8A] text-white",
+    secondary: "bg-[#F97316] text-white",
+    accent: "bg-[#60A5FA] text-white",
+    destructive: "bg-red-500 text-white",
   };
 
   const cardAccents = {
-    primary: "border-l-4 border-l-[#0891b2]",
-    secondary: "border-l-4 border-l-[#f5a962]",
-    accent: "border-l-4 border-l-slate-500",
+    primary: "border-l-4 border-l-[#1E3A8A]",
+    secondary: "border-l-4 border-l-[#F97316]",
+    accent: "border-l-4 border-l-[#60A5FA]",
     destructive: "border-l-4 border-l-red-500",
+  };
+
+  const trendColors = {
+    up: "text-emerald-600",
+    down: "text-red-500",
+    neutral: "text-[#64748B]",
   };
 
   return (
     <Card 
       className={cn(
-        "bg-white border-slate-200 shadow-sm hover:shadow-md group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards transition-all duration-300 hover:-translate-y-1",
+        "bg-white border-[#E2E8F0] shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5",
         cardAccents[color]
       )}
-      style={{ animationDelay: `${delay}ms` }}
     >
-      <CardContent className="p-6 relative overflow-hidden">
-        <div className="flex justify-between items-start relative z-10">
-          <div>
-            <p className="text-slate-500 text-xs font-bold tracking-widest uppercase">{title}</p>
-            <h3 className="text-4xl font-bold mt-2 font-display tracking-tight text-slate-900">{value}</h3>
+      <CardContent className="p-5">
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <p className="text-[#64748B] text-xs font-medium uppercase tracking-wide">{title}</p>
+            <h3 className="text-3xl font-bold text-[#1E293B]">{value}</h3>
             {change && (
               <p className={cn(
-                "text-sm mt-2 font-semibold flex items-center gap-1",
-                trend === "up" ? "text-[#0891b2]" : trend === "down" ? "text-red-500" : "text-slate-500"
+                "text-sm font-medium flex items-center gap-1",
+                trendColors[trend || "neutral"]
               )}>
                 {trend === "up" ? "↑" : trend === "down" ? "↓" : "•"} {change}
               </p>
             )}
           </div>
-          <div className={cn("p-4 rounded-2xl transition-all group-hover:scale-110 group-hover:shadow-lg duration-300", colorStyles[color])}>
-            <Icon className="w-7 h-7" />
+          <div className={cn(
+            "p-3 rounded-xl transition-transform duration-200 hover:scale-105",
+            iconColors[color]
+          )}>
+            <Icon className="w-5 h-5" />
           </div>
         </div>
       </CardContent>

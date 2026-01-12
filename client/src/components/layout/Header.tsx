@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Bell, Mic, Search, Calendar } from "lucide-react";
+import { Bell, Search, Calendar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-function DateTicker() {
+function DateDisplay() {
   const [currentDate, setCurrentDate] = useState(new Date());
   
   useEffect(() => {
@@ -13,65 +12,53 @@ function DateTicker() {
     return () => clearInterval(timer);
   }, []);
 
-  const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
-  const month = currentDate.toLocaleDateString('en-US', { month: 'long' });
+  const dayOfWeek = currentDate.toLocaleDateString('en-US', { weekday: 'short' });
+  const month = currentDate.toLocaleDateString('en-US', { month: 'short' });
   const day = currentDate.getDate();
-  const year = currentDate.getFullYear();
   const time = currentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
   return (
-    <div className="flex items-center gap-3 px-4 py-1.5 bg-card border border-border rounded-full shadow-sm">
-      <Calendar className="w-4 h-4 text-primary" />
-      <div className="flex items-center gap-2 font-ui text-sm tracking-wide">
-        <span className="text-primary font-bold">{dayOfWeek}</span>
-        <span className="text-muted-foreground">•</span>
-        <span className="text-foreground font-semibold">{month} {day}, {year}</span>
-        <span className="text-muted-foreground">•</span>
-        <span className="text-secondary font-medium">{time}</span>
-      </div>
+    <div className="flex items-center gap-2 text-sm text-[#64748B]">
+      <Calendar className="w-4 h-4 text-[#60A5FA]" />
+      <span className="font-medium text-[#1E293B]">{dayOfWeek}, {month} {day}</span>
+      <span className="text-[#E2E8F0]">|</span>
+      <span className="text-[#64748B]">{time}</span>
     </div>
   );
 }
 
 export function Header() {
   return (
-    <header className="border-b border-border bg-card/95 backdrop-blur-md sticky top-0 z-40 shadow-md">
-      <div className="h-10 bg-gradient-to-r from-primary/10 via-card to-secondary/10 border-b border-border flex items-center justify-center overflow-hidden">
-        <div className="flex items-center gap-8 animate-marquee whitespace-nowrap">
-          <DateTicker />
-          <span className="text-xs text-primary font-ui tracking-widest uppercase font-semibold">Breakpoint Intelligence</span>
-          <DateTicker />
-          <span className="text-xs text-secondary font-ui tracking-widest uppercase font-semibold">Pool Brain Connected</span>
-          <DateTicker />
+    <header className="h-16 border-b border-[#E2E8F0] bg-white sticky top-0 z-40 flex items-center justify-between px-6">
+      <div className="flex items-center gap-4 flex-1">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+          <input 
+            type="text"
+            placeholder="Search properties, alerts, customers..." 
+            className="w-full pl-10 pr-4 py-2 text-sm bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A5FA] focus:border-transparent transition-all"
+          />
         </div>
       </div>
-      <div className="h-16 flex items-center justify-between px-8 pl-[0px] pr-[0px]">
-        <div className="flex items-center gap-4 w-1/3">
-          <div className="relative w-full max-w-md group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input 
-              placeholder="Ask Ace Prime anything about your pools..." 
-              className="pl-10 bg-card border-border focus:border-primary focus:ring-primary/20 transition-all rounded-full font-ui shadow-sm"
-            />
-          </div>
-        </div>
 
-        <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4">
+        <DateDisplay />
+        
+        <div className="h-6 w-px bg-[#E2E8F0]" />
+        
         <Button 
           variant="ghost" 
           size="icon" 
-          className="relative text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors rounded-full w-10 h-10"
+          className="relative text-[#64748B] hover:text-[#1E3A8A] hover:bg-[#EFF6FF] rounded-lg w-9 h-9"
         >
-          <div className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+          <div className="absolute top-1 right-1 w-2 h-2 bg-[#F97316] rounded-full" />
           <Bell className="w-5 h-5" />
         </Button>
         
-        <div className="h-8 w-[1px] bg-border mx-2" />
-        
-        <Button className="bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white rounded-full shadow-md border-0 gap-2 font-ui tracking-wide">
-          <Mic className="w-4 h-4" />
-          VOICE COMMAND
-        </Button>
+        <div className="flex items-center gap-2 pl-2">
+          <div className="w-8 h-8 rounded-full bg-[#1E3A8A] flex items-center justify-center">
+            <User className="w-4 h-4 text-white" />
+          </div>
         </div>
       </div>
     </header>

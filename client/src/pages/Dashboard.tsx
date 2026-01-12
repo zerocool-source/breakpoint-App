@@ -60,17 +60,17 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-display font-bold text-foreground mb-2 tracking-tight">COMMAND CENTER</h2>
-          <p className="text-muted-foreground font-ui tracking-wide text-lg">
-            {alerts.length > 0 ? `${alerts.length} Total Alerts • ${activeAlerts.length} Active` : "System Standby • API Connected"}
+          <h1 className="text-2xl font-semibold text-[#1E293B] mb-1">Dashboard</h1>
+          <p className="text-[#64748B] text-sm">
+            {alerts.length > 0 ? `${alerts.length} total alerts • ${activeAlerts.length} active` : "System ready • API connected"}
           </p>
         </div>
         <Button
           onClick={() => syncMutation.mutate()}
           disabled={syncMutation.isPending}
-          className="bg-primary text-white hover:bg-primary/90 font-bold gap-2 shadow-md"
+          className="gap-2"
           data-testid="button-sync-poolbrain"
         >
           <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
