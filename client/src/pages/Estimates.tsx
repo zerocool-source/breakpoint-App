@@ -225,6 +225,10 @@ export default function Estimates() {
   const [showPhotoLightbox, setShowPhotoLightbox] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [showSendApprovalDialog, setShowSendApprovalDialog] = useState(false);
+  const [selectedApprovalEmail, setSelectedApprovalEmail] = useState("");
+  const [propertyContacts, setPropertyContacts] = useState<{id: string; name: string; email: string; type: string}[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -500,11 +504,91 @@ export default function Estimates() {
     }
   };
 
-  const handleSendForApproval = (estimate: Estimate) => {
+  const openSendApprovalDialog = async (estimate: Estimate) => {
+    setSelectedEstimate(estimate);
+    setSelectedApprovalEmail("");
+    setLoadingContacts(true);
+    setShowSendApprovalDialog(true);
+    
+    try {
+      // The propertyId in estimates refers to the customer ID
+      const customerId = estimate.propertyId;
+      const allContacts: {id: string; name: string; email: string; type: string}[] = [];
+      
+      // Fetch contacts for the customer
+      const response = await fetch(`/api/customers/${customerId}/contacts`);
+      if (response.ok) {
+        const data = await response.json();
+        const contacts = (data.contacts || []).filter((c: any) => c.email);
+        allContacts.push(...contacts);
+      }
+      
+      // Also add the customer's main email if available
+      const customer = customers.find((c: any) => c.id === customerId);
+      if (customer?.email && !allContacts.find((c: any) => c.email === customer.email)) {
+        allContacts.unshift({ id: 'main', name: customer.name || 'Primary Contact', email: customer.email, type: 'Primary' });
+      }
+      
+      // If estimate has customerEmail stored, add that too
+      if (estimate.customerEmail && !allContacts.find((c: any) => c.email === estimate.customerEmail)) {
+        allContacts.unshift({ id: 'estimate-email', name: estimate.customerName || 'Contact', email: estimate.customerEmail, type: 'Primary' });
+      }
+      
+      setPropertyContacts(allContacts);
+      if (allContacts.length > 0) {
+        setSelectedApprovalEmail(allContacts[0].email);
+      }
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      // If fetch fails, still try to use the estimate's stored email
+      if (estimate.customerEmail) {
+        setPropertyContacts([{ id: 'estimate-email', name: estimate.customerName || 'Contact', email: estimate.customerEmail, type: 'Primary' }]);
+        setSelectedApprovalEmail(estimate.customerEmail);
+      } else {
+        setPropertyContacts([]);
+      }
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const handleSendApprovalEmail = () => {
+    if (!selectedEstimate) return;
+    
+    // Generate email content
+    const subject = encodeURIComponent(`Estimate Approval Request: ${selectedEstimate.title} - ${selectedEstimate.propertyName}`);
+    const body = encodeURIComponent(`Dear Property Manager,
+
+We are requesting approval for the following repair estimate:
+
+Property: ${selectedEstimate.propertyName}
+Estimate #: ${selectedEstimate.estimateNumber || 'N/A'}
+Title: ${selectedEstimate.title}
+${selectedEstimate.description ? `Description: ${selectedEstimate.description}` : ''}
+
+Total Amount: $${((selectedEstimate.totalAmount || 0) / 100).toFixed(2)}
+
+Please review and respond with your approval or any questions.
+
+Thank you,
+Breakpoint Pool Service`);
+    
+    // Open Outlook compose URL
+    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
+    window.open(outlookUrl, '_blank');
+    
+    // Update status to pending approval
     updateStatusMutation.mutate({
-      id: estimate.id,
+      id: selectedEstimate.id,
       status: "pending_approval",
     });
+    
+    setShowSendApprovalDialog(false);
+    toast({ title: "Approval Request Sent", description: `Email opened for ${selectedApprovalEmail}` });
+  };
+
+  const handleSendForApproval = (estimate: Estimate) => {
+    openSendApprovalDialog(estimate);
   };
 
   const handleApproval = () => {
@@ -821,18 +905,38 @@ export default function Estimates() {
                             </>
                           )}
                           {estimate.status === "approved" && (
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSchedule(estimate);
-                              }}
-                              className="bg-blue-600 hover:bg-blue-700"
-                              data-testid={`button-schedule-${estimate.id}`}
-                            >
-                              <CalendarIcon className="w-3 h-3 mr-1" />
-                              Schedule Job
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInvoice(estimate);
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700"
+                                data-testid={`button-invoice-${estimate.id}`}
+                              >
+                                <Receipt className="w-3 h-3 mr-1" />
+                                Invoice
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSchedule(estimate);
+                                }}
+                                className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                                data-testid={`button-schedule-${estimate.id}`}
+                              >
+                                <CalendarIcon className="w-3 h-3 mr-1" />
+                                Schedule
+                              </Button>
+                            </>
+                          )}
+                          {estimate.status === "rejected" && (
+                            <Badge className="bg-red-100 text-red-700 border-red-200">
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Rejected
+                            </Badge>
                           )}
                           {estimate.status === "scheduled" && (
                             <Button
@@ -841,7 +945,7 @@ export default function Estimates() {
                                 e.stopPropagation();
                                 handleComplete(estimate);
                               }}
-                              className="bg-cyan-600 hover:bg-cyan-700"
+                              className="bg-[#60A5FA] hover:bg-[#60A5FA]/90"
                               data-testid={`button-complete-${estimate.id}`}
                             >
                               <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -882,7 +986,7 @@ export default function Estimates() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-slate-500">Amount</p>
-                  <p className="text-3xl font-bold text-[#0891b2]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  <p className="text-3xl font-bold text-[#1E3A8A]">{formatCurrency(calculateTotals.totalAmount)}</p>
                 </div>
               </div>
             </DialogHeader>
@@ -1016,7 +1120,7 @@ export default function Estimates() {
                             placeholder="Enter tags, separated by comma"
                             className="h-9"
                           />
-                          <Button variant="link" className="text-xs text-[#0891b2] px-0">
+                          <Button variant="link" className="text-xs text-[#60A5FA] px-0">
                             Manage tags
                           </Button>
                         </div>
@@ -1052,7 +1156,7 @@ export default function Estimates() {
                           <Button
                             size="sm"
                             onClick={addLineItem}
-                            className="bg-[#0891b2] hover:bg-[#0891b2]/90"
+                            className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
                             data-testid="button-add-line"
                           >
                             <Plus className="w-3 h-3 mr-1" />
@@ -1298,7 +1402,7 @@ export default function Estimates() {
 
                         <div className="flex justify-between text-lg font-bold border-t pt-3 border-slate-300">
                           <span>Estimate total</span>
-                          <span className="text-[#0891b2]">{formatCurrency(calculateTotals.totalAmount)}</span>
+                          <span className="text-[#1E3A8A]">{formatCurrency(calculateTotals.totalAmount)}</span>
                         </div>
 
                         <div className="space-y-1 border-t pt-3">
@@ -1340,7 +1444,7 @@ export default function Estimates() {
                           </div>
                         </div>
 
-                        <Button variant="link" className="text-xs text-[#0891b2] p-0 h-auto">
+                        <Button variant="link" className="text-xs text-[#60A5FA] p-0 h-auto">
                           Edit totals
                         </Button>
                       </div>
@@ -1355,7 +1459,7 @@ export default function Estimates() {
               <Button
                 onClick={handleSaveEstimate}
                 disabled={!formData.propertyName}
-                className="bg-[#0891b2] hover:bg-[#0891b2]/90"
+                className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
                 data-testid="button-save-estimate"
               >
                 {isEditing ? "Save Changes" : "Save Estimate"}
@@ -1381,7 +1485,7 @@ export default function Estimates() {
                 <div className="p-4 bg-slate-50 rounded-lg">
                   <h4 className="font-semibold">{selectedEstimate.title}</h4>
                   <p className="text-sm text-slate-600">{selectedEstimate.propertyName}</p>
-                  <p className="text-lg font-bold text-[#0891b2] mt-2">
+                  <p className="text-lg font-bold text-[#1E3A8A] mt-2">
                     {formatCurrency(selectedEstimate.totalAmount)}
                   </p>
                 </div>
@@ -1425,6 +1529,84 @@ export default function Estimates() {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={showSendApprovalDialog} onOpenChange={setShowSendApprovalDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-[#F97316]" />
+                Send for Approval
+              </DialogTitle>
+              <DialogDescription>
+                Select a contact to send the approval request email to.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedEstimate && (
+              <div className="space-y-4">
+                <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                  <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
+                  <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
+                  <p className="text-lg font-bold text-[#1E3A8A] mt-2">
+                    {formatCurrency(selectedEstimate.totalAmount)}
+                  </p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">Send approval request to:</Label>
+                  {loadingContacts ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
+                      <span className="ml-2 text-sm text-[#64748B]">Loading contacts...</span>
+                    </div>
+                  ) : propertyContacts.length > 0 ? (
+                    <Select value={selectedApprovalEmail} onValueChange={setSelectedApprovalEmail}>
+                      <SelectTrigger className="mt-2" data-testid="select-approval-email">
+                        <SelectValue placeholder="Select email..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {propertyContacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.email}>
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-3 h-3 text-[#64748B]" />
+                              <span>{contact.name}</span>
+                              <span className="text-[#94A3B8]">({contact.email})</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-2 p-3 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
+                      <p className="text-sm text-[#D97706]">No contacts found for this property.</p>
+                      <Input
+                        type="email"
+                        placeholder="Enter email manually..."
+                        value={selectedApprovalEmail}
+                        onChange={(e) => setSelectedApprovalEmail(e.target.value)}
+                        className="mt-2"
+                        data-testid="input-manual-email"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowSendApprovalDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendApprovalEmail}
+                disabled={!selectedApprovalEmail}
+                className="bg-[#F97316] hover:bg-[#F97316]/90"
+                data-testid="button-send-approval-email"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send Email
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -1449,7 +1631,7 @@ export default function Estimates() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Total Amount</p>
-                      <p className="text-3xl font-bold text-[#0891b2]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                      <p className="text-3xl font-bold text-[#1E3A8A]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                     </div>
                   </div>
                 </div>
@@ -1520,9 +1702,9 @@ export default function Estimates() {
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.repairTechName || "Not Assigned"}</p>
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-cyan-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-[#60A5FA]">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <UserCircle2 className="w-3 h-3 text-cyan-500" />
+                        <UserCircle2 className="w-3 h-3 text-[#60A5FA]" />
                         <span className="text-xs text-gray-500">Service Tech</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.serviceTechName || "Not Assigned"}</p>
@@ -1619,7 +1801,7 @@ export default function Estimates() {
                       )}
                       <div className="text-right pl-6 border-l border-slate-300">
                         <p className="text-sm text-slate-500">Total Amount</p>
-                        <p className="text-2xl font-bold text-[#0891b2]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                        <p className="text-2xl font-bold text-[#1E3A8A]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                       </div>
                     </div>
                     {(selectedEstimate.depositAmount || 0) > 0 && (
@@ -1652,7 +1834,7 @@ export default function Estimates() {
                           .map((photo: string, idx: number) => (
                           <div
                             key={idx}
-                            className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-[#0891b2] hover:shadow-md transition-all group"
+                            className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-[#60A5FA] hover:shadow-md transition-all group"
                             onClick={() => {
                               const validPhotos = selectedEstimate.photos?.filter((p: string) => p && !p.includes('[object Object]')) || [];
                               setCurrentPhotoIndex(validPhotos.indexOf(photo));
