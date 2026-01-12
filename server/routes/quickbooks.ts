@@ -212,6 +212,112 @@ export function registerQuickbooksRoutes(app: Express) {
       res.status(500).json({ error: "Failed to disconnect" });
     }
   });
+
+  app.post("/api/quickbooks/invoice", async (req: Request, res: Response) => {
+    try {
+      const { customerName, lineItems, memo } = req.body;
+      
+      if (!customerName || !lineItems || !Array.isArray(lineItems)) {
+        return res.status(400).json({ error: "Missing required fields: customerName, lineItems" });
+      }
+
+      const auth = await getQuickBooksAccessToken();
+      if (!auth) {
+        return res.status(401).json({ error: "QuickBooks not connected or token expired" });
+      }
+
+      const { accessToken, realmId } = auth;
+      const baseUrl = `https://quickbooks.api.intuit.com/v3/company/${realmId}`;
+
+      let customerId = await findOrCreateCustomer(baseUrl, accessToken, customerName);
+
+      const invoiceLines = lineItems.map((item: any, index: number) => ({
+        LineNum: index + 1,
+        Amount: item.amount / 100,
+        DetailType: "SalesItemLineDetail",
+        Description: item.description || item.productService,
+        SalesItemLineDetail: {
+          Qty: item.quantity,
+          UnitPrice: item.rate / 100,
+        },
+      }));
+
+      const invoicePayload = {
+        CustomerRef: { value: customerId },
+        Line: invoiceLines,
+        PrivateNote: memo || undefined,
+      };
+
+      const invoiceResponse = await fetch(`${baseUrl}/invoice`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(invoicePayload),
+      });
+
+      if (!invoiceResponse.ok) {
+        const errorData = await invoiceResponse.text();
+        console.error("QuickBooks invoice creation failed:", errorData);
+        return res.status(400).json({ error: "Failed to create invoice in QuickBooks", details: errorData });
+      }
+
+      const invoiceData = await invoiceResponse.json();
+      const invoice = invoiceData.Invoice;
+
+      res.json({
+        success: true,
+        invoiceId: invoice.Id,
+        invoiceNumber: invoice.DocNumber,
+        totalAmount: invoice.TotalAmt,
+      });
+    } catch (error) {
+      console.error("QuickBooks invoice error:", error);
+      res.status(500).json({ error: "Failed to create invoice" });
+    }
+  });
+}
+
+async function findOrCreateCustomer(baseUrl: string, accessToken: string, customerName: string): Promise<string> {
+  const queryResponse = await fetch(
+    `${baseUrl}/query?query=${encodeURIComponent(`SELECT * FROM Customer WHERE DisplayName = '${customerName.replace(/'/g, "\\'")}'`)}`,
+    {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json",
+      },
+    }
+  );
+
+  if (queryResponse.ok) {
+    const queryData = await queryResponse.json();
+    if (queryData.QueryResponse?.Customer?.length > 0) {
+      return queryData.QueryResponse.Customer[0].Id;
+    }
+  }
+
+  const createResponse = await fetch(`${baseUrl}/customer`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      DisplayName: customerName,
+    }),
+  });
+
+  if (!createResponse.ok) {
+    const errorData = await createResponse.text();
+    console.error("Failed to create customer:", errorData);
+    throw new Error("Failed to create customer in QuickBooks");
+  }
+
+  const createData = await createResponse.json();
+  return createData.Customer.Id;
 }
 
 export async function getQuickBooksAccessToken(): Promise<{ accessToken: string; realmId: string } | null> {

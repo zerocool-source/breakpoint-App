@@ -620,19 +620,65 @@ Breakpoint Pool Service`);
     openSendApprovalDialog(estimate);
   };
 
-  const handleApproval = () => {
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+
+  const handleApproval = async () => {
     if (!selectedEstimate) return;
     
     if (approvalAction === "approve") {
-      updateStatusMutation.mutate({
-        id: selectedEstimate.id,
-        status: "approved",
-        extras: {
-          approvedByManagerId: "manager-1",
-          approvedByManagerName: "HOA Manager",
-          managerNotes,
-        },
-      });
+      setIsCreatingInvoice(true);
+      try {
+        const invoiceResponse = await fetch("/api/quickbooks/invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: selectedEstimate.propertyName,
+            lineItems: selectedEstimate.items || [],
+            memo: `Estimate #${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
+          }),
+        });
+
+        let invoiceData = null;
+        if (invoiceResponse.ok) {
+          invoiceData = await invoiceResponse.json();
+        } else {
+          console.warn("QuickBooks invoice creation failed, continuing with approval");
+        }
+
+        updateStatusMutation.mutate({
+          id: selectedEstimate.id,
+          status: "approved",
+          extras: {
+            approvedByManagerId: "manager-1",
+            approvedByManagerName: "HOA Manager",
+            managerNotes,
+            invoiceId: invoiceData?.invoiceId || null,
+            qbInvoiceNumber: invoiceData?.invoiceNumber || null,
+          },
+        }, {
+          onSuccess: () => {
+            if (invoiceData?.invoiceNumber) {
+              toast({ 
+                title: "Approved & Invoice Created", 
+                description: `QuickBooks Invoice #${invoiceData.invoiceNumber} created successfully.` 
+              });
+            }
+          }
+        });
+      } catch (error) {
+        console.error("Error creating invoice:", error);
+        updateStatusMutation.mutate({
+          id: selectedEstimate.id,
+          status: "approved",
+          extras: {
+            approvedByManagerId: "manager-1",
+            approvedByManagerName: "HOA Manager",
+            managerNotes,
+          },
+        });
+      } finally {
+        setIsCreatingInvoice(false);
+      }
     } else {
       updateStatusMutation.mutate({
         id: selectedEstimate.id,
@@ -1601,12 +1647,19 @@ Breakpoint Pool Service`);
               <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>Cancel</Button>
               <Button
                 onClick={handleApproval}
-                disabled={approvalAction === "reject" && !rejectionReason}
+                disabled={(approvalAction === "reject" && !rejectionReason) || isCreatingInvoice}
                 className={approvalAction === "approve" ? "bg-green-600 hover:bg-green-700" : ""}
                 variant={approvalAction === "reject" ? "destructive" : "default"}
                 data-testid="button-confirm-approval"
               >
-                {approvalAction === "approve" ? "Approve" : "Reject"}
+                {isCreatingInvoice ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating Invoice...
+                  </>
+                ) : (
+                  approvalAction === "approve" ? "Approve" : "Reject"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
