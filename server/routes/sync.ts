@@ -164,17 +164,25 @@ export function registerSyncRoutes(app: any) {
       
       if (estimate.photos || estimate.photo_urls) {
         const rawPhotos = estimate.photos || estimate.photo_urls || [];
+        console.log('Raw photos received:', typeof rawPhotos, Array.isArray(rawPhotos) ? `Array(${rawPhotos.length})` : rawPhotos);
+        
         const photosArray = Array.isArray(rawPhotos) ? rawPhotos : 
           (typeof rawPhotos === 'string' ? JSON.parse(rawPhotos) : []);
         
-        mappedEstimate.photos = photosArray.map((photo: any) => {
+        const extractedUrls = photosArray.map((photo: any, idx: number) => {
+          console.log(`Photo ${idx} type:`, typeof photo, photo && typeof photo === 'object' ? 'has url:' + !!photo.url : '');
           if (typeof photo === 'string') {
             return photo;
           } else if (photo && typeof photo === 'object' && photo.url) {
+            console.log(`Photo ${idx} url extracted, length:`, photo.url.length);
             return photo.url;
           }
+          console.log(`Photo ${idx} could not extract URL`);
           return null;
         }).filter((url: any) => url !== null);
+        
+        console.log('Extracted photo URLs count:', extractedUrls.length);
+        mappedEstimate.photos = extractedUrls;
       }
       
       if (estimate.reportedDate || estimate.reported_date) {

@@ -1616,22 +1616,29 @@ export default function Estimates() {
                   </div>
                 </div>
 
-                {selectedEstimate.photos && selectedEstimate.photos.length > 0 && (
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="bg-slate-100 px-4 py-3 border-b">
-                      <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                        <Camera className="w-4 h-4" />
-                        Photos ({selectedEstimate.photos.length})
-                      </h4>
-                    </div>
-                    <div className="p-4">
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="bg-slate-100 px-4 py-3 border-b">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Photos {selectedEstimate.photos && selectedEstimate.photos.length > 0 && 
+                        selectedEstimate.photos.some((p: string) => p && !p.includes('[object Object]')) 
+                        ? `(${selectedEstimate.photos.filter((p: string) => p && !p.includes('[object Object]')).length})` 
+                        : ''}
+                    </h4>
+                  </div>
+                  <div className="p-4">
+                    {selectedEstimate.photos && selectedEstimate.photos.length > 0 && 
+                     selectedEstimate.photos.some((p: string) => p && !p.includes('[object Object]')) ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                        {selectedEstimate.photos.map((photo, idx) => (
+                        {selectedEstimate.photos
+                          .filter((photo: string) => photo && !photo.includes('[object Object]'))
+                          .map((photo: string, idx: number) => (
                           <div
                             key={idx}
                             className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-[#0891b2] hover:shadow-md transition-all group"
                             onClick={() => {
-                              setCurrentPhotoIndex(idx);
+                              const validPhotos = selectedEstimate.photos?.filter((p: string) => p && !p.includes('[object Object]')) || [];
+                              setCurrentPhotoIndex(validPhotos.indexOf(photo));
                               setShowPhotoLightbox(true);
                             }}
                             data-testid={`photo-thumbnail-${idx}`}
@@ -1647,9 +1654,15 @@ export default function Estimates() {
                           </div>
                         ))}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-6 text-gray-500">
+                        <Camera className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">No photos attached</p>
+                        <p className="text-xs text-gray-400 mt-1">Photos sent from the mobile app will appear here</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
                 {selectedEstimate.customerNote && (
                   <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
