@@ -1175,3 +1175,24 @@ export const insertFieldEntrySchema = createInsertSchema(fieldEntries).omit({
 
 export type InsertFieldEntry = z.infer<typeof insertFieldEntrySchema>;
 export type FieldEntry = typeof fieldEntries.$inferSelect;
+
+// QuickBooks OAuth Tokens
+export const quickbooksTokens = pgTable("quickbooks_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  realmId: text("realm_id").notNull(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  accessTokenExpiresAt: timestamp("access_token_expires_at").notNull(),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertQuickbooksTokenSchema = createInsertSchema(quickbooksTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertQuickbooksToken = z.infer<typeof insertQuickbooksTokenSchema>;
+export type QuickbooksToken = typeof quickbooksTokens.$inferSelect;
