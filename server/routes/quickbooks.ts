@@ -31,14 +31,16 @@ export function registerQuickbooksRoutes(app: Express) {
 
     const state = Math.random().toString(36).substring(7);
     
-    const authUrl = new URL(QUICKBOOKS_AUTH_URL);
-    authUrl.searchParams.set("client_id", config.clientId);
-    authUrl.searchParams.set("redirect_uri", config.redirectUri);
-    authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("scope", SCOPES);
-    authUrl.searchParams.set("state", state);
+    const params = new URLSearchParams();
+    params.set("client_id", config.clientId);
+    params.set("redirect_uri", config.redirectUri);
+    params.set("response_type", "code");
+    params.set("scope", SCOPES);
+    params.set("state", state);
+    
+    const authUrl = `${QUICKBOOKS_AUTH_URL}?${params.toString().replace(/\+/g, '%20')}`;
 
-    res.json({ authUrl: authUrl.toString() });
+    res.json({ authUrl });
   });
 
   app.get("/api/quickbooks/callback", async (req: Request, res: Response) => {
