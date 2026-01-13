@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, 
   Building2, 
@@ -198,28 +197,6 @@ export function Sidebar() {
   const [location] = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats", "operationsHub"]));
 
-  const { data: repairsNeededCount = 0 } = useQuery<number>({
-    queryKey: ["repairs-needed-count"],
-    queryFn: async () => {
-      const response = await fetch("/api/tech-ops?entryType=repairs_needed");
-      if (!response.ok) return 0;
-      const data = await response.json();
-      return Array.isArray(data) ? data.filter((e: any) => e.status !== "archived" && e.status !== "completed").length : 0;
-    },
-    refetchInterval: 30000,
-  });
-
-  const { data: serviceRepairsCount = 0 } = useQuery<number>({
-    queryKey: ["service-repairs-count"],
-    queryFn: async () => {
-      const response = await fetch("/api/service-repairs");
-      if (!response.ok) return 0;
-      const data = await response.json();
-      return Array.isArray(data) ? data.filter((j: any) => j.status === "pending" || j.status === "in_progress").length : 0;
-    },
-    refetchInterval: 30000,
-  });
-
   const toggleExpand = (key: string) => {
     setExpandedItems(prev => {
       const next = new Set(prev);
@@ -255,16 +232,7 @@ export function Sidebar() {
       icon: Hammer, 
       label: "Operations Hub", 
       children: [
-        { 
-          label: "Tech Ops", 
-          children: [
-            { label: "Repairs Needed", href: "/tech-ops/repairs-needed", badge: repairsNeededCount },
-            { label: "Service Repairs", href: "/service-repairs", badge: serviceRepairsCount },
-            { label: "Chemical Orders", href: "/tech-ops/chemical-order" },
-            { label: "Chemicals Dropped-Off", href: "/tech-ops/chemicals-dropoff" },
-            { label: "Report Issues", href: "/tech-ops/report-issue" },
-          ]
-        },
+        { label: "Tech Ops", href: "/tech-ops" },
         { label: "Repair Queue", href: "/repair-queue" },
         { label: "Supervisor", href: "/tech-supervisor" },
         { label: "Repair Foreman", href: "/tech-foreman" },

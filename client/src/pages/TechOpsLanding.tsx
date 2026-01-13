@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 const techOpsOptions = [
   { 
     id: "repairs-needed",
+    entryType: "repairs_needed",
     label: "Repairs Needed", 
     href: "/tech-ops/repairs-needed",
     icon: Wrench, 
@@ -27,8 +28,18 @@ const techOpsOptions = [
     description: "Report equipment or pool repairs needed at a property"
   },
   { 
+    id: "service-repairs",
+    entryType: "service_repairs",
+    label: "Service Repairs", 
+    href: "/service-repairs",
+    icon: Wrench, 
+    color: "bg-purple-100 text-purple-700 border-purple-200",
+    description: "Sub-$500 service technician repair jobs"
+  },
+  { 
     id: "chemical-order",
-    label: "Chemical Order", 
+    entryType: "chemical_order",
+    label: "Chemical Orders", 
     href: "/tech-ops/chemical-order",
     icon: Droplets, 
     color: "bg-blue-100 text-blue-700 border-blue-200",
@@ -36,23 +47,17 @@ const techOpsOptions = [
   },
   { 
     id: "chemicals-dropoff",
-    label: "Chemicals Drop-Off", 
+    entryType: "chemicals_dropoff",
+    label: "Chemicals Dropped-Off", 
     href: "/tech-ops/chemicals-dropoff",
     icon: Droplets, 
     color: "bg-green-100 text-green-700 border-green-200",
     description: "Log chemicals delivered or dropped off at a property"
   },
   { 
-    id: "windy-cleanup",
-    label: "Windy Day Clean Up", 
-    href: "/tech-ops/windy-cleanup",
-    icon: Wind, 
-    color: "bg-amber-100 text-amber-700 border-amber-200",
-    description: "Schedule additional cleanup due to windy conditions"
-  },
-  { 
     id: "report-issue",
-    label: "Report Issue", 
+    entryType: "report_issue",
+    label: "Report Issues", 
     href: "/tech-ops/report-issue",
     icon: AlertTriangle, 
     color: "bg-orange-100 text-orange-700 border-orange-200",
@@ -62,10 +67,10 @@ const techOpsOptions = [
 
 const entryTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
   repairs_needed: { label: "Repairs Needed", color: "bg-red-100 text-red-700", icon: Wrench },
-  chemical_order: { label: "Chemical Order", color: "bg-blue-100 text-blue-700", icon: Droplets },
-  chemicals_dropoff: { label: "Chemicals Drop-Off", color: "bg-green-100 text-green-700", icon: Droplets },
-  windy_day_cleanup: { label: "Windy Day", color: "bg-amber-100 text-amber-700", icon: Wind },
-  report_issue: { label: "Report Issue", color: "bg-orange-100 text-orange-700", icon: AlertTriangle },
+  service_repairs: { label: "Service Repairs", color: "bg-purple-100 text-purple-700", icon: Wrench },
+  chemical_order: { label: "Chemical Orders", color: "bg-blue-100 text-blue-700", icon: Droplets },
+  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-green-100 text-green-700", icon: Droplets },
+  report_issue: { label: "Report Issues", color: "bg-orange-100 text-orange-700", icon: AlertTriangle },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -117,6 +122,21 @@ export default function TechOpsLanding() {
     },
   });
 
+  const { data: serviceRepairsCount = 0 } = useQuery<number>({
+    queryKey: ["service-repairs-count-landing"],
+    queryFn: async () => {
+      const response = await fetch("/api/service-repairs");
+      if (!response.ok) return 0;
+      const data = await response.json();
+      return Array.isArray(data) ? data.filter((j: any) => j.status === "pending" || j.status === "in_progress").length : 0;
+    },
+  });
+
+  const getCountForType = (entryType: string): number => {
+    if (entryType === "service_repairs") return serviceRepairsCount;
+    return summary?.byType?.[entryType] || 0;
+  };
+
   const uniqueProperties = useMemo(() => {
     const props = new Map<string, string>();
     entries.forEach(e => {
@@ -158,6 +178,7 @@ export default function TechOpsLanding() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {techOpsOptions.map((option) => {
             const Icon = option.icon;
+            const count = getCountForType(option.entryType);
             return (
               <Link key={option.href} href={option.href} data-testid={`link-techops-${option.id}`}>
                 <Card className="hover:shadow-md transition-all cursor-pointer group h-full" data-testid={`card-techops-${option.id}`}>
@@ -166,10 +187,15 @@ export default function TechOpsLanding() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#1E3A8A] text-sm transition-colors">
+                      <span className="font-medium text-[#1E293B] group-hover:text-[#1E3A8A] text-sm transition-colors flex-1">
                         {option.label}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400 ml-auto group-hover:text-[#1E3A8A] transition-colors" />
+                      {count > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#F97316] text-white min-w-[24px] text-center">
+                          {count}
+                        </span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#1E3A8A] transition-colors" />
                     </div>
                   </CardContent>
                 </Card>
