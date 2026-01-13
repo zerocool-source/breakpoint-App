@@ -55,6 +55,24 @@ export function registerSyncRoutes(app: any) {
     }
   });
 
+  app.get('/api/visits', async (req: Request, res: Response) => {
+    try {
+      const { propertyId, technicianId, technicianName, entryType, startDate, endDate } = req.query;
+      const entries = await storage.getFieldEntries({
+        propertyId: propertyId as string | undefined,
+        technicianId: technicianId as string | undefined,
+        technicianName: technicianName as string | undefined,
+        entryType: entryType as string | undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+      });
+      res.json(entries);
+    } catch (error: any) {
+      console.error('Error fetching visits:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/sync/field-entries', async (req: Request, res: Response) => {
     try {
       const { entry } = req.body;

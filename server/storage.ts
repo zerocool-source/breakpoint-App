@@ -359,7 +359,14 @@ export interface IStorage {
   getRouteStopsByDate(date: string): Promise<RouteStop[]>;
 
   // Field Entries (for Field Tech sync)
-  getFieldEntries(): Promise<FieldEntry[]>;
+  getFieldEntries(filters?: {
+    propertyId?: string;
+    technicianId?: string;
+    technicianName?: string;
+    entryType?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<FieldEntry[]>;
   getFieldEntry(id: string): Promise<FieldEntry | undefined>;
   createFieldEntry(entry: InsertFieldEntry): Promise<FieldEntry>;
   updateFieldEntry(id: string, updates: Partial<InsertFieldEntry>): Promise<FieldEntry | undefined>;
@@ -2198,7 +2205,38 @@ export class DbStorage implements IStorage {
   }
 
   // Field Entries (for Field Tech sync)
-  async getFieldEntries(): Promise<FieldEntry[]> {
+  async getFieldEntries(filters?: {
+    propertyId?: string;
+    technicianId?: string;
+    technicianName?: string;
+    entryType?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<FieldEntry[]> {
+    const conditions = [];
+    if (filters?.propertyId) {
+      conditions.push(eq(fieldEntries.propertyId, filters.propertyId));
+    }
+    if (filters?.technicianId) {
+      conditions.push(eq(fieldEntries.technicianId, filters.technicianId));
+    }
+    if (filters?.technicianName) {
+      conditions.push(eq(fieldEntries.technicianName, filters.technicianName));
+    }
+    if (filters?.entryType) {
+      conditions.push(eq(fieldEntries.entryType, filters.entryType));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(fieldEntries.submittedAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(fieldEntries.submittedAt, filters.endDate));
+    }
+    if (conditions.length > 0) {
+      return db.select().from(fieldEntries)
+        .where(and(...conditions))
+        .orderBy(desc(fieldEntries.submittedAt));
+    }
     return db.select().from(fieldEntries).orderBy(desc(fieldEntries.submittedAt));
   }
 
