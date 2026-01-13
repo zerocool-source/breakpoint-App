@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 import { PoolBrainClient } from "../poolbrain-client";
 import { parseOfficeNotesForRepairs, extractPricesFromNotes, type ParsedRepair } from "../repair-parser";
+import { insertPropertySchema } from "@shared/schema";
 
 export function registerPropertyRoutes(app: any) {
   // Get all properties (local database)
@@ -32,7 +33,11 @@ export function registerPropertyRoutes(app: any) {
   // Create property
   app.post("/api/properties", async (req: Request, res: Response) => {
     try {
-      const property = await storage.createProperty(req.body);
+      const parsed = insertPropertySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request body", details: parsed.error.errors });
+      }
+      const property = await storage.createProperty(parsed.data);
       res.status(201).json(property);
     } catch (error: any) {
       console.error("Error creating property:", error);
@@ -43,7 +48,11 @@ export function registerPropertyRoutes(app: any) {
   // Update property
   app.put("/api/properties/:id", async (req: Request, res: Response) => {
     try {
-      const property = await storage.updateProperty(req.params.id, req.body);
+      const parsed = insertPropertySchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid request body", details: parsed.error.errors });
+      }
+      const property = await storage.updateProperty(req.params.id, parsed.data);
       if (!property) {
         return res.status(404).json({ error: "Property not found" });
       }
