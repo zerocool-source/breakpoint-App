@@ -40,6 +40,7 @@ import {
   type PropertyBillingContact, type InsertPropertyBillingContact,
   type PropertyContact, type InsertPropertyContact,
   type PropertyAccessNote, type InsertPropertyAccessNote,
+  type TechOpsEntry, type InsertTechOpsEntry,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -47,7 +48,7 @@ import {
   estimates, serviceRepairJobs, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
-  properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes
+  properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -241,6 +242,14 @@ export interface IStorage {
   createPropertyAccessNote(note: InsertPropertyAccessNote): Promise<PropertyAccessNote>;
   updatePropertyAccessNote(id: string, updates: Partial<InsertPropertyAccessNote>): Promise<PropertyAccessNote | undefined>;
   deletePropertyAccessNote(id: string): Promise<void>;
+
+  // Tech Ops Entries
+  getTechOpsEntries(entryType?: string, status?: string): Promise<TechOpsEntry[]>;
+  getTechOpsEntry(id: string): Promise<TechOpsEntry | undefined>;
+  createTechOpsEntry(entry: InsertTechOpsEntry): Promise<TechOpsEntry>;
+  updateTechOpsEntry(id: string, updates: Partial<InsertTechOpsEntry>): Promise<TechOpsEntry | undefined>;
+  markTechOpsReviewed(id: string, reviewedBy: string): Promise<TechOpsEntry | undefined>;
+  deleteTechOpsEntry(id: string): Promise<void>;
 
   // Pool WO Settings
   updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void>;
@@ -1389,6 +1398,59 @@ export class DbStorage implements IStorage {
 
   async deletePropertyAccessNote(id: string): Promise<void> {
     await db.delete(propertyAccessNotes).where(eq(propertyAccessNotes.id, id));
+  }
+
+  // Tech Ops Entries
+  async getTechOpsEntries(entryType?: string, status?: string): Promise<TechOpsEntry[]> {
+    const conditions = [];
+    if (entryType) {
+      conditions.push(eq(techOpsEntries.entryType, entryType));
+    }
+    if (status) {
+      conditions.push(eq(techOpsEntries.status, status));
+    }
+    if (conditions.length > 0) {
+      return db.select().from(techOpsEntries)
+        .where(and(...conditions))
+        .orderBy(desc(techOpsEntries.createdAt));
+    }
+    return db.select().from(techOpsEntries)
+      .orderBy(desc(techOpsEntries.createdAt));
+  }
+
+  async getTechOpsEntry(id: string): Promise<TechOpsEntry | undefined> {
+    const result = await db.select().from(techOpsEntries).where(eq(techOpsEntries.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createTechOpsEntry(entry: InsertTechOpsEntry): Promise<TechOpsEntry> {
+    const result = await db.insert(techOpsEntries).values(entry as any).returning();
+    return result[0];
+  }
+
+  async updateTechOpsEntry(id: string, updates: Partial<InsertTechOpsEntry>): Promise<TechOpsEntry | undefined> {
+    const result = await db.update(techOpsEntries)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(techOpsEntries.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async markTechOpsReviewed(id: string, reviewedBy: string): Promise<TechOpsEntry | undefined> {
+    const result = await db.update(techOpsEntries)
+      .set({ 
+        status: "reviewed",
+        reviewedBy,
+        reviewedAt: new Date(),
+        updatedAt: new Date()
+      } as any)
+      .where(eq(techOpsEntries.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTechOpsEntry(id: string): Promise<void> {
+    await db.delete(techOpsEntries).where(eq(techOpsEntries.id, id));
   }
 
   // Pool WO Settings
