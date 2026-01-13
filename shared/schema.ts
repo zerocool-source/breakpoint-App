@@ -707,6 +707,7 @@ export const estimates = pgTable("estimates", {
   
   // Work Order (WO) tracking
   workType: text("work_type").default("repairs"), // "repairs", "chemicals", "other"
+  woRequired: boolean("wo_required").default(false), // Flag if this property requires a work order
   woReceived: boolean("wo_received").default(false),
   woNumber: text("wo_number"),
 });
