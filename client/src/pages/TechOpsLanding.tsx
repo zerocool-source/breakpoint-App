@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Wrench, Droplets, Wind, AlertTriangle, ChevronRight, CalendarIcon,
+  Wrench, Droplets, AlertTriangle, ChevronRight, CalendarIcon,
   Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2
 } from "lucide-react";
 import type { TechOpsEntry } from "@shared/schema";
@@ -267,10 +267,9 @@ export default function TechOpsLanding() {
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="repairs_needed">Repairs Needed</SelectItem>
-                    <SelectItem value="chemical_order">Chemical Order</SelectItem>
-                    <SelectItem value="chemicals_dropoff">Chemicals Drop-Off</SelectItem>
-                    <SelectItem value="windy_day_cleanup">Windy Day Clean Up</SelectItem>
-                    <SelectItem value="report_issue">Report Issue</SelectItem>
+                    <SelectItem value="chemical_order">Chemical Orders</SelectItem>
+                    <SelectItem value="chemicals_dropoff">Chemicals Dropped-Off</SelectItem>
+                    <SelectItem value="report_issue">Report Issues</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
