@@ -205,4 +205,231 @@ export function registerEstimateRoutes(app: any) {
       res.status(500).json({ error: "Failed to delete estimate" });
     }
   });
+
+  // Estimate workflow transitions
+  app.patch("/api/estimates/:id/approve", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { approvedByManagerId, approvedByManagerName } = req.body;
+      const estimate = await storage.updateEstimate(id, {
+        status: "approved",
+        approvedAt: new Date(),
+        approvedByManagerId,
+        approvedByManagerName,
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error approving estimate:", error);
+      res.status(500).json({ error: "Failed to approve estimate" });
+    }
+  });
+
+  app.patch("/api/estimates/:id/reject", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { rejectionReason } = req.body;
+      const estimate = await storage.updateEstimate(id, {
+        status: "rejected",
+        rejectedAt: new Date(),
+        rejectionReason,
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error rejecting estimate:", error);
+      res.status(500).json({ error: "Failed to reject estimate" });
+    }
+  });
+
+  app.patch("/api/estimates/:id/needs-scheduling", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const estimate = await storage.updateEstimate(id, {
+        status: "needs_scheduling",
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error updating estimate:", error);
+      res.status(500).json({ error: "Failed to update estimate" });
+    }
+  });
+
+  app.patch("/api/estimates/:id/schedule", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { repairTechId, repairTechName, scheduledDate, scheduledByUserId, scheduledByUserName } = req.body;
+      
+      const estimate = await storage.updateEstimate(id, {
+        status: "scheduled",
+        repairTechId,
+        repairTechName,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+        scheduledAt: new Date(),
+        scheduledByUserId,
+        scheduledByUserName,
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error scheduling estimate:", error);
+      res.status(500).json({ error: "Failed to schedule estimate" });
+    }
+  });
+
+  app.patch("/api/estimates/:id/complete", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const estimate = await storage.updateEstimate(id, {
+        status: "ready_to_invoice",
+        completedAt: new Date(),
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error completing estimate:", error);
+      res.status(500).json({ error: "Failed to complete estimate" });
+    }
+  });
+
+  app.patch("/api/estimates/:id/invoice", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { invoiceId } = req.body;
+      const estimate = await storage.updateEstimate(id, {
+        status: "invoiced",
+        invoicedAt: new Date(),
+        invoiceId,
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error invoicing estimate:", error);
+      res.status(500).json({ error: "Failed to invoice estimate" });
+    }
+  });
+
+  // Estimate metrics
+  app.get("/api/estimates/metrics", async (req: Request, res: Response) => {
+    try {
+      const estimates = await storage.getEstimates();
+      
+      const metrics = {
+        total: estimates.length,
+        byStatus: {} as Record<string, number>,
+        totalValue: 0,
+        approvedValue: 0,
+        scheduledValue: 0,
+        completedValue: 0,
+        invoicedValue: 0,
+        conversionRate: 0,
+        avgApprovalTime: 0,
+        avgSchedulingTime: 0,
+        avgCompletionTime: 0,
+      };
+
+      let approvalTimes: number[] = [];
+      let schedulingTimes: number[] = [];
+      let completionTimes: number[] = [];
+
+      for (const est of estimates) {
+        const status = est.status || "draft";
+        metrics.byStatus[status] = (metrics.byStatus[status] || 0) + 1;
+        const amount = (est.totalAmount || 0) / 100;
+        metrics.totalValue += amount;
+
+        if (["approved", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced"].includes(status)) {
+          metrics.approvedValue += amount;
+        }
+        if (["scheduled", "completed", "ready_to_invoice", "invoiced"].includes(status)) {
+          metrics.scheduledValue += amount;
+        }
+        if (["completed", "ready_to_invoice", "invoiced"].includes(status)) {
+          metrics.completedValue += amount;
+        }
+        if (status === "invoiced") {
+          metrics.invoicedValue += amount;
+        }
+
+        // Calculate average times
+        if (est.sentForApprovalAt && est.approvedAt) {
+          approvalTimes.push(new Date(est.approvedAt).getTime() - new Date(est.sentForApprovalAt).getTime());
+        }
+        if (est.approvedAt && est.scheduledAt) {
+          schedulingTimes.push(new Date(est.scheduledAt).getTime() - new Date(est.approvedAt).getTime());
+        }
+        if (est.scheduledAt && est.completedAt) {
+          completionTimes.push(new Date(est.completedAt).getTime() - new Date(est.scheduledAt).getTime());
+        }
+      }
+
+      const approvedCount = estimates.filter(e => 
+        ["approved", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced"].includes(e.status || "")
+      ).length;
+      const sentCount = estimates.filter(e => 
+        e.status !== "draft"
+      ).length;
+
+      metrics.conversionRate = sentCount > 0 ? Math.round((approvedCount / sentCount) * 100) : 0;
+      
+      // Average times in hours
+      metrics.avgApprovalTime = approvalTimes.length > 0 
+        ? Math.round(approvalTimes.reduce((a, b) => a + b, 0) / approvalTimes.length / (1000 * 60 * 60))
+        : 0;
+      metrics.avgSchedulingTime = schedulingTimes.length > 0 
+        ? Math.round(schedulingTimes.reduce((a, b) => a + b, 0) / schedulingTimes.length / (1000 * 60 * 60))
+        : 0;
+      metrics.avgCompletionTime = completionTimes.length > 0 
+        ? Math.round(completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length / (1000 * 60 * 60))
+        : 0;
+
+      res.json(metrics);
+    } catch (error: any) {
+      console.error("Error fetching estimate metrics:", error);
+      res.status(500).json({ error: "Failed to fetch estimate metrics" });
+    }
+  });
+
+  // Get repair technicians with availability for scheduling
+  app.get("/api/estimates/repair-techs", async (req: Request, res: Response) => {
+    try {
+      const technicians = await storage.getTechnicians();
+      const repairTechs = technicians.filter((t: any) => t.role === "repair_tech" || t.role === "repair_foreman");
+      
+      // Get scheduled estimates for each tech to show their workload
+      const allEstimates = await storage.getEstimates("scheduled");
+      
+      const techsWithAvailability = repairTechs.map((tech: any) => {
+        const assignedEstimates = allEstimates.filter((e: any) => e.repairTechId === tech.id);
+        return {
+          ...tech,
+          assignedJobs: assignedEstimates.length,
+          scheduledEstimates: assignedEstimates.slice(0, 5).map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            propertyName: e.propertyName,
+            scheduledDate: e.scheduledDate,
+          })),
+        };
+      });
+
+      res.json({ technicians: techsWithAvailability });
+    } catch (error: any) {
+      console.error("Error fetching repair techs:", error);
+      res.status(500).json({ error: "Failed to fetch repair technicians" });
+    }
+  });
 }

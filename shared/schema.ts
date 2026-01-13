@@ -679,7 +679,7 @@ export type InsertChannelRead = z.infer<typeof insertChannelReadSchema>;
 export type ChannelRead = typeof channelReads.$inferSelect;
 
 // Estimates (Repair estimates requiring HOA approval)
-export const estimateStatusEnum = ["draft", "pending_approval", "approved", "rejected", "scheduled", "completed", "invoiced"] as const;
+export const estimateStatusEnum = ["draft", "pending_approval", "approved", "rejected", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced", "archived"] as const;
 export type EstimateStatus = typeof estimateStatusEnum[number];
 
 export const estimates = pgTable("estimates", {
@@ -779,6 +779,10 @@ export const estimates = pgTable("estimates", {
   // Link to job once scheduled
   jobId: text("job_id"),
   invoiceId: text("invoice_id"),
+  assignedRepairJobId: text("assigned_repair_job_id"), // Links to service_repair_jobs when scheduled
+  scheduledByUserId: text("scheduled_by_user_id"),
+  scheduledByUserName: text("scheduled_by_user_name"),
+  scheduledAt: timestamp("scheduled_at"),
   
   // Work Order (WO) tracking
   workType: text("work_type").default("repairs"), // "repairs", "chemicals", "other"
