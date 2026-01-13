@@ -8,6 +8,7 @@ import {
 
 const techOpsOptions = [
   { 
+    id: "repairs-needed",
     label: "Repairs Needed", 
     href: "/tech-ops/repairs-needed",
     icon: Wrench, 
@@ -15,6 +16,7 @@ const techOpsOptions = [
     description: "Report equipment or pool repairs needed at a property"
   },
   { 
+    id: "chemical-order",
     label: "Chemical Order", 
     href: "/tech-ops/chemical-order",
     icon: Droplets, 
@@ -22,6 +24,7 @@ const techOpsOptions = [
     description: "Request chemicals to be ordered for a property"
   },
   { 
+    id: "chemicals-dropoff",
     label: "Chemicals Drop-Off", 
     href: "/tech-ops/chemicals-dropoff",
     icon: Droplets, 
@@ -29,6 +32,7 @@ const techOpsOptions = [
     description: "Log chemicals delivered or dropped off at a property"
   },
   { 
+    id: "windy-cleanup",
     label: "Windy Day Clean Up", 
     href: "/tech-ops/windy-cleanup",
     icon: Wind, 
@@ -36,6 +40,7 @@ const techOpsOptions = [
     description: "Schedule additional cleanup due to windy conditions"
   },
   { 
+    id: "report-issue",
     label: "Report Issue", 
     href: "/tech-ops/report-issue",
     icon: AlertTriangle, 
@@ -43,6 +48,7 @@ const techOpsOptions = [
     description: "Report any issue or concern at a property"
   },
   { 
+    id: "add-notes",
     label: "Add Notes", 
     href: "/tech-ops/add-notes",
     icon: FileText, 
@@ -60,7 +66,7 @@ export default function TechOpsLanding() {
             <Wrench className="w-6 h-6 text-[#1E3A8A]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#1E293B]">Tech Ops</h1>
+            <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-techops">Tech Ops</h1>
             <p className="text-slate-500 text-sm">Field technician requests and submissions</p>
           </div>
         </div>
@@ -69,8 +75,8 @@ export default function TechOpsLanding() {
           {techOpsOptions.map((option) => {
             const Icon = option.icon;
             return (
-              <Link key={option.href} href={option.href}>
-                <Card className="hover:shadow-md transition-all cursor-pointer group h-full">
+              <Link key={option.href} href={option.href} data-testid={`link-techops-${option.id}`}>
+                <Card className="hover:shadow-md transition-all cursor-pointer group h-full" data-testid={`card-techops-${option.id}`}>
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-4">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${option.color}`}>

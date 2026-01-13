@@ -162,16 +162,16 @@ export default function RepairQueue() {
               <Wrench className="w-6 h-6 text-[#F97316]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#1E293B]">Repair Queue</h1>
+              <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-repairqueue">Repair Queue</h1>
               <p className="text-slate-500 text-sm">Manage repairs assigned to Repair Techs</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200" data-testid="badge-pending-count">
               <Clock className="w-4 h-4 text-amber-600" />
               <span className="text-sm font-medium text-amber-700">{pendingRepairs.length} Pending</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200" data-testid="badge-inprogress-count">
               <Wrench className="w-4 h-4 text-purple-600" />
               <span className="text-sm font-medium text-purple-700">{inProgressRepairs.length} In Progress</span>
             </div>
