@@ -31,6 +31,8 @@ import EquipmentReports from "@/pages/EquipmentReports";
 import ServiceRepairs from "@/pages/ServiceRepairs";
 import PropertyProfiles from "@/pages/PropertyProfiles";
 import TechOps from "@/pages/TechOps";
+import TechOpsLanding from "@/pages/TechOpsLanding";
+import RepairQueue from "@/pages/RepairQueue";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -54,7 +56,9 @@ function Router() {
       <Route path="/fleet/inventory" component={TruckInventory} />
       <Route path="/equipment" component={Equipment} />
       <Route path="/property-profiles" component={PropertyProfiles} />
+      <Route path="/tech-ops" component={TechOpsLanding} />
       <Route path="/tech-ops/:type" component={TechOps} />
+      <Route path="/repair-queue" component={RepairQueue} />
       <Route path="/operations" component={Operations} />
       <Route path="/report-equipment" component={EquipmentReports} />
       <Route path="/intelligence" component={Intelligence} />

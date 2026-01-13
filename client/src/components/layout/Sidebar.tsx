@@ -171,22 +171,12 @@ export function Sidebar() {
       ]
     },
     { 
-      key: "operations",
+      key: "operationsHub",
       icon: Hammer, 
-      label: "Operations", 
-      href: "/operations"
-    },
-    { 
-      key: "techOps",
-      icon: Wrench, 
-      label: "Tech Ops", 
+      label: "Operations Hub", 
       children: [
-        { label: "Repairs Needed", href: "/tech-ops/repairs-needed" },
-        { label: "Chemical Order", href: "/tech-ops/chemical-order" },
-        { label: "Chemicals Drop-Off", href: "/tech-ops/chemicals-dropoff" },
-        { label: "Windy Day Clean Up", href: "/tech-ops/windy-cleanup" },
-        { label: "Report Issue", href: "/tech-ops/report-issue" },
-        { label: "Add Notes", href: "/tech-ops/add-notes" },
+        { label: "Tech Ops", href: "/tech-ops" },
+        { label: "Repair Queue", href: "/repair-queue" },
       ]
     },
     { 
