@@ -176,8 +176,10 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   pending_approval: { label: "Pending Approval", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: Clock },
   approved: { label: "Approved", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
+  needs_scheduling: { label: "Needs Scheduling", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: CalendarIcon },
   scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#1E3A8A] border-[#93C5FD]", icon: CalendarIcon },
   completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
+  ready_to_invoice: { label: "Ready to Invoice", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Receipt },
   invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Receipt },
   archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
@@ -253,6 +255,8 @@ export default function Estimates() {
   const [selectedInvoiceEmail, setSelectedInvoiceEmail] = useState("");
   const [billingContacts, setBillingContacts] = useState<{id: string; name: string; email: string; contactType: string}[]>([]);
   const [loadingBillingContacts, setLoadingBillingContacts] = useState(false);
+  const [showSchedulingModal, setShowSchedulingModal] = useState(false);
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | undefined>(new Date());
   const [autoSelectedByWorkType, setAutoSelectedByWorkType] = useState(false);
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
@@ -285,8 +289,30 @@ export default function Estimates() {
     },
   });
 
+  const { data: repairTechsData } = useQuery({
+    queryKey: ["repair-techs"],
+    queryFn: async () => {
+      const response = await fetch("/api/estimates/repair-techs");
+      if (!response.ok) return { technicians: [] };
+      return response.json();
+    },
+    enabled: showSchedulingModal,
+  });
+
+  const { data: metricsData } = useQuery({
+    queryKey: ["estimate-metrics"],
+    queryFn: async () => {
+      const response = await fetch("/api/estimates/metrics");
+      if (!response.ok) return null;
+      return response.json();
+    },
+    refetchInterval: 30000,
+  });
+
   const technicians = techniciansData?.technicians || [];
   const customers = customersData?.customers || [];
+  const repairTechs = repairTechsData?.technicians || [];
+  const metrics = metricsData;
 
   const createMutation = useMutation({
     mutationFn: async (estimate: any) => {
@@ -381,23 +407,60 @@ export default function Estimates() {
     },
   });
 
+  const scheduleMutation = useMutation({
+    mutationFn: async ({ id, repairTechId, repairTechName, scheduledDate }: { id: string; repairTechId: string; repairTechName: string; scheduledDate: Date }) => {
+      const response = await fetch(`/api/estimates/${id}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repairTechId, repairTechName, scheduledDate: scheduledDate.toISOString() }),
+      });
+      if (!response.ok) throw new Error("Failed to schedule estimate");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["estimate-metrics"] });
+      toast({ title: "Scheduled", description: "Job has been assigned to the repair technician." });
+      setShowSchedulingModal(false);
+      setSelectedEstimate(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to schedule estimate.", variant: "destructive" });
+    },
+  });
+
+  const handleScheduleToTech = (tech: any) => {
+    if (!selectedEstimate || !selectedScheduleDate) return;
+    scheduleMutation.mutate({
+      id: selectedEstimate.id,
+      repairTechId: tech.id,
+      repairTechName: tech.name,
+      scheduledDate: selectedScheduleDate,
+    });
+  };
+
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
   // Filter out archived estimates from "all" tab, show archived only in archived tab
+  // Group related statuses together in tabs
   const filteredEstimates = activeTab === "all" 
     ? estimates.filter(e => e.status !== "archived")
     : activeTab === "archived"
     ? estimates.filter(e => e.status === "archived")
+    : activeTab === "approved"
+    ? estimates.filter(e => e.status === "approved" || e.status === "needs_scheduling")
+    : activeTab === "completed"
+    ? estimates.filter(e => e.status === "completed" || e.status === "ready_to_invoice")
     : estimates.filter(e => e.status === activeTab);
 
   const statusCounts = {
     all: estimates.filter(e => e.status !== "archived").length,
     draft: estimates.filter(e => e.status === "draft").length,
     pending_approval: estimates.filter(e => e.status === "pending_approval").length,
-    approved: estimates.filter(e => e.status === "approved").length,
+    approved: estimates.filter(e => e.status === "approved" || e.status === "needs_scheduling").length,
     rejected: estimates.filter(e => e.status === "rejected").length,
     scheduled: estimates.filter(e => e.status === "scheduled").length,
-    completed: estimates.filter(e => e.status === "completed").length,
+    completed: estimates.filter(e => e.status === "completed" || e.status === "ready_to_invoice").length,
     invoiced: estimates.filter(e => e.status === "invoiced").length,
     archived: estimates.filter(e => e.status === "archived").length,
   };
@@ -725,6 +788,18 @@ Breakpoint Pool Service`);
     });
   };
 
+  const handleNeedsScheduling = (estimate: Estimate) => {
+    updateStatusMutation.mutate({
+      id: estimate.id,
+      status: "needs_scheduling",
+    });
+  };
+
+  const openSchedulingModal = (estimate: Estimate) => {
+    setSelectedEstimate(estimate);
+    setShowSchedulingModal(true);
+  };
+
   const handleComplete = (estimate: Estimate) => {
     updateStatusMutation.mutate({
       id: estimate.id,
@@ -986,16 +1061,53 @@ Breakpoint Pool Service`);
         </div>
 
         <div className="grid grid-cols-7 gap-3">
-          {Object.entries(statusConfig).map(([key, config]) => (
+          {Object.entries(statusConfig).filter(([key]) => !["needs_scheduling", "ready_to_invoice"].includes(key)).map(([key, config]) => (
             <Card key={key} className="cursor-pointer hover:shadow-md hover:border-[#60A5FA]/50 transition-all" onClick={() => setActiveTab(key)}>
               <CardContent className="p-4 text-center">
                 <config.icon className="w-6 h-6 mx-auto mb-2 text-[#1E3A8A]" />
-                <p className="text-2xl font-bold text-[#1E293B]">{statusCounts[key as keyof typeof statusCounts]}</p>
+                <p className="text-2xl font-bold text-[#1E293B]">{statusCounts[key as keyof typeof statusCounts] || 0}</p>
                 <p className="text-xs text-[#64748B]">{config.label}</p>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        {metrics && (
+          <Card className="bg-gradient-to-r from-[#1E3A8A]/5 to-[#60A5FA]/5 border-[#1E3A8A]/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-[#1E3A8A]">Workflow Metrics</h3>
+                <Badge variant="outline" className="text-xs">Last 30 days</Badge>
+              </div>
+              <div className="grid grid-cols-6 gap-4">
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#1E3A8A]">{metrics.conversionRate}%</p>
+                  <p className="text-xs text-[#64748B]">Approval Rate</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-green-600">${(metrics.approvedValue || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#64748B]">Approved Value</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#1E3A8A]">${(metrics.scheduledValue || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#64748B]">Scheduled Value</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-purple-600">${(metrics.invoicedValue || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#64748B]">Invoiced Value</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#F97316]">{metrics.avgApprovalTime}h</p>
+                  <p className="text-xs text-[#64748B]">Avg Approval Time</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#60A5FA]">{metrics.avgCompletionTime}h</p>
+                  <p className="text-xs text-[#64748B]">Avg Completion Time</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="pb-3">
@@ -1156,31 +1268,37 @@ Breakpoint Pool Service`);
                           )}
                           {estimate.status === "approved" && (
                             <>
+                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Approved
+                              </Badge>
                               <Button
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleSchedule(estimate);
+                                  handleNeedsScheduling(estimate);
                                 }}
-                                className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-                                data-testid={`button-schedule-${estimate.id}`}
+                                className="bg-[#F97316] hover:bg-[#F97316]/90"
+                                data-testid={`button-needs-scheduling-${estimate.id}`}
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
-                                Schedule
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleInvoice(estimate);
-                                }}
-                                className="bg-emerald-600 hover:bg-emerald-700"
-                                data-testid={`button-invoice-${estimate.id}`}
-                              >
-                                <Receipt className="w-3 h-3 mr-1" />
-                                Invoice
+                                Needs Scheduling
                               </Button>
                             </>
+                          )}
+                          {estimate.status === "needs_scheduling" && (
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openSchedulingModal(estimate);
+                              }}
+                              className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                              data-testid={`button-schedule-${estimate.id}`}
+                            >
+                              <CalendarIcon className="w-3 h-3 mr-1" />
+                              Schedule
+                            </Button>
                           )}
                           {estimate.status === "rejected" && (
                             <Badge className="bg-red-100 text-red-700 border-red-200">
@@ -1189,32 +1307,55 @@ Breakpoint Pool Service`);
                             </Badge>
                           )}
                           {estimate.status === "scheduled" && (
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleComplete(estimate);
-                              }}
-                              className="bg-[#60A5FA] hover:bg-[#60A5FA]/90"
-                              data-testid={`button-complete-${estimate.id}`}
-                            >
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Mark Complete
-                            </Button>
+                            <>
+                              <Badge className="bg-[#DBEAFE] text-[#1E3A8A] border-[#93C5FD]">
+                                <CalendarIcon className="w-3 h-3 mr-1" />
+                                Scheduled
+                              </Badge>
+                              {estimate.repairTechName && (
+                                <span className="text-xs text-slate-500">
+                                  Tech: {estimate.repairTechName}
+                                </span>
+                              )}
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleComplete(estimate);
+                                }}
+                                className="bg-[#60A5FA] hover:bg-[#60A5FA]/90"
+                                data-testid={`button-complete-${estimate.id}`}
+                              >
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Mark Complete
+                              </Button>
+                            </>
                           )}
                           {estimate.status === "completed" && (
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleInvoice(estimate);
-                              }}
-                              className="bg-purple-600 hover:bg-purple-700"
-                              data-testid={`button-invoice-${estimate.id}`}
-                            >
-                              <Receipt className="w-3 h-3 mr-1" />
-                              Generate Invoice
-                            </Button>
+                            <Badge className="bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Completed
+                            </Badge>
+                          )}
+                          {estimate.status === "ready_to_invoice" && (
+                            <>
+                              <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Ready to Invoice
+                              </Badge>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInvoice(estimate);
+                                }}
+                                className="bg-purple-600 hover:bg-purple-700"
+                                data-testid={`button-invoice-${estimate.id}`}
+                              >
+                                <Receipt className="w-3 h-3 mr-1" />
+                                Invoice
+                              </Button>
+                            </>
                           )}
                           {estimate.status === "archived" && (
                             <Badge className="bg-gray-100 text-gray-500 border-gray-200">
@@ -2064,6 +2205,107 @@ Breakpoint Pool Service`);
                     Create Invoice
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showSchedulingModal} onOpenChange={setShowSchedulingModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-[#1E3A8A]" />
+                Schedule Job to Repair Technician
+              </DialogTitle>
+              <DialogDescription>
+                Select a repair technician to assign this job.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedEstimate && (
+              <div className="space-y-4">
+                <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                  <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
+                  <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
+                  <p className="text-lg font-bold text-[#1E3A8A] mt-2">
+                    {formatCurrency(selectedEstimate.totalAmount)}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">Scheduled Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left mt-2" data-testid="button-schedule-date">
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        {selectedScheduleDate ? format(selectedScheduleDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedScheduleDate}
+                        onSelect={setSelectedScheduleDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">Select Repair Technician</Label>
+                  <ScrollArea className="h-[300px] mt-2 rounded-lg border border-[#E2E8F0]">
+                    {repairTechs.length === 0 ? (
+                      <div className="flex items-center justify-center h-full py-8">
+                        <p className="text-sm text-[#64748B]">No repair technicians available</p>
+                      </div>
+                    ) : (
+                      <div className="p-2 space-y-2">
+                        {repairTechs.map((tech: any) => (
+                          <div
+                            key={tech.id}
+                            className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-[#1E3A8A] hover:shadow-md cursor-pointer transition-all"
+                            onClick={() => handleScheduleToTech(tech)}
+                            data-testid={`tech-card-${tech.id}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-[#1E3A8A]" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-[#1E293B]">{tech.name}</p>
+                                  <p className="text-xs text-[#64748B] capitalize">{tech.role?.replace(/_/g, " ")}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <Badge variant="outline" className={tech.assignedJobs > 3 ? "border-red-300 text-red-600" : "border-green-300 text-green-600"}>
+                                  {tech.assignedJobs || 0} jobs scheduled
+                                </Badge>
+                              </div>
+                            </div>
+                            {tech.scheduledEstimates && tech.scheduledEstimates.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-[#E2E8F0]">
+                                <p className="text-xs text-[#64748B] mb-2">Upcoming jobs:</p>
+                                <div className="space-y-1">
+                                  {tech.scheduledEstimates.slice(0, 3).map((e: any) => (
+                                    <p key={e.id} className="text-xs text-[#94A3B8]">
+                                      • {e.propertyName} - {e.title}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowSchedulingModal(false)}>
+                Cancel
               </Button>
             </DialogFooter>
           </DialogContent>
