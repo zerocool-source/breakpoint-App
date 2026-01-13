@@ -15,6 +15,7 @@ import { registerSettingsRoutes } from "./routes/settings";
 import { registerEstimateRoutes } from "./routes/estimates";
 import { registerQuickbooksRoutes } from "./routes/quickbooks";
 import { registerReportRoutes } from "./routes/reports";
+import { registerServiceRepairRoutes } from "./routes/serviceRepairs";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -39,4 +40,5 @@ function setupRoutes(app: any) {
   registerEstimateRoutes(app);
   registerQuickbooksRoutes(app);
   registerReportRoutes(app);
+  registerServiceRepairRoutes(app);
 }
