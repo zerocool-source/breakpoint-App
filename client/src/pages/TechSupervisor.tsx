@@ -41,11 +41,12 @@ export default function TechSupervisor() {
   const [selectedSupervisor, setSelectedSupervisor] = useState<string>("all");
 
   const { data: technicians = [], isLoading: loadingTechs } = useQuery<Technician[]>({
-    queryKey: ["technicians"],
+    queryKey: ["technicians-stored"],
     queryFn: async () => {
-      const response = await fetch("/api/technicians");
+      const response = await fetch("/api/technicians/stored");
       if (!response.ok) throw new Error("Failed to fetch technicians");
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : (data.technicians || []);
     },
   });
 
