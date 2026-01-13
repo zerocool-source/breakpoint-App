@@ -63,6 +63,7 @@ Routes are organized into domain-specific modules in `server/routes/`:
 - `properties.ts` - Property repair summaries
 - `settings.ts` - API configuration
 - `estimates.ts` - Estimate management
+- `serviceRepairs.ts` - Service repair jobs management (sub-$500 jobs), batch-to-estimate workflow
 
 **Data Flow:**
 1. Pool Brain API client fetches raw alerts, customers, and pool data
