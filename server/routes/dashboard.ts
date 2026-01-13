@@ -35,9 +35,12 @@ export function registerDashboardRoutes(app: any) {
       const supervisors = techniciansList.filter((t: any) => t.role === "supervisor");
 
       const urgentAlerts = alerts.filter((a: any) => 
-        a.severity?.toUpperCase().includes("URGENT") && a.status === "Active"
+        (a.severity?.toUpperCase()?.includes("URGENT") || a.severity?.toLowerCase()?.includes("urgent")) && 
+        (a.status === "Active" || a.status?.toLowerCase() === "active")
       );
-      const activeAlerts = alerts.filter((a: any) => a.status === "Active");
+      const activeAlerts = alerts.filter((a: any) => 
+        a.status === "Active" || a.status?.toLowerCase() === "active"
+      );
 
       const totalEstimateValue = estimates.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
       const pendingApprovalValue = pendingApprovals.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
@@ -49,19 +52,19 @@ export function registerDashboardRoutes(app: any) {
           type: "estimate",
           id: e.id,
           title: e.title || "Untitled Estimate",
-          property: e.propertyName,
-          status: e.status,
+          property: e.propertyName || "Unknown Property",
+          status: e.status || "draft",
           amount: (e.totalAmount || 0) / 100,
-          timestamp: e.updatedAt || e.createdAt,
+          timestamp: e.updatedAt || e.createdAt || new Date().toISOString(),
         })),
         ...serviceRepairs.slice(0, 5).map((r: any) => ({
           type: "service_repair",
           id: r.id,
-          title: r.description || "Service Repair",
-          property: r.propertyName,
-          status: r.status,
-          amount: (r.estimatedCost || 0) / 100,
-          timestamp: r.updatedAt || r.createdAt,
+          title: r.description || r.title || "Service Repair",
+          property: r.propertyName || r.propertyId || "Unknown Property",
+          status: r.status || "pending",
+          amount: (r.estimatedCost || r.amount || 0) / 100,
+          timestamp: r.updatedAt || r.createdAt || new Date().toISOString(),
         })),
       ].sort((a, b) => {
         const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
@@ -73,26 +76,26 @@ export function registerDashboardRoutes(app: any) {
         ...urgentAlerts.slice(0, 5).map((a: any) => ({
           type: "alert",
           id: a.id,
-          title: a.alertType || "Alert",
-          description: a.description,
-          severity: a.severity,
-          property: a.poolName,
+          title: a.alertType || a.type || "Alert",
+          description: a.description || a.message || "No description",
+          severity: a.severity || "warning",
+          property: a.poolName || a.propertyName || "Unknown",
         })),
         ...readyToInvoice.slice(0, 3).map((e: any) => ({
           type: "ready_to_invoice",
           id: e.id,
           title: e.title || "Ready to Invoice",
-          description: `${e.propertyName} - $${((e.totalAmount || 0) / 100).toLocaleString()}`,
+          description: `${e.propertyName || "Property"} - $${((e.totalAmount || 0) / 100).toLocaleString()}`,
           severity: "info",
-          property: e.propertyName,
+          property: e.propertyName || "Unknown",
         })),
         ...approvedEstimates.filter((e: any) => e.status === "needs_scheduling").slice(0, 3).map((e: any) => ({
           type: "needs_scheduling",
           id: e.id,
           title: e.title || "Needs Scheduling",
-          description: `${e.propertyName} - Approved, awaiting schedule`,
+          description: `${e.propertyName || "Property"} - Approved, awaiting schedule`,
           severity: "warning",
-          property: e.propertyName,
+          property: e.propertyName || "Unknown",
         })),
       ];
 

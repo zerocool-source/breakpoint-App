@@ -214,9 +214,7 @@ export function Sidebar() {
       key: "overview",
       icon: LayoutDashboard, 
       label: "Overview", 
-      href: "/",
-      badge: "Alpha",
-      disabled: true
+      href: "/"
     },
     { 
       key: "properties",
