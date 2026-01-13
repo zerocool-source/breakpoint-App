@@ -28,6 +28,7 @@ import TruckInventory from "@/pages/TruckInventory";
 import Equipment from "@/pages/Equipment";
 import Operations from "@/pages/Operations";
 import EquipmentReports from "@/pages/EquipmentReports";
+import ServiceRepairs from "@/pages/ServiceRepairs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/accounts/:accountId" component={AccountDetails} />
       <Route path="/channels" component={Channels} />
       <Route path="/estimates" component={Estimates} />
+      <Route path="/service-repairs" component={ServiceRepairs} />
       <Route path="/scheduling" component={Scheduling} />
       <Route path="/customers" component={Customers} />
       <Route path="/tech-services" component={ServiceTechs} />

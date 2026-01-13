@@ -213,7 +213,10 @@ export function Sidebar() {
       key: "estimates",
       icon: FileText, 
       label: "Estimates", 
-      href: "/estimates"
+      children: [
+        { label: "All Estimates", href: "/estimates" },
+        { label: "Service Repairs", href: "/service-repairs" },
+      ]
     },
     { 
       key: "chats",
