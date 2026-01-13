@@ -14,8 +14,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, FileSpreadsheet, Loader2, Flame, Wrench, Filter } from "lucide-react";
-import { format, startOfYear, endOfDay } from "date-fns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Download, FileSpreadsheet, Loader2, Flame, Wrench, Filter, AlertTriangle } from "lucide-react";
+import { format, startOfYear } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface EquipmentJob {
   id: string;
@@ -32,12 +34,13 @@ interface EquipmentJob {
 export default function EquipmentReports() {
   const today = new Date();
   const yearStart = startOfYear(today);
+  const { toast } = useToast();
   
   const [fromDate, setFromDate] = useState(format(yearStart, "yyyy-MM-dd"));
   const [toDate, setToDate] = useState(format(today, "yyyy-MM-dd"));
   const [isExporting, setIsExporting] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["/api/reports/equipment", fromDate, toDate],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -45,9 +48,13 @@ export default function EquipmentReports() {
       if (toDate) params.append("toDate", toDate);
       
       const response = await fetch(`/api/reports/equipment?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch report");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch report");
+      }
       return response.json();
     },
+    retry: 1,
   });
 
   const handleExport = async () => {
@@ -58,7 +65,10 @@ export default function EquipmentReports() {
       if (toDate) params.append("toDate", toDate);
       
       const response = await fetch(`/api/reports/equipment/export?${params}`);
-      if (!response.ok) throw new Error("Failed to export");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to export");
+      }
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -69,8 +79,18 @@ export default function EquipmentReports() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error) {
-      console.error("Export failed:", error);
+      
+      toast({
+        title: "Export Complete",
+        description: "Your equipment report has been downloaded.",
+      });
+    } catch (err: any) {
+      console.error("Export failed:", err);
+      toast({
+        title: "Export Failed",
+        description: err.message || "Failed to export report. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsExporting(false);
     }
@@ -89,7 +109,8 @@ export default function EquipmentReports() {
     }
   };
 
-  const equipmentJobs: EquipmentJob[] = data?.data || [];
+  const equipmentJobs: EquipmentJob[] = Array.isArray(data?.data) ? data.data : [];
+  const hasPartialData = data?.hasPartialData || false;
   
   const tearDownCount = equipmentJobs.filter(j => j.equipmentType === "Tear Down").length;
   const deSootCount = equipmentJobs.filter(j => j.equipmentType === "De-Soot").length;
@@ -178,6 +199,16 @@ export default function EquipmentReports() {
             </Card>
           </div>
 
+          {hasPartialData && (
+            <Alert className="mb-6 border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Partial Data Warning</AlertTitle>
+              <AlertDescription className="text-amber-700">
+                Some job details could not be fetched from Pool Brain. The report may be incomplete.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Card className="bg-white shadow-sm border-[#E2E8F0] mb-6">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -232,7 +263,23 @@ export default function EquipmentReports() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {error ? (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Error Loading Report</AlertTitle>
+                  <AlertDescription>
+                    {(error as Error).message || "Failed to fetch equipment jobs. Please check your Pool Brain connection."}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="ml-4"
+                      onClick={() => refetch()}
+                    >
+                      Retry
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
                   <span className="ml-3 text-slate-600">Loading equipment jobs from Pool Brain...</span>
