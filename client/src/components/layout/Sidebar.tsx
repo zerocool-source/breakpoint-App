@@ -22,11 +22,18 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import BreakpointLogo from "@assets/ChatGPT_Image_Dec_9,_2025,_11_02_17_PM_1765350238464.png";
 
-interface NavSubItem {
+interface NavSubSubItem {
   label: string;
   href: string;
+  badge?: number;
+}
+
+interface NavSubItem {
+  label: string;
+  href?: string;
   icon?: any;
   badge?: number;
+  children?: NavSubSubItem[];
 }
 
 interface NavItem {
@@ -114,11 +121,54 @@ function NavItemComponent({
       {isExpanded && item.children && (
         <div className="ml-4 mt-1 space-y-0.5 pl-4 border-l-2 border-slate-200">
           {item.children.map((child) => {
-            const isChildActive = location === child.href;
+            const isChildActive = child.href ? location === child.href : false;
+            const hasSubChildren = child.children && child.children.length > 0;
+            const hasActiveSubChild = child.children?.some(sub => location === sub.href);
+            
+            if (hasSubChildren) {
+              return (
+                <div key={child.label}>
+                  <div className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
+                    hasActiveSubChild ? "text-[#1E3A8A]" : "text-slate-600"
+                  )}>
+                    <span>{child.label}</span>
+                  </div>
+                  <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-slate-200">
+                    {child.children!.map((subChild) => {
+                      const isSubActive = location === subChild.href;
+                      return (
+                        <Link
+                          key={subChild.href}
+                          href={subChild.href}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
+                            isSubActive 
+                              ? "bg-[#1E3A8A] text-white shadow-sm" 
+                              : "text-slate-500 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+                          )}
+                        >
+                          <span className="flex-1">{subChild.label}</span>
+                          {subChild.badge !== undefined && subChild.badge > 0 && (
+                            <span className={cn(
+                              "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
+                              isSubActive ? "bg-white/20 text-white" : "bg-[#F97316] text-white"
+                            )}>
+                              {subChild.badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            }
+            
             return (
               <Link
-                key={child.href}
-                href={child.href}
+                key={child.href || child.label}
+                href={child.href || "#"}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
                   isChildActive 
@@ -205,10 +255,14 @@ export function Sidebar() {
       icon: Hammer, 
       label: "Operations Hub", 
       children: [
-        { label: "Tech Ops", href: "/tech-ops" },
-        { label: "Repairs Needed", href: "/tech-ops/repairs-needed", badge: repairsNeededCount },
+        { 
+          label: "Tech Ops", 
+          children: [
+            { label: "Repairs Needed", href: "/tech-ops/repairs-needed", badge: repairsNeededCount },
+            { label: "Service Repairs", href: "/service-repairs", badge: serviceRepairsCount },
+          ]
+        },
         { label: "Repair Queue", href: "/repair-queue" },
-        { label: "Service Repairs", href: "/service-repairs", badge: serviceRepairsCount },
         { label: "Supervisor", href: "/tech-supervisor" },
         { label: "Repair Foreman", href: "/tech-foreman" },
       ]
