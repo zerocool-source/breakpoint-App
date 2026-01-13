@@ -297,6 +297,7 @@ export default function EquipmentReports() {
                       <TableRow className="bg-[#F8FAFC]">
                         <TableHead className="font-semibold text-[#1E3A8A]">Date</TableHead>
                         <TableHead className="font-semibold text-[#1E3A8A]">Property</TableHead>
+                        <TableHead className="font-semibold text-[#1E3A8A]">Customer</TableHead>
                         <TableHead className="font-semibold text-[#1E3A8A]">Technician</TableHead>
                         <TableHead className="font-semibold text-[#1E3A8A]">Type</TableHead>
                         <TableHead className="font-semibold text-[#1E3A8A]">Job Title</TableHead>
@@ -320,6 +321,7 @@ export default function EquipmentReports() {
                               )}
                             </div>
                           </TableCell>
+                          <TableCell>{job.customerName}</TableCell>
                           <TableCell>{job.technicianName}</TableCell>
                           <TableCell>{getEquipmentBadge(job.equipmentType)}</TableCell>
                           <TableCell className="max-w-xs truncate">{job.jobTitle}</TableCell>

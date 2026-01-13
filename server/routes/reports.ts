@@ -380,6 +380,7 @@ export function registerReportRoutes(app: any) {
       worksheet.columns = [
         { header: 'Date', key: 'date', width: 15 },
         { header: 'Property', key: 'propertyName', width: 30 },
+        { header: 'Customer', key: 'customerName', width: 30 },
         { header: 'Technician', key: 'technicianName', width: 20 },
         { header: 'Equipment Type', key: 'equipmentType', width: 15 },
         { header: 'Job Title', key: 'jobTitle', width: 35 },
