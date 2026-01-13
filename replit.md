@@ -62,7 +62,11 @@ Routes are organized into domain-specific modules in `server/routes/`:
 - `sync.ts` - Field Tech Sync API for mobile app
 - `properties.ts` - Property repair summaries
 - `settings.ts` - API configuration
-- `estimates.ts` - Estimate management
+- `estimates.ts` - Estimate management with enhanced workflow:
+    - Workflow: Draft → Pending Approval → Approved → Needs Scheduling → Scheduled → Completed → Ready to Invoice → Invoiced
+    - Dedicated endpoints for each workflow transition: /approve, /reject, /schedule, /complete, /ready-to-invoice, /invoice
+    - Metrics dashboard showing approval rate, values by status, average times
+    - Scheduling modal for assigning jobs to repair technicians
 - `serviceRepairs.ts` - Service repair jobs management (sub-$500 jobs), batch-to-estimate workflow
 
 **Data Flow:**
