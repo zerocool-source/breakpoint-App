@@ -290,7 +290,7 @@ export function registerEstimateRoutes(app: any) {
     try {
       const { id } = req.params;
       const estimate = await storage.updateEstimate(id, {
-        status: "ready_to_invoice",
+        status: "completed",
         completedAt: new Date(),
       });
       if (!estimate) {
@@ -300,6 +300,22 @@ export function registerEstimateRoutes(app: any) {
     } catch (error: any) {
       console.error("Error completing estimate:", error);
       res.status(500).json({ error: "Failed to complete estimate" });
+    }
+  });
+
+  app.patch("/api/estimates/:id/ready-to-invoice", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const estimate = await storage.updateEstimate(id, {
+        status: "ready_to_invoice",
+      });
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      res.json({ estimate });
+    } catch (error: any) {
+      console.error("Error marking estimate ready to invoice:", error);
+      res.status(500).json({ error: "Failed to mark estimate ready to invoice" });
     }
   });
 

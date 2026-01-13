@@ -800,11 +800,50 @@ Breakpoint Pool Service`);
     setShowSchedulingModal(true);
   };
 
-  const handleComplete = (estimate: Estimate) => {
-    updateStatusMutation.mutate({
-      id: estimate.id,
-      status: "completed",
-    });
+  const handleComplete = async (estimate: Estimate) => {
+    try {
+      const response = await fetch(`/api/estimates/${estimate.id}/complete`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to mark complete");
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/metrics"] });
+      toast({
+        title: "Job Completed",
+        description: "Estimate marked as completed.",
+      });
+    } catch (error) {
+      console.error("Error completing estimate:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete estimate.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReadyToInvoice = async (estimate: Estimate) => {
+    try {
+      const response = await fetch(`/api/estimates/${estimate.id}/ready-to-invoice`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to mark ready to invoice");
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/metrics"] });
+      toast({
+        title: "Ready to Invoice",
+        description: "Estimate marked as ready for invoicing.",
+      });
+    } catch (error) {
+      console.error("Error marking ready to invoice:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update estimate status.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openInvoiceDialog = async (estimate: Estimate) => {
@@ -1332,10 +1371,24 @@ Breakpoint Pool Service`);
                             </>
                           )}
                           {estimate.status === "completed" && (
-                            <Badge className="bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]">
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Completed
-                            </Badge>
+                            <>
+                              <Badge className="bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Completed
+                              </Badge>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReadyToInvoice(estimate);
+                                }}
+                                className="bg-purple-600 hover:bg-purple-700"
+                                data-testid={`button-ready-invoice-${estimate.id}`}
+                              >
+                                <Receipt className="w-3 h-3 mr-1" />
+                                Ready to Invoice
+                              </Button>
+                            </>
                           )}
                           {estimate.status === "ready_to_invoice" && (
                             <>
