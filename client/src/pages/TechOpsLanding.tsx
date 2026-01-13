@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Wrench, Droplets, Wind, AlertTriangle, FileText, ChevronRight
+  Wrench, Droplets, Wind, AlertTriangle, ChevronRight
 } from "lucide-react";
 
 const techOpsOptions = [
@@ -46,14 +46,6 @@ const techOpsOptions = [
     icon: AlertTriangle, 
     color: "bg-orange-100 text-orange-700 border-orange-200",
     description: "Report any issue or concern at a property"
-  },
-  { 
-    id: "add-notes",
-    label: "Add Notes", 
-    href: "/tech-ops/add-notes",
-    icon: FileText, 
-    color: "bg-slate-100 text-slate-700 border-slate-200",
-    description: "Add general notes about a property or service"
   },
 ];
 
