@@ -27,6 +27,7 @@ import Fleet from "@/pages/Fleet";
 import TruckInventory from "@/pages/TruckInventory";
 import Equipment from "@/pages/Equipment";
 import Operations from "@/pages/Operations";
+import EquipmentReports from "@/pages/EquipmentReports";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/fleet/inventory" component={TruckInventory} />
       <Route path="/equipment" component={Equipment} />
       <Route path="/operations" component={Operations} />
+      <Route path="/report-equipment" component={EquipmentReports} />
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
