@@ -5,15 +5,35 @@ import { insertTechOpsEntrySchema } from "@shared/schema";
 export function registerTechOpsRoutes(app: Express) {
   app.get("/api/tech-ops", async (req: Request, res: Response) => {
     try {
-      const { entryType, status } = req.query;
-      const entries = await storage.getTechOpsEntries(
-        entryType as string | undefined,
-        status as string | undefined
-      );
+      const { entryType, status, propertyId, technicianName, startDate, endDate } = req.query;
+      const entries = await storage.getTechOpsEntries({
+        entryType: entryType as string | undefined,
+        status: status as string | undefined,
+        propertyId: propertyId as string | undefined,
+        technicianName: technicianName as string | undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+      });
       res.json(entries);
     } catch (error: any) {
       console.error("Error fetching tech ops entries:", error);
       res.status(500).json({ error: "Failed to fetch tech ops entries" });
+    }
+  });
+
+  app.get("/api/tech-ops/summary", async (req: Request, res: Response) => {
+    try {
+      const { propertyId, technicianName, startDate, endDate } = req.query;
+      const summary = await storage.getTechOpsSummary({
+        propertyId: propertyId as string | undefined,
+        technicianName: technicianName as string | undefined,
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+      });
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Error fetching tech ops summary:", error);
+      res.status(500).json({ error: "Failed to fetch tech ops summary" });
     }
   });
 

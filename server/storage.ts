@@ -244,7 +244,24 @@ export interface IStorage {
   deletePropertyAccessNote(id: string): Promise<void>;
 
   // Tech Ops Entries
-  getTechOpsEntries(entryType?: string, status?: string): Promise<TechOpsEntry[]>;
+  getTechOpsEntries(filters?: {
+    entryType?: string;
+    status?: string;
+    propertyId?: string;
+    technicianName?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<TechOpsEntry[]>;
+  getTechOpsSummary(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    propertyId?: string;
+    technicianName?: string;
+  }): Promise<{
+    total: number;
+    byType: Record<string, number>;
+    byStatus: Record<string, number>;
+  }>;
   getTechOpsEntry(id: string): Promise<TechOpsEntry | undefined>;
   createTechOpsEntry(entry: InsertTechOpsEntry): Promise<TechOpsEntry>;
   updateTechOpsEntry(id: string, updates: Partial<InsertTechOpsEntry>): Promise<TechOpsEntry | undefined>;
@@ -1401,13 +1418,32 @@ export class DbStorage implements IStorage {
   }
 
   // Tech Ops Entries
-  async getTechOpsEntries(entryType?: string, status?: string): Promise<TechOpsEntry[]> {
+  async getTechOpsEntries(filters?: {
+    entryType?: string;
+    status?: string;
+    propertyId?: string;
+    technicianName?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<TechOpsEntry[]> {
     const conditions = [];
-    if (entryType) {
-      conditions.push(eq(techOpsEntries.entryType, entryType));
+    if (filters?.entryType) {
+      conditions.push(eq(techOpsEntries.entryType, filters.entryType));
     }
-    if (status) {
-      conditions.push(eq(techOpsEntries.status, status));
+    if (filters?.status) {
+      conditions.push(eq(techOpsEntries.status, filters.status));
+    }
+    if (filters?.propertyId) {
+      conditions.push(eq(techOpsEntries.propertyId, filters.propertyId));
+    }
+    if (filters?.technicianName) {
+      conditions.push(eq(techOpsEntries.technicianName, filters.technicianName));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(techOpsEntries.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(techOpsEntries.createdAt, filters.endDate));
     }
     if (conditions.length > 0) {
       return db.select().from(techOpsEntries)
@@ -1416,6 +1452,53 @@ export class DbStorage implements IStorage {
     }
     return db.select().from(techOpsEntries)
       .orderBy(desc(techOpsEntries.createdAt));
+  }
+
+  async getTechOpsSummary(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    propertyId?: string;
+    technicianName?: string;
+  }): Promise<{
+    total: number;
+    byType: Record<string, number>;
+    byStatus: Record<string, number>;
+  }> {
+    const conditions = [];
+    if (filters?.propertyId) {
+      conditions.push(eq(techOpsEntries.propertyId, filters.propertyId));
+    }
+    if (filters?.technicianName) {
+      conditions.push(eq(techOpsEntries.technicianName, filters.technicianName));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(techOpsEntries.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(techOpsEntries.createdAt, filters.endDate));
+    }
+    
+    let entries: TechOpsEntry[];
+    if (conditions.length > 0) {
+      entries = await db.select().from(techOpsEntries).where(and(...conditions));
+    } else {
+      entries = await db.select().from(techOpsEntries);
+    }
+    
+    const byType: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    
+    for (const entry of entries) {
+      byType[entry.entryType] = (byType[entry.entryType] || 0) + 1;
+      const status = entry.status || 'pending';
+      byStatus[status] = (byStatus[status] || 0) + 1;
+    }
+    
+    return {
+      total: entries.length,
+      byType,
+      byStatus
+    };
   }
 
   async getTechOpsEntry(id: string): Promise<TechOpsEntry | undefined> {
