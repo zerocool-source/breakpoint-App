@@ -4,6 +4,67 @@ import { PoolBrainClient } from "../poolbrain-client";
 import { parseOfficeNotesForRepairs, extractPricesFromNotes, type ParsedRepair } from "../repair-parser";
 
 export function registerPropertyRoutes(app: any) {
+  // Get all properties (local database)
+  app.get("/api/properties", async (req: Request, res: Response) => {
+    try {
+      const properties = await storage.getProperties();
+      res.json(properties);
+    } catch (error: any) {
+      console.error("Error fetching properties:", error);
+      res.status(500).json({ error: "Failed to fetch properties" });
+    }
+  });
+
+  // Get property by ID
+  app.get("/api/properties/:id", async (req: Request, res: Response) => {
+    try {
+      const property = await storage.getProperty(req.params.id);
+      if (!property) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+      res.json(property);
+    } catch (error: any) {
+      console.error("Error fetching property:", error);
+      res.status(500).json({ error: "Failed to fetch property" });
+    }
+  });
+
+  // Create property
+  app.post("/api/properties", async (req: Request, res: Response) => {
+    try {
+      const property = await storage.createProperty(req.body);
+      res.status(201).json(property);
+    } catch (error: any) {
+      console.error("Error creating property:", error);
+      res.status(500).json({ error: "Failed to create property" });
+    }
+  });
+
+  // Update property
+  app.put("/api/properties/:id", async (req: Request, res: Response) => {
+    try {
+      const property = await storage.updateProperty(req.params.id, req.body);
+      if (!property) {
+        return res.status(404).json({ error: "Property not found" });
+      }
+      res.json(property);
+    } catch (error: any) {
+      console.error("Error updating property:", error);
+      res.status(500).json({ error: "Failed to update property" });
+    }
+  });
+
+  // Delete property
+  app.delete("/api/properties/:id", async (req: Request, res: Response) => {
+    try {
+      await storage.deleteProperty(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting property:", error);
+      res.status(500).json({ error: "Failed to delete property" });
+    }
+  });
+
   app.get("/api/properties/repairs", async (req: Request, res: Response) => {
     try {
       const settings = await storage.getSettings();

@@ -164,6 +164,7 @@ export function Sidebar() {
       icon: Building2, 
       label: "Properties", 
       children: [
+        { label: "Profiles", href: "/property-profiles" },
         { label: "Repairs", href: "/property-repairs" },
         { label: "Visits", href: "/visits" },
         { label: "Equipment Tracker", href: "/equipment" },

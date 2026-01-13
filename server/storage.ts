@@ -312,6 +312,7 @@ export interface IStorage {
   getProperty(id: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, updates: Partial<InsertProperty>): Promise<Property | undefined>;
+  deleteProperty(id: string): Promise<void>;
 
   // Route Stops (additional methods for Field Tech sync)
   getAllRouteStops(): Promise<RouteStop[]>;
@@ -1955,6 +1956,10 @@ export class DbStorage implements IStorage {
       .where(eq(properties.id, id))
       .returning();
     return result[0];
+  }
+
+  async deleteProperty(id: string): Promise<void> {
+    await db.delete(properties).where(eq(properties.id, id));
   }
 
   // Route Stops (additional methods for Field Tech sync)

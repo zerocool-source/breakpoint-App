@@ -1227,6 +1227,24 @@ export const properties = pgTable("properties", {
   notes: text("notes"),
   gateCode: text("gate_code"),
   accessInstructions: text("access_instructions"),
+  // Extended profile fields (QuickBooks-style)
+  billingAddress: text("billing_address"),
+  billingCity: text("billing_city"),
+  billingState: text("billing_state"),
+  billingZip: text("billing_zip"),
+  primaryContactName: text("primary_contact_name"),
+  primaryContactPhone: text("primary_contact_phone"),
+  primaryContactEmail: text("primary_contact_email"),
+  secondaryContactName: text("secondary_contact_name"),
+  secondaryContactPhone: text("secondary_contact_phone"),
+  secondaryContactEmail: text("secondary_contact_email"),
+  zone: text("zone"), // Service zone/territory
+  tags: text("tags").array(), // Multiple tags for categorization
+  monthlyRate: integer("monthly_rate"), // cents
+  accountBalance: integer("account_balance").default(0), // cents
+  lastServiceDate: timestamp("last_service_date"),
+  nextServiceDate: timestamp("next_service_date"),
+  propertyType: text("property_type"), // residential, commercial, hoa
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
