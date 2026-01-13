@@ -720,6 +720,64 @@ export const insertEstimateSchema = createInsertSchema(estimates).omit({
 export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 export type Estimate = typeof estimates.$inferSelect;
 
+// Service Repair Jobs (from service techs, under $500)
+export const serviceRepairJobs = pgTable("service_repair_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  externalId: text("external_id"), // From mobile app sync
+  
+  // Location/Customer
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  customerId: text("customer_id"),
+  customerName: text("customer_name"),
+  poolId: text("pool_id"),
+  poolName: text("pool_name"),
+  address: text("address"),
+  
+  // Technician
+  technicianId: text("technician_id"),
+  technicianName: text("technician_name"),
+  
+  // Job details
+  jobDate: timestamp("job_date").defaultNow(),
+  description: text("description"),
+  notes: text("notes"),
+  
+  // Amounts (stored in cents)
+  laborAmount: integer("labor_amount").default(0),
+  partsAmount: integer("parts_amount").default(0),
+  totalAmount: integer("total_amount").default(0),
+  
+  // Line items from the job
+  items: json("items").$type<{
+    description: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }[]>().default([]),
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // pending, selected, estimated, invoiced
+  
+  // Links to estimate/invoice
+  estimateId: text("estimate_id"),
+  invoiceId: text("invoice_id"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  batchedAt: timestamp("batched_at"),
+});
+
+export const insertServiceRepairJobSchema = createInsertSchema(serviceRepairJobs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertServiceRepairJob = z.infer<typeof insertServiceRepairJobSchema>;
+export type ServiceRepairJob = typeof serviceRepairJobs.$inferSelect;
+
 // Routes (Service routes for technicians)
 export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
