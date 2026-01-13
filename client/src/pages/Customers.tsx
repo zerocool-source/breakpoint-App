@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -948,6 +949,113 @@ function AddPoolModal({
   );
 }
 
+const BILLING_CONTACT_TYPES = [
+  { value: "primary", label: "Primary Billing", description: "Default billing contact for all work types" },
+  { value: "repairs", label: "Repairs", description: "Receives invoices for repair work" },
+  { value: "chemicals", label: "Chemicals", description: "Receives invoices for chemical orders" },
+];
+
+function AddBillingContactModal({
+  open,
+  onClose,
+  onSave,
+  customerId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: { name: string; email: string; phone?: string; contactType: string }) => void;
+  customerId: string;
+}) {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    contactType: "primary",
+  });
+
+  const handleSubmit = () => {
+    onSave({
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || undefined,
+      contactType: formData.contactType,
+    });
+    setFormData({ name: "", email: "", phone: "", contactType: "primary" });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-blue-600" />
+            Add Billing Contact
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Contact Type <span className="text-red-500">*</span></Label>
+            <Select
+              value={formData.contactType}
+              onValueChange={(value) => setFormData({ ...formData, contactType: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BILLING_CONTACT_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    <div>
+                      <p className="font-medium">{type.label}</p>
+                      <p className="text-xs text-slate-500">{type.description}</p>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Name <span className="text-red-500">*</span></Label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Contact name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Email <span className="text-red-500">*</span></Label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="billing@example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Phone</Label>
+            <Input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="(555) 123-4567"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={!formData.name.trim() || !formData.email.trim()}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Add Billing Contact
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CustomerDetailPanel({
   customer,
   onClose,
@@ -959,11 +1067,13 @@ function CustomerDetailPanel({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("properties");
   const [showAddProperty, setShowAddProperty] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddEquipment, setShowAddEquipment] = useState(false);
   const [showAddPool, setShowAddPool] = useState(false);
+  const [showAddBillingContact, setShowAddBillingContact] = useState(false);
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [scheduleActive, setScheduleActive] = useState(false);
@@ -1012,10 +1122,20 @@ function CustomerDetailPanel({
     },
   });
 
+  const { data: billingContactsData } = useQuery<{ contacts: { id: string; name: string; email: string; phone: string | null; contactType: string }[] }>({
+    queryKey: ["/api/customers", customer.id, "billing-contacts"],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${customer.id}/billing-contacts`);
+      if (!res.ok) return { contacts: [] };
+      return res.json();
+    },
+  });
+
   const properties = propertiesData?.properties || [];
   const contacts = contactsData?.contacts || [];
   const equipmentList = equipmentData?.equipment || [];
   const poolsList = poolsData?.pools || [];
+  const billingContacts = billingContactsData?.contacts || [];
 
   useEffect(() => {
     if (properties.length > 0 && !selectedPropertyId) {
@@ -1179,6 +1299,43 @@ function CustomerDetailPanel({
     },
   });
 
+  const addBillingContactMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string; phone?: string; contactType: string }) => {
+      const res = await fetch(`/api/customers/${customer.id}/billing-contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to add billing contact");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "billing-contacts"] });
+      setShowAddBillingContact(false);
+      toast({ title: "Billing Contact Added", description: "The billing contact was added successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add billing contact. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const deleteBillingContactMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const res = await fetch(`/api/customers/${customer.id}/billing-contacts/${contactId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete billing contact");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "billing-contacts"] });
+      toast({ title: "Billing Contact Deleted", description: "The billing contact was removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete billing contact. Please try again.", variant: "destructive" });
+    },
+  });
+
   const saveRouteScheduleMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!selectedPropertyId) throw new Error("No property selected");
@@ -1317,6 +1474,10 @@ function CustomerDetailPanel({
               <TabsTrigger value="equipment" className="gap-1 whitespace-nowrap">
                 <Wrench className="h-4 w-4" />
                 Equipment ({equipmentList.length})
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="gap-1 whitespace-nowrap">
+                <FileText className="h-4 w-4" />
+                Billing
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1953,6 +2114,97 @@ function CustomerDetailPanel({
             )}
           </ScrollArea>
         </TabsContent>
+
+        <TabsContent value="billing" className="flex-1 m-0 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-700">Billing Contacts</h3>
+            <Button size="sm" onClick={() => setShowAddBillingContact(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Billing Contact
+            </Button>
+          </div>
+          
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Billing contacts</strong> are used to route invoices based on work type. 
+              Assign contacts to specific work types (Repairs, Chemicals) or as Primary billing.
+            </p>
+          </div>
+          
+          <ScrollArea className="h-[calc(100vh-500px)]">
+            {billingContacts.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No billing contacts yet</p>
+                <Button variant="link" size="sm" onClick={() => setShowAddBillingContact(true)}>
+                  Add first billing contact
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {billingContacts.map((contact) => (
+                  <Card key={contact.id} className={cn(
+                    "border-l-4",
+                    contact.contactType === "repairs" && "border-l-[#F97316]",
+                    contact.contactType === "chemicals" && "border-l-[#60A5FA]",
+                    contact.contactType === "primary" && "border-l-[#1E3A8A]"
+                  )}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                            <Mail className="h-5 w-5 text-slate-500" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{contact.name}</p>
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "text-xs capitalize",
+                                  contact.contactType === "repairs" && "border-[#F97316] text-[#F97316] bg-orange-50",
+                                  contact.contactType === "chemicals" && "border-[#60A5FA] text-[#60A5FA] bg-blue-50",
+                                  contact.contactType === "primary" && "border-[#1E3A8A] text-[#1E3A8A] bg-blue-50"
+                                )}
+                              >
+                                {contact.contactType}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-slate-500">{contact.email}</p>
+                            {contact.phone && (
+                              <p className="text-sm text-slate-500">{contact.phone}</p>
+                            )}
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                if (confirm("Are you sure you want to delete this billing contact?")) {
+                                  deleteBillingContactMutation.mutate(contact.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </TabsContent>
       </Tabs>
 
       <AddPropertyModal
@@ -1981,6 +2233,13 @@ function CustomerDetailPanel({
         open={showAddPool}
         onClose={() => setShowAddPool(false)}
         onSave={(data) => addPoolMutation.mutate(data)}
+        customerId={customer.id}
+      />
+
+      <AddBillingContactModal
+        open={showAddBillingContact}
+        onClose={() => setShowAddBillingContact(false)}
+        onSave={(data) => addBillingContactMutation.mutate(data)}
         customerId={customer.id}
       />
     </div>

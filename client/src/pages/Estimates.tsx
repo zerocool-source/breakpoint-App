@@ -787,13 +787,21 @@ Breakpoint Pool Service`);
       if (customer?.email) {
         setBillingContacts(prev => {
           if (!prev.find((c: any) => c.email === customer.email)) {
-            return [{ id: 'main', name: customer.name || 'Primary Contact', email: customer.email, contactType: 'primary' }, ...prev];
+            const newContacts = [{ id: 'main', name: customer.name || 'Primary Contact', email: customer.email, contactType: 'primary' }, ...prev];
+            // If no email was selected yet, use the customer main email as fallback
+            setSelectedInvoiceEmail(prevEmail => prevEmail || customer.email);
+            return newContacts;
           }
           return prev;
         });
       }
     } catch (error) {
       console.error("Error fetching billing contacts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load billing contacts. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoadingBillingContacts(false);
     }
