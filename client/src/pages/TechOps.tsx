@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute } from "wouter";
+import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,11 +13,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Wrench, Plus, Loader2, CheckCircle, Clock, XCircle,
-  Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2
+  Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2,
+  CalendarIcon, Filter
 } from "lucide-react";
 import type { TechOpsEntry, Property } from "@shared/schema";
+import { cn } from "@/lib/utils";
 
 const entryTypeConfig: Record<string, { label: string; icon: any; color: string; description: string }> = {
   repairs_needed: { 
@@ -49,19 +54,13 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
     color: "bg-orange-100 text-orange-700 border-orange-200",
     description: "Report any issue or concern at a property"
   },
-  add_notes: { 
-    label: "Add Notes", 
-    icon: FileText, 
-    color: "bg-slate-100 text-slate-700 border-slate-200",
-    description: "Add general notes about a property or service"
-  },
 };
 
-const statusConfig: Record<string, { color: string; icon: any }> = {
-  pending: { color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },
-  reviewed: { color: "bg-blue-100 text-blue-700 border-blue-200", icon: CheckCircle },
-  completed: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle },
-  cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle },
+const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
+  pending: { color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock, label: "Pending" },
+  reviewed: { color: "bg-blue-100 text-blue-700 border-blue-200", icon: CheckCircle, label: "Reviewed" },
+  completed: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle, label: "Completed" },
+  cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle, label: "Cancelled" },
 };
 
 const priorityConfig: Record<string, string> = {
@@ -85,6 +84,14 @@ export default function TechOps() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: subDays(new Date(), 30),
+    to: new Date()
+  });
+  const [selectedProperty, setSelectedProperty] = useState<string>("all");
+  const [selectedTech, setSelectedTech] = useState<string>("all");
+
   const [form, setForm] = useState({
     technicianName: "",
     propertyId: "",
@@ -99,10 +106,20 @@ export default function TechOps() {
   const config = entryTypeConfig[entryType] || entryTypeConfig.repairs_needed;
   const Icon = config.icon;
 
+  const buildQueryString = () => {
+    const params = new URLSearchParams();
+    params.set("entryType", entryType);
+    if (dateRange.from) params.set("startDate", startOfDay(dateRange.from).toISOString());
+    if (dateRange.to) params.set("endDate", endOfDay(dateRange.to).toISOString());
+    if (selectedProperty !== "all") params.set("propertyId", selectedProperty);
+    if (selectedTech !== "all") params.set("technicianName", selectedTech);
+    return params.toString();
+  };
+
   const { data: entries = [], isLoading } = useQuery<TechOpsEntry[]>({
-    queryKey: ["tech-ops", entryType],
+    queryKey: ["tech-ops", entryType, dateRange, selectedProperty, selectedTech],
     queryFn: async () => {
-      const response = await fetch(`/api/tech-ops?entryType=${entryType}`);
+      const response = await fetch(`/api/tech-ops?${buildQueryString()}`);
       if (!response.ok) throw new Error("Failed to fetch entries");
       return response.json();
     },
@@ -117,6 +134,24 @@ export default function TechOps() {
     },
   });
 
+  const uniqueProperties = useMemo(() => {
+    const props = new Map<string, string>();
+    entries.forEach(e => {
+      if (e.propertyId && e.propertyName) {
+        props.set(e.propertyId, e.propertyName);
+      }
+    });
+    return Array.from(props.entries()).map(([id, name]) => ({ id, name }));
+  }, [entries]);
+
+  const uniqueTechs = useMemo(() => {
+    const techs = new Set<string>();
+    entries.forEach(e => {
+      if (e.technicianName) techs.add(e.technicianName);
+    });
+    return Array.from(techs);
+  }, [entries]);
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await fetch("/api/tech-ops", {
@@ -128,7 +163,7 @@ export default function TechOps() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tech-ops", entryType] });
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
       setShowAddDialog(false);
       setForm({
         technicianName: "",
@@ -153,7 +188,7 @@ export default function TechOps() {
       if (!response.ok) throw new Error("Failed to delete entry");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tech-ops", entryType] });
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
       toast({ title: "Entry Deleted" });
     },
   });
@@ -169,7 +204,7 @@ export default function TechOps() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tech-ops", entryType] });
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
       toast({ title: "Entry Marked as Reviewed" });
     },
   });
@@ -200,7 +235,7 @@ export default function TechOps() {
               <Icon className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#1E293B]">{config.label}</h1>
+              <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">{config.label}</h1>
               <p className="text-slate-500 text-sm">{config.description}</p>
             </div>
           </div>
@@ -213,9 +248,64 @@ export default function TechOps() {
           </Button>
         </div>
 
+        <div className="flex items-center gap-3 flex-wrap p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <Filter className="w-4 h-4 text-slate-500" />
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2" data-testid="button-date-range">
+                <CalendarIcon className="w-4 h-4" />
+                {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={{ from: dateRange.from, to: dateRange.to }}
+                onSelect={(range) => {
+                  if (range?.from && range?.to) {
+                    setDateRange({ from: range.from, to: range.to });
+                  }
+                }}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Select value={selectedProperty} onValueChange={setSelectedProperty}>
+            <SelectTrigger className="w-[180px]" data-testid="filter-property">
+              <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+              <SelectValue placeholder="All Properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Properties</SelectItem>
+              {uniqueProperties.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedTech} onValueChange={setSelectedTech}>
+            <SelectTrigger className="w-[180px]" data-testid="filter-technician">
+              <User className="w-4 h-4 mr-2 text-slate-400" />
+              <SelectValue placeholder="All Technicians" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Technicians</SelectItem>
+              {uniqueTechs.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="ml-auto text-sm text-slate-500">
+            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+          </div>
+        </div>
+
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Recent Entries</CardTitle>
+            <CardTitle className="text-lg">Entries</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -225,8 +315,8 @@ export default function TechOps() {
             ) : entries.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
                 <Icon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>No entries yet</p>
-                <p className="text-sm mt-1">Click "New Entry" to submit one</p>
+                <p>No entries found</p>
+                <p className="text-sm mt-1">Try adjusting your filters or click "New Entry" to submit one</p>
               </div>
             ) : (
               <ScrollArea className="max-h-[600px]">
@@ -244,7 +334,7 @@ export default function TechOps() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge className={statusCfg.color}>
                               <StatusIcon className="w-3 h-3 mr-1" />
-                              {entry.status}
+                              {statusCfg.label}
                             </Badge>
                             <Badge className={priorityConfig[entry.priority || "normal"]}>
                               {entry.priority}
@@ -314,7 +404,7 @@ export default function TechOps() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Icon className="w-5 h-5" style={{ color: config.color.includes("red") ? "#DC2626" : "#1E3A8A" }} />
+              <Icon className="w-5 h-5" />
               New {config.label}
             </DialogTitle>
           </DialogHeader>
@@ -413,7 +503,7 @@ export default function TechOps() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} data-testid="button-cancel">
               Cancel
             </Button>
             <Button
