@@ -110,9 +110,9 @@ export function registerServiceRepairRoutes(app: any) {
         title: `Service Repairs Batch - ${ids.length} items`,
         status: 'draft',
         subtotal: totalAmount,
-        total: totalAmount,
+        totalAmount: totalAmount,
         description: descriptions.join('\n'),
-        notes: notes || `Batch service repairs: ${ids.length} items`,
+        techNotes: notes || `Batch service repairs: ${ids.length} items`,
         woRequired: false
       });
       

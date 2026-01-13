@@ -129,6 +129,25 @@ interface Estimate {
   woRequired?: boolean;
 }
 
+interface ServiceRepairJob {
+  id: string;
+  propertyId: string;
+  propertyName: string;
+  technicianId: string | null;
+  technicianName: string | null;
+  description: string;
+  laborAmount: number;
+  partsAmount: number;
+  totalAmount: number;
+  status: string;
+  jobDate: string;
+  estimateId: string | null;
+  invoiceId: string | null;
+  notes: string | null;
+  createdAt: string;
+  batchedAt: string | null;
+}
+
 interface EstimateFormData {
   propertyId: string;
   propertyName: string;
@@ -287,6 +306,70 @@ export default function Estimates() {
 
   const technicians = techniciansData?.technicians || [];
   const customers = customersData?.customers || [];
+
+  // Service Repairs query and state
+  const [selectedRepairs, setSelectedRepairs] = useState<Set<string>>(new Set());
+  
+  const { data: serviceRepairsData, isLoading: isLoadingRepairs } = useQuery({
+    queryKey: ["service-repairs"],
+    queryFn: async () => {
+      const response = await fetch("/api/service-repairs?maxAmount=50000");
+      if (!response.ok) throw new Error("Failed to fetch service repairs");
+      return response.json();
+    },
+    refetchInterval: 10000,
+  });
+
+  const serviceRepairs: ServiceRepairJob[] = serviceRepairsData || [];
+  const pendingRepairs = serviceRepairs.filter(r => r.status === 'pending');
+  
+  const toggleRepairSelection = (id: string) => {
+    setSelectedRepairs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+  
+  const selectAllRepairs = () => {
+    setSelectedRepairs(new Set(pendingRepairs.map(r => r.id)));
+  };
+  
+  const clearRepairSelection = () => {
+    setSelectedRepairs(new Set());
+  };
+
+  const batchToEstimateMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const response = await fetch("/api/service-repairs/batch-to-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!response.ok) throw new Error("Failed to batch to estimate");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["service-repairs"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      clearRepairSelection();
+      toast({
+        title: "Estimate Created",
+        description: `Created estimate from ${data.updatedJobCount} service repair(s)`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create estimate from repairs",
+        variant: "destructive",
+      });
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: async (estimate: any) => {
@@ -1008,11 +1091,115 @@ Breakpoint Pool Service`);
                 <TabsTrigger value="scheduled" data-testid="tab-scheduled">Scheduled ({statusCounts.scheduled})</TabsTrigger>
                 <TabsTrigger value="completed" data-testid="tab-completed">Completed ({statusCounts.completed})</TabsTrigger>
                 <TabsTrigger value="archived" data-testid="tab-archived">Archived ({statusCounts.archived})</TabsTrigger>
+                <TabsTrigger value="service_repairs" data-testid="tab-service-repairs" className="text-[#F97316]">
+                  <Wrench className="w-4 h-4 mr-1" /> Service Repairs ({pendingRepairs.length})
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {activeTab === "service_repairs" ? (
+              /* Service Repairs Tab Content */
+              isLoadingRepairs ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#F97316]" />
+                </div>
+              ) : pendingRepairs.length === 0 ? (
+                <div className="text-center py-12 text-[#64748B]">
+                  <Wrench className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No pending service repairs under $500</p>
+                  <p className="text-sm mt-2">Service repairs will appear here when service techs log small jobs</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Selection Controls */}
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={selectedRepairs.size === pendingRepairs.length && pendingRepairs.length > 0}
+                        onCheckedChange={(checked) => checked ? selectAllRepairs() : clearRepairSelection()}
+                        data-testid="checkbox-select-all-repairs"
+                      />
+                      <span className="text-sm text-slate-600">
+                        {selectedRepairs.size > 0 ? `${selectedRepairs.size} selected` : "Select all"}
+                      </span>
+                    </div>
+                    {selectedRepairs.size > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#1E293B]">
+                          Total: {formatCurrency(Array.from(selectedRepairs).reduce((sum, id) => {
+                            const repair = pendingRepairs.find(r => r.id === id);
+                            return sum + (repair?.totalAmount || 0);
+                          }, 0))}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          className="bg-[#1E3A8A] hover:bg-[#1E40AF]"
+                          onClick={() => batchToEstimateMutation.mutate(Array.from(selectedRepairs))}
+                          disabled={batchToEstimateMutation.isPending}
+                          data-testid="button-batch-to-estimate"
+                        >
+                          {batchToEstimateMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <FileText className="w-4 h-4 mr-1" />
+                          )}
+                          Create Estimate
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Service Repairs Table */}
+                  <ScrollArea className="h-[450px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead>Property</TableHead>
+                          <TableHead>Technician</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Labor</TableHead>
+                          <TableHead className="text-right">Parts</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingRepairs.map((repair) => (
+                          <TableRow 
+                            key={repair.id} 
+                            className={selectedRepairs.has(repair.id) ? "bg-blue-50" : ""}
+                            data-testid={`repair-row-${repair.id}`}
+                          >
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedRepairs.has(repair.id)}
+                                onCheckedChange={() => toggleRepairSelection(repair.id)}
+                                data-testid={`checkbox-repair-${repair.id}`}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{repair.propertyName}</TableCell>
+                            <TableCell>{repair.technicianName || "—"}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{repair.description}</TableCell>
+                            <TableCell>{formatDate(repair.jobDate)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(repair.laborAmount)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(repair.partsAmount)}</TableCell>
+                            <TableCell className="text-right font-semibold">{formatCurrency(repair.totalAmount)}</TableCell>
+                            <TableCell>
+                              <Badge className="bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]">
+                                {repair.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              )
+            ) : isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
               </div>
