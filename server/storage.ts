@@ -36,6 +36,7 @@ import {
   type TruckInventory, type InsertTruckInventory,
   type Property, type InsertProperty,
   type FieldEntry, type InsertFieldEntry,
+  type PropertyBillingContact, type InsertPropertyBillingContact,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -43,7 +44,7 @@ import {
   estimates, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
-  properties, fieldEntries
+  properties, fieldEntries, propertyBillingContacts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -217,6 +218,16 @@ export interface IStorage {
   updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined>;
   deleteEstimate(id: string): Promise<void>;
+
+  // Property Billing Contacts
+  getPropertyBillingContacts(propertyId: string): Promise<PropertyBillingContact[]>;
+  createPropertyBillingContact(contact: InsertPropertyBillingContact): Promise<PropertyBillingContact>;
+  updatePropertyBillingContact(id: string, updates: Partial<InsertPropertyBillingContact>): Promise<PropertyBillingContact | undefined>;
+  deletePropertyBillingContact(id: string): Promise<void>;
+  getBillingEmailForWorkType(propertyId: string, workType: string): Promise<string | null>;
+
+  // Pool WO Settings
+  updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void>;
 
   // Routes
   getRoutes(dayOfWeek?: number): Promise<Route[]>;
@@ -1243,6 +1254,64 @@ export class DbStorage implements IStorage {
 
   async deleteEstimate(id: string): Promise<void> {
     await db.delete(estimates).where(eq(estimates.id, id));
+  }
+
+  // Property Billing Contacts
+  async getPropertyBillingContacts(propertyId: string): Promise<PropertyBillingContact[]> {
+    return db.select().from(propertyBillingContacts)
+      .where(eq(propertyBillingContacts.propertyId, propertyId));
+  }
+
+  async createPropertyBillingContact(contact: InsertPropertyBillingContact): Promise<PropertyBillingContact> {
+    const result = await db.insert(propertyBillingContacts).values(contact as any).returning();
+    return result[0];
+  }
+
+  async updatePropertyBillingContact(id: string, updates: Partial<InsertPropertyBillingContact>): Promise<PropertyBillingContact | undefined> {
+    const result = await db.update(propertyBillingContacts)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(propertyBillingContacts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePropertyBillingContact(id: string): Promise<void> {
+    await db.delete(propertyBillingContacts).where(eq(propertyBillingContacts.id, id));
+  }
+
+  async getBillingEmailForWorkType(propertyId: string, workType: string): Promise<string | null> {
+    // First try to find specific contact for work type
+    const specificResult = await db.select().from(propertyBillingContacts)
+      .where(and(
+        eq(propertyBillingContacts.propertyId, propertyId),
+        eq(propertyBillingContacts.contactType, workType)
+      ))
+      .limit(1);
+    
+    if (specificResult[0]?.email) {
+      return specificResult[0].email;
+    }
+    
+    // Fall back to primary billing contact
+    const primaryResult = await db.select().from(propertyBillingContacts)
+      .where(and(
+        eq(propertyBillingContacts.propertyId, propertyId),
+        eq(propertyBillingContacts.contactType, 'primary')
+      ))
+      .limit(1);
+    
+    return primaryResult[0]?.email || null;
+  }
+
+  // Pool WO Settings
+  async updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void> {
+    await db.update(pools)
+      .set({ 
+        woRequired, 
+        woNotes: woNotes || null,
+        updatedAt: new Date() 
+      } as any)
+      .where(eq(pools.id, poolId));
   }
 
   // Routes

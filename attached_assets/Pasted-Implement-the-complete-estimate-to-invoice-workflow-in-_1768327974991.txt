@@ -1,0 +1,245 @@
+Implement the complete estimate-to-invoice workflow in the Command Center web app. This workflow handles Field Estimates received from technicians, manual estimates created by office staff, and tracks the entire lifecycle through to invoicing.
+
+---
+
+## Workflow Steps
+
+### Step 1: Intake
+**Trigger:** Field Estimate received from Field App OR office staff clicks "+ New Estimate"
+
+**Actions:**
+- New estimates appear in the Estimates section with status "Draft"
+- Display property name, date, assigned user, and estimate total
+- Show Edit, Approve, and Reject buttons for each estimate
+
+---
+
+### Step 2: Draft & Review
+**Status:** Draft
+
+**Actions:**
+- Office staff reviews the estimate details
+- Edit button allows modifications to line items, pricing, descriptions
+- Once reviewed and ready, staff can move to send for approval
+
+---
+
+### Step 3: Send for Approval
+**Status:** Pending Approval
+
+**Actions:**
+- Send estimate to customer via email
+- Track approval status
+- **If Approved:** Convert to Job, move to Step 4
+- **If Rejected:** Return to Draft status for revision and resubmission
+
+---
+
+### Step 4: Job Created
+**Status:** Approved
+
+**Actions:**
+- Approved estimate converts to an active Job
+- Job is listed under Estimates section with "Approved" status
+- Ready for scheduling
+
+---
+
+### Step 5: Schedule & Assign
+**Status:** Scheduled
+
+**Actions:**
+- Office staff selects date/time for the work
+- Assigns job to available field technician
+- Technician receives notification in Field App
+
+---
+
+### Step 6: Complete Work
+**Status:** Completed
+
+**Actions:**
+- Field technician performs work on site
+- Tech marks job complete in Field App
+- Status syncs to Command Center as "Completed"
+
+---
+
+### Step 7: Send Invoice
+**Status:** Invoiced
+
+**Actions:**
+- Generate invoice from completed job
+- Send to appropriate billing email (see Billing Contact Logic below)
+- Mark as "Invoiced" to complete the workflow
+
+---
+
+## New Feature: Work Order (WO) Required Toggle
+
+### Purpose
+Some properties require a Work Order (WO) before work can begin or after the estimate is sent. This toggle identifies those properties so staff knows additional steps are needed.
+
+### Implementation
+
+#### Property Settings
+Add a toggle switch to each Property record:
+
+```
+Field: wo_required
+Type: Boolean
+Default: false
+Label: "Work Order Required"
+Description: "This property requires a Work Order before or after estimate approval"
+```
+
+#### UI Display
+- In the Estimates list, show a visual indicator (badge or icon) next to properties that have `wo_required = true`
+- Example: Orange "WO Required" badge or a document icon
+- This alerts staff that they need to wait for or request a Work Order
+
+#### Workflow Impact
+When `wo_required = true`:
+1. After estimate is approved, display a reminder: "Work Order required before scheduling"
+2. Add a field to track WO status:
+   - `wo_received`: Boolean
+   - `wo_number`: String (optional, to store the WO reference number)
+3. Optionally block scheduling until `wo_received = true`
+
+#### Property Settings UI
+In the Property edit screen (or a dedicated settings section), add:
+```
+[ ] Work Order Required
+    Toggle ON if this property requires a WO before work can be scheduled
+```
+
+---
+
+## Billing Contact Logic
+
+### Invoice Routing
+When sending invoices, the system must send to the correct billing email based on the work type.
+
+### Implementation
+
+#### Property Contact Structure
+Each property should have billing contacts categorized by department:
+
+```
+property.billing_contacts = {
+  repairs: {
+    email: "repairs-billing@property.com",
+    name: "Repairs Department"
+  },
+  chemicals: {
+    email: "chemicals-billing@property.com", 
+    name: "Chemical Orders"
+  },
+  primary: {
+    email: "ap@property.com",
+    name: "Accounts Payable"
+  }
+}
+```
+
+#### Estimate/Job Type Field
+Add a field to categorize the work:
+
+```
+Field: work_type
+Type: Enum
+Options: "repairs", "chemicals", "other"
+```
+
+#### Invoice Send Logic
+```
+function getBillingEmail(property, workType) {
+  // Check if property has specific billing contact for this work type
+  if (property.billing_contacts[workType]?.email) {
+    return property.billing_contacts[workType].email
+  }
+  
+  // Fall back to primary billing contact
+  if (property.billing_contacts.primary?.email) {
+    return property.billing_contacts.primary.email
+  }
+  
+  // Fall back to property primary contact
+  return property.primary_contact_email
+}
+```
+
+#### UI for Invoice Sending
+When clicking "Send Invoice":
+1. Auto-select the appropriate billing email based on work type
+2. Display the selected email for confirmation
+3. Allow override if needed
+4. Show: "Sending to: repairs-billing@property.com (Repairs Department)"
+
+---
+
+## Database Schema Updates
+
+### Properties Table - Add Fields:
+```sql
+wo_required BOOLEAN DEFAULT false,
+wo_notes TEXT
+```
+
+### Property Billing Contacts Table (new or embedded):
+```sql
+property_id UUID,
+contact_type VARCHAR (repairs, chemicals, primary),
+email VARCHAR,
+name VARCHAR
+```
+
+### Estimates Table - Add Fields:
+```sql
+work_type VARCHAR DEFAULT 'repairs',
+wo_received BOOLEAN DEFAULT false,
+wo_number VARCHAR
+```
+
+---
+
+## UI Updates Summary
+
+### Estimates List View
+- Add "WO" badge/indicator for properties with `wo_required = true`
+- Status badges: Draft, Pending Approval, Approved, Scheduled, Completed, Invoiced
+
+### Property Settings
+- Add "Work Order Required" toggle switch
+- Add billing contacts section for Repairs, Chemicals, Primary
+
+### Estimate Detail View
+- Add work type selector (Repairs, Chemicals, Other)
+- If WO required: Show WO status fields and reminder
+
+### Invoice Dialog
+- Auto-populate billing email based on work type
+- Show confirmation of recipient before sending
+
+---
+
+## Status Flow Summary
+
+```
+Draft → Pending Approval → Approved → Scheduled → Completed → Invoiced
+                ↓
+           (If Rejected)
+                ↓
+             Draft (revise and resubmit)
+```
+
+## Status Counts (Dashboard)
+Display counts for each status as shown in current UI:
+- Draft
+- Pending Approval  
+- Approved
+- Rejected
+- Scheduled
+- Completed
+- Invoiced
+- Archived

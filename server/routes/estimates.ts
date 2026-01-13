@@ -2,6 +2,79 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 
 export function registerEstimateRoutes(app: any) {
+  // Property Billing Contacts
+  app.get("/api/properties/:propertyId/billing-contacts", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const contacts = await storage.getPropertyBillingContacts(propertyId);
+      res.json({ contacts });
+    } catch (error: any) {
+      console.error("Error fetching billing contacts:", error);
+      res.status(500).json({ error: "Failed to fetch billing contacts" });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/billing-contacts", async (req: Request, res: Response) => {
+    try {
+      const { propertyId } = req.params;
+      const contact = await storage.createPropertyBillingContact({ ...req.body, propertyId });
+      res.json({ contact });
+    } catch (error: any) {
+      console.error("Error creating billing contact:", error);
+      res.status(500).json({ error: "Failed to create billing contact" });
+    }
+  });
+
+  app.put("/api/billing-contacts/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const contact = await storage.updatePropertyBillingContact(id, req.body);
+      if (!contact) {
+        return res.status(404).json({ error: "Billing contact not found" });
+      }
+      res.json({ contact });
+    } catch (error: any) {
+      console.error("Error updating billing contact:", error);
+      res.status(500).json({ error: "Failed to update billing contact" });
+    }
+  });
+
+  app.delete("/api/billing-contacts/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePropertyBillingContact(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting billing contact:", error);
+      res.status(500).json({ error: "Failed to delete billing contact" });
+    }
+  });
+
+  app.get("/api/properties/:propertyId/billing-email/:workType", async (req: Request, res: Response) => {
+    try {
+      const { propertyId, workType } = req.params;
+      const email = await storage.getBillingEmailForWorkType(propertyId, workType);
+      res.json({ email });
+    } catch (error: any) {
+      console.error("Error getting billing email:", error);
+      res.status(500).json({ error: "Failed to get billing email" });
+    }
+  });
+
+  // Pool WO Settings
+  app.patch("/api/pools/:poolId/wo-settings", async (req: Request, res: Response) => {
+    try {
+      const { poolId } = req.params;
+      const { woRequired, woNotes } = req.body;
+      await storage.updatePoolWoSettings(poolId, woRequired, woNotes);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error updating WO settings:", error);
+      res.status(500).json({ error: "Failed to update WO settings" });
+    }
+  });
+
+  // Estimates
   app.get("/api/estimates", async (req: Request, res: Response) => {
     try {
       const { status } = req.query;

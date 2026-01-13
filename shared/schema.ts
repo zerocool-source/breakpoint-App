@@ -109,9 +109,32 @@ export const pools = pgTable("pools", {
   latitude: real("latitude"),
   longitude: real("longitude"),
   notes: text("notes"),
+  // Work Order requirements
+  woRequired: boolean("wo_required").default(false),
+  woNotes: text("wo_notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Property Billing Contacts (for invoice routing by department)
+export const propertyBillingContacts = pgTable("property_billing_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull(), // Can be pool ID or customer ID
+  contactType: text("contact_type").notNull(), // "repairs", "chemicals", "primary"
+  email: text("email").notNull(),
+  name: text("name"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyBillingContactSchema = createInsertSchema(propertyBillingContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPropertyBillingContact = z.infer<typeof insertPropertyBillingContactSchema>;
+export type PropertyBillingContact = typeof propertyBillingContacts.$inferSelect;
 
 // Equipment (pool equipment linked to bodies of water)
 export const equipment = pgTable("equipment", {
@@ -681,6 +704,11 @@ export const estimates = pgTable("estimates", {
   // Link to job once scheduled
   jobId: text("job_id"),
   invoiceId: text("invoice_id"),
+  
+  // Work Order (WO) tracking
+  workType: text("work_type").default("repairs"), // "repairs", "chemicals", "other"
+  woReceived: boolean("wo_received").default(false),
+  woNumber: text("wo_number"),
 });
 
 export const insertEstimateSchema = createInsertSchema(estimates).omit({
