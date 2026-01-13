@@ -121,6 +121,12 @@ interface Estimate {
   memoOnStatement: string | null;
   jobId: string | null;
   invoiceId: string | null;
+  // WO tracking fields
+  workType: string | null;
+  woReceived: boolean | null;
+  woNumber: string | null;
+  // Pool WO requirement (joined from pool data)
+  woRequired?: boolean;
 }
 
 interface EstimateFormData {
@@ -160,6 +166,9 @@ interface EstimateFormData {
   memoOnStatement: string;
   techNotes: string;
   attachments: Attachment[];
+  workType: string;
+  woReceived: boolean;
+  woNumber: string;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -210,6 +219,9 @@ const emptyFormData: EstimateFormData = {
   memoOnStatement: "",
   techNotes: "",
   attachments: [],
+  workType: "repairs",
+  woReceived: false,
+  woNumber: "",
 };
 
 function generateEstimateNumber(): string {
@@ -438,6 +450,9 @@ export default function Estimates() {
       memoOnStatement: estimate.memoOnStatement || "",
       techNotes: estimate.techNotes || "",
       attachments: estimate.attachments || [],
+      workType: estimate.workType || "repairs",
+      woReceived: estimate.woReceived || false,
+      woNumber: estimate.woNumber || "",
     });
     setSelectedEstimate(estimate);
     setShowFormDialog(true);
@@ -899,6 +914,11 @@ Breakpoint Pool Service`);
                               <span className="flex items-center gap-1">
                                 <Building2 className="w-3 h-3" />
                                 {estimate.propertyName}
+                                {estimate.woRequired && (
+                                  <Badge className="ml-1 bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0">
+                                    WO Required
+                                  </Badge>
+                                )}
                               </span>
                               {estimate.customerName && (
                                 <span className="flex items-center gap-1">
@@ -1212,6 +1232,49 @@ Breakpoint Pool Service`);
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500">Work Type</Label>
+                        <Select
+                          value={formData.workType}
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, workType: value }))}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="repairs">Repairs</SelectItem>
+                            <SelectItem value="chemicals">Chemicals</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ClipboardList className="w-4 h-4 text-orange-600" />
+                        <Label className="text-sm font-medium text-orange-800">Work Order Tracking</Label>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="woReceived"
+                            checked={formData.woReceived}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, woReceived: !!checked }))}
+                          />
+                          <Label htmlFor="woReceived" className="text-sm text-slate-700">Work Order Received</Label>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-slate-500">WO Number</Label>
+                          <Input
+                            value={formData.woNumber}
+                            onChange={(e) => setFormData(prev => ({ ...prev, woNumber: e.target.value }))}
+                            placeholder="Enter WO number..."
+                            className="h-9"
+                            data-testid="input-wo-number"
+                          />
+                        </div>
                       </div>
                     </div>
 
