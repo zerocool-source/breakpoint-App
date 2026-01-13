@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Wrench, Plus, Loader2, CheckCircle, Clock, XCircle,
   Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2,
-  CalendarIcon, Filter
+  CalendarIcon, Filter, Archive, FileUp, Zap
 } from "lucide-react";
 import type { TechOpsEntry, Property } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -61,6 +61,7 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   reviewed: { color: "bg-blue-100 text-blue-700 border-blue-200", icon: CheckCircle, label: "Reviewed" },
   completed: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle, label: "Cancelled" },
+  archived: { color: "bg-slate-100 text-slate-500 border-slate-200", icon: XCircle, label: "Archived" },
 };
 
 const priorityConfig: Record<string, string> = {
@@ -91,6 +92,10 @@ export default function TechOps() {
   });
   const [selectedProperty, setSelectedProperty] = useState<string>("all");
   const [selectedTech, setSelectedTech] = useState<string>("all");
+  const [urgentOnly, setUrgentOnly] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [convertEntry, setConvertEntry] = useState<TechOpsEntry | null>(null);
+  const [markUrgent, setMarkUrgent] = useState(false);
 
   const [form, setForm] = useState({
     technicianName: "",
@@ -113,11 +118,12 @@ export default function TechOps() {
     if (dateRange.to) params.set("endDate", endOfDay(dateRange.to).toISOString());
     if (selectedProperty !== "all") params.set("propertyId", selectedProperty);
     if (selectedTech !== "all") params.set("technicianName", selectedTech);
+    if (urgentOnly) params.set("priority", "urgent");
     return params.toString();
   };
 
   const { data: entries = [], isLoading } = useQuery<TechOpsEntry[]>({
-    queryKey: ["tech-ops", entryType, dateRange, selectedProperty, selectedTech],
+    queryKey: ["tech-ops", entryType, dateRange, selectedProperty, selectedTech, urgentOnly],
     queryFn: async () => {
       const response = await fetch(`/api/tech-ops?${buildQueryString()}`);
       if (!response.ok) throw new Error("Failed to fetch entries");
@@ -209,6 +215,62 @@ export default function TechOps() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/tech-ops/${id}/archive`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to archive entry");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
+      toast({ title: "Entry Archived" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to archive entry", variant: "destructive" });
+    },
+  });
+
+  const convertToEstimateMutation = useMutation({
+    mutationFn: async ({ id, urgent }: { id: string; urgent: boolean }) => {
+      const response = await fetch(`/api/tech-ops/${id}/convert-to-estimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urgent }),
+      });
+      if (!response.ok) throw new Error("Failed to convert to estimate");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      setShowConvertDialog(false);
+      setConvertEntry(null);
+      setMarkUrgent(false);
+      toast({ 
+        title: "Converted to Estimate", 
+        description: `Estimate #${data.estimateNumber || data.id} has been created`
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to convert to estimate", variant: "destructive" });
+    },
+  });
+
+  const handleOpenConvertDialog = (entry: TechOpsEntry) => {
+    setConvertEntry(entry);
+    setMarkUrgent(false);
+    setShowConvertDialog(true);
+  };
+
+  const handleConvertToEstimate = () => {
+    if (convertEntry) {
+      convertToEstimateMutation.mutate({ id: convertEntry.id, urgent: markUrgent });
+    }
+  };
+
   const handlePropertyChange = (propertyId: string) => {
     const property = properties.find(p => p.id === propertyId);
     setForm({
@@ -298,6 +360,19 @@ export default function TechOps() {
             </SelectContent>
           </Select>
 
+          {entryType === "repairs_needed" && (
+            <Button
+              variant={urgentOnly ? "default" : "outline"}
+              size="sm"
+              className={urgentOnly ? "bg-red-500 hover:bg-red-600 text-white" : ""}
+              onClick={() => setUrgentOnly(!urgentOnly)}
+              data-testid="filter-urgent"
+            >
+              <Zap className="w-4 h-4 mr-1" />
+              URGENT Only
+            </Button>
+          )}
+
           <div className="ml-auto text-sm text-slate-500">
             {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
           </div>
@@ -369,7 +444,29 @@ export default function TechOps() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 ml-4">
-                          {entry.status === "pending" && (
+                          {entryType === "repairs_needed" && entry.status !== "archived" && entry.status !== "completed" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handleOpenConvertDialog(entry)}
+                                data-testid={`button-convert-${entry.id}`}
+                              >
+                                <FileUp className="w-4 h-4 mr-1" /> Convert to Estimate
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-slate-600 hover:text-slate-700 hover:bg-slate-100"
+                                onClick={() => archiveMutation.mutate(entry.id)}
+                                data-testid={`button-archive-${entry.id}`}
+                              >
+                                <Archive className="w-4 h-4 mr-1" /> Archive
+                              </Button>
+                            </>
+                          )}
+                          {entryType !== "repairs_needed" && entry.status === "pending" && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -518,6 +615,71 @@ export default function TechOps() {
                 <Plus className="w-4 h-4 mr-1" />
               )}
               Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileUp className="w-5 h-5 text-blue-600" />
+              Convert to Estimate
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {convertEntry && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="font-medium text-slate-700">{convertEntry.propertyName || "No property"}</p>
+                <p className="text-sm text-slate-500 mt-1">{convertEntry.description || "No description"}</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Submitted by {convertEntry.technicianName} on {formatDate(convertEntry.createdAt)}
+                </p>
+              </div>
+            )}
+            <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <input
+                type="checkbox"
+                id="mark-urgent"
+                checked={markUrgent}
+                onChange={(e) => setMarkUrgent(e.target.checked)}
+                className="w-5 h-5 rounded border-amber-400 text-red-500 focus:ring-red-500"
+                data-testid="checkbox-urgent"
+              />
+              <label htmlFor="mark-urgent" className="flex items-center gap-2 cursor-pointer">
+                <Zap className="w-4 h-4 text-red-500" />
+                <span className="font-medium text-amber-800">Mark as URGENT</span>
+              </label>
+            </div>
+            <p className="text-sm text-slate-500">
+              This will create an estimate in the Estimates section and mark this repair request as completed.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowConvertDialog(false);
+                setConvertEntry(null);
+                setMarkUrgent(false);
+              }}
+              data-testid="button-cancel-convert"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#1E3A8A] hover:bg-[#1E40AF]"
+              onClick={handleConvertToEstimate}
+              disabled={convertToEstimateMutation.isPending}
+              data-testid="button-confirm-convert"
+            >
+              {convertToEstimateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <FileUp className="w-4 h-4 mr-1" />
+              )}
+              Create Estimate
             </Button>
           </DialogFooter>
         </DialogContent>

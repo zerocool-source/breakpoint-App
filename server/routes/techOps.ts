@@ -5,12 +5,13 @@ import { insertTechOpsEntrySchema } from "@shared/schema";
 export function registerTechOpsRoutes(app: Express) {
   app.get("/api/tech-ops", async (req: Request, res: Response) => {
     try {
-      const { entryType, status, propertyId, technicianName, startDate, endDate } = req.query;
+      const { entryType, status, propertyId, technicianName, startDate, endDate, priority } = req.query;
       const entries = await storage.getTechOpsEntries({
         entryType: entryType as string | undefined,
         status: status as string | undefined,
         propertyId: propertyId as string | undefined,
         technicianName: technicianName as string | undefined,
+        priority: priority as string | undefined,
         startDate: startDate ? new Date(startDate as string) : undefined,
         endDate: endDate ? new Date(endDate as string) : undefined,
       });
@@ -105,6 +106,53 @@ export function registerTechOpsRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error deleting tech ops entry:", error);
       res.status(500).json({ error: "Failed to delete tech ops entry" });
+    }
+  });
+
+  app.post("/api/tech-ops/:id/archive", async (req: Request, res: Response) => {
+    try {
+      const entry = await storage.updateTechOpsEntry(req.params.id, { status: "archived" });
+      if (!entry) {
+        return res.status(404).json({ error: "Entry not found" });
+      }
+      res.json(entry);
+    } catch (error: any) {
+      console.error("Error archiving tech ops entry:", error);
+      res.status(500).json({ error: "Failed to archive tech ops entry" });
+    }
+  });
+
+  app.post("/api/tech-ops/:id/convert-to-estimate", async (req: Request, res: Response) => {
+    try {
+      const { urgent } = req.body;
+      const entry = await storage.getTechOpsEntry(req.params.id);
+      if (!entry) {
+        return res.status(404).json({ error: "Entry not found" });
+      }
+
+      const estimateNumber = `EST-${Date.now().toString(36).toUpperCase()}`;
+      const tags = urgent ? ["URGENT"] : [];
+
+      const estimate = await storage.createEstimate({
+        propertyId: entry.propertyId || "",
+        propertyName: entry.propertyName || "Unknown Property",
+        title: `Repair Request - ${entry.propertyName || "Unknown"}`,
+        description: entry.description || "",
+        estimateNumber,
+        status: "draft",
+        tags,
+        items: [],
+        subtotal: "0",
+        taxRate: "0",
+        total: "0",
+      });
+
+      await storage.updateTechOpsEntry(req.params.id, { status: "completed" });
+
+      res.json(estimate);
+    } catch (error: any) {
+      console.error("Error converting tech ops entry to estimate:", error);
+      res.status(500).json({ error: "Failed to convert to estimate" });
     }
   });
 }

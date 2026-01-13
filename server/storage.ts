@@ -249,6 +249,7 @@ export interface IStorage {
     status?: string;
     propertyId?: string;
     technicianName?: string;
+    priority?: string;
     startDate?: Date;
     endDate?: Date;
   }): Promise<TechOpsEntry[]>;
@@ -1430,6 +1431,7 @@ export class DbStorage implements IStorage {
     status?: string;
     propertyId?: string;
     technicianName?: string;
+    priority?: string;
     startDate?: Date;
     endDate?: Date;
   }): Promise<TechOpsEntry[]> {
@@ -1446,13 +1448,21 @@ export class DbStorage implements IStorage {
     if (filters?.technicianName) {
       conditions.push(eq(techOpsEntries.technicianName, filters.technicianName));
     }
+    if (filters?.priority) {
+      conditions.push(eq(techOpsEntries.priority, filters.priority));
+    }
     if (filters?.startDate) {
       conditions.push(gte(techOpsEntries.createdAt, filters.startDate));
     }
     if (filters?.endDate) {
       conditions.push(lte(techOpsEntries.createdAt, filters.endDate));
     }
-    if (conditions.length > 0) {
+    if (conditions.length === 1) {
+      return db.select().from(techOpsEntries)
+        .where(conditions[0])
+        .orderBy(desc(techOpsEntries.createdAt));
+    }
+    if (conditions.length > 1) {
       return db.select().from(techOpsEntries)
         .where(and(...conditions))
         .orderBy(desc(techOpsEntries.createdAt));
