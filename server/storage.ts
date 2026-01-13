@@ -23,6 +23,7 @@ import {
   type ChannelReaction, type InsertChannelReaction,
   type ChannelRead, type InsertChannelRead,
   type Estimate, type InsertEstimate,
+  type ServiceRepairJob, type InsertServiceRepairJob,
   type Route, type InsertRoute,
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
@@ -41,7 +42,7 @@ import {
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
-  estimates, routes, routeStops, routeMoves, unscheduledStops,
+  estimates, serviceRepairJobs, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts
@@ -229,6 +230,14 @@ export interface IStorage {
 
   // Pool WO Settings
   updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void>;
+
+  // Service Repair Jobs
+  getServiceRepairJobs(status?: string, maxAmount?: number): Promise<ServiceRepairJob[]>;
+  getServiceRepairJob(id: string): Promise<ServiceRepairJob | undefined>;
+  createServiceRepairJob(job: InsertServiceRepairJob): Promise<ServiceRepairJob>;
+  updateServiceRepairJob(id: string, updates: Partial<InsertServiceRepairJob>): Promise<ServiceRepairJob | undefined>;
+  updateServiceRepairJobsStatus(ids: string[], status: string, estimateId?: string, invoiceId?: string): Promise<void>;
+  deleteServiceRepairJob(id: string): Promise<void>;
 
   // Routes
   getRoutes(dayOfWeek?: number): Promise<Route[]>;
@@ -1328,6 +1337,56 @@ export class DbStorage implements IStorage {
         updatedAt: new Date() 
       } as any)
       .where(eq(pools.id, poolId));
+  }
+
+  // Service Repair Jobs
+  async getServiceRepairJobs(status?: string, maxAmount?: number): Promise<ServiceRepairJob[]> {
+    let query = db.select().from(serviceRepairJobs);
+    
+    const conditions = [];
+    if (status) {
+      conditions.push(eq(serviceRepairJobs.status, status));
+    }
+    if (maxAmount !== undefined) {
+      conditions.push(lte(serviceRepairJobs.totalAmount, maxAmount));
+    }
+    
+    if (conditions.length > 0) {
+      return query.where(and(...conditions)).orderBy(desc(serviceRepairJobs.jobDate));
+    }
+    return query.orderBy(desc(serviceRepairJobs.jobDate));
+  }
+
+  async getServiceRepairJob(id: string): Promise<ServiceRepairJob | undefined> {
+    const result = await db.select().from(serviceRepairJobs).where(eq(serviceRepairJobs.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createServiceRepairJob(job: InsertServiceRepairJob): Promise<ServiceRepairJob> {
+    const result = await db.insert(serviceRepairJobs).values(job as any).returning();
+    return result[0];
+  }
+
+  async updateServiceRepairJob(id: string, updates: Partial<InsertServiceRepairJob>): Promise<ServiceRepairJob | undefined> {
+    const result = await db.update(serviceRepairJobs)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(serviceRepairJobs.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateServiceRepairJobsStatus(ids: string[], status: string, estimateId?: string, invoiceId?: string): Promise<void> {
+    const updateData: any = { status, updatedAt: new Date(), batchedAt: new Date() };
+    if (estimateId) updateData.estimateId = estimateId;
+    if (invoiceId) updateData.invoiceId = invoiceId;
+    
+    await db.update(serviceRepairJobs)
+      .set(updateData)
+      .where(inArray(serviceRepairJobs.id, ids));
+  }
+
+  async deleteServiceRepairJob(id: string): Promise<void> {
+    await db.delete(serviceRepairJobs).where(eq(serviceRepairJobs.id, id));
   }
 
   // Routes
