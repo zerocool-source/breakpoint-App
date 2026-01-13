@@ -74,6 +74,108 @@ export function registerPropertyRoutes(app: any) {
     }
   });
 
+  // Property Contacts
+  app.get("/api/properties/:propertyId/contacts", async (req: Request, res: Response) => {
+    try {
+      const contacts = await storage.getPropertyContacts(req.params.propertyId);
+      res.json(contacts);
+    } catch (error: any) {
+      console.error("Error fetching property contacts:", error);
+      res.status(500).json({ error: "Failed to fetch property contacts" });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/contacts", async (req: Request, res: Response) => {
+    try {
+      const contact = await storage.createPropertyContact({
+        ...req.body,
+        propertyId: req.params.propertyId,
+      });
+      res.status(201).json(contact);
+    } catch (error: any) {
+      console.error("Error creating property contact:", error);
+      res.status(500).json({ error: "Failed to create property contact" });
+    }
+  });
+
+  app.delete("/api/properties/:propertyId/contacts/:contactId", async (req: Request, res: Response) => {
+    try {
+      await storage.deletePropertyContact(req.params.contactId);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting property contact:", error);
+      res.status(500).json({ error: "Failed to delete property contact" });
+    }
+  });
+
+  // Property Billing Contacts
+  app.get("/api/properties/:propertyId/billing", async (req: Request, res: Response) => {
+    try {
+      const contacts = await storage.getPropertyBillingContacts(req.params.propertyId);
+      res.json(contacts);
+    } catch (error: any) {
+      console.error("Error fetching billing contacts:", error);
+      res.status(500).json({ error: "Failed to fetch billing contacts" });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/billing", async (req: Request, res: Response) => {
+    try {
+      const contact = await storage.createPropertyBillingContact({
+        ...req.body,
+        propertyId: req.params.propertyId,
+      });
+      res.status(201).json(contact);
+    } catch (error: any) {
+      console.error("Error creating billing contact:", error);
+      res.status(500).json({ error: "Failed to create billing contact" });
+    }
+  });
+
+  app.delete("/api/properties/:propertyId/billing/:contactId", async (req: Request, res: Response) => {
+    try {
+      await storage.deletePropertyBillingContact(req.params.contactId);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting billing contact:", error);
+      res.status(500).json({ error: "Failed to delete billing contact" });
+    }
+  });
+
+  // Property Access Notes
+  app.get("/api/properties/:propertyId/access-notes", async (req: Request, res: Response) => {
+    try {
+      const notes = await storage.getPropertyAccessNotes(req.params.propertyId);
+      res.json(notes);
+    } catch (error: any) {
+      console.error("Error fetching access notes:", error);
+      res.status(500).json({ error: "Failed to fetch access notes" });
+    }
+  });
+
+  app.post("/api/properties/:propertyId/access-notes", async (req: Request, res: Response) => {
+    try {
+      const note = await storage.createPropertyAccessNote({
+        ...req.body,
+        propertyId: req.params.propertyId,
+      });
+      res.status(201).json(note);
+    } catch (error: any) {
+      console.error("Error creating access note:", error);
+      res.status(500).json({ error: "Failed to create access note" });
+    }
+  });
+
+  app.delete("/api/properties/:propertyId/access-notes/:noteId", async (req: Request, res: Response) => {
+    try {
+      await storage.deletePropertyAccessNote(req.params.noteId);
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting access note:", error);
+      res.status(500).json({ error: "Failed to delete access note" });
+    }
+  });
+
   app.get("/api/properties/repairs", async (req: Request, res: Response) => {
     try {
       const settings = await storage.getSettings();

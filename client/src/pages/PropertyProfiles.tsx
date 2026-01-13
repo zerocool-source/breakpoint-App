@@ -15,9 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import {
   Building2, Plus, Search, MapPin, Phone, Mail, User, DollarSign,
-  Calendar, Tag, Lock, FileText, Edit2, Trash2, Save, Loader2, X
+  Calendar, Tag, Lock, FileText, Edit2, Trash2, Save, Loader2, X, Receipt
 } from "lucide-react";
-import type { Property } from "@shared/schema";
+import type { Property, PropertyContact, PropertyBillingContact, PropertyAccessNote } from "@shared/schema";
 
 function formatCurrency(cents: number | null | undefined): string {
   if (!cents) return "$0.00";
@@ -52,12 +52,6 @@ const emptyPropertyForm = {
   billingCity: "",
   billingState: "",
   billingZip: "",
-  primaryContactName: "",
-  primaryContactPhone: "",
-  primaryContactEmail: "",
-  secondaryContactName: "",
-  secondaryContactPhone: "",
-  secondaryContactEmail: "",
   gateCode: "",
   accessInstructions: "",
   zone: "",
@@ -67,6 +61,10 @@ const emptyPropertyForm = {
   monthlyRate: "",
 };
 
+const emptyContactForm = { name: "", role: "", phone: "", email: "", isPrimary: false };
+const emptyBillingForm = { contactType: "primary", name: "", email: "" };
+const emptyAccessNoteForm = { noteType: "gate_code", title: "", content: "" };
+
 export default function PropertyProfiles() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -75,6 +73,15 @@ export default function PropertyProfiles() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [propertyForm, setPropertyForm] = useState(emptyPropertyForm);
+  
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [contactForm, setContactForm] = useState(emptyContactForm);
+  
+  const [showBillingDialog, setShowBillingDialog] = useState(false);
+  const [billingForm, setBillingForm] = useState(emptyBillingForm);
+  
+  const [showAccessDialog, setShowAccessDialog] = useState(false);
+  const [accessForm, setAccessForm] = useState(emptyAccessNoteForm);
 
   const { data: properties = [], isLoading } = useQuery<Property[]>({
     queryKey: ["properties"],
@@ -86,6 +93,36 @@ export default function PropertyProfiles() {
   });
 
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+
+  const { data: contacts = [] } = useQuery<PropertyContact[]>({
+    queryKey: ["property-contacts", selectedPropertyId],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/contacts`);
+      if (!response.ok) throw new Error("Failed to fetch contacts");
+      return response.json();
+    },
+    enabled: !!selectedPropertyId,
+  });
+
+  const { data: billingContacts = [] } = useQuery<PropertyBillingContact[]>({
+    queryKey: ["property-billing", selectedPropertyId],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/billing`);
+      if (!response.ok) throw new Error("Failed to fetch billing contacts");
+      return response.json();
+    },
+    enabled: !!selectedPropertyId,
+  });
+
+  const { data: accessNotes = [] } = useQuery<PropertyAccessNote[]>({
+    queryKey: ["property-access", selectedPropertyId],
+    queryFn: async () => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/access-notes`);
+      if (!response.ok) throw new Error("Failed to fetch access notes");
+      return response.json();
+    },
+    enabled: !!selectedPropertyId,
+  });
 
   const filteredProperties = properties.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -151,6 +188,93 @@ export default function PropertyProfiles() {
     },
   });
 
+  const createContactMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/contacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create contact");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-contacts", selectedPropertyId] });
+      setShowContactDialog(false);
+      setContactForm(emptyContactForm);
+      toast({ title: "Contact Added" });
+    },
+  });
+
+  const deleteContactMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/contacts/${contactId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete contact");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-contacts", selectedPropertyId] });
+      toast({ title: "Contact Removed" });
+    },
+  });
+
+  const createBillingMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/billing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create billing contact");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-billing", selectedPropertyId] });
+      setShowBillingDialog(false);
+      setBillingForm(emptyBillingForm);
+      toast({ title: "Billing Contact Added" });
+    },
+  });
+
+  const deleteBillingMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/billing/${contactId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete billing contact");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-billing", selectedPropertyId] });
+      toast({ title: "Billing Contact Removed" });
+    },
+  });
+
+  const createAccessMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/access-notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create access note");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-access", selectedPropertyId] });
+      setShowAccessDialog(false);
+      setAccessForm(emptyAccessNoteForm);
+      toast({ title: "Access Note Added" });
+    },
+  });
+
+  const deleteAccessMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const response = await fetch(`/api/properties/${selectedPropertyId}/access-notes/${noteId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete access note");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property-access", selectedPropertyId] });
+      toast({ title: "Access Note Removed" });
+    },
+  });
+
   const handleCreate = () => {
     const data = {
       ...propertyForm,
@@ -181,12 +305,6 @@ export default function PropertyProfiles() {
       billingCity: selectedProperty.billingCity || "",
       billingState: selectedProperty.billingState || "",
       billingZip: selectedProperty.billingZip || "",
-      primaryContactName: selectedProperty.primaryContactName || "",
-      primaryContactPhone: selectedProperty.primaryContactPhone || "",
-      primaryContactEmail: selectedProperty.primaryContactEmail || "",
-      secondaryContactName: selectedProperty.secondaryContactName || "",
-      secondaryContactPhone: selectedProperty.secondaryContactPhone || "",
-      secondaryContactEmail: selectedProperty.secondaryContactEmail || "",
       gateCode: selectedProperty.gateCode || "",
       accessInstructions: selectedProperty.accessInstructions || "",
       zone: selectedProperty.zone || "",
@@ -426,56 +544,96 @@ export default function PropertyProfiles() {
 
                 <TabsContent value="contacts">
                   <Card>
-                    <CardContent className="pt-6 grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-[#1E293B] flex items-center gap-2">
-                          <User className="w-4 h-4 text-[#1E3A8A]" /> Primary Contact
-                        </h3>
-                        <div className="text-sm space-y-2">
-                          <p className="font-medium">{selectedProperty.primaryContactName || "—"}</p>
-                          {selectedProperty.primaryContactPhone && (
-                            <p className="flex items-center gap-2 text-slate-600">
-                              <Phone className="w-3 h-3" /> {selectedProperty.primaryContactPhone}
-                            </p>
-                          )}
-                          {selectedProperty.primaryContactEmail && (
-                            <p className="flex items-center gap-2 text-slate-600">
-                              <Mail className="w-3 h-3" /> {selectedProperty.primaryContactEmail}
-                            </p>
-                          )}
+                    <CardHeader className="flex flex-row items-center justify-between pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <User className="w-5 h-5 text-[#1E3A8A]" />
+                        Contacts
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        className="bg-[#1E3A8A] hover:bg-[#1E40AF]"
+                        onClick={() => {
+                          setContactForm(emptyContactForm);
+                          setShowContactDialog(true);
+                        }}
+                        data-testid="button-add-contact"
+                      >
+                        <Plus className="w-4 h-4 mr-1" /> Add Contact
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {contacts.length === 0 ? (
+                        <p className="text-slate-500 text-center py-6">No contacts added yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {contacts.map((contact) => (
+                            <div key={contact.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{contact.name}</p>
+                                  {contact.isPrimary && (
+                                    <Badge className="bg-blue-100 text-blue-700 text-xs">Primary</Badge>
+                                  )}
+                                  {contact.role && (
+                                    <Badge variant="outline" className="text-xs">{contact.role}</Badge>
+                                  )}
+                                </div>
+                                <div className="flex gap-4 text-sm text-slate-500">
+                                  {contact.phone && (
+                                    <span className="flex items-center gap-1">
+                                      <Phone className="w-3 h-3" /> {contact.phone}
+                                    </span>
+                                  )}
+                                  {contact.email && (
+                                    <span className="flex items-center gap-1">
+                                      <Mail className="w-3 h-3" /> {contact.email}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => deleteContactMutation.mutate(contact.id)}
+                                data-testid={`button-delete-contact-${contact.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                      <div className="space-y-3">
-                        <h3 className="font-semibold text-[#1E293B] flex items-center gap-2">
-                          <User className="w-4 h-4 text-[#60A5FA]" /> Secondary Contact
-                        </h3>
-                        <div className="text-sm space-y-2">
-                          <p className="font-medium">{selectedProperty.secondaryContactName || "—"}</p>
-                          {selectedProperty.secondaryContactPhone && (
-                            <p className="flex items-center gap-2 text-slate-600">
-                              <Phone className="w-3 h-3" /> {selectedProperty.secondaryContactPhone}
-                            </p>
-                          )}
-                          {selectedProperty.secondaryContactEmail && (
-                            <p className="flex items-center gap-2 text-slate-600">
-                              <Mail className="w-3 h-3" /> {selectedProperty.secondaryContactEmail}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 <TabsContent value="billing">
                   <Card>
-                    <CardContent className="pt-6">
-                      <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-[#F97316]" /> Billing Address
-                      </h3>
-                      <div className="text-sm space-y-1">
-                        <p>{selectedProperty.billingAddress || selectedProperty.address || "Same as service address"}</p>
-                        <p>
+                    <CardHeader className="flex flex-row items-center justify-between pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Receipt className="w-5 h-5 text-[#F97316]" />
+                        Billing Contacts
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        className="bg-[#F97316] hover:bg-[#EA580C]"
+                        onClick={() => {
+                          setBillingForm(emptyBillingForm);
+                          setShowBillingDialog(true);
+                        }}
+                        data-testid="button-add-billing"
+                      >
+                        <Plus className="w-4 h-4 mr-1" /> Add Billing Contact
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                        <h4 className="font-medium text-sm mb-2">Billing Address</h4>
+                        <p className="text-sm text-slate-600">
+                          {selectedProperty.billingAddress || selectedProperty.address || "Same as service address"}
+                        </p>
+                        <p className="text-sm text-slate-600">
                           {[
                             selectedProperty.billingCity || selectedProperty.city,
                             selectedProperty.billingState || selectedProperty.state,
@@ -483,29 +641,100 @@ export default function PropertyProfiles() {
                           ].filter(Boolean).join(", ") || "—"}
                         </p>
                       </div>
+                      {billingContacts.length === 0 ? (
+                        <p className="text-slate-500 text-center py-6">No billing contacts added yet</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {billingContacts.map((contact) => (
+                            <div key={contact.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{contact.name || contact.email}</p>
+                                  <Badge variant="outline" className="text-xs capitalize">{contact.contactType}</Badge>
+                                </div>
+                                <p className="text-sm text-slate-500 flex items-center gap-1">
+                                  <Mail className="w-3 h-3" /> {contact.email}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => deleteBillingMutation.mutate(contact.id)}
+                                data-testid={`button-delete-billing-${contact.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
 
                 <TabsContent value="access">
                   <Card>
-                    <CardContent className="pt-6 grid grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                          <Lock className="w-4 h-4 text-[#F97316]" /> Gate Code
-                        </h3>
-                        <p className="text-lg font-mono bg-slate-100 px-3 py-2 rounded inline-block">
-                          {selectedProperty.gateCode || "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-[#1E3A8A]" /> Access Instructions
-                        </h3>
-                        <p className="text-sm text-slate-600">
-                          {selectedProperty.accessInstructions || "No special access instructions"}
-                        </p>
-                      </div>
+                    <CardHeader className="flex flex-row items-center justify-between pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Lock className="w-5 h-5 text-[#60A5FA]" />
+                        Access Information
+                      </CardTitle>
+                      <Button
+                        size="sm"
+                        className="bg-[#60A5FA] hover:bg-[#3B82F6]"
+                        onClick={() => {
+                          setAccessForm(emptyAccessNoteForm);
+                          setShowAccessDialog(true);
+                        }}
+                        data-testid="button-add-access"
+                      >
+                        <Plus className="w-4 h-4 mr-1" /> Add Access Note
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {selectedProperty.gateCode && (
+                        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                          <h4 className="font-medium text-sm mb-1">Gate Code</h4>
+                          <p className="text-lg font-mono">{selectedProperty.gateCode}</p>
+                        </div>
+                      )}
+                      {selectedProperty.accessInstructions && (
+                        <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+                          <h4 className="font-medium text-sm mb-1">General Access Instructions</h4>
+                          <p className="text-sm text-slate-600">{selectedProperty.accessInstructions}</p>
+                        </div>
+                      )}
+                      {accessNotes.length === 0 ? (
+                        <p className="text-slate-500 text-center py-6">No additional access notes</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {accessNotes.map((note) => (
+                            <div key={note.id} className="flex items-start justify-between p-3 bg-slate-50 rounded-lg">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{note.title}</p>
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {note.noteType.replace(/_/g, ' ')}
+                                  </Badge>
+                                </div>
+                                {note.content && (
+                                  <p className="text-sm text-slate-600">{note.content}</p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => deleteAccessMutation.mutate(note.id)}
+                                data-testid={`button-delete-access-${note.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -545,6 +774,187 @@ export default function PropertyProfiles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Contact Dialog */}
+      <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-[#1E3A8A]" />
+              Add Contact
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input
+                value={contactForm.name}
+                onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                placeholder="John Smith"
+                data-testid="input-contact-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Input
+                value={contactForm.role}
+                onChange={(e) => setContactForm({ ...contactForm, role: e.target.value })}
+                placeholder="Property Manager"
+                data-testid="input-contact-role"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  value={contactForm.phone}
+                  onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                  data-testid="input-contact-phone"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  value={contactForm.email}
+                  onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                  placeholder="john@example.com"
+                  data-testid="input-contact-email"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowContactDialog(false)}>Cancel</Button>
+            <Button
+              className="bg-[#1E3A8A] hover:bg-[#1E40AF]"
+              onClick={() => createContactMutation.mutate(contactForm)}
+              disabled={!contactForm.name || createContactMutation.isPending}
+              data-testid="button-save-contact"
+            >
+              {createContactMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+              Add Contact
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Billing Contact Dialog */}
+      <Dialog open={showBillingDialog} onOpenChange={setShowBillingDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-[#F97316]" />
+              Add Billing Contact
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Contact Type *</Label>
+              <Select value={billingForm.contactType} onValueChange={(v) => setBillingForm({ ...billingForm, contactType: v })}>
+                <SelectTrigger data-testid="select-billing-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="primary">Primary</SelectItem>
+                  <SelectItem value="repairs">Repairs</SelectItem>
+                  <SelectItem value="chemicals">Chemicals</SelectItem>
+                  <SelectItem value="accounting">Accounting</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={billingForm.name}
+                onChange={(e) => setBillingForm({ ...billingForm, name: e.target.value })}
+                placeholder="Accounting Dept"
+                data-testid="input-billing-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input
+                value={billingForm.email}
+                onChange={(e) => setBillingForm({ ...billingForm, email: e.target.value })}
+                placeholder="billing@company.com"
+                data-testid="input-billing-email"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBillingDialog(false)}>Cancel</Button>
+            <Button
+              className="bg-[#F97316] hover:bg-[#EA580C]"
+              onClick={() => createBillingMutation.mutate(billingForm)}
+              disabled={!billingForm.email || createBillingMutation.isPending}
+              data-testid="button-save-billing"
+            >
+              {createBillingMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+              Add Billing Contact
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Access Note Dialog */}
+      <Dialog open={showAccessDialog} onOpenChange={setShowAccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-[#60A5FA]" />
+              Add Access Note
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Type *</Label>
+              <Select value={accessForm.noteType} onValueChange={(v) => setAccessForm({ ...accessForm, noteType: v })}>
+                <SelectTrigger data-testid="select-access-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gate_code">Gate Code</SelectItem>
+                  <SelectItem value="key_location">Key Location</SelectItem>
+                  <SelectItem value="instruction">Instruction</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input
+                value={accessForm.title}
+                onChange={(e) => setAccessForm({ ...accessForm, title: e.target.value })}
+                placeholder="e.g., Back Gate Code"
+                data-testid="input-access-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <Textarea
+                value={accessForm.content}
+                onChange={(e) => setAccessForm({ ...accessForm, content: e.target.value })}
+                placeholder="Enter details..."
+                rows={3}
+                data-testid="input-access-content"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAccessDialog(false)}>Cancel</Button>
+            <Button
+              className="bg-[#60A5FA] hover:bg-[#3B82F6]"
+              onClick={() => createAccessMutation.mutate(accessForm)}
+              disabled={!accessForm.title || createAccessMutation.isPending}
+              data-testid="button-save-access"
+            >
+              {createAccessMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+              Add Access Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
@@ -552,7 +962,6 @@ export default function PropertyProfiles() {
 function PropertyForm({ form, setForm }: { form: typeof emptyPropertyForm; setForm: (f: typeof emptyPropertyForm) => void }) {
   return (
     <div className="space-y-6">
-      {/* Basic Info */}
       <div>
         <h3 className="font-medium text-[#1E293B] mb-3">Basic Information</h3>
         <div className="grid grid-cols-2 gap-4">
@@ -605,7 +1014,6 @@ function PropertyForm({ form, setForm }: { form: typeof emptyPropertyForm; setFo
 
       <Separator />
 
-      {/* Service Address */}
       <div>
         <h3 className="font-medium text-[#1E293B] mb-3">Service Address</h3>
         <div className="grid grid-cols-2 gap-4">
@@ -652,43 +1060,6 @@ function PropertyForm({ form, setForm }: { form: typeof emptyPropertyForm; setFo
 
       <Separator />
 
-      {/* Primary Contact */}
-      <div>
-        <h3 className="font-medium text-[#1E293B] mb-3">Primary Contact</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={form.primaryContactName}
-              onChange={(e) => setForm({ ...form, primaryContactName: e.target.value })}
-              placeholder="John Smith"
-              data-testid="input-primary-contact-name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Phone</Label>
-            <Input
-              value={form.primaryContactPhone}
-              onChange={(e) => setForm({ ...form, primaryContactPhone: e.target.value })}
-              placeholder="(555) 123-4567"
-              data-testid="input-primary-contact-phone"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input
-              value={form.primaryContactEmail}
-              onChange={(e) => setForm({ ...form, primaryContactEmail: e.target.value })}
-              placeholder="john@example.com"
-              data-testid="input-primary-contact-email"
-            />
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Access & Zone */}
       <div>
         <h3 className="font-medium text-[#1E293B] mb-3">Access & Zone</h3>
         <div className="grid grid-cols-3 gap-4">
@@ -736,7 +1107,6 @@ function PropertyForm({ form, setForm }: { form: typeof emptyPropertyForm; setFo
 
       <Separator />
 
-      {/* Notes */}
       <div className="space-y-2">
         <Label>Notes</Label>
         <Textarea

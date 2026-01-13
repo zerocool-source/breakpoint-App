@@ -136,6 +136,49 @@ export const insertPropertyBillingContactSchema = createInsertSchema(propertyBil
 export type InsertPropertyBillingContact = z.infer<typeof insertPropertyBillingContactSchema>;
 export type PropertyBillingContact = typeof propertyBillingContacts.$inferSelect;
 
+// Property Contacts (general contacts for a property)
+export const propertyContacts = pgTable("property_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull(),
+  name: text("name").notNull(),
+  role: text("role"), // "Manager", "Owner", "Maintenance", etc.
+  phone: text("phone"),
+  email: text("email"),
+  isPrimary: boolean("is_primary").default(false),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyContactSchema = createInsertSchema(propertyContacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPropertyContact = z.infer<typeof insertPropertyContactSchema>;
+export type PropertyContact = typeof propertyContacts.$inferSelect;
+
+// Property Access Notes (gate codes, instructions, etc.)
+export const propertyAccessNotes = pgTable("property_access_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull(),
+  noteType: text("note_type").notNull(), // "gate_code", "key_location", "instruction", "warning"
+  title: text("title").notNull(),
+  content: text("content"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPropertyAccessNoteSchema = createInsertSchema(propertyAccessNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPropertyAccessNote = z.infer<typeof insertPropertyAccessNoteSchema>;
+export type PropertyAccessNote = typeof propertyAccessNotes.$inferSelect;
+
 // Equipment (pool equipment linked to bodies of water)
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -38,6 +38,8 @@ import {
   type Property, type InsertProperty,
   type FieldEntry, type InsertFieldEntry,
   type PropertyBillingContact, type InsertPropertyBillingContact,
+  type PropertyContact, type InsertPropertyContact,
+  type PropertyAccessNote, type InsertPropertyAccessNote,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -45,7 +47,7 @@ import {
   estimates, serviceRepairJobs, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
-  properties, fieldEntries, propertyBillingContacts
+  properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -227,6 +229,18 @@ export interface IStorage {
   updatePropertyBillingContact(id: string, updates: Partial<InsertPropertyBillingContact>): Promise<PropertyBillingContact | undefined>;
   deletePropertyBillingContact(id: string): Promise<void>;
   getBillingEmailForWorkType(propertyId: string, workType: string): Promise<string | null>;
+
+  // Property Contacts
+  getPropertyContacts(propertyId: string): Promise<PropertyContact[]>;
+  createPropertyContact(contact: InsertPropertyContact): Promise<PropertyContact>;
+  updatePropertyContact(id: string, updates: Partial<InsertPropertyContact>): Promise<PropertyContact | undefined>;
+  deletePropertyContact(id: string): Promise<void>;
+
+  // Property Access Notes
+  getPropertyAccessNotes(propertyId: string): Promise<PropertyAccessNote[]>;
+  createPropertyAccessNote(note: InsertPropertyAccessNote): Promise<PropertyAccessNote>;
+  updatePropertyAccessNote(id: string, updates: Partial<InsertPropertyAccessNote>): Promise<PropertyAccessNote | undefined>;
+  deletePropertyAccessNote(id: string): Promise<void>;
 
   // Pool WO Settings
   updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void>;
@@ -1327,6 +1341,54 @@ export class DbStorage implements IStorage {
       .limit(1);
     
     return primaryResult[0]?.email || null;
+  }
+
+  // Property Contacts
+  async getPropertyContacts(propertyId: string): Promise<PropertyContact[]> {
+    return db.select().from(propertyContacts)
+      .where(eq(propertyContacts.propertyId, propertyId))
+      .orderBy(desc(propertyContacts.isPrimary));
+  }
+
+  async createPropertyContact(contact: InsertPropertyContact): Promise<PropertyContact> {
+    const result = await db.insert(propertyContacts).values(contact as any).returning();
+    return result[0];
+  }
+
+  async updatePropertyContact(id: string, updates: Partial<InsertPropertyContact>): Promise<PropertyContact | undefined> {
+    const result = await db.update(propertyContacts)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(propertyContacts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePropertyContact(id: string): Promise<void> {
+    await db.delete(propertyContacts).where(eq(propertyContacts.id, id));
+  }
+
+  // Property Access Notes
+  async getPropertyAccessNotes(propertyId: string): Promise<PropertyAccessNote[]> {
+    return db.select().from(propertyAccessNotes)
+      .where(eq(propertyAccessNotes.propertyId, propertyId))
+      .orderBy(propertyAccessNotes.noteType);
+  }
+
+  async createPropertyAccessNote(note: InsertPropertyAccessNote): Promise<PropertyAccessNote> {
+    const result = await db.insert(propertyAccessNotes).values(note as any).returning();
+    return result[0];
+  }
+
+  async updatePropertyAccessNote(id: string, updates: Partial<InsertPropertyAccessNote>): Promise<PropertyAccessNote | undefined> {
+    const result = await db.update(propertyAccessNotes)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(propertyAccessNotes.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deletePropertyAccessNote(id: string): Promise<void> {
+    await db.delete(propertyAccessNotes).where(eq(propertyAccessNotes.id, id));
   }
 
   // Pool WO Settings
