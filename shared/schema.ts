@@ -44,7 +44,8 @@ export const technicians = pgTable("technicians", {
   lastName: text("last_name").notNull(),
   phone: text("phone"),
   email: text("email"),
-  role: text("role").default("service"), // "service", "repair"
+  role: text("role").default("service"), // "service", "repair", "supervisor", "foreman"
+  supervisorId: varchar("supervisor_id"), // Self-referential FK for team hierarchy
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

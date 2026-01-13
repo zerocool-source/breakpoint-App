@@ -184,6 +184,8 @@ export function Sidebar() {
       icon: Users, 
       label: "Technicians", 
       children: [
+        { label: "Supervisor", href: "/tech-supervisor" },
+        { label: "Repair Foreman", href: "/tech-foreman" },
         { label: "Repair Tech", href: "/tech-repairs" },
         { label: "Service Techs", href: "/tech-services" },
       ]

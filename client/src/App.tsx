@@ -34,6 +34,8 @@ import TechOps from "@/pages/TechOps";
 import TechOpsLanding from "@/pages/TechOpsLanding";
 import RepairQueue from "@/pages/RepairQueue";
 import Visits from "@/pages/Visits";
+import TechSupervisor from "@/pages/TechSupervisor";
+import TechForeman from "@/pages/TechForeman";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,6 +55,8 @@ function Router() {
       <Route path="/customers" component={Customers} />
       <Route path="/tech-services" component={ServiceTechs} />
       <Route path="/tech-repairs" component={RepairTechs} />
+      <Route path="/tech-supervisor" component={TechSupervisor} />
+      <Route path="/tech-foreman" component={TechForeman} />
             <Route path="/fleet" component={Fleet} />
       <Route path="/fleet/inventory" component={TruckInventory} />
       <Route path="/equipment" component={Equipment} />
