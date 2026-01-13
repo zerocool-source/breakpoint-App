@@ -2187,9 +2187,16 @@ Breakpoint Pool Service`);
                         <CheckCircle2 className="w-3 h-3 text-green-500" />
                         <span className="text-xs text-gray-500">Status</span>
                       </div>
-                      <Badge className={`${statusConfig[selectedEstimate.status]?.color} border text-xs`}>
-                        {statusConfig[selectedEstimate.status]?.label}
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={`${statusConfig[selectedEstimate.status]?.color} border text-xs`}>
+                          {statusConfig[selectedEstimate.status]?.label}
+                        </Badge>
+                        {selectedEstimate.woRequired && (
+                          <Badge className="bg-[#F97316]/10 text-[#F97316] border-[#F97316] text-xs">
+                            WO Required
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
