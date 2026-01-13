@@ -204,7 +204,6 @@ export function Sidebar() {
       icon: FileBarChart, 
       label: "Reports", 
       children: [
-        { label: "Equipment", href: "/report-equipment" },
         { label: "Repairs", href: "/report-repairs" },
         { label: "Chemicals", href: "/report-chemicals" },
         { label: "Commissions", href: "/commissions" },
