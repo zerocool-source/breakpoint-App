@@ -2232,7 +2232,12 @@ export class DbStorage implements IStorage {
     if (filters?.endDate) {
       conditions.push(lte(fieldEntries.submittedAt, filters.endDate));
     }
-    if (conditions.length > 0) {
+    if (conditions.length === 1) {
+      return db.select().from(fieldEntries)
+        .where(conditions[0])
+        .orderBy(desc(fieldEntries.submittedAt));
+    }
+    if (conditions.length > 1) {
       return db.select().from(fieldEntries)
         .where(and(...conditions))
         .orderBy(desc(fieldEntries.submittedAt));
