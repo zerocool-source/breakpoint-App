@@ -260,6 +260,9 @@ export function Sidebar() {
           children: [
             { label: "Repairs Needed", href: "/tech-ops/repairs-needed", badge: repairsNeededCount },
             { label: "Service Repairs", href: "/service-repairs", badge: serviceRepairsCount },
+            { label: "Chemical Orders", href: "/tech-ops/chemical-order" },
+            { label: "Chemicals Dropped-Off", href: "/tech-ops/chemicals-dropoff" },
+            { label: "Report Issues", href: "/tech-ops/report-issue" },
           ]
         },
         { label: "Repair Queue", href: "/repair-queue" },
