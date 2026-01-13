@@ -1306,7 +1306,10 @@ function CustomerDetailPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to add billing contact");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to add billing contact");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -1314,8 +1317,8 @@ function CustomerDetailPanel({
       setShowAddBillingContact(false);
       toast({ title: "Billing Contact Added", description: "The billing contact was added successfully." });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to add billing contact. Please try again.", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 

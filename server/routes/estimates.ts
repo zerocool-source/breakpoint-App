@@ -2,6 +2,46 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 
 export function registerEstimateRoutes(app: any) {
+  // Customer Billing Contacts (aggregate across all properties)
+  app.get("/api/customers/:customerId/billing-contacts", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const contacts = await storage.getBillingContactsByCustomer(customerId);
+      res.json({ contacts });
+    } catch (error: any) {
+      console.error("Error fetching customer billing contacts:", error);
+      res.status(500).json({ error: "Failed to fetch billing contacts" });
+    }
+  });
+
+  app.post("/api/customers/:customerId/billing-contacts", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      // Get the first property for this customer to associate the billing contact
+      const customerProperties = await storage.getPropertiesByCustomer(customerId);
+      if (customerProperties.length === 0) {
+        return res.status(400).json({ error: "Customer has no properties. Please create a property first." });
+      }
+      const propertyId = req.body.propertyId || customerProperties[0].id;
+      const contact = await storage.createPropertyBillingContact({ ...req.body, propertyId });
+      res.json({ contact });
+    } catch (error: any) {
+      console.error("Error creating billing contact:", error);
+      res.status(500).json({ error: "Failed to create billing contact" });
+    }
+  });
+
+  app.delete("/api/customers/:customerId/billing-contacts/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      await storage.deletePropertyBillingContact(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting billing contact:", error);
+      res.status(500).json({ error: "Failed to delete billing contact" });
+    }
+  });
+
   // Property Billing Contacts
   app.get("/api/properties/:propertyId/billing-contacts", async (req: Request, res: Response) => {
     try {

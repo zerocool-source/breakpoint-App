@@ -221,6 +221,7 @@ export interface IStorage {
 
   // Property Billing Contacts
   getPropertyBillingContacts(propertyId: string): Promise<PropertyBillingContact[]>;
+  getBillingContactsByCustomer(customerId: string): Promise<PropertyBillingContact[]>;
   createPropertyBillingContact(contact: InsertPropertyBillingContact): Promise<PropertyBillingContact>;
   updatePropertyBillingContact(id: string, updates: Partial<InsertPropertyBillingContact>): Promise<PropertyBillingContact | undefined>;
   deletePropertyBillingContact(id: string): Promise<void>;
@@ -298,6 +299,7 @@ export interface IStorage {
 
   // Properties (for Field Tech sync)
   getProperties(): Promise<Property[]>;
+  getPropertiesByCustomer(customerId: string): Promise<Property[]>;
   getProperty(id: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: string, updates: Partial<InsertProperty>): Promise<Property | undefined>;
@@ -1262,6 +1264,20 @@ export class DbStorage implements IStorage {
       .where(eq(propertyBillingContacts.propertyId, propertyId));
   }
 
+  async getBillingContactsByCustomer(customerId: string): Promise<PropertyBillingContact[]> {
+    // Get all properties for the customer then get their billing contacts
+    const customerProperties = await db.select().from(properties)
+      .where(eq(properties.customerId, customerId));
+    
+    if (customerProperties.length === 0) {
+      return [];
+    }
+    
+    const propertyIds = customerProperties.map(p => p.id);
+    return db.select().from(propertyBillingContacts)
+      .where(inArray(propertyBillingContacts.propertyId, propertyIds));
+  }
+
   async createPropertyBillingContact(contact: InsertPropertyBillingContact): Promise<PropertyBillingContact> {
     const result = await db.insert(propertyBillingContacts).values(contact as any).returning();
     return result[0];
@@ -1856,6 +1872,12 @@ export class DbStorage implements IStorage {
   // Properties (for Field Tech sync)
   async getProperties(): Promise<Property[]> {
     return db.select().from(properties).orderBy(properties.name);
+  }
+
+  async getPropertiesByCustomer(customerId: string): Promise<Property[]> {
+    return db.select().from(properties)
+      .where(eq(properties.customerId, customerId))
+      .orderBy(properties.name);
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
