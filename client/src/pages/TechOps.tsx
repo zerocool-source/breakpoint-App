@@ -118,7 +118,7 @@ export default function TechOps() {
     if (dateRange.to) params.set("endDate", endOfDay(dateRange.to).toISOString());
     if (selectedProperty !== "all") params.set("propertyId", selectedProperty);
     if (selectedTech !== "all") params.set("technicianName", selectedTech);
-    if (urgentOnly) params.set("priority", "urgent");
+    if (entryType === "repairs_needed" && urgentOnly) params.set("priority", "urgent");
     return params.toString();
   };
 
