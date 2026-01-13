@@ -1160,18 +1160,6 @@ Breakpoint Pool Service`);
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleInvoice(estimate);
-                                }}
-                                className="bg-emerald-600 hover:bg-emerald-700"
-                                data-testid={`button-invoice-${estimate.id}`}
-                              >
-                                <Receipt className="w-3 h-3 mr-1" />
-                                Invoice
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
                                   handleSchedule(estimate);
                                 }}
                                 className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
@@ -1179,6 +1167,18 @@ Breakpoint Pool Service`);
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
                                 Schedule
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInvoice(estimate);
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700"
+                                data-testid={`button-invoice-${estimate.id}`}
+                              >
+                                <Receipt className="w-3 h-3 mr-1" />
+                                Invoice
                               </Button>
                             </>
                           )}
