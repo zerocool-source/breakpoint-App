@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, 
   Building2, 
@@ -25,6 +26,7 @@ interface NavSubItem {
   label: string;
   href: string;
   icon?: any;
+  badge?: number;
 }
 
 interface NavItem {
@@ -124,7 +126,15 @@ function NavItemComponent({
                     : "text-slate-600 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
                 )}
               >
-                <span>{child.label}</span>
+                <span className="flex-1">{child.label}</span>
+                {child.badge !== undefined && child.badge > 0 && (
+                  <span className={cn(
+                    "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
+                    isChildActive ? "bg-white/20 text-white" : "bg-[#F97316] text-white"
+                  )}>
+                    {child.badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -136,7 +146,29 @@ function NavItemComponent({
 
 export function Sidebar() {
   const [location] = useLocation();
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats"]));
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats", "operationsHub"]));
+
+  const { data: repairsNeededCount = 0 } = useQuery<number>({
+    queryKey: ["repairs-needed-count"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops?entryType=repairs_needed");
+      if (!response.ok) return 0;
+      const data = await response.json();
+      return Array.isArray(data) ? data.filter((e: any) => e.status !== "archived" && e.status !== "completed").length : 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: serviceRepairsCount = 0 } = useQuery<number>({
+    queryKey: ["service-repairs-count"],
+    queryFn: async () => {
+      const response = await fetch("/api/service-repairs");
+      if (!response.ok) return 0;
+      const data = await response.json();
+      return Array.isArray(data) ? data.filter((j: any) => j.status === "pending" || j.status === "in_progress").length : 0;
+    },
+    refetchInterval: 30000,
+  });
 
   const toggleExpand = (key: string) => {
     setExpandedItems(prev => {
@@ -165,9 +197,7 @@ export function Sidebar() {
       label: "Properties", 
       children: [
         { label: "Profiles", href: "/property-profiles" },
-        { label: "Repairs", href: "/property-repairs" },
         { label: "Visits", href: "/visits" },
-        { label: "Equipment Tracker", href: "/equipment" },
       ]
     },
     { 
@@ -176,7 +206,9 @@ export function Sidebar() {
       label: "Operations Hub", 
       children: [
         { label: "Tech Ops", href: "/tech-ops" },
+        { label: "Repairs Needed", href: "/tech-ops/repairs-needed", badge: repairsNeededCount },
         { label: "Repair Queue", href: "/repair-queue" },
+        { label: "Service Repairs", href: "/service-repairs", badge: serviceRepairsCount },
       ]
     },
     { 
@@ -213,6 +245,7 @@ export function Sidebar() {
         { label: "Repairs", href: "/report-repairs" },
         { label: "Chemicals", href: "/report-chemicals" },
         { label: "Commissions", href: "/commissions" },
+        { label: "Equipment Tracker", href: "/equipment" },
       ]
     },
     { 
@@ -221,7 +254,6 @@ export function Sidebar() {
       label: "Estimates", 
       children: [
         { label: "All Estimates", href: "/estimates" },
-        { label: "Service Repairs", href: "/service-repairs" },
       ]
     },
     { 
