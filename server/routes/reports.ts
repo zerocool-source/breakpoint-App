@@ -82,7 +82,56 @@ async function fetchEquipmentJobs(
     return { data: allTechs };
   };
 
-  const fetchAllJobs = async () => {
+  const fetchAllCustomers = async () => {
+    const allCustomers: any[] = [];
+    let offset = 0;
+    let hasMore = true;
+    const limit = 500;
+
+    while (hasMore) {
+      try {
+        const custData = await client.getCustomerList({ offset, limit });
+        if (custData.data && Array.isArray(custData.data)) {
+          allCustomers.push(...custData.data);
+        }
+        hasMore = custData.hasMore === true;
+        offset += limit;
+      } catch (e) {
+        console.error("Error fetching customers at offset", offset, e);
+        break;
+      }
+    }
+    return { data: allCustomers };
+  };
+
+  const fetchAllBasicJobs = async () => {
+    const allJobs: any[] = [];
+    let offset = 0;
+    let hasMore = true;
+    const limit = 500;
+
+    while (hasMore) {
+      try {
+        const jobData = await client.getOneTimeJobList({ 
+          fromDate: formatDate(fromDate), 
+          toDate: formatDate(toDate), 
+          offset, 
+          limit 
+        });
+        if (jobData.data && Array.isArray(jobData.data)) {
+          allJobs.push(...jobData.data);
+        }
+        hasMore = jobData.hasMore === true;
+        offset += limit;
+      } catch (e) {
+        console.error("Error fetching basic jobs at offset", offset, e);
+        break;
+      }
+    }
+    return { data: allJobs };
+  };
+
+  const fetchAllJobDetails = async () => {
     const allJobs: any[] = [];
     let offset = 0;
     let hasMore = true;
@@ -102,28 +151,46 @@ async function fetchEquipmentJobs(
         hasMore = jobData.hasMore === true;
         offset += limit;
       } catch (e) {
-        console.error("Error fetching jobs at offset", offset, e);
+        console.error("Error fetching job details at offset", offset, e);
         break;
       }
     }
     return { data: allJobs };
   };
 
-  const [techData, jobsData] = await Promise.all([
+  const [techData, customerData, basicJobsData, jobDetailsData] = await Promise.all([
     fetchAllTechnicians(),
-    fetchAllJobs()
+    fetchAllCustomers(),
+    fetchAllBasicJobs(),
+    fetchAllJobDetails()
   ]);
 
   const technicianMap: Record<string, string> = {};
   if (techData.data) {
     techData.data.forEach((tech: any) => {
       const techId = tech.RecordID || tech.TechnicianID || tech.id;
-      const name = tech.TechnicianName || tech.Name || `${tech.FirstName || ''} ${tech.LastName || ''}`.trim();
+      const name = tech.Name || tech.TechnicianName || `${tech.FirstName || ''} ${tech.LastName || ''}`.trim();
       if (techId) technicianMap[techId] = name;
     });
   }
 
-  const allJobs: any[] = jobsData.data || [];
+  const customerMap: Record<string, any> = {};
+  if (customerData.data) {
+    customerData.data.forEach((cust: any) => {
+      const custId = cust.RecordID || cust.CustomerID || cust.id;
+      if (custId) customerMap[custId] = cust;
+    });
+  }
+
+  const jobDetailsMap: Record<string, any> = {};
+  if (jobDetailsData.data) {
+    jobDetailsData.data.forEach((detail: any) => {
+      const jobId = detail.JobID || detail.RecordID || detail.id;
+      if (jobId) jobDetailsMap[jobId] = detail;
+    });
+  }
+
+  const allJobs: any[] = basicJobsData.data || [];
   
   const auditNotesMap: Record<string, { instructions: string; officeNotes: string }> = {};
   let auditFetchErrors = 0;
@@ -173,38 +240,43 @@ async function fetchEquipmentJobs(
   
   for (const job of allJobs) {
     const jobId = job.JobID || job.RecordID || job.id;
+    const jobDetail = jobDetailsMap[jobId] || {};
+    const techId = job.TechnicianID || job.technicianId || job.TechnicianId;
+    const customerId = job.CustomerId || job.CustomerID || job.customerId;
+    const customer = customerId ? customerMap[customerId] : undefined;
     const auditNotes = auditNotesMap[jobId] || { instructions: '', officeNotes: '' };
     
     const fullSearchText = [
-      job.JobTitle || job.Title || '',
-      job.Description || '',
-      job.Notes || '',
-      job.OfficeNotes || '',
-      job.Instructions || '',
+      job.Title || job.JobTitle || jobDetail.Title || '',
+      job.Description || jobDetail.Description || '',
+      job.Notes || jobDetail.Notes || '',
+      job.OfficeNotes || jobDetail.OfficeNotes || '',
+      job.Instructions || jobDetail.Instructions || '',
       auditNotes.instructions,
       auditNotes.officeNotes,
-      ...(job.OneOfJobItemDetails || []).map((item: any) => 
-        `${item.ItemName || ''} ${item.Description || ''}`
+      ...(jobDetail.OneOfJobItemDetails || job.OneOfJobItemDetails || []).map((item: any) => 
+        `${item.ItemName || ''} ${item.Description || ''} ${item.ProductName || ''}`
       )
     ].join(' ');
 
     const matchedType = containsEquipmentKeyword(fullSearchText);
     
     if (matchedType) {
-      const techId = job.TechnicianID || job.TechnicianId || job.technicianId;
-      const techName = techId ? technicianMap[techId] : 'Unknown';
-      const jobDate = job.ScheduledDate || job.DateScheduled || job.JobDate || job.Date;
+      const techName = techId ? technicianMap[techId] : 'Unassigned';
+      const customerName = customer?.CustomerName || customer?.CompanyName || job.CustomerName || 'Unknown Customer';
+      const jobDate = job.JobDate || job.ScheduledDate || job.ServiceDate || jobDetail.ScheduledDate || job.CreatedDate || '';
+      const poolName = job.BodyOfWater || job.poolName || jobDetail.BodyOfWater || '';
       
       equipmentJobs.push({
         id: jobId,
         date: jobDate,
-        propertyName: job.PoolName || job.PropertyName || job.CustomerName || 'Unknown Property',
-        customerName: job.CustomerName || 'Unknown Customer',
-        address: job.Address || job.AddressLine1 || '',
+        propertyName: poolName || customerName,
+        customerName: customerName,
+        address: job.ServiceAddress || '',
         technicianName: techName,
-        jobTitle: job.JobTitle || job.Title || 'Untitled Job',
+        jobTitle: job.Title || job.JobTitle || jobDetail.Title || 'Service Job',
         equipmentType: matchedType,
-        notes: auditNotes.officeNotes || auditNotes.instructions || job.Notes || job.OfficeNotes || '',
+        notes: auditNotes.officeNotes || auditNotes.instructions || job.OfficeNotes || jobDetail.OfficeNotes || '',
       });
     }
   }
