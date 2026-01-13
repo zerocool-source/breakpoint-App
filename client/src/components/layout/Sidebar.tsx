@@ -209,6 +209,8 @@ export function Sidebar() {
         { label: "Repairs Needed", href: "/tech-ops/repairs-needed", badge: repairsNeededCount },
         { label: "Repair Queue", href: "/repair-queue" },
         { label: "Service Repairs", href: "/service-repairs", badge: serviceRepairsCount },
+        { label: "Supervisor", href: "/tech-supervisor" },
+        { label: "Repair Foreman", href: "/tech-foreman" },
       ]
     },
     { 
@@ -216,8 +218,6 @@ export function Sidebar() {
       icon: Users, 
       label: "Technicians", 
       children: [
-        { label: "Supervisor", href: "/tech-supervisor" },
-        { label: "Repair Foreman", href: "/tech-foreman" },
         { label: "Repair Tech", href: "/tech-repairs" },
         { label: "Service Techs", href: "/tech-services" },
       ]
