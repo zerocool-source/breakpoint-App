@@ -724,6 +724,7 @@ export type Estimate = typeof estimates.$inferSelect;
 export const serviceRepairJobs = pgTable("service_repair_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   externalId: text("external_id"), // From mobile app sync
+  jobNumber: text("job_number").notNull(), // Auto-generated job number (e.g., SR-2025-0001)
   
   // Location/Customer
   propertyId: text("property_id").notNull(),

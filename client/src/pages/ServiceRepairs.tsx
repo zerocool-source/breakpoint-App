@@ -22,6 +22,7 @@ import {
 
 interface ServiceRepairJob {
   id: string;
+  jobNumber: string;
   propertyId: string;
   propertyName: string;
   technicianId: string | null;
@@ -252,6 +253,7 @@ export default function ServiceRepairs() {
                     <TableHeader>
                       <TableRow>
                         {statusFilter === 'pending' && <TableHead className="w-10"></TableHead>}
+                        <TableHead>Job #</TableHead>
                         <TableHead>Property</TableHead>
                         <TableHead>Technician</TableHead>
                         <TableHead>Description</TableHead>
@@ -280,6 +282,11 @@ export default function ServiceRepairs() {
                                 />
                               </TableCell>
                             )}
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono text-xs bg-slate-50">
+                                {repair.jobNumber}
+                              </Badge>
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <Building2 className="w-4 h-4 text-slate-400" />
