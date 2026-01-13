@@ -16,6 +16,7 @@ import { registerEstimateRoutes } from "./routes/estimates";
 import { registerQuickbooksRoutes } from "./routes/quickbooks";
 import { registerReportRoutes } from "./routes/reports";
 import { registerServiceRepairRoutes } from "./routes/serviceRepairs";
+import { registerTechOpsRoutes } from "./routes/techOps";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -41,4 +42,5 @@ function setupRoutes(app: any) {
   registerQuickbooksRoutes(app);
   registerReportRoutes(app);
   registerServiceRepairRoutes(app);
+  registerTechOpsRoutes(app);
 }
