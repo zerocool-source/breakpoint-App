@@ -177,6 +177,19 @@ export function Sidebar() {
       href: "/operations"
     },
     { 
+      key: "techOps",
+      icon: Wrench, 
+      label: "Tech Ops", 
+      children: [
+        { label: "Repairs Needed", href: "/tech-ops/repairs-needed" },
+        { label: "Chemical Order", href: "/tech-ops/chemical-order" },
+        { label: "Chemicals Drop-Off", href: "/tech-ops/chemicals-dropoff" },
+        { label: "Windy Day Clean Up", href: "/tech-ops/windy-cleanup" },
+        { label: "Report Issue", href: "/tech-ops/report-issue" },
+        { label: "Add Notes", href: "/tech-ops/add-notes" },
+      ]
+    },
+    { 
       key: "technicians",
       icon: Users, 
       label: "Technicians", 

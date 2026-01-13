@@ -179,6 +179,37 @@ export const insertPropertyAccessNoteSchema = createInsertSchema(propertyAccessN
 export type InsertPropertyAccessNote = z.infer<typeof insertPropertyAccessNoteSchema>;
 export type PropertyAccessNote = typeof propertyAccessNotes.$inferSelect;
 
+// Tech Ops Entries (field technician submissions)
+export const techOpsEntries = pgTable("tech_ops_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entryType: text("entry_type").notNull(), // "repairs_needed", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "add_notes"
+  technicianName: text("technician_name").notNull(),
+  propertyId: varchar("property_id"),
+  propertyName: text("property_name"),
+  description: text("description"),
+  priority: text("priority").default("normal"), // "low", "normal", "high", "urgent"
+  status: text("status").default("pending"), // "pending", "reviewed", "completed", "cancelled"
+  chemicals: text("chemicals"), // For chemical orders/dropoffs - list of chemicals
+  quantity: text("quantity"), // Quantity details for orders
+  issueType: text("issue_type"), // For report issue - type of issue
+  photos: text("photos").array(), // Array of photo URLs
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTechOpsEntrySchema = createInsertSchema(techOpsEntries).omit({
+  id: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTechOpsEntry = z.infer<typeof insertTechOpsEntrySchema>;
+export type TechOpsEntry = typeof techOpsEntries.$inferSelect;
+
 // Equipment (pool equipment linked to bodies of water)
 export const equipment = pgTable("equipment", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
