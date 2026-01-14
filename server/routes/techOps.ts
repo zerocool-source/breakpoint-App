@@ -61,6 +61,20 @@ export function registerTechOpsRoutes(app: Express) {
     }
   });
 
+  // Windy Day Cleanup: Get pending count for badge - MUST be before :id route
+  app.get("/api/tech-ops/windy-day-pending-count", async (req: Request, res: Response) => {
+    try {
+      const entries = await storage.getTechOpsEntries({
+        entryType: "windy_day_cleanup",
+        status: "pending"
+      });
+      res.json({ count: entries.length });
+    } catch (error: any) {
+      console.error("Error fetching windy day pending count:", error);
+      res.status(500).json({ error: "Failed to fetch pending count" });
+    }
+  });
+
   app.get("/api/tech-ops/:id", async (req: Request, res: Response) => {
     try {
       const entry = await storage.getTechOpsEntry(req.params.id);
@@ -179,9 +193,9 @@ export function registerTechOpsRoutes(app: Express) {
         status: "draft",
         tags,
         items: [],
-        subtotal: "0",
-        taxRate: "0",
-        total: "0",
+        subtotal: 0,
+        taxRate: 0,
+        totalAmount: 0,
       });
 
       await storage.updateTechOpsEntry(req.params.id, { status: "completed" });
@@ -190,6 +204,23 @@ export function registerTechOpsRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error converting tech ops entry to estimate:", error);
       res.status(500).json({ error: "Failed to convert to estimate" });
+    }
+  });
+
+  // Windy Day Cleanup: Mark as completed with no charge (no billing)
+  app.post("/api/tech-ops/:id/no-charge", async (req: Request, res: Response) => {
+    try {
+      const entry = await storage.updateTechOpsEntry(req.params.id, { 
+        status: "completed",
+        notes: ((await storage.getTechOpsEntry(req.params.id))?.notes || "") + "\n[No Charge - Marked as completed with no billing]"
+      });
+      if (!entry) {
+        return res.status(404).json({ error: "Entry not found" });
+      }
+      res.json(entry);
+    } catch (error: any) {
+      console.error("Error marking entry as no charge:", error);
+      res.status(500).json({ error: "Failed to mark entry as no charge" });
     }
   });
 }
