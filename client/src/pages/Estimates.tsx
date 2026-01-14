@@ -270,6 +270,7 @@ export default function Estimates() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [valueFilter, setValueFilter] = useState<string>("all");
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -512,8 +513,15 @@ export default function Estimates() {
       });
     }
 
+    // Apply value filter ($500 threshold = 50000 cents)
+    if (valueFilter === "under500") {
+      result = result.filter((e: Estimate) => (e.totalAmount || 0) < 50000);
+    } else if (valueFilter === "500plus") {
+      result = result.filter((e: Estimate) => (e.totalAmount || 0) >= 50000);
+    }
+
     return result;
-  }, [estimates, activeTab, customerFilter, sourceFilter, dateFrom, dateTo]);
+  }, [estimates, activeTab, customerFilter, sourceFilter, dateFrom, dateTo, valueFilter]);
 
   const statusCounts = {
     all: estimates.filter(e => e.status !== "archived").length,
@@ -1255,140 +1263,142 @@ Breakpoint Pool Service`);
     </div>
   );
 
+  const statusCardColors: Record<string, string> = {
+    draft: "border-b-slate-400",
+    pending_approval: "border-b-[#FF6A00]",
+    approved: "border-b-[#2CA01C]",
+    rejected: "border-b-red-500",
+    scheduled: "border-b-[#0077C5]",
+    completed: "border-b-[#0077C5]",
+    invoiced: "border-b-purple-500",
+    archived: "border-b-gray-400",
+  };
+
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-[#1E293B]">Estimates</h1>
-            <p className="text-[#64748B] text-sm">Manage repair estimates and HOA approvals</p>
+      <div className="p-6 space-y-6 bg-[#F3F4F6] min-h-screen">
+        {/* QuickBooks-style Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Estimates</h1>
+            <Button
+              onClick={openCreateDialog}
+              className="bg-[#0077C5] hover:bg-[#005fa3] text-white"
+              data-testid="button-create-estimate"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Estimate
+            </Button>
           </div>
-          <Button
-            onClick={openCreateDialog}
-            data-testid="button-create-estimate"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Estimate
-          </Button>
         </div>
 
-        <div className="grid grid-cols-7 gap-3">
+        {/* QuickBooks-style Status Cards Row */}
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {Object.entries(statusConfig).filter(([key]) => !["needs_scheduling", "ready_to_invoice"].includes(key)).map(([key, config]) => (
-            <Card key={key} className="cursor-pointer hover:shadow-md hover:border-[#60A5FA]/50 transition-all" onClick={() => setActiveTab(key)}>
-              <CardContent className="p-4 text-center">
-                <config.icon className="w-6 h-6 mx-auto mb-2 text-[#1E3A8A]" />
-                <p className="text-2xl font-bold text-[#1E293B]">{statusCounts[key as keyof typeof statusCounts] || 0}</p>
-                <p className="text-xs text-[#64748B]">{config.label}</p>
-              </CardContent>
-            </Card>
+            <div 
+              key={key} 
+              className={`flex-shrink-0 min-w-[120px] bg-[#f9fafb] rounded-lg border border-gray-200 border-b-4 ${statusCardColors[key] || "border-b-gray-300"} cursor-pointer hover:shadow-md transition-all px-4 py-3`}
+              onClick={() => setActiveTab(key)}
+            >
+              <p className="text-2xl font-bold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{statusCounts[key as keyof typeof statusCounts] || 0}</p>
+              <p className="text-xs text-[#6B7280] mt-1">{config.label}</p>
+            </div>
           ))}
         </div>
 
+        {/* QuickBooks-style Workflow Metrics */}
         {metrics && (
-          <Card className="bg-gradient-to-r from-[#1E3A8A]/5 to-[#60A5FA]/5 border-[#1E3A8A]/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-[#1E3A8A]">Workflow Metrics</h3>
-                <Badge variant="outline" className="text-xs">Last 30 days</Badge>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Workflow Metrics</h3>
+              <span className="text-xs bg-[#f9fafb] text-[#6B7280] px-2 py-1 rounded-full border border-gray-200">Last 30 days</span>
+            </div>
+            <div className="grid grid-cols-7 gap-4">
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#2CA01C]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.conversionRate}%</p>
+                <p className="text-xs text-[#6B7280] mt-1">Approval Rate</p>
               </div>
-              <div className="grid grid-cols-7 gap-4">
-                <div className="text-center">
-                  <p className="text-xl font-bold text-[#1E3A8A]">{metrics.conversionRate}%</p>
-                  <p className="text-xs text-[#64748B]">Approval Rate</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-green-600">${(metrics.approvedValue || 0).toLocaleString()}</p>
-                  <p className="text-xs text-[#64748B]">Approved Value</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-[#1E3A8A]">${(metrics.scheduledValue || 0).toLocaleString()}</p>
-                  <p className="text-xs text-[#64748B]">Scheduled Value</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-[#F97316]">${(metrics.readyToInvoiceValue || 0).toLocaleString()}</p>
-                  <p className="text-xs text-[#64748B]">Ready to Invoice</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-purple-600">${(metrics.invoicedValue || 0).toLocaleString()}</p>
-                  <p className="text-xs text-[#64748B]">Invoiced Value</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-[#F97316]">{metrics.avgApprovalTime}h</p>
-                  <p className="text-xs text-[#64748B]">Avg Approval Time</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-bold text-[#60A5FA]">{metrics.avgCompletionTime}h</p>
-                  <p className="text-xs text-[#64748B]">Avg Completion Time</p>
-                </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#2CA01C]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.approvedValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-[#6B7280] mt-1">Approved Value</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#0077C5]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.scheduledValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-[#6B7280] mt-1">Scheduled Value</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#FF6A00]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.readyToInvoiceValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-[#6B7280] mt-1">Ready to Invoice</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-purple-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-[#6B7280] mt-1">Invoiced Value</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#FF6A00]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgApprovalTime}h</p>
+                <p className="text-xs text-[#6B7280] mt-1">Avg Approval Time</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-[#0077C5]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgCompletionTime}h</p>
+                <p className="text-xs text-[#6B7280] mt-1">Avg Completion</p>
+              </div>
+            </div>
+          </div>
         )}
 
-        <Card>
-          <CardHeader className="pb-3 space-y-4">
-            {/* Filters Row */}
+        {/* QuickBooks-style Main Content Card */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          {/* QuickBooks-style Filter Bar */}
+          <div className="px-5 py-4 border-b border-gray-200">
             <div className="flex items-center gap-4 flex-wrap" data-testid="estimate-filters">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-slate-600 whitespace-nowrap">Customer:</Label>
-                <Select value={customerFilter} onValueChange={setCustomerFilter}>
-                  <SelectTrigger className="w-[200px]" data-testid="filter-customer">
-                    <SelectValue placeholder="All Customers" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Customers</SelectItem>
-                    {uniqueCustomers.map((customer) => (
-                      <SelectItem key={customer} value={customer}>{customer}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                <SelectTrigger className="w-[180px] border-gray-300 bg-white text-sm" data-testid="filter-customer">
+                  <SelectValue placeholder="All Customers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  {uniqueCustomers.map((customer) => (
+                    <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-slate-600 whitespace-nowrap">Source:</Label>
-                <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                  <SelectTrigger className="w-[180px]" data-testid="filter-source">
-                    <SelectValue placeholder="All Sources" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sources</SelectItem>
-                    <SelectItem value="service_repair">From Service Repairs</SelectItem>
-                    <SelectItem value="manual">Manual Entry</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-[160px] border-gray-300 bg-white text-sm" data-testid="filter-source">
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="service_repair">Service Repairs</SelectItem>
+                  <SelectItem value="manual">Manual Entry</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-slate-600 whitespace-nowrap">From:</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal" data-testid="filter-date-from">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "MMM d, yyyy") : "Start Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[130px] justify-start text-left font-normal border-gray-300 text-sm" data-testid="filter-date-from">
+                    <CalendarIcon className="mr-2 h-4 w-4 text-[#6B7280]" />
+                    {dateFrom ? format(dateFrom, "MMM d") : "From"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
+                </PopoverContent>
+              </Popover>
 
-              <div className="flex items-center gap-2">
-                <Label className="text-sm text-slate-600 whitespace-nowrap">To:</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal" data-testid="filter-date-to">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "MMM d, yyyy") : "End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[130px] justify-start text-left font-normal border-gray-300 text-sm" data-testid="filter-date-to">
+                    <CalendarIcon className="mr-2 h-4 w-4 text-[#6B7280]" />
+                    {dateTo ? format(dateTo, "MMM d") : "To"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
+                </PopoverContent>
+              </Popover>
 
-              {(customerFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo) && (
+              {(customerFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo || valueFilter !== "all") && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1397,52 +1407,86 @@ Breakpoint Pool Service`);
                     setSourceFilter("all");
                     setDateFrom(undefined);
                     setDateTo(undefined);
+                    setValueFilter("all");
                   }}
-                  className="text-slate-500 hover:text-slate-700"
+                  className="text-[#6B7280] hover:text-[#1E293B] text-sm"
                   data-testid="button-clear-filters"
                 >
                   <X className="w-4 h-4 mr-1" />
-                  Clear Filters
+                  Clear
                 </Button>
               )}
             </div>
+          </div>
 
+          {/* QuickBooks-style Tabs with Value Filter */}
+          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-[#F1F5F9]">
-                <TabsTrigger value="all" data-testid="tab-all">All ({statusCounts.all})</TabsTrigger>
-                <TabsTrigger value="draft" data-testid="tab-draft">Drafts ({statusCounts.draft})</TabsTrigger>
-                <TabsTrigger value="pending_approval" data-testid="tab-pending">Pending ({statusCounts.pending_approval})</TabsTrigger>
-                <TabsTrigger value="approved" data-testid="tab-approved">Approved ({statusCounts.approved})</TabsTrigger>
-                <TabsTrigger value="scheduled" data-testid="tab-scheduled">Scheduled ({statusCounts.scheduled})</TabsTrigger>
-                <TabsTrigger value="completed" data-testid="tab-completed">Completed ({statusCounts.completed})</TabsTrigger>
-                <TabsTrigger value="archived" data-testid="tab-archived">Archived ({statusCounts.archived})</TabsTrigger>
+              <TabsList className="bg-transparent h-auto p-0 gap-1">
+                <TabsTrigger value="all" className="data-[state=active]:bg-[#0077C5] data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-all">All ({statusCounts.all})</TabsTrigger>
+                <TabsTrigger value="draft" className="data-[state=active]:bg-[#0077C5] data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-draft">Drafts ({statusCounts.draft})</TabsTrigger>
+                <TabsTrigger value="pending_approval" className="data-[state=active]:bg-[#FF6A00] data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-pending">Pending ({statusCounts.pending_approval})</TabsTrigger>
+                <TabsTrigger value="approved" className="data-[state=active]:bg-[#2CA01C] data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-approved">Approved ({statusCounts.approved})</TabsTrigger>
+                <TabsTrigger value="scheduled" className="data-[state=active]:bg-[#0077C5] data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-scheduled">Scheduled ({statusCounts.scheduled})</TabsTrigger>
+                <TabsTrigger value="completed" className="data-[state=active]:bg-[#0077C5] data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-completed">Completed ({statusCounts.completed})</TabsTrigger>
+                <TabsTrigger value="archived" className="data-[state=active]:bg-gray-500 data-[state=active]:text-white rounded-full px-3 py-1.5 text-sm" data-testid="tab-archived">Archived ({statusCounts.archived})</TabsTrigger>
               </TabsList>
             </Tabs>
-          </CardHeader>
-          <CardContent>
+
+            {/* Value Filter Tabs */}
+            <div className="flex items-center gap-1 bg-[#f9fafb] rounded-lg p-1 border border-gray-200" role="group" aria-label="Filter by estimate value">
+              <button
+                onClick={() => setValueFilter("all")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${valueFilter === "all" ? "bg-white shadow-sm text-[#1E293B] font-medium border border-gray-200" : "text-[#6B7280] hover:text-[#1E293B] hover:bg-white/50"}`}
+                data-testid="filter-value-all"
+                aria-pressed={valueFilter === "all"}
+              >
+                All Values
+              </button>
+              <button
+                onClick={() => setValueFilter("under500")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${valueFilter === "under500" ? "bg-white shadow-sm text-[#1E293B] font-medium border border-gray-200" : "text-[#6B7280] hover:text-[#1E293B] hover:bg-white/50"}`}
+                data-testid="filter-value-under500"
+                aria-pressed={valueFilter === "under500"}
+              >
+                Under $500
+              </button>
+              <button
+                onClick={() => setValueFilter("500plus")}
+                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${valueFilter === "500plus" ? "bg-white shadow-sm text-[#1E293B] font-medium border border-gray-200" : "text-[#6B7280] hover:text-[#1E293B] hover:bg-white/50"}`}
+                data-testid="filter-value-500plus"
+                aria-pressed={valueFilter === "500plus"}
+              >
+                $500 & Above
+              </button>
+            </div>
+          </div>
+
+          {/* QuickBooks-style List Content */}
+          <div className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0077C5]" />
               </div>
             ) : filteredEstimates.length === 0 ? (
-              <div className="text-center py-12 text-[#64748B]">
+              <div className="text-center py-12 text-[#6B7280]">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No estimates found</p>
+                <p className="text-sm">No estimates found</p>
                 {activeTab === "all" && (
-                  <Button onClick={openCreateDialog} variant="link" className="mt-2 text-[#60A5FA]">
+                  <Button onClick={openCreateDialog} variant="link" className="mt-2 text-[#0077C5]">
                     Create your first estimate
                   </Button>
                 )}
               </div>
             ) : (
               <ScrollArea className="h-[500px]">
-                <div className="space-y-3">
+                <div className="divide-y divide-gray-100">
                   {filteredEstimates.map((estimate) => {
                     const config = statusConfig[estimate.status] || statusConfig.draft;
                     return (
                       <div
                         key={estimate.id}
-                        className="flex items-center justify-between p-4 rounded-lg border border-[#E2E8F0] bg-white hover:border-[#60A5FA]/50 hover:shadow-sm transition-all cursor-pointer"
+                        className="flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-[#0077C5]"
                         onClick={() => {
                           setSelectedEstimate(estimate);
                           setShowDetailDialog(true);
@@ -1450,73 +1494,57 @@ Breakpoint Pool Service`);
                         data-testid={`estimate-row-${estimate.id}`}
                       >
                         <div className="flex items-center gap-4 flex-1">
-                          <div className="p-2 rounded-lg bg-[#EFF6FF]">
-                            <config.icon className="w-5 h-5 text-[#1E3A8A]" />
+                          <div className="p-2.5 rounded-lg bg-[#f0f9ff] border border-[#e0f2fe]">
+                            <FileText className="w-5 h-5 text-[#0077C5]" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-[#1E293B] truncate">{estimate.title}</h3>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-[16px] font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{estimate.title}</h3>
                               {estimate.estimateNumber && (
-                                <span className="text-xs text-slate-500">#{estimate.estimateNumber}</span>
+                                <span className="text-sm text-[#6B7280]">#{estimate.estimateNumber}</span>
                               )}
-                              <Badge className={`${config.color} border text-xs`}>
+                              <Badge className={`${config.color} border text-[11px] px-2 py-0.5 rounded-full`}>
                                 {config.label}
                               </Badge>
                               {estimate.sourceType === "service_repair" && (
-                                <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs">
+                                <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[11px] px-2 py-0.5 rounded-full">
                                   <Wrench className="w-3 h-3 mr-1" />
-                                  From Service Repair
+                                  Service Repair
                                 </Badge>
                               )}
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
-                              <span className="flex items-center gap-1">
-                                <Building2 className="w-3 h-3" />
+                            <div className="flex items-center gap-4 text-[14px] text-[#6B7280] mt-1.5">
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="w-3.5 h-3.5" />
                                 {estimate.propertyName}
                                 {estimate.woRequired && (
-                                  <Badge className="ml-1 bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0">
-                                    WO Required
+                                  <Badge className="ml-1 bg-[#FFF7ED] text-[#FF6A00] border-[#FFEDD5] text-[10px] px-1.5 py-0 rounded-full">
+                                    WO
                                   </Badge>
                                 )}
                               </span>
-                              {estimate.customerName && (
-                                <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  {estimate.customerName}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1">
-                                <CalendarIcon className="w-3 h-3" />
+                              <span className="flex items-center gap-1.5">
+                                <CalendarIcon className="w-3.5 h-3.5" />
                                 {formatDate(estimate.estimateDate || estimate.createdAt)}
                               </span>
-                              {estimate.createdByTechName && (
-                                <span className="flex items-center gap-1 text-slate-500">
-                                  <UserCircle2 className="w-3 h-3" />
-                                  {estimate.createdByTechName}
-                                </span>
-                              )}
                               {estimate.photos && estimate.photos.length > 0 && 
-                               estimate.photos.some((p: string) => p && !p.includes('[object Object]')) ? (
-                                <span className="flex items-center gap-1 text-green-600" title="Has photos attached">
-                                  <Camera className="w-3 h-3" />
+                               estimate.photos.some((p: string) => p && !p.includes('[object Object]')) && (
+                                <span className="flex items-center gap-1 text-[#2CA01C]" title="Has photos attached">
+                                  <Camera className="w-3.5 h-3.5" />
                                   {estimate.photos.filter((p: string) => p && !p.includes('[object Object]')).length}
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1 text-slate-400" title="No photos">
-                                  <Camera className="w-3 h-3" />
-                                  0
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-[#1E3A8A]">{formatCurrency(estimate.totalAmount)}</p>
+                          <div className="text-right mr-4">
+                            <p className="text-[18px] font-bold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{formatCurrency(estimate.totalAmount)}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 ml-4">
                           <Button
                             size="sm"
                             variant="outline"
+                            className="border-gray-300 text-[#6B7280] hover:text-[#1E293B] hover:border-gray-400"
                             onClick={(e) => {
                               e.stopPropagation();
                               openEditDialog(estimate);
@@ -1533,7 +1561,7 @@ Breakpoint Pool Service`);
                                 e.stopPropagation();
                                 handleSendForApproval(estimate);
                               }}
-                              className="bg-[#F97316] hover:bg-[#F97316]/90"
+                              className="bg-[#FF6A00] hover:bg-[#e55f00] text-white"
                               data-testid={`button-send-approval-${estimate.id}`}
                             >
                               <Send className="w-3 h-3 mr-1" />
@@ -1548,7 +1576,7 @@ Breakpoint Pool Service`);
                                   e.stopPropagation();
                                   openApprovalDialog(estimate, "approve");
                                 }}
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-[#2CA01C] hover:bg-[#248a17] text-white"
                                 data-testid={`button-approve-${estimate.id}`}
                               >
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -1570,7 +1598,7 @@ Breakpoint Pool Service`);
                           )}
                           {estimate.status === "approved" && (
                             <>
-                              <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                              <Badge className="bg-[#ECFDF5] text-[#2CA01C] border-[#A7F3D0] rounded-full">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Approved
                               </Badge>
@@ -1580,7 +1608,7 @@ Breakpoint Pool Service`);
                                   e.stopPropagation();
                                   handleNeedsScheduling(estimate);
                                 }}
-                                className="bg-[#F97316] hover:bg-[#F97316]/90"
+                                className="bg-[#FF6A00] hover:bg-[#e55f00] text-white"
                                 data-testid={`button-needs-scheduling-${estimate.id}`}
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
@@ -1595,7 +1623,7 @@ Breakpoint Pool Service`);
                                 e.stopPropagation();
                                 openSchedulingModal(estimate);
                               }}
-                              className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                              className="bg-[#0077C5] hover:bg-[#005fa3] text-white"
                               data-testid={`button-schedule-${estimate.id}`}
                             >
                               <CalendarIcon className="w-3 h-3 mr-1" />
@@ -1603,7 +1631,7 @@ Breakpoint Pool Service`);
                             </Button>
                           )}
                           {estimate.status === "rejected" && (
-                            <Badge className="bg-red-100 text-red-700 border-red-200">
+                            <Badge className="bg-red-50 text-red-700 border-red-200 rounded-full">
                               <XCircle className="w-3 h-3 mr-1" />
                               Rejected
                             </Badge>
@@ -1612,7 +1640,7 @@ Breakpoint Pool Service`);
                             <>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="outline" size="sm" className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200">
+                                  <Button variant="outline" size="sm" className="bg-[#f0f9ff] text-[#0077C5] border-[#e0f2fe] hover:bg-[#e0f2fe]">
                                     <Wrench className="w-3 h-3 mr-1" />
                                     In Progress
                                     <ChevronDown className="w-3 h-3 ml-1" />
@@ -1785,8 +1813,8 @@ Breakpoint Pool Service`);
                 </div>
               </ScrollArea>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
           <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
