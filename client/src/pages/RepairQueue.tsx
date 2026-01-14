@@ -9,9 +9,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
-  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText
+  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays
 } from "lucide-react";
 import type { ServiceRepairJob, Technician } from "@shared/schema";
 
@@ -49,6 +59,9 @@ export default function RepairQueue() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("by-tech");
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
+  const [reassignModalOpen, setReassignModalOpen] = useState(false);
+  const [selectedRepairForReassign, setSelectedRepairForReassign] = useState<ServiceRepairJob | null>(null);
+  const [newTechId, setNewTechId] = useState<string>("");
 
   const { data: repairs = [], isLoading } = useQuery<ServiceRepairJob[]>({
     queryKey: ["service-repairs"],
@@ -136,6 +149,100 @@ export default function RepairQueue() {
     },
   });
 
+  const { data: repairTechs = [] } = useQuery<any[]>({
+    queryKey: ["repair-technicians"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians/repair");
+      if (!response.ok) throw new Error("Failed to fetch repair technicians");
+      return response.json();
+    },
+  });
+
+  const reassignMutation = useMutation({
+    mutationFn: async ({ repairId, estimateId, techId, techName }: { repairId: string; estimateId: string | null; techId: number; techName: string }) => {
+      const repairResponse = await fetch(`/api/service-repairs/${repairId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ technicianId: techId, technicianName: techName }),
+      });
+      if (!repairResponse.ok) throw new Error("Failed to update repair");
+      
+      if (estimateId) {
+        const estimateResponse = await fetch(`/api/estimates/${estimateId}/schedule`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repairTechId: techId, repairTechName: techName }),
+        });
+        if (!estimateResponse.ok) throw new Error("Failed to update estimate");
+      }
+      return repairResponse.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-repairs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      setReassignModalOpen(false);
+      setSelectedRepairForReassign(null);
+      setNewTechId("");
+      toast({ title: "Job Reassigned", description: "Technician updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reassign job", variant: "destructive" });
+    },
+  });
+
+  const moveToNeedsSchedulingMutation = useMutation({
+    mutationFn: async ({ repairId, estimateId }: { repairId: string; estimateId: string | null }) => {
+      const repairResponse = await fetch(`/api/service-repairs/${repairId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ technicianId: null, technicianName: null, status: "pending" }),
+      });
+      if (!repairResponse.ok) throw new Error("Failed to update repair");
+      
+      if (estimateId) {
+        const estimateResponse = await fetch(`/api/estimates/${estimateId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            status: "needs_scheduling",
+            repairTechId: null, 
+            repairTechName: null, 
+            scheduledDate: null 
+          }),
+        });
+        if (!estimateResponse.ok) throw new Error("Failed to update estimate");
+      }
+      return repairResponse.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service-repairs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      toast({ title: "Moved to Needs Scheduling", description: "Job is now unassigned and awaiting scheduling" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to move job", variant: "destructive" });
+    },
+  });
+
+  const openReassignModal = (repair: ServiceRepairJob) => {
+    setSelectedRepairForReassign(repair);
+    setNewTechId("");
+    setReassignModalOpen(true);
+  };
+
+  const handleReassign = () => {
+    if (!selectedRepairForReassign || !newTechId) return;
+    const tech = repairTechs.find(t => t.id.toString() === newTechId);
+    if (!tech) return;
+    
+    reassignMutation.mutate({
+      repairId: selectedRepairForReassign.id,
+      estimateId: selectedRepairForReassign.estimateId,
+      techId: parseInt(newTechId),
+      techName: tech.name,
+    });
+  };
+
   const renderRepairCard = (repair: ServiceRepairJob) => {
     const statusCfg = statusConfig[repair.status || "pending"] || defaultStatus;
     const StatusIcon = statusCfg.icon;
@@ -217,11 +324,38 @@ export default function RepairQueue() {
           <Button
             size="sm"
             variant="ghost"
-            className="ml-auto"
             data-testid={`button-view-${repair.id}`}
           >
             <Eye className="w-4 h-4 mr-1" /> View
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-auto"
+                data-testid={`button-actions-${repair.id}`}
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => openReassignModal(repair)}>
+                <Users className="w-4 h-4 mr-2" />
+                Reassign to Another Tech
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => moveToNeedsSchedulingMutation.mutate({ 
+                  repairId: repair.id, 
+                  estimateId: repair.estimateId 
+                })}
+              >
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Move to Needs Scheduling
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     );
@@ -479,6 +613,58 @@ export default function RepairQueue() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={reassignModalOpen} onOpenChange={setReassignModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign Job</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Current Job</Label>
+              <p className="text-sm text-slate-600">
+                {selectedRepairForReassign?.description || "No description"}
+              </p>
+              <p className="text-xs text-slate-400">
+                Currently assigned to: {selectedRepairForReassign?.technicianName || "Unassigned"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Select New Technician</Label>
+              <Select value={newTechId} onValueChange={setNewTechId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {repairTechs.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id.toString()}>
+                      {tech.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleReassign}
+              disabled={!newTechId || reassignMutation.isPending}
+            >
+              {reassignMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Reassigning...
+                </>
+              ) : (
+                "Reassign"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
