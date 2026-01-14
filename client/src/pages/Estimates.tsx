@@ -1885,6 +1885,10 @@ Breakpoint Pool Service`);
                           )}
                           {estimate.status === "pending_approval" && (
                             <>
+                              <Badge className="bg-amber-50 text-amber-700 border-amber-200 rounded-full">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Pending Approval
+                              </Badge>
                               {estimate.approvalSentTo && (
                                 <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
                                   <Mail className="w-3 h-3" />
@@ -1903,30 +1907,6 @@ Breakpoint Pool Service`);
                               >
                                 <Send className="w-3 h-3 mr-1" />
                                 Resend
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openApprovalDialog(estimate, "approve");
-                                }}
-                                className="bg-[#2CA01C] hover:bg-[#248a17] text-white"
-                                data-testid={`button-approve-${estimate.id}`}
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openApprovalDialog(estimate, "reject");
-                                }}
-                                data-testid={`button-reject-${estimate.id}`}
-                              >
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Reject
                               </Button>
                             </>
                           )}
@@ -1965,10 +1945,30 @@ Breakpoint Pool Service`);
                             </Button>
                           )}
                           {estimate.status === "rejected" && (
-                            <Badge className="bg-red-50 text-red-700 border-red-200 rounded-full">
-                              <XCircle className="w-3 h-3 mr-1" />
-                              Rejected
-                            </Badge>
+                            <>
+                              <Badge className="bg-red-50 text-red-700 border-red-200 rounded-full">
+                                <XCircle className="w-3 h-3 mr-1" />
+                                Rejected
+                              </Badge>
+                              {estimate.rejectionReason && (
+                                <div className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded max-w-[200px] truncate" title={estimate.rejectionReason}>
+                                  <span>Reason: {estimate.rejectionReason}</span>
+                                </div>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditDialog(estimate);
+                                }}
+                                className="text-slate-600 border-slate-300 hover:bg-slate-50"
+                                data-testid={`button-revise-${estimate.id}`}
+                              >
+                                <Edit className="w-3 h-3 mr-1" />
+                                Revise & Resend
+                              </Button>
+                            </>
                           )}
                           {estimate.status === "scheduled" && (
                             <>
