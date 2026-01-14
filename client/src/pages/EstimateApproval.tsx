@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "wouter";
+import { useState, useEffect } from "react";
+import { useParams, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   Mail,
   Globe,
   MapPin,
+  ArrowLeft,
 } from "lucide-react";
 
 interface EstimateItem {
@@ -77,10 +78,26 @@ const TERMS_TEXT = `This estimate is valid for 60 days from the date shown above
 
 export default function EstimateApproval() {
   const { token } = useParams<{ token: string }>();
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const actionFromUrl = urlParams.get("action");
+  
   const [approverName, setApproverName] = useState("");
   const [approverTitle, setApproverTitle] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<"approve" | "decline" | null>(null);
+  
+  // Set initial action based on URL parameter
+  useEffect(() => {
+    if (actionFromUrl === "approve") {
+      setSelectedAction("approve");
+      setShowRejectForm(false);
+    } else if (actionFromUrl === "decline") {
+      setSelectedAction("decline");
+      setShowRejectForm(true);
+    }
+  }, [actionFromUrl]);
 
   const { data, isLoading, error, refetch } = useQuery<{
     estimate: Estimate;
@@ -476,13 +493,45 @@ export default function EstimateApproval() {
 
             <Separator className="my-8" />
 
-            <div className="bg-slate-50 rounded-xl p-6">
-              <h3 className="text-xl font-bold text-slate-800 mb-2 text-center">
-                Your Approval Required
-              </h3>
-              <p className="text-slate-600 text-center mb-6">
-                Please enter your information and select Approve or Decline below.
-              </p>
+            <div className={`rounded-xl p-6 ${selectedAction === "approve" ? "bg-green-50 border-2 border-green-200" : selectedAction === "decline" ? "bg-red-50 border-2 border-red-200" : "bg-slate-50"}`}>
+              {selectedAction === "approve" ? (
+                <>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="w-6 h-6 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-green-800">
+                      Approve This Estimate
+                    </h3>
+                  </div>
+                  <p className="text-slate-600 text-center mb-6">
+                    Please enter your information to confirm approval.
+                  </p>
+                </>
+              ) : selectedAction === "decline" ? (
+                <>
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                      <XCircle className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-red-800">
+                      Decline This Estimate
+                    </h3>
+                  </div>
+                  <p className="text-slate-600 text-center mb-6">
+                    Please enter your information and reason for declining.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-xl font-bold text-slate-800 mb-2 text-center">
+                    Your Approval Required
+                  </h3>
+                  <p className="text-slate-600 text-center mb-6">
+                    Please enter your information and select Approve or Decline below.
+                  </p>
+                </>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
@@ -532,47 +581,107 @@ export default function EstimateApproval() {
                 </div>
               )}
 
-              {!canSubmit && (
+              {!canSubmit && !selectedAction && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 flex items-center gap-2 justify-center">
                   <AlertTriangle className="w-4 h-4 text-amber-600" />
                   <span className="text-sm text-amber-800">Please enter your name and title/role to approve or decline this estimate</span>
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  className="flex-1 bg-[#2CA01C] hover:bg-[#248a17] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                  onClick={() => approveMutation.mutate()}
-                  disabled={!canSubmit || approveMutation.isPending || rejectMutation.isPending}
-                  data-testid="button-approve"
-                >
-                  {approveMutation.isPending ? (
-                    <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                  ) : (
+              {selectedAction === "approve" ? (
+                <div className="flex flex-col gap-4">
+                  {!canSubmit && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 justify-center">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm text-amber-800">Please enter your name and title above to confirm approval</span>
+                    </div>
+                  )}
+                  <Button
+                    className="w-full bg-[#2CA01C] hover:bg-[#248a17] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                    onClick={() => approveMutation.mutate()}
+                    disabled={!canSubmit || approveMutation.isPending}
+                    data-testid="button-approve"
+                  >
+                    {approveMutation.isPending ? (
+                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-6 h-6 mr-2" />
+                    )}
+                    Confirm Approval
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-slate-600 hover:text-slate-800"
+                    onClick={() => {
+                      setSelectedAction(null);
+                      setShowRejectForm(false);
+                    }}
+                    data-testid="button-back-to-options"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Options
+                  </Button>
+                </div>
+              ) : selectedAction === "decline" ? (
+                <div className="flex flex-col gap-4">
+                  {!canSubmit && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 justify-center">
+                      <AlertTriangle className="w-4 h-4 text-amber-600" />
+                      <span className="text-sm text-amber-800">Please enter your name and title above to confirm decline</span>
+                    </div>
+                  )}
+                  <Button
+                    className="w-full bg-[#DC2626] hover:bg-[#b91c1c] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                    onClick={() => rejectMutation.mutate()}
+                    disabled={!canSubmit || rejectMutation.isPending}
+                    data-testid="button-reject"
+                  >
+                    {rejectMutation.isPending ? (
+                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="w-6 h-6 mr-2" />
+                    )}
+                    Confirm Decline
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="text-slate-600 hover:text-slate-800"
+                    onClick={() => {
+                      setSelectedAction(null);
+                      setShowRejectForm(false);
+                    }}
+                    data-testid="button-back-to-options"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Options
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button
+                    className="flex-1 bg-[#2CA01C] hover:bg-[#248a17] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                    onClick={() => {
+                      setSelectedAction("approve");
+                      setShowRejectForm(false);
+                    }}
+                    data-testid="button-select-approve"
+                  >
                     <CheckCircle2 className="w-6 h-6 mr-2" />
-                  )}
-                  Approve Estimate
-                </Button>
-                <Button
-                  className="flex-1 bg-[#DC2626] hover:bg-[#b91c1c] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                  onClick={() => {
-                    if (showRejectForm) {
-                      rejectMutation.mutate();
-                    } else {
+                    Approve Estimate
+                  </Button>
+                  <Button
+                    className="flex-1 bg-[#DC2626] hover:bg-[#b91c1c] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
+                    onClick={() => {
+                      setSelectedAction("decline");
                       setShowRejectForm(true);
-                    }
-                  }}
-                  disabled={!canSubmit || approveMutation.isPending || rejectMutation.isPending}
-                  data-testid="button-reject"
-                >
-                  {rejectMutation.isPending ? (
-                    <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                  ) : (
+                    }}
+                    data-testid="button-select-decline"
+                  >
                     <XCircle className="w-6 h-6 mr-2" />
-                  )}
-                  {showRejectForm ? "Confirm Decline" : "Decline Estimate"}
-                </Button>
-              </div>
+                    Decline Estimate
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-200 text-center">

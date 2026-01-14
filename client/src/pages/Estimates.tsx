@@ -820,10 +820,10 @@ export default function Estimates() {
         throw new Error(error.error || "Failed to send for approval");
       }
       
-      const { approvalUrl } = await response.json();
+      const { approvalUrl, approveUrl, declineUrl, emailSubject, emailHtml } = await response.json();
       
-      // Generate email content with approval link
-      const subject = encodeURIComponent(`Estimate Approval Request: ${selectedEstimate.title} - ${selectedEstimate.propertyName}`);
+      // Generate text email content with approval links
+      const subject = encodeURIComponent(emailSubject || `Estimate Approval Request: ${selectedEstimate.title} - ${selectedEstimate.propertyName}`);
       const body = encodeURIComponent(`Dear Property Manager,
 
 We are requesting approval for the following repair estimate:
@@ -835,14 +835,28 @@ ${selectedEstimate.description ? `Description: ${selectedEstimate.description}` 
 
 Total Amount: $${((selectedEstimate.totalAmount || 0) / 100).toFixed(2)}
 
-Please click the link below to review the full estimate and approve or decline:
+Please use one of the links below to respond:
 
-${approvalUrl}
+✓ APPROVE: ${approveUrl}
+
+✗ DECLINE: ${declineUrl}
+
+Or view the full estimate here: ${approvalUrl}
 
 This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.
 
 Thank you,
-Breakpoint Pool Service`);
+Breakpoint Commercial Pool Systems
+(951) 653-3333 | info@breakpointpools.com`);
+      
+      // Copy the HTML email to clipboard for users who want to use it
+      if (emailHtml) {
+        try {
+          await navigator.clipboard.writeText(emailHtml);
+        } catch (clipboardError) {
+          console.log("Could not copy HTML to clipboard:", clipboardError);
+        }
+      }
       
       // Open Outlook compose URL
       const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
@@ -854,7 +868,7 @@ Breakpoint Pool Service`);
       setShowSendApprovalDialog(false);
       toast({ 
         title: "Approval Request Sent", 
-        description: `Estimate sent to ${selectedApprovalEmail}. Status updated to Pending Approval.` 
+        description: `Estimate sent to ${selectedApprovalEmail}. Status updated to Pending Approval. HTML email copied to clipboard.` 
       });
     } catch (error: any) {
       toast({ 
@@ -1916,6 +1930,20 @@ Breakpoint Pool Service`);
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Approved
                               </Badge>
+                              {estimate.customerApproverName && (
+                                <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                                  <User className="w-3 h-3" />
+                                  <span>
+                                    {estimate.customerApproverName}
+                                    {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
+                                  </span>
+                                  {estimate.approvedAt && (
+                                    <span className="text-green-500">
+                                      • {new Date(estimate.approvedAt).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                               <Button
                                 size="sm"
                                 onClick={(e) => {
@@ -1931,18 +1959,38 @@ Breakpoint Pool Service`);
                             </>
                           )}
                           {estimate.status === "needs_scheduling" && (
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openSchedulingModal(estimate);
-                              }}
-                              className="bg-[#0077C5] hover:bg-[#005fa3] text-white"
-                              data-testid={`button-schedule-${estimate.id}`}
-                            >
-                              <CalendarIcon className="w-3 h-3 mr-1" />
-                              Schedule
-                            </Button>
+                            <>
+                              <Badge className="bg-[#FEF3C7] text-[#D97706] border-[#FCD34D] rounded-full">
+                                <CalendarIcon className="w-3 h-3 mr-1" />
+                                Needs Scheduling
+                              </Badge>
+                              {estimate.customerApproverName && (
+                                <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                                  <User className="w-3 h-3" />
+                                  <span>
+                                    {estimate.customerApproverName}
+                                    {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
+                                  </span>
+                                  {estimate.approvedAt && (
+                                    <span className="text-green-500">
+                                      • {new Date(estimate.approvedAt).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              <Button
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openSchedulingModal(estimate);
+                                }}
+                                className="bg-[#0077C5] hover:bg-[#005fa3] text-white"
+                                data-testid={`button-schedule-${estimate.id}`}
+                              >
+                                <CalendarIcon className="w-3 h-3 mr-1" />
+                                Schedule
+                              </Button>
+                            </>
                           )}
                           {estimate.status === "rejected" && (
                             <>

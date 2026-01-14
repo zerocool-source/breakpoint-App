@@ -2,6 +2,285 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 import crypto from "crypto";
 
+const COMPANY_INFO = {
+  name: "Breakpoint Commercial Pool Systems",
+  tagline: "Keeping People Safe",
+  address: "6236 River Crest Drive Suite C",
+  cityStateZip: "Riverside, CA 92507",
+  phone: "(951) 653-3333",
+  email: "info@breakpointpools.com",
+  website: "www.BreakpointPools.com",
+};
+
+const COMPLIANCE_TEXT = `All work performed under this estimate will comply with applicable regulatory standards including but not limited to: California Title 22, California Title 24, NEC Article 680, NFPA 54, ANSI/NSF 50, DOE efficiency standards, ADA accessibility requirements, and VGB Act compliance.`;
+
+const TERMS_TEXT = `This estimate is valid for 60 days from the date shown above. For projects exceeding $500, a deposit of 10% or $1,000 (whichever is greater) is required. For repairs exceeding $10,000, a 35% deposit is required. Final payment is due upon completion.`;
+
+function formatCurrency(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+
+function formatDate(date: Date | string | null): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
+
+function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl: string): string {
+  const items = estimate.items || [];
+  const laborItems = items.filter((item: any) => {
+    const classVal = (item.class || "").toLowerCase();
+    const productVal = (item.productService || "").toLowerCase();
+    const skuVal = (item.sku || "").toLowerCase();
+    return classVal.includes("labor") || productVal.includes("labor") || skuVal.includes("labor");
+  });
+  const partsItems = items.filter((item: any) => !laborItems.includes(item));
+
+  let itemsHtml = "";
+  
+  if (partsItems.length > 0) {
+    itemsHtml += `<tr style="background-color: #f1f5f9;"><td colspan="4" style="padding: 8px; font-weight: bold; color: #475569; font-size: 12px; text-transform: uppercase;">Parts & Equipment</td></tr>`;
+    for (const item of partsItems) {
+      itemsHtml += `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 12px; color: #1e293b;">
+            <strong>${item.productService || ""}</strong>
+            ${item.description ? `<br><span style="color: #64748b; font-size: 13px;">${item.description}</span>` : ""}
+          </td>
+          <td style="padding: 12px; text-align: center; color: #475569;">${item.quantity}</td>
+          <td style="padding: 12px; text-align: right; color: #475569;">${formatCurrency(item.rate || 0)}</td>
+          <td style="padding: 12px; text-align: right; color: #1e293b; font-weight: 500;">${formatCurrency(item.amount || 0)}</td>
+        </tr>`;
+    }
+  }
+  
+  if (laborItems.length > 0) {
+    itemsHtml += `<tr style="background-color: #f1f5f9;"><td colspan="4" style="padding: 8px; font-weight: bold; color: #475569; font-size: 12px; text-transform: uppercase;">Labor</td></tr>`;
+    for (const item of laborItems) {
+      itemsHtml += `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 12px; color: #1e293b;">
+            <strong>${item.productService || ""}</strong>
+            ${item.description ? `<br><span style="color: #64748b; font-size: 13px;">${item.description}</span>` : ""}
+          </td>
+          <td style="padding: 12px; text-align: center; color: #475569;">${item.quantity}</td>
+          <td style="padding: 12px; text-align: right; color: #475569;">${formatCurrency(item.rate || 0)}</td>
+          <td style="padding: 12px; text-align: right; color: #1e293b; font-weight: 500;">${formatCurrency(item.amount || 0)}</td>
+        </tr>`;
+    }
+  }
+  
+  if (partsItems.length === 0 && laborItems.length === 0) {
+    for (const item of items) {
+      itemsHtml += `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 12px; color: #1e293b;">
+            <strong>${item.productService || ""}</strong>
+            ${item.description ? `<br><span style="color: #64748b; font-size: 13px;">${item.description}</span>` : ""}
+          </td>
+          <td style="padding: 12px; text-align: center; color: #475569;">${item.quantity}</td>
+          <td style="padding: 12px; text-align: right; color: #475569;">${formatCurrency(item.rate || 0)}</td>
+          <td style="padding: 12px; text-align: right; color: #1e293b; font-weight: 500;">${formatCurrency(item.amount || 0)}</td>
+        </tr>`;
+    }
+  }
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimate ${estimate.estimateNumber || ""} - ${COMPANY_INFO.name}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #1e3a8a; padding: 24px; color: #ffffff;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${COMPANY_INFO.name}</h1>
+                    <p style="margin: 4px 0 0 0; font-size: 16px; color: #93c5fd; font-style: italic;">${COMPANY_INFO.tagline}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 12px; font-size: 13px; color: #bfdbfe;">
+                    ${COMPANY_INFO.address}<br>
+                    ${COMPANY_INFO.cityStateZip}<br>
+                    ${COMPANY_INFO.phone} | ${COMPANY_INFO.email}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Estimate Title -->
+          <tr>
+            <td style="padding: 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <h2 style="margin: 0; color: #1e3a8a; font-size: 28px; letter-spacing: 2px;">ESTIMATE</h2>
+                  </td>
+                  <td align="right" style="font-size: 14px; color: #475569;">
+                    <strong>Estimate #:</strong> ${estimate.estimateNumber || "—"}<br>
+                    <strong>Date:</strong> ${formatDate(estimate.estimateDate || estimate.createdAt)}<br>
+                    ${estimate.expirationDate ? `<strong>Valid Until:</strong> ${formatDate(estimate.expirationDate)}` : ""}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Addresses -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="48%" style="vertical-align: top; background-color: #f8fafc; padding: 16px; border-radius: 6px;">
+                    <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Bill To</p>
+                    <p style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 600;">${estimate.customerName || estimate.propertyName}</p>
+                    ${estimate.managementCompany ? `<p style="margin: 4px 0 0 0; font-size: 14px; color: #475569;">C/O ${estimate.managementCompany}</p>` : ""}
+                    <p style="margin: 4px 0 0 0; font-size: 14px; color: #475569;">${estimate.billingAddress || estimate.address || ""}</p>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" style="vertical-align: top; background-color: #f8fafc; padding: 16px; border-radius: 6px;">
+                    <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Service Location</p>
+                    <p style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 600;">${estimate.propertyName}</p>
+                    <p style="margin: 4px 0 0 0; font-size: 14px; color: #475569;">${estimate.address || ""}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Project Title -->
+          ${estimate.title ? `
+          <tr>
+            <td style="padding: 0 24px 16px 24px;">
+              <p style="margin: 0; font-size: 16px; color: #1e3a8a; font-weight: bold;">Project: ${estimate.title}</p>
+              ${estimate.description ? `<p style="margin: 8px 0 0 0; padding: 12px; background-color: #eff6ff; border-left: 4px solid #1e3a8a; color: #475569; font-size: 14px; border-radius: 0 6px 6px 0;">${estimate.description}</p>` : ""}
+            </td>
+          </tr>
+          ` : ""}
+
+          <!-- Line Items Table -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+                <tr style="background-color: #1e3a8a; color: #ffffff;">
+                  <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600;">Description</th>
+                  <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 600; width: 60px;">Qty</th>
+                  <th style="padding: 12px; text-align: right; font-size: 13px; font-weight: 600; width: 90px;">Rate</th>
+                  <th style="padding: 12px; text-align: right; font-size: 13px; font-weight: 600; width: 90px;">Amount</th>
+                </tr>
+                ${itemsHtml}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Totals -->
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="60%"></td>
+                  <td width="40%" style="background-color: #f8fafc; padding: 16px; border-radius: 6px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 4px 0; color: #475569; font-size: 14px;">Subtotal</td>
+                        <td style="padding: 4px 0; text-align: right; color: #1e293b; font-size: 14px;">${formatCurrency(estimate.subtotal || 0)}</td>
+                      </tr>
+                      ${estimate.discountAmount > 0 ? `
+                      <tr>
+                        <td style="padding: 4px 0; color: #16a34a; font-size: 14px;">Discount</td>
+                        <td style="padding: 4px 0; text-align: right; color: #16a34a; font-size: 14px;">-${formatCurrency(estimate.discountAmount)}</td>
+                      </tr>
+                      ` : ""}
+                      ${estimate.salesTaxAmount > 0 ? `
+                      <tr>
+                        <td style="padding: 4px 0; color: #475569; font-size: 14px;">Sales Tax${estimate.salesTaxRate ? ` (${estimate.salesTaxRate}%)` : ""}</td>
+                        <td style="padding: 4px 0; text-align: right; color: #1e293b; font-size: 14px;">${formatCurrency(estimate.salesTaxAmount)}</td>
+                      </tr>
+                      ` : ""}
+                      <tr>
+                        <td colspan="2" style="border-top: 2px solid #e2e8f0; padding-top: 8px; margin-top: 8px;"></td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 4px 0; color: #1e293b; font-size: 18px; font-weight: bold;">Total</td>
+                        <td style="padding: 4px 0; text-align: right; color: #1e3a8a; font-size: 18px; font-weight: bold;">${formatCurrency(estimate.totalAmount || 0)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Compliance & Terms -->
+          <tr>
+            <td style="padding: 0 24px 16px 24px;">
+              <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px;">
+                <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: #1e3a8a; text-transform: uppercase;">Compliance & Authorization</p>
+                <p style="margin: 0; font-size: 11px; color: #475569; line-height: 1.5;">${COMPLIANCE_TEXT}</p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 24px 24px 24px;">
+              <div style="background-color: #fefce8; border: 1px solid #fde047; border-radius: 6px; padding: 12px;">
+                <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: bold; color: #854d0e; text-transform: uppercase;">Terms & Conditions</p>
+                <p style="margin: 0; font-size: 11px; color: #475569; line-height: 1.5;">${TERMS_TEXT}</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Approval Buttons -->
+          <tr>
+            <td style="padding: 24px; background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0 0 16px 0; text-align: center; font-size: 16px; color: #1e293b; font-weight: 600;">Your Response Required</p>
+              <p style="margin: 0 0 20px 0; text-align: center; font-size: 14px; color: #64748b;">Please review the estimate above and click one of the buttons below to respond.</p>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="48%" align="center">
+                    <a href="${approveUrl}" style="display: inline-block; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);">
+                      ✓ Approve Estimate
+                    </a>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" align="center">
+                    <a href="${declineUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 16px; font-weight: bold; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);">
+                      ✗ Decline Estimate
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0; font-size: 13px; color: #64748b;">${COMPANY_INFO.name}</p>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #94a3b8;">${COMPANY_INFO.phone} | ${COMPANY_INFO.email} | ${COMPANY_INFO.website}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 export function registerEstimateRoutes(app: any) {
   // Customer Billing Contacts (aggregate across all properties)
   app.get("/api/customers/:customerId/billing-contacts", async (req: Request, res: Response) => {
@@ -538,15 +817,24 @@ export function registerEstimateRoutes(app: any) {
         return res.status(404).json({ error: "Estimate not found" });
       }
       
-      // Generate the approval URL
+      // Generate the approval URLs
       const baseUrl = process.env.REPLIT_DEV_DOMAIN 
         ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : process.env.REPLIT_DEPLOYMENT_URL || "http://localhost:5000";
+      const approveUrl = `${baseUrl}/approve/${approvalToken}?action=approve`;
+      const declineUrl = `${baseUrl}/approve/${approvalToken}?action=decline`;
       const approvalUrl = `${baseUrl}/approve/${approvalToken}`;
+      
+      // Generate the HTML email content
+      const emailHtml = generateApprovalEmailHtml(estimate, approveUrl, declineUrl);
       
       res.json({ 
         estimate, 
         approvalUrl,
+        approveUrl,
+        declineUrl,
+        emailHtml,
+        emailSubject: `Estimate ${estimate.estimateNumber || ""} from ${COMPANY_INFO.name} - Approval Required`,
         message: `Estimate sent for approval to ${email}` 
       });
     } catch (error: any) {
