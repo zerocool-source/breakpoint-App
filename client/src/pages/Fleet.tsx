@@ -134,7 +134,8 @@ export default function Fleet() {
     queryKey: ["/api/fleet/trucks"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/trucks");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -142,7 +143,8 @@ export default function Fleet() {
     queryKey: ["/api/fleet/maintenance"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/maintenance");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -150,7 +152,8 @@ export default function Fleet() {
     queryKey: ["/api/fleet/inventory"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/inventory");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
@@ -158,7 +161,8 @@ export default function Fleet() {
     queryKey: ["/api/fleet/inventory-low-stock"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/inventory-low-stock");
-      return res.json();
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
