@@ -142,9 +142,24 @@ export default function TechOpsLanding() {
     },
   });
 
+  // Fetch unread counts for new submission badges
+  const { data: unreadCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["tech-ops-unread-counts"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops/unread-counts");
+      if (!response.ok) return {};
+      return response.json();
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+  });
+
   const getCountForType = (entryType: string): number => {
     if (entryType === "service_repairs") return serviceRepairsCount;
     return summary?.byType?.[entryType] || 0;
+  };
+
+  const getUnreadCount = (entryType: string): number => {
+    return unreadCounts[entryType] || 0;
   };
 
   const uniqueProperties = useMemo(() => {
@@ -189,9 +204,17 @@ export default function TechOpsLanding() {
           {techOpsOptions.map((option) => {
             const Icon = option.icon;
             const count = getCountForType(option.entryType);
+            const unreadCount = getUnreadCount(option.entryType);
             return (
               <Link key={option.href} href={option.href} data-testid={`link-techops-${option.id}`}>
-                <Card className="hover:shadow-md transition-all cursor-pointer group h-full" data-testid={`card-techops-${option.id}`}>
+                <Card className="hover:shadow-md transition-all cursor-pointer group h-full relative" data-testid={`card-techops-${option.id}`}>
+                  {unreadCount > 0 && (
+                    <div className="absolute -top-2 -right-2 z-10">
+                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-red-500 text-white animate-pulse min-w-[20px] text-center" data-testid={`badge-new-${option.id}`}>
+                        {unreadCount} NEW
+                      </span>
+                    </div>
+                  )}
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
