@@ -161,12 +161,9 @@ export function registerTechOpsRoutes(app: Express) {
           const propertyName = customer?.DisplayName || customer?.Company || poolName;
           const propertyAddress = customer?.ServiceAddress || customer?.Address || "";
 
-          // Extract notes from alert
+          // Extract notes from alert (may be updated during parsing)
           let techNote = alert.TechNote || alert.techNote || alert.TechNotes || 
                          alert.Notes || alert.notes || alert.Description || "";
-          
-          // Combine with customer notes if available
-          const combinedNotes = techNote + (customerNotes ? `\n\nCustomer Notes: ${customerNotes}` : "");
 
           // Check alert categories for repair and windy day references
           let isRepairNeeded = false;
@@ -239,6 +236,9 @@ export function registerTechOpsRoutes(app: Express) {
           const topAlertName = (alert.AlertName || alert.alertName || "").toLowerCase();
           if (topAlertName.includes("repair")) isRepairNeeded = true;
           if (topAlertName.includes("windy") || topAlertName.includes("wind")) isWindyDay = true;
+
+          // Combine tech note with customer notes AFTER parsing completes (techNote may have been updated)
+          const combinedNotes = techNote + (customerNotes ? `\n\nCustomer Notes: ${customerNotes}` : "");
 
           // Determine priority from severity
           const severity = (alert.Severity || alert.severity || "medium").toLowerCase();
