@@ -1140,18 +1140,39 @@ Breakpoint Pool Service`);
     }
   };
 
-  const openApprovalDialog = (estimate: Estimate, action: "approve" | "reject") => {
+  const openApprovalDialog = async (estimate: Estimate, action: "approve" | "reject") => {
     setSelectedEstimate(estimate);
     setApprovalAction(action);
     setRejectionReason("");
     setManagerNotes("");
-    setApprovalStep("confirm");
     setDeadlineValue(24);
     setDeadlineUnit("hours");
     setSelectedTechId("");
     setSelectedTechName("");
     setSelectedScheduleDate(new Date());
-    setShowApprovalDialog(true);
+    
+    if (action === "approve") {
+      // Skip confirmation step - go directly to schedule and auto-approve
+      setApprovalStep("schedule");
+      setShowApprovalDialog(true);
+      
+      // Auto-approve the estimate in the background
+      try {
+        await fetch(`/api/estimates/${estimate.id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "approved" }),
+        });
+        queryClient.invalidateQueries({ queryKey: ["estimates"] });
+        toast({ title: "Approved", description: "Estimate approved. Now schedule the job." });
+      } catch (error) {
+        console.error("Error approving estimate:", error);
+      }
+    } else {
+      // For reject, still show confirm step
+      setApprovalStep("confirm");
+      setShowApprovalDialog(true);
+    }
   };
 
   const formatCurrency = (amount: number | null) => {
