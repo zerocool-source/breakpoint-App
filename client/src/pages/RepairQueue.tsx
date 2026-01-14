@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -7,11 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
-  User, MapPin, DollarSign, Calendar, Eye
+  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target
 } from "lucide-react";
-import type { ServiceRepairJob } from "@shared/schema";
+import type { ServiceRepairJob, Technician } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock, label: "Pending" },
@@ -19,8 +21,11 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   in_progress: { color: "bg-purple-100 text-purple-700 border-purple-200", icon: Wrench, label: "In Progress" },
   completed: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
+  estimated: { color: "bg-cyan-100 text-cyan-700 border-cyan-200", icon: DollarSign, label: "Estimated" },
+  batched: { color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: Target, label: "Batched" },
 };
 
+const defaultStatus = { color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock, label: "Unknown" };
 
 function formatCurrency(cents: number | null | undefined): string {
   if (!cents) return "$0.00";
@@ -34,10 +39,16 @@ function formatDate(date: Date | string | null | undefined): string {
   });
 }
 
+function getInitials(name: string | null | undefined): string {
+  if (!name) return "?";
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+}
+
 export default function RepairQueue() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState("by-tech");
+  const [selectedTech, setSelectedTech] = useState<string | null>(null);
 
   const { data: repairs = [], isLoading } = useQuery<ServiceRepairJob[]>({
     queryKey: ["service-repairs"],
@@ -48,9 +59,62 @@ export default function RepairQueue() {
     },
   });
 
+  const { data: technicians = [] } = useQuery<Technician[]>({
+    queryKey: ["technicians"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians?role=repair_tech");
+      if (!response.ok) throw new Error("Failed to fetch technicians");
+      return response.json();
+    },
+  });
+
   const pendingRepairs = repairs.filter(r => r.status === "pending" || r.status === "assigned");
   const inProgressRepairs = repairs.filter(r => r.status === "in_progress");
   const completedRepairs = repairs.filter(r => r.status === "completed");
+
+  const repairsByTech = useMemo(() => {
+    const grouped: Record<string, { tech: string; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number }> = {};
+    
+    repairs.forEach(repair => {
+      const techName = repair.technicianName || "Unassigned";
+      if (!grouped[techName]) {
+        grouped[techName] = { tech: techName, repairs: [], pending: 0, inProgress: 0, completed: 0, totalValue: 0 };
+      }
+      grouped[techName].repairs.push(repair);
+      grouped[techName].totalValue += repair.totalAmount || 0;
+      if (repair.status === "pending" || repair.status === "assigned") grouped[techName].pending++;
+      else if (repair.status === "in_progress") grouped[techName].inProgress++;
+      else if (repair.status === "completed") grouped[techName].completed++;
+    });
+
+    return Object.values(grouped).sort((a, b) => {
+      if (a.tech === "Unassigned") return 1;
+      if (b.tech === "Unassigned") return -1;
+      return (b.pending + b.inProgress) - (a.pending + a.inProgress);
+    });
+  }, [repairs]);
+
+  const dashboardMetrics = useMemo(() => {
+    const totalValue = repairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const pendingValue = pendingRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const inProgressValue = inProgressRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const completedValue = completedRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const activeTechs = repairsByTech.filter(t => t.tech !== "Unassigned" && (t.pending > 0 || t.inProgress > 0)).length;
+    const avgPerTech = activeTechs > 0 ? (pendingRepairs.length + inProgressRepairs.length) / activeTechs : 0;
+
+    return {
+      totalJobs: repairs.length,
+      pending: pendingRepairs.length,
+      inProgress: inProgressRepairs.length,
+      completed: completedRepairs.length,
+      totalValue,
+      pendingValue,
+      inProgressValue,
+      completedValue,
+      activeTechs,
+      avgPerTech: Math.round(avgPerTech * 10) / 10,
+    };
+  }, [repairs, pendingRepairs, inProgressRepairs, completedRepairs, repairsByTech]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -72,7 +136,7 @@ export default function RepairQueue() {
   });
 
   const renderRepairCard = (repair: ServiceRepairJob) => {
-    const statusCfg = statusConfig[repair.status || "pending"];
+    const statusCfg = statusConfig[repair.status || "pending"] || defaultStatus;
     const StatusIcon = statusCfg.icon;
 
     return (
@@ -153,6 +217,66 @@ export default function RepairQueue() {
     );
   };
 
+  const renderTechCard = (techData: { tech: string; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number }) => {
+    const totalActive = techData.pending + techData.inProgress;
+    const completionRate = techData.repairs.length > 0 ? Math.round((techData.completed / techData.repairs.length) * 100) : 0;
+
+    return (
+      <Card
+        key={techData.tech}
+        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#1E3A8A] shadow-lg' : ''}`}
+        onClick={() => setSelectedTech(selectedTech === techData.tech ? null : techData.tech)}
+        data-testid={`tech-card-${techData.tech.replace(/\s+/g, '-').toLowerCase()}`}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#1E3A8A] text-white"}>
+                {getInitials(techData.tech)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-[#1E293B] truncate">{techData.tech}</h3>
+              <p className="text-xs text-slate-500">{totalActive} active jobs</p>
+            </div>
+            {totalActive > 0 && (
+              <Badge className="bg-[#F97316]/10 text-[#F97316] border-[#F97316]/20">
+                {totalActive}
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="text-center p-2 bg-amber-50 rounded-lg">
+              <div className="text-lg font-bold text-amber-700">{techData.pending}</div>
+              <div className="text-xs text-amber-600">Pending</div>
+            </div>
+            <div className="text-center p-2 bg-purple-50 rounded-lg">
+              <div className="text-lg font-bold text-purple-700">{techData.inProgress}</div>
+              <div className="text-xs text-purple-600">In Progress</div>
+            </div>
+            <div className="text-center p-2 bg-green-50 rounded-lg">
+              <div className="text-lg font-bold text-green-700">{techData.completed}</div>
+              <div className="text-xs text-green-600">Completed</div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Total Value</span>
+              <span className="font-semibold text-[#1E293B]">{formatCurrency(techData.totalValue)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-500">Completion</span>
+              <span className="font-medium text-green-600">{completionRate}%</span>
+            </div>
+            <Progress value={completionRate} className="h-1.5" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -178,8 +302,80 @@ export default function RepairQueue() {
           </div>
         </div>
 
+        {/* Dashboard Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" data-testid="dashboard-metrics">
+          <Card className="bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Target className="w-4 h-4 opacity-80" />
+                <span className="text-sm opacity-90">Total Jobs</span>
+              </div>
+              <div className="text-2xl font-bold">{dashboardMetrics.totalJobs}</div>
+              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.totalValue)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-500 to-amber-400 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 opacity-80" />
+                <span className="text-sm opacity-90">Pending</span>
+              </div>
+              <div className="text-2xl font-bold">{dashboardMetrics.pending}</div>
+              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.pendingValue)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-600 to-purple-500 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Wrench className="w-4 h-4 opacity-80" />
+                <span className="text-sm opacity-90">In Progress</span>
+              </div>
+              <div className="text-2xl font-bold">{dashboardMetrics.inProgress}</div>
+              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.inProgressValue)}</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-600 to-green-500 text-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-4 h-4 opacity-80" />
+                <span className="text-sm opacity-90">Completed</span>
+              </div>
+              <div className="text-2xl font-bold">{dashboardMetrics.completed}</div>
+              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.completedValue)}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-[#1E3A8A]" />
+                <span className="text-sm text-slate-600">Active Techs</span>
+              </div>
+              <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.activeTechs}</div>
+              <div className="text-xs text-slate-500">with assigned jobs</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-[#F97316]" />
+                <span className="text-sm text-slate-600">Avg per Tech</span>
+              </div>
+              <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.avgPerTech}</div>
+              <div className="text-xs text-slate-500">active jobs</div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
+            <TabsTrigger value="by-tech" data-testid="tab-by-tech">
+              <Users className="w-4 h-4 mr-2" /> By Technician
+            </TabsTrigger>
             <TabsTrigger value="pending" data-testid="tab-pending">
               Pending ({pendingRepairs.length})
             </TabsTrigger>
@@ -190,6 +386,36 @@ export default function RepairQueue() {
               Completed ({completedRepairs.length})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="by-tech" className="mt-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <h3 className="font-semibold text-[#1E293B] mb-3">Repair Technicians</h3>
+                  <div className="space-y-3">
+                    {repairsByTech.map(renderTechCard)}
+                  </div>
+                </div>
+                <div className="lg:col-span-2">
+                  <h3 className="font-semibold text-[#1E293B] mb-3">
+                    {selectedTech ? `${selectedTech}'s Jobs` : "All Active Jobs"}
+                  </h3>
+                  <ScrollArea className="h-[600px]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-4">
+                      {(selectedTech 
+                        ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
+                        : [...pendingRepairs, ...inProgressRepairs]
+                      ).map(renderRepairCard)}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value="pending" className="mt-4">
             {isLoading ? (
