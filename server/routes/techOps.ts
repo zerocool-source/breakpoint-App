@@ -38,6 +38,29 @@ export function registerTechOpsRoutes(app: Express) {
     }
   });
 
+  // Get unread counts by entry type for badge notifications - MUST be before :id route
+  app.get("/api/tech-ops/unread-counts", async (req: Request, res: Response) => {
+    try {
+      const counts = await storage.getTechOpsUnreadCounts();
+      res.json(counts);
+    } catch (error: any) {
+      console.error("Error fetching unread counts:", error);
+      res.status(500).json({ error: "Failed to fetch unread counts" });
+    }
+  });
+
+  // Mark all entries of a type as read - MUST be before :id route
+  app.post("/api/tech-ops/mark-all-read", async (req: Request, res: Response) => {
+    try {
+      const { entryType } = req.body;
+      await storage.markAllTechOpsRead(entryType);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error marking entries as read:", error);
+      res.status(500).json({ error: "Failed to mark entries as read" });
+    }
+  });
+
   app.get("/api/tech-ops/:id", async (req: Request, res: Response) => {
     try {
       const entry = await storage.getTechOpsEntry(req.params.id);
@@ -122,17 +145,6 @@ export function registerTechOpsRoutes(app: Express) {
     }
   });
 
-  // Get unread counts by entry type for badge notifications
-  app.get("/api/tech-ops/unread-counts", async (req: Request, res: Response) => {
-    try {
-      const counts = await storage.getTechOpsUnreadCounts();
-      res.json(counts);
-    } catch (error: any) {
-      console.error("Error fetching unread counts:", error);
-      res.status(500).json({ error: "Failed to fetch unread counts" });
-    }
-  });
-
   // Mark an entry as read
   app.post("/api/tech-ops/:id/mark-read", async (req: Request, res: Response) => {
     try {
@@ -144,18 +156,6 @@ export function registerTechOpsRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error marking entry as read:", error);
       res.status(500).json({ error: "Failed to mark entry as read" });
-    }
-  });
-
-  // Mark all entries of a type as read
-  app.post("/api/tech-ops/mark-all-read", async (req: Request, res: Response) => {
-    try {
-      const { entryType } = req.body;
-      await storage.markAllTechOpsRead(entryType);
-      res.json({ success: true });
-    } catch (error: any) {
-      console.error("Error marking entries as read:", error);
-      res.status(500).json({ error: "Failed to mark entries as read" });
     }
   });
 
