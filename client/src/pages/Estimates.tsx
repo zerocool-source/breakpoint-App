@@ -22,7 +22,7 @@ import {
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive
+  Users, ClipboardList, MoreVertical, Archive, Wind
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -322,10 +322,22 @@ export default function Estimates() {
     refetchInterval: 30000,
   });
 
+  // Windy Day Cleanup pending count for metric display
+  const { data: windyDayPendingData } = useQuery({
+    queryKey: ["windy-day-pending-count"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops/windy-day-pending-count");
+      if (!response.ok) return { count: 0 };
+      return response.json();
+    },
+    refetchInterval: 30000,
+  });
+
   const technicians = techniciansData?.technicians || [];
   const customers = customersData?.customers || [];
   const repairTechs = repairTechsData?.technicians || [];
   const metrics = metricsData;
+  const windyDayPending = windyDayPendingData?.count || 0;
 
   const createMutation = useMutation({
     mutationFn: async (estimate: any) => {
@@ -1313,7 +1325,7 @@ Breakpoint Pool Service`);
               <h3 className="text-base font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Workflow Metrics</h3>
               <span className="text-xs bg-[#f9fafb] text-[#6B7280] px-2 py-1 rounded-full border border-gray-200">Last 30 days</span>
             </div>
-            <div className="grid grid-cols-7 gap-4">
+            <div className="grid grid-cols-8 gap-4">
               <div className="text-center">
                 <p className="text-xl font-bold text-[#2CA01C]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.conversionRate}%</p>
                 <p className="text-xs text-[#6B7280] mt-1">Approval Rate</p>
@@ -1342,6 +1354,13 @@ Breakpoint Pool Service`);
                 <p className="text-xl font-bold text-[#0077C5]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgCompletionTime}h</p>
                 <p className="text-xs text-[#6B7280] mt-1">Avg Completion</p>
               </div>
+              <a href="/tech-ops/windy-day-cleanup" className="text-center hover:bg-cyan-50 rounded-lg p-2 -m-2 transition-colors cursor-pointer" data-testid="metric-windy-cleanup">
+                <div className="flex items-center justify-center gap-1">
+                  <Wind className="w-4 h-4 text-cyan-500" />
+                  <p className="text-xl font-bold text-cyan-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{windyDayPending}</p>
+                </div>
+                <p className="text-xs text-[#6B7280] mt-1">Windy Cleanup</p>
+              </a>
             </div>
           </div>
         )}

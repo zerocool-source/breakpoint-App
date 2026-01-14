@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Wrench, Droplets, AlertTriangle, ChevronRight, CalendarIcon,
-  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind
+  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive
 } from "lucide-react";
 import type { TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   reviewed: { label: "Reviewed", color: "bg-blue-100 text-blue-700", icon: FileText },
   completed: { label: "Completed", color: "bg-green-100 text-green-700", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-600", icon: XCircle },
+  archived: { label: "Archived", color: "bg-slate-100 text-slate-500", icon: Archive },
 };
 
 export default function TechOpsLanding() {

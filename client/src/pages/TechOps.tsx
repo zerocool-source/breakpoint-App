@@ -19,7 +19,7 @@ import {
   Wrench, Plus, Loader2, CheckCircle, Clock, XCircle,
   Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2,
   CalendarIcon, Filter, Archive, FileUp, Zap, Image, X, ChevronLeft, ChevronRight,
-  Receipt, Ban, DollarSign
+  Receipt, Ban, DollarSign, Building
 } from "lucide-react";
 import type { TechOpsEntry, Property } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -193,6 +193,29 @@ export default function TechOps() {
     });
     return Array.from(techs);
   }, [entries]);
+
+  // Group entries by property for windy_day_cleanup view
+  const entriesByProperty = useMemo(() => {
+    if (entryType !== "windy_day_cleanup") return null;
+    
+    const groups: Record<string, { propertyName: string; propertyAddress?: string; entries: typeof entries }> = {};
+    entries.forEach(entry => {
+      const key = entry.propertyId || entry.propertyName || "Unknown Property";
+      if (!groups[key]) {
+        groups[key] = {
+          propertyName: entry.propertyName || "Unknown Property",
+          propertyAddress: (entry as any).propertyAddress,
+          entries: []
+        };
+      }
+      groups[key].entries.push(entry);
+    });
+    
+    // Sort groups by property name
+    return Object.entries(groups).sort((a, b) => 
+      a[1].propertyName.localeCompare(b[1].propertyName)
+    );
+  }, [entries, entryType]);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -472,7 +495,16 @@ export default function TechOps() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Entries</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              {entryType === "windy_day_cleanup" ? (
+                <>
+                  <Building className="w-5 h-5 text-[#1E3A8A]" />
+                  Entries by Property
+                </>
+              ) : (
+                "Entries"
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -485,6 +517,168 @@ export default function TechOps() {
                 <p>No entries found</p>
                 <p className="text-sm mt-1">Try adjusting your filters or click "New Entry" to submit one</p>
               </div>
+            ) : entryType === "windy_day_cleanup" && entriesByProperty ? (
+              /* Property-Grouped View for Windy Day Cleanup */
+              <ScrollArea className="max-h-[700px]">
+                <div className="space-y-6">
+                  {entriesByProperty.map(([propertyKey, group]) => (
+                    <div key={propertyKey} className="border border-slate-200 rounded-lg overflow-hidden" data-testid={`property-group-${propertyKey}`}>
+                      {/* Property Header */}
+                      <div className="bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] text-white p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                            <Building className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg">{group.propertyName}</h3>
+                            {group.propertyAddress && (
+                              <p className="text-blue-100 text-sm">{group.propertyAddress}</p>
+                            )}
+                          </div>
+                          <Badge className="bg-white/20 text-white border-white/30">
+                            {group.entries.length} {group.entries.length === 1 ? 'entry' : 'entries'}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {/* Property Entries */}
+                      <div className="bg-white divide-y divide-slate-100">
+                        {group.entries.map((entry) => {
+                          const statusCfg = statusConfig[entry.status || "pending"];
+                          const StatusIcon = statusCfg.icon;
+                          const priorityCfg = priorityConfig[entry.priority || "normal"];
+                          const photos = entry.photos || [];
+                          
+                          return (
+                            <div
+                              key={entry.id}
+                              className="p-4 hover:bg-slate-50 transition-colors"
+                              data-testid={`entry-item-${entry.id}`}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  {/* Header: Status, Priority, Date, Technician */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge className={statusCfg.color}>
+                                      <StatusIcon className="w-3 h-3 mr-1" />
+                                      {statusCfg.label}
+                                    </Badge>
+                                    <Badge className={cn(priorityCfg.bg, priorityCfg.text, "font-semibold")}>
+                                      {priorityCfg.label}
+                                    </Badge>
+                                    <span className="text-sm text-slate-600 flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {entry.technicianName}
+                                    </span>
+                                    <span className="text-xs text-slate-400 ml-auto">
+                                      {formatDate(entry.createdAt)}
+                                    </span>
+                                  </div>
+
+                                  {/* Description/Notes */}
+                                  {(entry.description || entry.notes) && (
+                                    <div className="bg-cyan-50 border border-cyan-100 rounded-md p-3">
+                                      {entry.description && (
+                                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.description}</p>
+                                      )}
+                                      {entry.notes && entry.notes !== entry.description && (
+                                        <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{entry.notes}</p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Photo Gallery */}
+                                  {photos.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                      {photos.map((photo, idx) => (
+                                        <button
+                                          key={idx}
+                                          onClick={() => openLightbox(photos, idx)}
+                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#1E3A8A] transition-colors"
+                                        >
+                                          <img
+                                            src={photo}
+                                            alt={`Photo ${idx + 1}`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect fill="%23f1f5f9" width="64" height="64"/><text x="32" y="36" text-anchor="middle" fill="%2394a3b8" font-size="8">No img</text></svg>';
+                                            }}
+                                          />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex flex-col gap-2">
+                                  {entry.status !== "archived" && entry.status !== "completed" && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        className="bg-[#2CA01C] hover:bg-[#248a17] text-white"
+                                        onClick={() => createInvoiceMutation.mutate(entry)}
+                                        disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
+                                        data-testid={`button-create-invoice-${entry.id}`}
+                                      >
+                                        {createInvoiceMutation.isPending ? (
+                                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <Receipt className="w-4 h-4 mr-1" />
+                                        )}
+                                        Create Invoice
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                                        onClick={() => noChargeMutation.mutate(entry.id)}
+                                        disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
+                                        data-testid={`button-no-charge-${entry.id}`}
+                                      >
+                                        {noChargeMutation.isPending ? (
+                                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <Ban className="w-4 h-4 mr-1" />
+                                        )}
+                                        No Charge
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-slate-600 hover:text-slate-700 hover:bg-slate-100"
+                                        onClick={() => archiveMutation.mutate(entry.id)}
+                                        disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
+                                        data-testid={`button-dismiss-${entry.id}`}
+                                      >
+                                        {archiveMutation.isPending ? (
+                                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <Archive className="w-4 h-4 mr-1" />
+                                        )}
+                                        Dismiss
+                                      </Button>
+                                    </>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => deleteMutation.mutate(entry.id)}
+                                    data-testid={`button-delete-${entry.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             ) : (
               <ScrollArea className="max-h-[600px]">
                 <div className="space-y-3">
