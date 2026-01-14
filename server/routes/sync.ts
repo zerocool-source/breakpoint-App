@@ -12,6 +12,40 @@ export function registerSyncRoutes(app: any) {
     }
   });
 
+  app.get('/api/sync/customers', async (req: Request, res: Response) => {
+    try {
+      const customers = await storage.getCustomers();
+      const enrichedCustomers = await Promise.all(
+        customers.map(async (customer: any) => {
+          const customerTags = await storage.getCustomerTagsWithAssignments(customer.id);
+          const warningTags = customerTags.filter((tag: any) => tag.isWarningTag);
+          return {
+            ...customer,
+            warningTags: warningTags.map((tag: any) => ({
+              id: tag.id,
+              name: tag.name,
+              color: tag.color,
+            })),
+            budget: {
+              chemicals: customer.chemicalsBudget ? {
+                amount: customer.chemicalsBudget,
+                period: customer.chemicalsBudgetPeriod || 'monthly',
+              } : null,
+              repairs: customer.repairsBudget ? {
+                amount: customer.repairsBudget,
+                period: customer.repairsBudgetPeriod || 'monthly',
+              } : null,
+            },
+          };
+        })
+      );
+      res.json({ customers: enrichedCustomers });
+    } catch (error: any) {
+      console.error('Error fetching customers for sync:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/sync/technicians', async (req: Request, res: Response) => {
     try {
       const technicians = await storage.getTechnicians();

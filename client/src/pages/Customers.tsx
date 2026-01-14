@@ -28,7 +28,8 @@ import {
 import {
   Search, Plus, Users, Building2, User, MapPin, Phone, Mail,
   MoreVertical, X, ChevronLeft, ChevronRight, Tag, Edit, Trash2,
-  Home, FileText, Check, Loader2, Calendar, Clock, Wrench, Droplets
+  Home, FileText, Check, Loader2, Calendar, Clock, Wrench, Droplets,
+  DollarSign, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,10 @@ interface Customer {
   poolCount: number | null;
   tags: string | null;
   notes: string | null;
+  chemicalsBudget: number | null;
+  chemicalsBudgetPeriod: string | null;
+  repairsBudget: number | null;
+  repairsBudgetPeriod: string | null;
 }
 
 interface Property {
@@ -198,8 +203,20 @@ function CustomerListItem({
               </span>
             )}
           </div>
-          {tags.length > 0 && (
+          {(tags.length > 0 || customer.chemicalsBudget || customer.repairsBudget) && (
             <div className="flex items-center gap-1 mt-2 flex-wrap">
+              {customer.chemicalsBudget && (
+                <Badge variant="outline" className="text-xs border-[#60A5FA] text-[#60A5FA]">
+                  <Droplets className="h-3 w-3 mr-1" />
+                  ${customer.chemicalsBudget / 100}/{customer.chemicalsBudgetPeriod === "annual" ? "yr" : "mo"}
+                </Badge>
+              )}
+              {customer.repairsBudget && (
+                <Badge variant="outline" className="text-xs border-[#F97316] text-[#F97316]">
+                  <Wrench className="h-3 w-3 mr-1" />
+                  ${customer.repairsBudget / 100}/{customer.repairsBudgetPeriod === "annual" ? "yr" : "mo"}
+                </Badge>
+              )}
               {tags.slice(0, 3).map((tag, idx) => (
                 <Badge key={idx} variant="outline" className="text-xs">
                   {tag.trim()}
@@ -1077,6 +1094,11 @@ function CustomerDetailPanel({
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [scheduleActive, setScheduleActive] = useState(false);
+  const [chemicalsBudget, setChemicalsBudget] = useState("");
+  const [chemicalsBudgetPeriod, setChemicalsBudgetPeriod] = useState<"monthly" | "annual">("monthly");
+  const [repairsBudget, setRepairsBudget] = useState("");
+  const [repairsBudgetPeriod, setRepairsBudgetPeriod] = useState<"monthly" | "annual">("monthly");
+  const [budgetSaved, setBudgetSaved] = useState(false);
   const [visitDays, setVisitDays] = useState<string[]>([]);
   const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "custom">("weekly");
   const [frequencyInterval, setFrequencyInterval] = useState(1);
@@ -1131,11 +1153,31 @@ function CustomerDetailPanel({
     },
   });
 
+  const { data: allTagsData } = useQuery<{ tags: { id: string; name: string; color: string; isPrebuilt: boolean; isWarningTag: boolean }[] }>({
+    queryKey: ["/api/customer-tags"],
+    queryFn: async () => {
+      const res = await fetch("/api/customer-tags");
+      if (!res.ok) return { tags: [] };
+      return res.json();
+    },
+  });
+
+  const { data: customerTagsData } = useQuery<{ tags: { id: string; name: string; color: string; isPrebuilt: boolean; isWarningTag: boolean }[] }>({
+    queryKey: ["/api/customers", customer.id, "tags"],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${customer.id}/tags`);
+      if (!res.ok) return { tags: [] };
+      return res.json();
+    },
+  });
+
   const properties = propertiesData?.properties || [];
   const contacts = contactsData?.contacts || [];
   const equipmentList = equipmentData?.equipment || [];
   const poolsList = poolsData?.pools || [];
   const billingContacts = billingContactsData?.contacts || [];
+  const allTags = allTagsData?.tags || [];
+  const customerTags = customerTagsData?.tags || [];
 
   useEffect(() => {
     if (properties.length > 0 && !selectedPropertyId) {
@@ -1189,6 +1231,14 @@ function CustomerDetailPanel({
       setRouteNotes("");
     }
   }, [routeScheduleData]);
+
+  useEffect(() => {
+    setChemicalsBudget(customer.chemicalsBudget ? String(customer.chemicalsBudget / 100) : "");
+    setChemicalsBudgetPeriod((customer.chemicalsBudgetPeriod as "monthly" | "annual") || "monthly");
+    setRepairsBudget(customer.repairsBudget ? String(customer.repairsBudget / 100) : "");
+    setRepairsBudgetPeriod((customer.repairsBudgetPeriod as "monthly" | "annual") || "monthly");
+    setBudgetSaved(false);
+  }, [customer.id, customer.chemicalsBudget, customer.chemicalsBudgetPeriod, customer.repairsBudget, customer.repairsBudgetPeriod]);
 
   const addPropertyMutation = useMutation({
     mutationFn: async (data: Partial<Property>) => {
@@ -1339,6 +1389,61 @@ function CustomerDetailPanel({
     },
   });
 
+  const assignTagMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const res = await fetch(`/api/customers/${customer.id}/tags/${tagId}`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to assign tag");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "tags"] });
+      toast({ title: "Tag Assigned", description: "The tag was added to this customer." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to assign tag. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const removeTagMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const res = await fetch(`/api/customers/${customer.id}/tags/${tagId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove tag");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "tags"] });
+      toast({ title: "Tag Removed", description: "The tag was removed from this customer." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to remove tag. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const updateBudgetMutation = useMutation({
+    mutationFn: async (data: { chemicalsBudget?: number | null; chemicalsBudgetPeriod?: string | null; repairsBudget?: number | null; repairsBudgetPeriod?: string | null }) => {
+      const res = await fetch(`/api/customers/${customer.id}/budget`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update budget");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      setBudgetSaved(true);
+      toast({ title: "Budget Updated", description: "The customer budget has been saved." });
+    },
+    onError: () => {
+      setBudgetSaved(false);
+      toast({ title: "Error", description: "Failed to update budget. Please try again.", variant: "destructive" });
+    },
+  });
+
   const saveRouteScheduleMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!selectedPropertyId) throw new Error("No property selected");
@@ -1481,6 +1586,14 @@ function CustomerDetailPanel({
               <TabsTrigger value="billing" className="gap-1 whitespace-nowrap">
                 <FileText className="h-4 w-4" />
                 Billing
+              </TabsTrigger>
+              <TabsTrigger value="budget" className="gap-1 whitespace-nowrap">
+                <DollarSign className="h-4 w-4" />
+                Budget
+              </TabsTrigger>
+              <TabsTrigger value="tags" className="gap-1 whitespace-nowrap">
+                <Tag className="h-4 w-4" />
+                Tags
               </TabsTrigger>
             </TabsList>
           </div>
@@ -2207,6 +2320,203 @@ function CustomerDetailPanel({
               </div>
             )}
           </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="budget" className="flex-1 m-0 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-700">Budget Management</h3>
+          </div>
+          
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Budgets</strong> help track spending limits for chemicals and repairs. 
+              Field technicians will see alerts when approaching or exceeding budget limits.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Droplets className="h-5 w-5 text-[#60A5FA]" />
+                  <h4 className="font-medium">Chemicals Budget</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Amount ($)</Label>
+                    <Input
+                      type="number"
+                      value={chemicalsBudget}
+                      onChange={(e) => {
+                        setChemicalsBudget(e.target.value);
+                        setBudgetSaved(false);
+                      }}
+                      placeholder="e.g. 500"
+                      data-testid="input-chemicals-budget"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Period</Label>
+                    <Select
+                      value={chemicalsBudgetPeriod}
+                      onValueChange={(v: "monthly" | "annual") => {
+                        setChemicalsBudgetPeriod(v);
+                        setBudgetSaved(false);
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-chemicals-period">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="annual">Annual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Wrench className="h-5 w-5 text-[#F97316]" />
+                  <h4 className="font-medium">Repairs Budget</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Amount ($)</Label>
+                    <Input
+                      type="number"
+                      value={repairsBudget}
+                      onChange={(e) => {
+                        setRepairsBudget(e.target.value);
+                        setBudgetSaved(false);
+                      }}
+                      placeholder="e.g. 1000"
+                      data-testid="input-repairs-budget"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Period</Label>
+                    <Select
+                      value={repairsBudgetPeriod}
+                      onValueChange={(v: "monthly" | "annual") => {
+                        setRepairsBudgetPeriod(v);
+                        setBudgetSaved(false);
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-repairs-period">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="annual">Annual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Button
+              onClick={() => {
+                updateBudgetMutation.mutate({
+                  chemicalsBudget: chemicalsBudget ? Math.round(Number(chemicalsBudget) * 100) : null,
+                  chemicalsBudgetPeriod,
+                  repairsBudget: repairsBudget ? Math.round(Number(repairsBudget) * 100) : null,
+                  repairsBudgetPeriod,
+                });
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={updateBudgetMutation.isPending}
+              data-testid="button-save-budget"
+            >
+              {updateBudgetMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : budgetSaved ? (
+                <Check className="h-4 w-4 mr-2" />
+              ) : (
+                <DollarSign className="h-4 w-4 mr-2" />
+              )}
+              {budgetSaved ? "Budget Saved" : "Save Budget"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tags" className="flex-1 m-0 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-slate-700">Customer Tags</h3>
+          </div>
+          
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Tags</strong> help categorize customers and control field tech behavior. 
+              Warning tags show alerts to technicians when they service this customer.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <h4 className="text-sm font-medium text-slate-600 mb-3">Assigned Tags</h4>
+              {customerTags.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 border border-dashed rounded-lg">
+                  <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No tags assigned</p>
+                  <p className="text-xs">Select tags below to assign them</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {customerTags.map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      className="pl-2 pr-1 py-1 flex items-center gap-1"
+                      style={{ backgroundColor: tag.color + "20", color: tag.color, borderColor: tag.color }}
+                      data-testid={`badge-assigned-tag-${tag.id}`}
+                    >
+                      {tag.isWarningTag && <AlertTriangle className="h-3 w-3" />}
+                      {tag.name}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 ml-1 hover:bg-white/20"
+                        onClick={() => removeTagMutation.mutate(tag.id)}
+                        data-testid={`button-remove-tag-${tag.id}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h4 className="text-sm font-medium text-slate-600 mb-3">Available Tags</h4>
+              <div className="flex flex-wrap gap-2">
+                {allTags
+                  .filter((tag) => !customerTags.some((ct) => ct.id === tag.id))
+                  .map((tag) => (
+                    <Badge
+                      key={tag.id}
+                      variant="outline"
+                      className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
+                      style={{ borderColor: tag.color, color: tag.color }}
+                      onClick={() => assignTagMutation.mutate(tag.id)}
+                      data-testid={`badge-available-tag-${tag.id}`}
+                    >
+                      {tag.isWarningTag && <AlertTriangle className="h-3 w-3" />}
+                      <Plus className="h-3 w-3" />
+                      {tag.name}
+                      {tag.isPrebuilt && <span className="text-[10px] opacity-60 ml-1">(built-in)</span>}
+                    </Badge>
+                  ))}
+                {allTags.filter((tag) => !customerTags.some((ct) => ct.id === tag.id)).length === 0 && (
+                  <p className="text-sm text-slate-400">All tags are already assigned</p>
+                )}
+              </div>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
