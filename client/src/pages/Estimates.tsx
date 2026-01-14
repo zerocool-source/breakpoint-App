@@ -271,6 +271,8 @@ export default function Estimates() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [valueFilter, setValueFilter] = useState<string>("all");
+  const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
+  const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -1204,6 +1206,56 @@ Breakpoint Pool Service`);
     return new Date(date).toLocaleDateString();
   };
 
+  // SR selection helpers - for service repair estimates under $500
+  const isSRSelectable = (estimate: Estimate) => {
+    return estimate.sourceType === "service_repair" && 
+           (estimate.totalAmount || 0) < 50000; // $500 in cents
+  };
+
+  const selectableSREstimates = useMemo(() => {
+    return filteredEstimates.filter(isSRSelectable);
+  }, [filteredEstimates]);
+
+  const toggleSRSelection = (id: string) => {
+    setSelectedSRIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const selectAllSR = () => {
+    const allIds = selectableSREstimates.map(e => e.id);
+    setSelectedSRIds(new Set(allIds));
+  };
+
+  const deselectAllSR = () => {
+    setSelectedSRIds(new Set());
+  };
+
+  const getSelectedSREstimates = () => {
+    return filteredEstimates.filter(e => selectedSRIds.has(e.id));
+  };
+
+  const getItemCountLabel = (estimate: Estimate) => {
+    const count = estimate.items?.length || 0;
+    if (estimate.sourceType === "service_repair") {
+      return `${count}-SR`;
+    }
+    return `${count} items`;
+  };
+
+  const getEstimateTitle = (estimate: Estimate) => {
+    if (estimate.sourceType === "service_repair") {
+      return estimate.title.startsWith("SR.") ? estimate.title : `SR. ${estimate.title}`;
+    }
+    return estimate.title;
+  };
+
   const DatePickerField = ({ 
     label, 
     value, 
@@ -1481,6 +1533,51 @@ Breakpoint Pool Service`);
             </div>
           </div>
 
+          {/* SR Selection Header - shows when service repair estimates are selectable */}
+          {sourceFilter === "service_repair" && selectableSREstimates.length > 0 && (
+            <div className="px-5 py-3 bg-purple-50 border-b border-purple-200 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={selectedSRIds.size > 0 && selectedSRIds.size === selectableSREstimates.length}
+                    onCheckedChange={(checked) => {
+                      if (checked) selectAllSR();
+                      else deselectAllSR();
+                    }}
+                    className="border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                    data-testid="checkbox-select-all-sr"
+                  />
+                  <span className="text-sm text-purple-700 font-medium">
+                    {selectedSRIds.size === 0 
+                      ? `Select all (${selectableSREstimates.length} under $500)`
+                      : `${selectedSRIds.size} selected`}
+                  </span>
+                </div>
+                {selectedSRIds.size > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={deselectAllSR}
+                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+                    data-testid="button-deselect-all"
+                  >
+                    Clear selection
+                  </Button>
+                )}
+              </div>
+              {selectedSRIds.size > 0 && (
+                <Button
+                  onClick={() => setShowBatchInvoiceDialog(true)}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  data-testid="button-batch-invoice"
+                >
+                  <Receipt className="w-4 h-4 mr-2" />
+                  Invoice ({selectedSRIds.size})
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* QuickBooks-style List Content */}
           <div className="p-0">
             {isLoading ? (
@@ -1502,10 +1599,12 @@ Breakpoint Pool Service`);
                 <div className="divide-y divide-gray-100">
                   {filteredEstimates.map((estimate) => {
                     const config = statusConfig[estimate.status] || statusConfig.draft;
+                    const isSelectable = isSRSelectable(estimate);
+                    const isSelected = selectedSRIds.has(estimate.id);
                     return (
                       <div
                         key={estimate.id}
-                        className="flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-[#0077C5]"
+                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-purple-500 bg-purple-50/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
                         onClick={() => {
                           setSelectedEstimate(estimate);
                           setShowDetailDialog(true);
@@ -1513,14 +1612,34 @@ Breakpoint Pool Service`);
                         data-testid={`estimate-row-${estimate.id}`}
                       >
                         <div className="flex items-center gap-4 flex-1">
+                          {/* Checkbox for SR estimates under $500 */}
+                          {isSelectable && (
+                            <div 
+                              onClick={(e) => e.stopPropagation()} 
+                              className="flex items-center"
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSRSelection(estimate.id)}
+                                className="border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                data-testid={`checkbox-sr-${estimate.id}`}
+                              />
+                            </div>
+                          )}
                           <div className="p-2.5 rounded-lg bg-[#f0f9ff] border border-[#e0f2fe]">
                             <FileText className="w-5 h-5 text-[#0077C5]" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-[16px] font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{estimate.title}</h3>
+                              <h3 className="text-[16px] font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{getEstimateTitle(estimate)}</h3>
                               {estimate.estimateNumber && (
                                 <span className="text-sm text-[#6B7280]">#{estimate.estimateNumber}</span>
+                              )}
+                              {/* Show item count as X-SR for service repairs */}
+                              {estimate.items && estimate.items.length > 0 && (
+                                <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[11px] px-2 py-0.5 rounded-full">
+                                  {getItemCountLabel(estimate)}
+                                </Badge>
                               )}
                               <Badge className={`${config.color} border text-[11px] px-2 py-0.5 rounded-full`}>
                                 {config.label}
@@ -1528,7 +1647,7 @@ Breakpoint Pool Service`);
                               {estimate.sourceType === "service_repair" && (
                                 <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[11px] px-2 py-0.5 rounded-full">
                                   <Wrench className="w-3 h-3 mr-1" />
-                                  Service Repair
+                                  {getItemCountLabel(estimate)}
                                 </Badge>
                               )}
                             </div>
@@ -3213,6 +3332,90 @@ Breakpoint Pool Service`);
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Batch Invoice Dialog for Service Repairs */}
+        <Dialog open={showBatchInvoiceDialog} onOpenChange={setShowBatchInvoiceDialog}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-purple-700">
+                <Receipt className="w-5 h-5" />
+                Invoice Service Repairs
+              </DialogTitle>
+              <DialogDescription>
+                Create invoices for the selected service repair estimates
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-purple-700 mb-2">Selected Estimates ({selectedSRIds.size})</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {getSelectedSREstimates().map((est) => (
+                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-purple-100">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800">{getEstimateTitle(est)}</p>
+                        <p className="text-xs text-gray-500">{est.propertyName}</p>
+                      </div>
+                      <span className="font-semibold text-purple-700">{formatCurrency(est.totalAmount)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-purple-200 flex justify-between">
+                  <span className="text-sm font-medium text-purple-700">Total</span>
+                  <span className="text-lg font-bold text-purple-700">
+                    {formatCurrency(getSelectedSREstimates().reduce((sum, e) => sum + (e.totalAmount || 0), 0))}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  This will mark all selected estimates as invoiced
+                </p>
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowBatchInvoiceDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={async () => {
+                  try {
+                    const selectedIds = Array.from(selectedSRIds);
+                    for (const id of selectedIds) {
+                      await fetch(`/api/estimates/${id}/status`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ status: "invoiced" }),
+                      });
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["estimates"] });
+                    toast({
+                      title: "Invoiced",
+                      description: `${selectedIds.length} service repair estimate(s) marked as invoiced`,
+                    });
+                    setSelectedSRIds(new Set());
+                    setShowBatchInvoiceDialog(false);
+                  } catch (error) {
+                    toast({
+                      title: "Error",
+                      description: "Failed to invoice estimates",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                data-testid="button-confirm-batch-invoice"
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                Invoice All ({selectedSRIds.size})
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
