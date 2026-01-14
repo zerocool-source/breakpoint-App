@@ -722,7 +722,7 @@ export default function Estimates() {
   };
 
   const handleSaveEstimate = () => {
-    const estimateData = {
+    const estimateData: Record<string, any> = {
       ...formData,
       estimateDate: formData.estimateDate?.toISOString(),
       expirationDate: formData.expirationDate?.toISOString(),
@@ -736,12 +736,14 @@ export default function Estimates() {
       depositAmount: calculateTotals.depositAmount,
       createdByTechId: "tech-1",
       createdByTechName: "Service Tech",
-      sourceType: "office_staff",
     };
 
     if (isEditing && selectedEstimate) {
+      // Preserve existing sourceType when editing
       updateMutation.mutate({ id: selectedEstimate.id, data: estimateData });
     } else {
+      // Only set office_staff for new estimates created via the UI
+      estimateData.sourceType = "office_staff";
       createMutation.mutate(estimateData);
     }
   };
