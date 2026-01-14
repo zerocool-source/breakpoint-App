@@ -220,6 +220,26 @@ export default function ServiceRepairs() {
     
     return filtered;
   }, [serviceRepairs, statusFilter, searchQuery, technicianFilter, propertyFilter, dateRangeFilter, sortOption]);
+
+  // Group repairs by property for container view
+  const repairsByProperty = useMemo(() => {
+    const grouped = new Map<string, { propertyId: string; propertyName: string; address: string; repairs: ServiceRepairJob[] }>();
+    
+    filteredAndSortedRepairs.forEach(repair => {
+      const key = repair.propertyId || 'unknown';
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          propertyId: repair.propertyId,
+          propertyName: repair.propertyName || 'Unknown Property',
+          address: repair.address || '',
+          repairs: []
+        });
+      }
+      grouped.get(key)!.repairs.push(repair);
+    });
+    
+    return Array.from(grouped.values()).sort((a, b) => a.propertyName.localeCompare(b.propertyName));
+  }, [filteredAndSortedRepairs]);
   
   const statusCounts = {
     all: serviceRepairs.length,
@@ -551,7 +571,7 @@ export default function ServiceRepairs() {
           </div>
         )}
 
-        {/* Service Repair Cards */}
+        {/* Service Repair Cards - Grouped by Property */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-[#F97316]" />
@@ -568,149 +588,168 @@ export default function ServiceRepairs() {
           </div>
         ) : (
           <ScrollArea className="h-[calc(100vh-400px)]">
-            <div className="grid gap-4">
-              {filteredAndSortedRepairs.map((repair) => {
-                const config = statusConfig[repair.status] || statusConfig.pending;
-                const photos = repair.photos || [];
-                
-                return (
-                  <Card 
-                    key={repair.id} 
-                    className={`border-l-4 transition-all ${
-                      selectedRepairs.has(repair.id) 
-                        ? "border-l-[#1E3A8A] bg-blue-50/50" 
-                        : "border-l-[#F97316] hover:shadow-md"
-                    }`}
-                    data-testid={`card-repair-${repair.id}`}
-                  >
-                    <CardContent className="pt-4 pb-4">
-                      <div className="flex gap-4">
-                        {/* Checkbox for pending items */}
-                        {repair.status === 'pending' && (
-                          <div className="pt-1">
-                            <Checkbox
-                              checked={selectedRepairs.has(repair.id)}
-                              onCheckedChange={() => toggleRepairSelection(repair.id)}
-                              data-testid={`checkbox-repair-${repair.id}`}
-                            />
-                          </div>
-                        )}
-                        
-                        {/* Main Content */}
-                        <div className="flex-1 space-y-3">
-                          {/* Header Row: SR# prominent */}
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                              <Badge 
-                                className="text-lg font-bold px-3 py-1 bg-[#1E3A8A] text-white"
-                                data-testid={`badge-sr-${repair.jobNumber}`}
-                              >
-                                {repair.jobNumber}
-                              </Badge>
-                              <Badge className={`${config.color} border`}>
-                                {config.label}
-                              </Badge>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => deleteJobMutation.mutate(repair.id)}
-                              disabled={deleteJobMutation.isPending}
-                              data-testid={`button-delete-${repair.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          
-                          {/* Property & Address */}
-                          <div className="bg-slate-50 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-[#1E293B] font-medium">
-                              <Building2 className="w-4 h-4 text-[#F97316]" />
-                              {repair.propertyName}
-                            </div>
-                            {repair.address && (
-                              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1 ml-6">
-                                <MapPin className="w-3 h-3" />
-                                {repair.address}
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Technician & Timestamp */}
-                          <div className="flex items-center gap-6 text-sm text-slate-600">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-slate-400" />
-                              <span>{repair.technicianName || "Unassigned"}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-slate-400" />
-                              <span>{formatDateTime(repair.jobDate || repair.createdAt)}</span>
-                            </div>
-                          </div>
-                          
-                          {/* Description */}
-                          {repair.description && (
-                            <div className="text-slate-700">
-                              <p className="font-medium text-sm text-slate-500 mb-1">Description</p>
-                              <p>{repair.description}</p>
-                            </div>
+            <div className="space-y-6">
+              {repairsByProperty.map((propertyGroup) => (
+                <Card 
+                  key={propertyGroup.propertyId} 
+                  className="bg-white border border-slate-200 shadow-sm"
+                  data-testid={`property-container-${propertyGroup.propertyId}`}
+                >
+                  <CardHeader className="pb-3 bg-slate-50 border-b">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-[#F97316] flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-[#1E293B]">
+                            {propertyGroup.propertyName}
+                          </CardTitle>
+                          {propertyGroup.address && (
+                            <p className="text-sm text-slate-500 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {propertyGroup.address}
+                            </p>
                           )}
-                          
-                          {/* Notes */}
-                          {repair.notes && (
-                            <div className="text-slate-600 text-sm bg-amber-50 p-2 rounded border border-amber-100">
-                              <p className="font-medium text-amber-700 mb-1">Notes</p>
-                              <p>{repair.notes}</p>
-                            </div>
-                          )}
-                          
-                          {/* Photos Gallery */}
-                          {photos.length > 0 && (
-                            <div>
-                              <p className="font-medium text-sm text-slate-500 mb-2 flex items-center gap-1">
-                                <Image className="w-4 h-4" />
-                                Attached Photos ({photos.length})
-                              </p>
-                              <div className="flex gap-2 flex-wrap">
-                                {photos.map((photo, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#F97316] transition-all"
-                                    onClick={() => openLightbox(photos, idx)}
-                                    data-testid={`photo-${repair.id}-${idx}`}
-                                  >
-                                    <img
-                                      src={photo}
-                                      alt={`Repair photo ${idx + 1}`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {/* Amounts */}
-                          <div className="flex items-center gap-4 pt-2 border-t">
-                            <div className="text-sm">
-                              <span className="text-slate-500">Labor:</span>
-                              <span className="ml-1 font-medium">{formatCurrency(repair.laborAmount)}</span>
-                            </div>
-                            <div className="text-sm">
-                              <span className="text-slate-500">Parts:</span>
-                              <span className="ml-1 font-medium">{formatCurrency(repair.partsAmount)}</span>
-                            </div>
-                            <div className="text-sm font-bold text-[#1E3A8A] ml-auto">
-                              Total: {formatCurrency(repair.totalAmount)}
-                            </div>
-                          </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      <Badge className="bg-[#1E3A8A] text-white">
+                        {propertyGroup.repairs.length} {propertyGroup.repairs.length === 1 ? 'Repair' : 'Repairs'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="space-y-3">
+                      {propertyGroup.repairs.map((repair) => {
+                        const config = statusConfig[repair.status] || statusConfig.pending;
+                        const photos = repair.photos || [];
+                        
+                        return (
+                          <div 
+                            key={repair.id} 
+                            className={`border-l-4 rounded-lg p-4 transition-all ${
+                              selectedRepairs.has(repair.id) 
+                                ? "border-l-[#1E3A8A] bg-blue-50/50" 
+                                : "border-l-[#F97316] bg-slate-50 hover:bg-slate-100"
+                            }`}
+                            data-testid={`card-repair-${repair.id}`}
+                          >
+                            <div className="flex gap-4">
+                              {/* Checkbox for pending items */}
+                              {repair.status === 'pending' && (
+                                <div className="pt-1">
+                                  <Checkbox
+                                    checked={selectedRepairs.has(repair.id)}
+                                    onCheckedChange={() => toggleRepairSelection(repair.id)}
+                                    data-testid={`checkbox-repair-${repair.id}`}
+                                  />
+                                </div>
+                              )}
+                              
+                              {/* Main Content */}
+                              <div className="flex-1 space-y-3">
+                                {/* Header Row: SR# prominent */}
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <Badge 
+                                      className="text-lg font-bold px-3 py-1 bg-[#1E3A8A] text-white"
+                                      data-testid={`badge-sr-${repair.jobNumber}`}
+                                    >
+                                      {repair.jobNumber}
+                                    </Badge>
+                                    <Badge className={`${config.color} border`}>
+                                      {config.label}
+                                    </Badge>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => deleteJobMutation.mutate(repair.id)}
+                                    disabled={deleteJobMutation.isPending}
+                                    data-testid={`button-delete-${repair.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                                
+                                {/* Technician & Timestamp */}
+                                <div className="flex items-center gap-6 text-sm text-slate-600">
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-slate-400" />
+                                    <span>{repair.technicianName || "Unassigned"}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4 text-slate-400" />
+                                    <span>{formatDateTime(repair.jobDate || repair.createdAt)}</span>
+                                  </div>
+                                </div>
+                                
+                                {/* Description */}
+                                {repair.description && (
+                                  <div className="text-slate-700">
+                                    <p className="font-medium text-sm text-slate-500 mb-1">Description</p>
+                                    <p>{repair.description}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Notes */}
+                                {repair.notes && (
+                                  <div className="text-slate-600 text-sm bg-amber-50 p-2 rounded border border-amber-100">
+                                    <p className="font-medium text-amber-700 mb-1">Notes</p>
+                                    <p>{repair.notes}</p>
+                                  </div>
+                                )}
+                                
+                                {/* Photos Gallery */}
+                                {photos.length > 0 && (
+                                  <div>
+                                    <p className="font-medium text-sm text-slate-500 mb-2 flex items-center gap-1">
+                                      <Image className="w-4 h-4" />
+                                      Attached Photos ({photos.length})
+                                    </p>
+                                    <div className="flex gap-2 flex-wrap">
+                                      {photos.map((photo, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#F97316] transition-all"
+                                          onClick={() => openLightbox(photos, idx)}
+                                          data-testid={`photo-${repair.id}-${idx}`}
+                                        >
+                                          <img
+                                            src={photo}
+                                            alt={`Repair photo ${idx + 1}`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Amounts */}
+                                <div className="flex items-center gap-4 pt-2 border-t border-slate-200">
+                                  <div className="text-sm">
+                                    <span className="text-slate-500">Labor:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(repair.laborAmount)}</span>
+                                  </div>
+                                  <div className="text-sm">
+                                    <span className="text-slate-500">Parts:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(repair.partsAmount)}</span>
+                                  </div>
+                                  <div className="text-sm font-bold text-[#1E3A8A] ml-auto">
+                                    Total: {formatCurrency(repair.totalAmount)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </ScrollArea>
         )}
