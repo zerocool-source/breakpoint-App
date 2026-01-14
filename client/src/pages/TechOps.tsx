@@ -18,7 +18,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Wrench, Plus, Loader2, CheckCircle, Clock, XCircle,
   Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2,
-  CalendarIcon, Filter, Archive, FileUp, Zap, Image, X, ChevronLeft, ChevronRight
+  CalendarIcon, Filter, Archive, FileUp, Zap, Image, X, ChevronLeft, ChevronRight,
+  Receipt, Ban, DollarSign
 } from "lucide-react";
 import type { TechOpsEntry, Property } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -164,6 +165,17 @@ export default function TechOps() {
     },
   });
 
+  // Fetch pending count for Windy Day Cleanup badge
+  const { data: pendingCount = { count: 0 } } = useQuery<{ count: number }>({
+    queryKey: ["windy-day-pending-count"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops/windy-day-pending-count");
+      if (!response.ok) throw new Error("Failed to fetch pending count");
+      return response.json();
+    },
+    enabled: entryType === "windy_day_cleanup",
+  });
+
   const uniqueProperties = useMemo(() => {
     const props = new Map<string, string>();
     entries.forEach(e => {
@@ -251,10 +263,57 @@ export default function TechOps() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
-      toast({ title: "Entry Archived" });
+      queryClient.invalidateQueries({ queryKey: ["windy-day-pending-count"] });
+      toast({ title: "Entry Dismissed", description: "Entry has been archived" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to archive entry", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to dismiss entry", variant: "destructive" });
+    },
+  });
+
+  // No Charge mutation for Windy Day Cleanup
+  const noChargeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/tech-ops/${id}/no-charge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to mark as no charge");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
+      queryClient.invalidateQueries({ queryKey: ["windy-day-pending-count"] });
+      toast({ title: "No Charge", description: "Entry marked as completed with no billing" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to mark as no charge", variant: "destructive" });
+    },
+  });
+
+  // Create Invoice mutation for Windy Day Cleanup - marks entry and redirects to invoice creation
+  const createInvoiceMutation = useMutation({
+    mutationFn: async (entry: TechOpsEntry) => {
+      // First mark the entry as completed (being invoiced)
+      const response = await fetch(`/api/tech-ops/${entry.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: "completed",
+          notes: (entry.notes || "") + (entry.notes?.includes("[Invoice Created]") ? "" : "\n[Invoice Created]")
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to update entry status");
+      return { entry };
+    },
+    onSuccess: ({ entry }) => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
+      queryClient.invalidateQueries({ queryKey: ["windy-day-pending-count"] });
+      // Navigate to invoice creation with pre-filled data
+      window.location.href = `/estimates/new?propertyId=${entry.propertyId || ''}&propertyName=${encodeURIComponent(entry.propertyName || '')}&title=${encodeURIComponent('Windy Day Cleanup - ' + (entry.propertyName || ''))}&description=${encodeURIComponent(entry.description || entry.notes || '')}`;
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create invoice", variant: "destructive" });
     },
   });
 
@@ -323,7 +382,14 @@ export default function TechOps() {
               <Icon className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">{config.label}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">{config.label}</h1>
+                {entryType === "windy_day_cleanup" && pendingCount.count > 0 && (
+                  <Badge className="bg-amber-500 text-white border-amber-600 px-2.5 py-0.5 text-sm font-semibold" data-testid="badge-pending-count">
+                    {pendingCount.count} Pending
+                  </Badge>
+                )}
+              </div>
               <p className="text-slate-500 text-sm">{config.description}</p>
             </div>
           </div>
@@ -549,7 +615,56 @@ export default function TechOps() {
                                 </Button>
                               </>
                             )}
-                            {entryType !== "repairs_needed" && entry.status === "pending" && (
+                            {/* Windy Day Cleanup specific actions */}
+                            {entryType === "windy_day_cleanup" && entry.status !== "archived" && entry.status !== "completed" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#2CA01C] hover:bg-[#248a17] text-white"
+                                  onClick={() => createInvoiceMutation.mutate(entry)}
+                                  disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
+                                  data-testid={`button-create-invoice-${entry.id}`}
+                                >
+                                  {createInvoiceMutation.isPending ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Receipt className="w-4 h-4 mr-1" />
+                                  )}
+                                  Create Invoice
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                                  onClick={() => noChargeMutation.mutate(entry.id)}
+                                  disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
+                                  data-testid={`button-no-charge-${entry.id}`}
+                                >
+                                  {noChargeMutation.isPending ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Ban className="w-4 h-4 mr-1" />
+                                  )}
+                                  No Charge
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-slate-600 hover:text-slate-700 hover:bg-slate-100"
+                                  onClick={() => archiveMutation.mutate(entry.id)}
+                                  disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
+                                  data-testid={`button-dismiss-${entry.id}`}
+                                >
+                                  {archiveMutation.isPending ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Archive className="w-4 h-4 mr-1" />
+                                  )}
+                                  Dismiss
+                                </Button>
+                              </>
+                            )}
+                            {entryType !== "repairs_needed" && entryType !== "windy_day_cleanup" && entry.status === "pending" && (
                               <Button
                                 size="sm"
                                 variant="outline"

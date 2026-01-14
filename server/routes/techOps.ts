@@ -194,7 +194,6 @@ export function registerTechOpsRoutes(app: Express) {
         tags,
         items: [],
         subtotal: 0,
-        taxRate: 0,
         totalAmount: 0,
       });
 
@@ -210,13 +209,26 @@ export function registerTechOpsRoutes(app: Express) {
   // Windy Day Cleanup: Mark as completed with no charge (no billing)
   app.post("/api/tech-ops/:id/no-charge", async (req: Request, res: Response) => {
     try {
-      const entry = await storage.updateTechOpsEntry(req.params.id, { 
-        status: "completed",
-        notes: ((await storage.getTechOpsEntry(req.params.id))?.notes || "") + "\n[No Charge - Marked as completed with no billing]"
-      });
-      if (!entry) {
+      const existingEntry = await storage.getTechOpsEntry(req.params.id);
+      if (!existingEntry) {
         return res.status(404).json({ error: "Entry not found" });
       }
+      
+      // Prevent duplicate no-charge marking
+      if (existingEntry.status === "completed" && existingEntry.notes?.includes("[No Charge")) {
+        return res.status(400).json({ error: "Entry already marked as no charge" });
+      }
+      
+      // Only append note if not already present
+      const noChargeNote = "[No Charge - Marked as completed with no billing]";
+      const updatedNotes = existingEntry.notes?.includes(noChargeNote) 
+        ? existingEntry.notes 
+        : (existingEntry.notes || "") + "\n" + noChargeNote;
+      
+      const entry = await storage.updateTechOpsEntry(req.params.id, { 
+        status: "completed",
+        notes: updatedNotes
+      });
       res.json(entry);
     } catch (error: any) {
       console.error("Error marking entry as no charge:", error);
