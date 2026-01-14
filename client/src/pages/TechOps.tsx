@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Wrench, Plus, Loader2, CheckCircle, Clock, XCircle,
   Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2,
-  CalendarIcon, Filter, Archive, FileUp, Zap
+  CalendarIcon, Filter, Archive, FileUp, Zap, Image, X, ChevronLeft, ChevronRight
 } from "lucide-react";
 import type { TechOpsEntry, Property } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -64,11 +64,11 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   archived: { color: "bg-slate-100 text-slate-500 border-slate-200", icon: XCircle, label: "Archived" },
 };
 
-const priorityConfig: Record<string, string> = {
-  low: "bg-slate-100 text-slate-600",
-  normal: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
+const priorityConfig: Record<string, { bg: string; text: string; label: string }> = {
+  low: { bg: "bg-green-100", text: "text-green-700", label: "Low" },
+  normal: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Medium" },
+  high: { bg: "bg-orange-100", text: "text-orange-700", label: "High" },
+  urgent: { bg: "bg-red-100", text: "text-red-700", label: "Urgent" },
 };
 
 function formatDate(date: Date | string | null | undefined): string {
@@ -96,11 +96,35 @@ export default function TechOps() {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [convertEntry, setConvertEntry] = useState<TechOpsEntry | null>(null);
   const [markUrgent, setMarkUrgent] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = (photos: string[], index: number) => {
+    setLightboxImages(photos);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxImages([]);
+    setLightboxIndex(0);
+  };
+
+  const nextImage = () => {
+    setLightboxIndex((prev) => (prev + 1) % lightboxImages.length);
+  };
+
+  const prevImage = () => {
+    setLightboxIndex((prev) => (prev - 1 + lightboxImages.length) % lightboxImages.length);
+  };
 
   const [form, setForm] = useState({
     technicianName: "",
     propertyId: "",
     propertyName: "",
+    propertyAddress: "",
     description: "",
     priority: "normal",
     chemicals: "",
@@ -175,6 +199,7 @@ export default function TechOps() {
         technicianName: "",
         propertyId: "",
         propertyName: "",
+        propertyAddress: "",
         description: "",
         priority: "normal",
         chemicals: "",
@@ -277,6 +302,7 @@ export default function TechOps() {
       ...form,
       propertyId,
       propertyName: property?.name || "",
+      propertyAddress: property?.address || "",
     });
   };
 
@@ -399,93 +425,151 @@ export default function TechOps() {
                   {entries.map((entry) => {
                     const statusCfg = statusConfig[entry.status || "pending"];
                     const StatusIcon = statusCfg.icon;
+                    const priorityCfg = priorityConfig[entry.priority || "normal"];
+                    const photos = entry.photos || [];
                     return (
                       <div
                         key={entry.id}
-                        className="flex items-start justify-between p-4 bg-slate-50 rounded-lg border border-slate-100"
+                        className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                         data-testid={`entry-item-${entry.id}`}
                       >
-                        <div className="flex-1 min-w-0 space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge className={statusCfg.color}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {statusCfg.label}
-                            </Badge>
-                            <Badge className={priorityConfig[entry.priority || "normal"]}>
-                              {entry.priority}
-                            </Badge>
-                            <span className="text-xs text-slate-400">
-                              {formatDate(entry.createdAt)}
-                            </span>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0 space-y-3">
+                            {/* Header: Status, Priority, Date */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge className={statusCfg.color}>
+                                <StatusIcon className="w-3 h-3 mr-1" />
+                                {statusCfg.label}
+                              </Badge>
+                              <Badge className={cn(priorityCfg.bg, priorityCfg.text, "font-semibold")}>
+                                {priorityCfg.label}
+                              </Badge>
+                              <span className="text-xs text-slate-400 ml-auto">
+                                {formatDate(entry.createdAt)}
+                              </span>
+                            </div>
+
+                            {/* Property Info */}
+                            <div className="bg-slate-50 rounded-md p-3 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-[#1E3A8A]" />
+                                <span className="font-semibold text-[#1E293B]">{entry.propertyName || "No property"}</span>
+                              </div>
+                              {(entry as any).propertyAddress && (
+                                <p className="text-sm text-slate-500 ml-6">{(entry as any).propertyAddress}</p>
+                              )}
+                            </div>
+
+                            {/* Technician */}
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="w-4 h-4 text-slate-400" />
+                              <span className="text-slate-600">Submitted by:</span>
+                              <span className="font-medium text-[#1E293B]">{entry.technicianName}</span>
+                            </div>
+
+                            {/* Description/Notes */}
+                            {(entry.description || entry.notes) && (
+                              <div className="bg-blue-50 border border-blue-100 rounded-md p-3">
+                                <h4 className="text-xs font-semibold text-blue-700 uppercase mb-1">Description / Notes</h4>
+                                {entry.description && (
+                                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.description}</p>
+                                )}
+                                {entry.notes && entry.notes !== entry.description && (
+                                  <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{entry.notes}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Chemical info (for other entry types) */}
+                            {entry.chemicals && (
+                              <p className="text-sm text-slate-600">
+                                <strong>Chemicals:</strong> {entry.chemicals}
+                                {entry.quantity && ` (${entry.quantity})`}
+                              </p>
+                            )}
+                            {entry.issueType && (
+                              <p className="text-sm text-slate-600">
+                                <strong>Issue Type:</strong> {entry.issueType}
+                              </p>
+                            )}
+
+                            {/* Photo Gallery */}
+                            {photos.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="text-xs font-semibold text-slate-500 uppercase flex items-center gap-1">
+                                  <Image className="w-3 h-3" />
+                                  Attached Photos ({photos.length})
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                  {photos.map((photo, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => openLightbox(photos, idx)}
+                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#1E3A8A] transition-colors"
+                                      data-testid={`photo-thumb-${entry.id}-${idx}`}
+                                    >
+                                      <img
+                                        src={photo}
+                                        alt={`Photo ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="%23f1f5f9" width="80" height="80"/><text x="40" y="45" text-anchor="middle" fill="%2394a3b8" font-size="10">No image</text></svg>';
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                        <span className="text-white opacity-0 group-hover:opacity-100 text-xs font-medium">View</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3 text-slate-400" />
-                              <span className="font-medium">{entry.technicianName}</span>
-                            </span>
-                            <span className="flex items-center gap-1 text-slate-500">
-                              <MapPin className="w-3 h-3" />
-                              {entry.propertyName || "No property"}
-                            </span>
-                          </div>
-                          {entry.description && (
-                            <p className="text-sm text-slate-600">{entry.description}</p>
-                          )}
-                          {entry.chemicals && (
-                            <p className="text-sm text-slate-600">
-                              <strong>Chemicals:</strong> {entry.chemicals}
-                              {entry.quantity && ` (${entry.quantity})`}
-                            </p>
-                          )}
-                          {entry.issueType && (
-                            <p className="text-sm text-slate-600">
-                              <strong>Issue Type:</strong> {entry.issueType}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 ml-4">
-                          {entryType === "repairs_needed" && entry.status !== "archived" && entry.status !== "completed" && (
-                            <>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-2">
+                            {entryType === "repairs_needed" && entry.status !== "archived" && entry.status !== "completed" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#1E3A8A] hover:bg-[#1E40AF] text-white"
+                                  onClick={() => handleOpenConvertDialog(entry)}
+                                  data-testid={`button-convert-${entry.id}`}
+                                >
+                                  <FileUp className="w-4 h-4 mr-1" /> Convert to Estimate
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-slate-600 hover:text-slate-700 hover:bg-slate-100"
+                                  onClick={() => archiveMutation.mutate(entry.id)}
+                                  data-testid={`button-archive-${entry.id}`}
+                                >
+                                  <Archive className="w-4 h-4 mr-1" /> Archive
+                                </Button>
+                              </>
+                            )}
+                            {entryType !== "repairs_needed" && entry.status === "pending" && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                onClick={() => handleOpenConvertDialog(entry)}
-                                data-testid={`button-convert-${entry.id}`}
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => reviewMutation.mutate(entry.id)}
+                                data-testid={`button-review-${entry.id}`}
                               >
-                                <FileUp className="w-4 h-4 mr-1" /> Convert to Estimate
+                                <CheckCircle className="w-4 h-4 mr-1" /> Review
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-slate-600 hover:text-slate-700 hover:bg-slate-100"
-                                onClick={() => archiveMutation.mutate(entry.id)}
-                                data-testid={`button-archive-${entry.id}`}
-                              >
-                                <Archive className="w-4 h-4 mr-1" /> Archive
-                              </Button>
-                            </>
-                          )}
-                          {entryType !== "repairs_needed" && entry.status === "pending" && (
+                            )}
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                              onClick={() => reviewMutation.mutate(entry.id)}
-                              data-testid={`button-review-${entry.id}`}
+                              variant="ghost"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => deleteMutation.mutate(entry.id)}
+                              data-testid={`button-delete-${entry.id}`}
                             >
-                              <CheckCircle className="w-4 h-4 mr-1" /> Review
+                              <Trash2 className="w-4 h-4" />
                             </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => deleteMutation.mutate(entry.id)}
-                            data-testid={`button-delete-${entry.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -684,6 +768,55 @@ export default function TechOps() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Lightbox */}
+      {lightboxOpen && lightboxImages.length > 0 && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={closeLightbox}
+          data-testid="lightbox-overlay"
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            data-testid="button-close-lightbox"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          
+          {lightboxImages.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); prevImage(); }}
+                className="absolute left-4 text-white hover:text-gray-300 z-10 p-2 bg-black/50 rounded-full"
+                data-testid="button-prev-image"
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); nextImage(); }}
+                className="absolute right-4 text-white hover:text-gray-300 z-10 p-2 bg-black/50 rounded-full"
+                data-testid="button-next-image"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            </>
+          )}
+          
+          <div className="max-w-[90vw] max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={lightboxImages[lightboxIndex]}
+              alt={`Image ${lightboxIndex + 1} of ${lightboxImages.length}`}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              data-testid="lightbox-image"
+            />
+          </div>
+          
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
+            {lightboxIndex + 1} / {lightboxImages.length}
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
