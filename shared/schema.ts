@@ -833,6 +833,7 @@ export const serviceRepairJobs = pgTable("service_repair_jobs", {
   jobDate: timestamp("job_date").defaultNow(),
   description: text("description"),
   notes: text("notes"),
+  photos: text("photos").array(), // Array of photo URLs from field app
   
   // Amounts (stored in cents)
   laborAmount: integer("labor_amount").default(0),
