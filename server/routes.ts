@@ -18,6 +18,7 @@ import { registerReportRoutes } from "./routes/reports";
 import { registerServiceRepairRoutes } from "./routes/serviceRepairs";
 import { registerTechOpsRoutes } from "./routes/techOps";
 import { registerDashboardRoutes } from "./routes/dashboard";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -45,4 +46,5 @@ function setupRoutes(app: any) {
   registerServiceRepairRoutes(app);
   registerTechOpsRoutes(app);
   registerDashboardRoutes(app);
+  registerObjectStorageRoutes(app);
 }

@@ -188,6 +188,7 @@ export const techOpsEntries = pgTable("tech_ops_entries", {
   technicianId: varchar("technician_id"), // Link to technician record
   propertyId: varchar("property_id"),
   propertyName: text("property_name"),
+  propertyAddress: text("property_address"), // Full property address
   description: text("description"),
   notes: text("notes"), // Additional notes field
   priority: text("priority").default("normal"), // "low", "normal", "high", "urgent"
