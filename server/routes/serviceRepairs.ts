@@ -134,7 +134,7 @@ export function registerServiceRepairRoutes(app: any) {
         description: descriptions.join('\n'),
         techNotes: notes || `Batch service repairs: ${ids.length} items`,
         woRequired: false,
-        sourceType: 'service_repair',
+        sourceType: 'service_tech',
         sourceRepairJobId: ids.length === 1 ? ids[0] : ids.join(','),
       });
       

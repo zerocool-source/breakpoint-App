@@ -341,6 +341,32 @@ export default function Estimates() {
   const metrics = metricsData;
   const windyDayPending = windyDayPendingData?.count || 0;
 
+  const normalizeSourceType = (sourceType: string | null): string => {
+    if (!sourceType || sourceType === "manual") return "office_staff";
+    if (sourceType === "service_repair") return "service_tech";
+    return sourceType;
+  };
+
+  const getSourceLabel = (sourceType: string | null): string => {
+    const normalized = normalizeSourceType(sourceType);
+    switch (normalized) {
+      case "repair_tech": return "Repair Tech";
+      case "service_tech": return "Service Tech";
+      case "office_staff": return "Office Staff";
+      default: return "Office Staff";
+    }
+  };
+
+  const getSourceBadgeColor = (sourceType: string | null): string => {
+    const normalized = normalizeSourceType(sourceType);
+    switch (normalized) {
+      case "repair_tech": return "bg-blue-100 text-blue-700 border-blue-200";
+      case "service_tech": return "bg-purple-100 text-purple-700 border-purple-200";
+      case "office_staff": return "bg-gray-100 text-gray-700 border-gray-200";
+      default: return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async (estimate: any) => {
       const response = await fetch("/api/estimates", {
@@ -472,6 +498,27 @@ export default function Estimates() {
 
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
+  const sourceMetrics = useMemo(() => {
+    const repairTech = estimates.filter((e: Estimate) => normalizeSourceType(e.sourceType) === "repair_tech");
+    const serviceTech = estimates.filter((e: Estimate) => normalizeSourceType(e.sourceType) === "service_tech");
+    const officeStaff = estimates.filter((e: Estimate) => normalizeSourceType(e.sourceType) === "office_staff");
+    
+    return {
+      repairTech: {
+        count: repairTech.length,
+        totalValue: repairTech.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
+      },
+      serviceTech: {
+        count: serviceTech.length,
+        totalValue: serviceTech.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
+      },
+      officeStaff: {
+        count: officeStaff.length,
+        totalValue: officeStaff.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
+      },
+    };
+  }, [estimates]);
+
   // Get unique customer names for filter dropdown - combine customers from API and estimates
   const uniqueCustomers = useMemo(() => {
     const customerSet = new Set<string>();
@@ -504,11 +551,9 @@ export default function Estimates() {
       result = result.filter((e: Estimate) => e.customerName === customerFilter);
     }
 
-    // Apply source filter
+    // Apply source filter (normalize legacy values)
     if (sourceFilter !== "all") {
-      result = result.filter((e: Estimate) => 
-        sourceFilter === "service_repair" ? e.sourceType === "service_repair" : e.sourceType !== "service_repair"
-      );
+      result = result.filter((e: Estimate) => normalizeSourceType(e.sourceType) === sourceFilter);
     }
 
     // Apply date range filter
@@ -691,6 +736,7 @@ export default function Estimates() {
       depositAmount: calculateTotals.depositAmount,
       createdByTechId: "tech-1",
       createdByTechName: "Service Tech",
+      sourceType: "office_staff",
     };
 
     if (isEditing && selectedEstimate) {
@@ -1208,7 +1254,7 @@ Breakpoint Pool Service`);
 
   // SR selection helpers - for service repair estimates under $500
   const isSRSelectable = (estimate: Estimate) => {
-    return estimate.sourceType === "service_repair" && 
+    return normalizeSourceType(estimate.sourceType) === "service_tech" && 
            (estimate.totalAmount || 0) < 50000; // $500 in cents
   };
 
@@ -1243,14 +1289,16 @@ Breakpoint Pool Service`);
 
   const getItemCountLabel = (estimate: Estimate) => {
     const count = estimate.items?.length || 0;
-    if (estimate.sourceType === "service_repair") {
+    const normalized = normalizeSourceType(estimate.sourceType);
+    if (normalized === "service_tech") {
       return `${count}-SR`;
     }
     return `${count} items`;
   };
 
   const getEstimateTitle = (estimate: Estimate) => {
-    if (estimate.sourceType === "service_repair") {
+    const normalized = normalizeSourceType(estimate.sourceType);
+    if (normalized === "service_tech") {
       return estimate.title.startsWith("SR.") ? estimate.title : `SR. ${estimate.title}`;
     }
     return estimate.title;
@@ -1370,6 +1418,58 @@ Breakpoint Pool Service`);
           ))}
         </div>
 
+        {/* Estimate Source Metrics */}
+        <div className="grid grid-cols-3 gap-4">
+          <div 
+            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-blue-500 p-4 cursor-pointer hover:shadow-md transition-all"
+            onClick={() => setSourceFilter("repair_tech")}
+            data-testid="metric-repair-tech"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-blue-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.repairTech.count}</p>
+                <p className="text-sm text-[#6B7280] mt-1">Repair Tech Estimates</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-semibold text-[#1E293B]">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-[#6B7280]">Total Value</p>
+              </div>
+            </div>
+          </div>
+          <div 
+            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-purple-500 p-4 cursor-pointer hover:shadow-md transition-all"
+            onClick={() => setSourceFilter("service_tech")}
+            data-testid="metric-service-tech"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-purple-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.serviceTech.count}</p>
+                <p className="text-sm text-[#6B7280] mt-1">Service Tech Estimates</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-semibold text-[#1E293B]">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-[#6B7280]">Total Value</p>
+              </div>
+            </div>
+          </div>
+          <div 
+            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-gray-400 p-4 cursor-pointer hover:shadow-md transition-all"
+            onClick={() => setSourceFilter("office_staff")}
+            data-testid="metric-office-staff"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-gray-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.officeStaff.count}</p>
+                <p className="text-sm text-[#6B7280] mt-1">Office Staff Estimates</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-semibold text-[#1E293B]">${(sourceMetrics.officeStaff.totalValue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-[#6B7280]">Total Value</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* QuickBooks-style Workflow Metrics */}
         {metrics && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
@@ -1414,6 +1514,43 @@ Breakpoint Pool Service`);
                 <p className="text-xs text-[#6B7280] mt-1">Windy Cleanup</p>
               </a>
             </div>
+            
+            {/* Source Breakdown Row */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-[#6B7280] mb-3">By Source</h4>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="text-sm text-[#1E293B]">Repair Tech</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-blue-600">{sourceMetrics.repairTech.count}</span>
+                    <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg border border-purple-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span className="text-sm text-[#1E293B]">Service Tech</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-purple-600">{sourceMetrics.serviceTech.count}</span>
+                    <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-gray-400" />
+                    <span className="text-sm text-[#1E293B]">Office Staff</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-semibold text-gray-600">{sourceMetrics.officeStaff.count}</span>
+                    <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.officeStaff.totalValue / 100).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1436,12 +1573,13 @@ Breakpoint Pool Service`);
 
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
                 <SelectTrigger className="w-[160px] border-gray-300 bg-white text-sm" data-testid="filter-source">
-                  <SelectValue placeholder="All Sources" />
+                  <SelectValue placeholder="Estimate Source" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="service_repair">Service Repairs</SelectItem>
-                  <SelectItem value="manual">Manual Entry</SelectItem>
+                  <SelectItem value="repair_tech">Repair Tech</SelectItem>
+                  <SelectItem value="service_tech">Service Tech</SelectItem>
+                  <SelectItem value="office_staff">Office Staff</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -1534,7 +1672,7 @@ Breakpoint Pool Service`);
           </div>
 
           {/* SR Selection Header - shows when service repair estimates are selectable */}
-          {sourceFilter === "service_repair" && selectableSREstimates.length > 0 && (
+          {sourceFilter === "service_tech" && selectableSREstimates.length > 0 && (
             <div className="px-5 py-3 bg-purple-50 border-b border-purple-200 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -1644,12 +1782,9 @@ Breakpoint Pool Service`);
                               <Badge className={`${config.color} border text-[11px] px-2 py-0.5 rounded-full`}>
                                 {config.label}
                               </Badge>
-                              {estimate.sourceType === "service_repair" && (
-                                <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[11px] px-2 py-0.5 rounded-full">
-                                  <Wrench className="w-3 h-3 mr-1" />
-                                  {getItemCountLabel(estimate)}
-                                </Badge>
-                              )}
+                              <Badge className={`${getSourceBadgeColor(estimate.sourceType)} border text-[11px] px-2 py-0.5 rounded-full`}>
+                                {getSourceLabel(estimate.sourceType)}
+                              </Badge>
                             </div>
                             <div className="flex items-center gap-4 text-[14px] text-[#6B7280] mt-1.5">
                               <span className="flex items-center gap-1.5">
