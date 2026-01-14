@@ -308,7 +308,7 @@ export default function Estimates() {
       if (!response.ok) return { technicians: [] };
       return response.json();
     },
-    enabled: showSchedulingModal,
+    enabled: showSchedulingModal || (showApprovalDialog && approvalStep === "schedule"),
   });
 
   const { data: metricsData } = useQuery({

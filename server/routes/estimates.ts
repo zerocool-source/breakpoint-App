@@ -231,15 +231,19 @@ export function registerEstimateRoutes(app: any) {
   app.get("/api/estimates/repair-techs", async (req: Request, res: Response) => {
     try {
       const technicians = await storage.getTechnicians();
-      const repairTechs = technicians.filter((t: any) => t.role === "repair_tech" || t.role === "repair_foreman");
+      const repairTechs = technicians.filter((t: any) => 
+        t.role === "repair" || t.role === "repair_tech" || t.role === "repair_foreman"
+      );
       
       // Get scheduled estimates for each tech to show their workload
       const allEstimates = await storage.getEstimates("scheduled");
       
       const techsWithAvailability = repairTechs.map((tech: any) => {
         const assignedEstimates = allEstimates.filter((e: any) => e.repairTechId === tech.id);
+        const name = tech.name || `${tech.firstName || ''} ${tech.lastName || ''}`.trim() || 'Unknown';
         return {
           ...tech,
+          name,
           assignedJobs: assignedEstimates.length,
           scheduledEstimates: assignedEstimates.slice(0, 5).map((e: any) => ({
             id: e.id,
