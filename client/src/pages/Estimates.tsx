@@ -1267,6 +1267,11 @@ Breakpoint Pool Service`);
   // Check if Under $500 filter is active
   const isUnder500FilterActive = valueFilter === "under500";
 
+  // Clear selection when filter changes
+  useEffect(() => {
+    setSelectedSRIds(new Set());
+  }, [valueFilter]);
+
   const toggleUnder500Selection = (id: string) => {
     setSelectedSRIds(prev => {
       const next = new Set(prev);
@@ -3546,9 +3551,7 @@ Breakpoint Pool Service`);
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-sm text-amber-700 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  {invoiceType === "combined" 
-                    ? "This will create one combined invoice and mark all estimates as invoiced"
-                    : "This will create separate invoices and mark all estimates as invoiced"}
+                  This will mark all selected estimates as invoiced
                 </p>
               </div>
             </div>
@@ -3564,26 +3567,30 @@ Breakpoint Pool Service`);
                 onClick={async () => {
                   try {
                     const selectedIds = Array.from(selectedSRIds);
+                    const invoiceMode = invoiceType;
                     for (const id of selectedIds) {
                       await fetch(`/api/estimates/${id}/status`, {
                         method: "PATCH",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ status: "invoiced" }),
+                        body: JSON.stringify({ 
+                          status: "invoiced",
+                          invoiceMode: invoiceMode
+                        }),
                       });
                     }
                     queryClient.invalidateQueries({ queryKey: ["estimates"] });
                     toast({
-                      title: "Invoiced",
-                      description: invoiceType === "combined" 
-                        ? `Combined ${selectedIds.length} estimates into one invoice`
-                        : `Created ${selectedIds.length} separate invoices`,
+                      title: "Marked as Invoiced",
+                      description: invoiceMode === "combined" 
+                        ? `${selectedIds.length} estimates marked for combined invoice`
+                        : `${selectedIds.length} estimates marked as separately invoiced`,
                     });
                     setSelectedSRIds(new Set());
                     setShowBatchInvoiceDialog(false);
                   } catch (error) {
                     toast({
                       title: "Error",
-                      description: "Failed to invoice estimates",
+                      description: "Failed to update estimates",
                       variant: "destructive",
                     });
                   }
@@ -3591,7 +3598,7 @@ Breakpoint Pool Service`);
                 data-testid="button-confirm-batch-invoice"
               >
                 <Receipt className="w-4 h-4 mr-2" />
-                {invoiceType === "combined" ? "Create Combined Invoice" : `Create ${selectedSRIds.size} Invoices`}
+                Mark as Invoiced ({selectedSRIds.size})
               </Button>
             </DialogFooter>
           </DialogContent>
