@@ -221,7 +221,7 @@ export function Sidebar() {
       icon: Building2, 
       label: "Properties", 
       children: [
-        { label: "Profiles", href: "/property-profiles" },
+        { label: "Customers", href: "/customers" },
         { label: "Visits", href: "/visits" },
       ]
     },
