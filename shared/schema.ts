@@ -786,6 +786,11 @@ export const estimates = pgTable("estimates", {
   scheduledByUserName: text("scheduled_by_user_name"),
   scheduledAt: timestamp("scheduled_at"),
   
+  // Deadline tracking for job completion
+  deadlineAt: timestamp("deadline_at"), // When the job must be completed by
+  deadlineUnit: text("deadline_unit").default("hours"), // "hours" or "days"
+  deadlineValue: integer("deadline_value"), // Number of hours or days
+  
   // Work Order (WO) tracking
   workType: text("work_type").default("repairs"), // "repairs", "chemicals", "other"
   woRequired: boolean("wo_required").default(false), // Flag if this property requires a work order

@@ -261,6 +261,11 @@ export default function Estimates() {
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | undefined>(new Date());
   const [autoSelectedByWorkType, setAutoSelectedByWorkType] = useState(false);
+  const [approvalStep, setApprovalStep] = useState<"confirm" | "schedule">("confirm");
+  const [deadlineValue, setDeadlineValue] = useState<number>(24);
+  const [deadlineUnit, setDeadlineUnit] = useState<"hours" | "days">("hours");
+  const [selectedTechId, setSelectedTechId] = useState<string>("");
+  const [selectedTechName, setSelectedTechName] = useState<string>("");
   const [customerFilter, setCustomerFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
@@ -798,16 +803,17 @@ Breakpoint Pool Service`);
           onSuccess: () => {
             if (invoiceData?.invoiceNumber) {
               toast({ 
-                title: "Approved & Invoice Created", 
-                description: `QuickBooks Invoice #${invoiceData.invoiceNumber} created successfully.` 
+                title: "Approved", 
+                description: `Estimate approved. QuickBooks Invoice #${invoiceData.invoiceNumber} created.` 
               });
             } else if (invoiceError) {
               toast({ 
-                title: "Approved (Invoice Failed)", 
-                description: `Estimate approved, but QuickBooks invoice creation failed: ${invoiceError}`,
-                variant: "destructive"
+                title: "Approved", 
+                description: `Estimate approved. (QuickBooks invoice creation failed)`,
               });
             }
+            // Move to schedule step instead of closing
+            setApprovalStep("schedule");
           }
         });
       } catch (error) {
@@ -820,6 +826,10 @@ Breakpoint Pool Service`);
             approvedByManagerName: "HOA Manager",
             managerNotes,
           },
+        }, {
+          onSuccess: () => {
+            setApprovalStep("schedule");
+          }
         });
       } finally {
         setIsCreatingInvoice(false);
@@ -829,6 +839,79 @@ Breakpoint Pool Service`);
         id: selectedEstimate.id,
         status: "rejected",
         extras: { rejectionReason },
+      });
+    }
+  };
+
+  const handleScheduleFromApproval = async () => {
+    if (!selectedEstimate || !selectedTechId) return;
+    
+    // Calculate deadline
+    const deadlineAt = new Date();
+    if (deadlineUnit === "hours") {
+      deadlineAt.setHours(deadlineAt.getHours() + deadlineValue);
+    } else {
+      deadlineAt.setDate(deadlineAt.getDate() + deadlineValue);
+    }
+    
+    try {
+      const response = await fetch(`/api/estimates/${selectedEstimate.id}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repairTechId: selectedTechId,
+          repairTechName: selectedTechName,
+          scheduledDate: selectedScheduleDate?.toISOString(),
+          deadlineAt: deadlineAt.toISOString(),
+          deadlineUnit,
+          deadlineValue,
+        }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to schedule");
+      
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["service-repairs"] });
+      
+      toast({
+        title: "Job Scheduled",
+        description: `Assigned to ${selectedTechName}. Deadline: ${deadlineValue} ${deadlineUnit}.`,
+      });
+      setShowApprovalDialog(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to schedule job.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleScheduleLater = async () => {
+    if (!selectedEstimate) return;
+    
+    try {
+      const response = await fetch(`/api/estimates/${selectedEstimate.id}/needs-scheduling`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (!response.ok) throw new Error("Failed to update");
+      
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      
+      toast({
+        title: "Added to Queue",
+        description: "Estimate added to scheduling queue.",
+      });
+      setShowApprovalDialog(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update estimate.",
+        variant: "destructive",
       });
     }
   };
@@ -1052,6 +1135,12 @@ Breakpoint Pool Service`);
     setApprovalAction(action);
     setRejectionReason("");
     setManagerNotes("");
+    setApprovalStep("confirm");
+    setDeadlineValue(24);
+    setDeadlineUnit("hours");
+    setSelectedTechId("");
+    setSelectedTechName("");
+    setSelectedScheduleDate(new Date());
     setShowApprovalDialog(true);
   };
 
@@ -2141,15 +2230,21 @@ Breakpoint Pool Service`);
         </Dialog>
 
         <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
-          <DialogContent>
+          <DialogContent className={approvalStep === "schedule" ? "max-w-2xl" : ""}>
             <DialogHeader>
               <DialogTitle>
-                {approvalAction === "approve" ? "Approve Estimate" : "Reject Estimate"}
+                {approvalAction === "reject" 
+                  ? "Reject Estimate" 
+                  : approvalStep === "confirm" 
+                    ? "Approve Estimate" 
+                    : "Schedule Job"}
               </DialogTitle>
               <DialogDescription>
-                {approvalAction === "approve"
-                  ? "Approving this estimate will allow it to be scheduled as a job."
-                  : "Please provide a reason for rejecting this estimate."}
+                {approvalAction === "reject"
+                  ? "Please provide a reason for rejecting this estimate."
+                  : approvalStep === "confirm"
+                    ? "Approving this estimate will allow it to be scheduled as a job."
+                    : "Assign to a repair technician or add to the scheduling queue."}
               </DialogDescription>
             </DialogHeader>
             {selectedEstimate && (
@@ -2161,7 +2256,19 @@ Breakpoint Pool Service`);
                     {formatCurrency(selectedEstimate.totalAmount)}
                   </p>
                 </div>
-                {approvalAction === "approve" ? (
+                
+                {approvalAction === "reject" ? (
+                  <div>
+                    <Label>Rejection Reason</Label>
+                    <Textarea
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Explain why this estimate is being rejected..."
+                      rows={3}
+                      data-testid="input-rejection-reason"
+                    />
+                  </div>
+                ) : approvalStep === "confirm" ? (
                   <div>
                     <Label>Manager Notes (optional)</Label>
                     <Textarea
@@ -2173,37 +2280,152 @@ Breakpoint Pool Service`);
                     />
                   </div>
                 ) : (
-                  <div>
-                    <Label>Rejection Reason</Label>
-                    <Textarea
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      placeholder="Explain why this estimate is being rejected..."
-                      rows={3}
-                      data-testid="input-rejection-reason"
-                    />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Scheduled Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left mt-1" data-testid="button-schedule-date-approval">
+                              <CalendarIcon className="w-4 h-4 mr-2" />
+                              {selectedScheduleDate ? format(selectedScheduleDate, "PPP") : "Pick a date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={selectedScheduleDate}
+                              onSelect={setSelectedScheduleDate}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Deadline Timer</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            type="number"
+                            value={deadlineValue}
+                            onChange={(e) => setDeadlineValue(parseInt(e.target.value) || 24)}
+                            min={1}
+                            className="w-20"
+                            data-testid="input-deadline-value"
+                          />
+                          <Select value={deadlineUnit} onValueChange={(v: "hours" | "days") => setDeadlineUnit(v)}>
+                            <SelectTrigger className="flex-1" data-testid="select-deadline-unit">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hours">Hours</SelectItem>
+                              <SelectItem value="days">Days</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Job expires and returns to queue if not completed
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium">Select Repair Technician</Label>
+                      <ScrollArea className="h-[200px] mt-2 rounded-lg border border-[#E2E8F0]">
+                        {repairTechs.length === 0 ? (
+                          <div className="flex items-center justify-center h-full py-8">
+                            <p className="text-sm text-[#64748B]">No repair technicians available</p>
+                          </div>
+                        ) : (
+                          <div className="p-2 space-y-2">
+                            {repairTechs.map((tech: any) => (
+                              <div
+                                key={tech.id}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                  selectedTechId === tech.id 
+                                    ? "border-[#1E3A8A] bg-[#1E3A8A]/5 ring-2 ring-[#1E3A8A]" 
+                                    : "border-[#E2E8F0] hover:border-[#1E3A8A] hover:shadow-sm"
+                                }`}
+                                onClick={() => {
+                                  setSelectedTechId(tech.id);
+                                  setSelectedTechName(tech.name);
+                                }}
+                                data-testid={`tech-select-${tech.id}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#1E3A8A]" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-[#1E293B] text-sm">{tech.name}</p>
+                                      <p className="text-xs text-[#64748B]">{tech.assignedJobs || 0} jobs assigned</p>
+                                    </div>
+                                  </div>
+                                  {selectedTechId === tech.id && (
+                                    <CheckCircle2 className="w-5 h-5 text-[#1E3A8A]" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
                   </div>
                 )}
               </div>
             )}
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>Cancel</Button>
-              <Button
-                onClick={handleApproval}
-                disabled={(approvalAction === "reject" && !rejectionReason) || isCreatingInvoice}
-                className={approvalAction === "approve" ? "bg-green-600 hover:bg-green-700" : ""}
-                variant={approvalAction === "reject" ? "destructive" : "default"}
-                data-testid="button-confirm-approval"
-              >
-                {isCreatingInvoice ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Invoice...
-                  </>
-                ) : (
-                  approvalAction === "approve" ? "Approve" : "Reject"
-                )}
-              </Button>
+              {approvalAction === "reject" ? (
+                <Button
+                  onClick={handleApproval}
+                  disabled={!rejectionReason}
+                  variant="destructive"
+                  data-testid="button-confirm-rejection"
+                >
+                  Reject
+                </Button>
+              ) : approvalStep === "confirm" ? (
+                <Button
+                  onClick={handleApproval}
+                  disabled={isCreatingInvoice}
+                  className="bg-green-600 hover:bg-green-700"
+                  data-testid="button-confirm-approval"
+                >
+                  {isCreatingInvoice ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Approving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Approve
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleScheduleLater}
+                    data-testid="button-schedule-later"
+                  >
+                    <Clock className="w-4 h-4 mr-2" />
+                    Later
+                  </Button>
+                  <Button
+                    onClick={handleScheduleFromApproval}
+                    disabled={!selectedTechId}
+                    className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                    data-testid="button-schedule-now"
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    Schedule
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

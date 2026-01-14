@@ -119,6 +119,26 @@ export function registerEstimateRoutes(app: any) {
     try {
       const { status } = req.query;
       const estimates = await storage.getEstimates(status as string | undefined);
+      
+      // Check for expired deadlines and auto-return to needs_scheduling
+      const now = new Date();
+      for (const est of estimates) {
+        if (est.status === "scheduled" && est.deadlineAt) {
+          const deadline = new Date(est.deadlineAt);
+          if (deadline < now) {
+            // Deadline expired - return to needs_scheduling
+            await storage.updateEstimate(est.id, {
+              status: "needs_scheduling",
+              deadlineAt: null,
+              repairTechId: null,
+              repairTechName: null,
+            });
+            est.status = "needs_scheduling";
+            est.deadlineAt = null;
+          }
+        }
+      }
+      
       res.json({ estimates });
     } catch (error: any) {
       console.error("Error fetching estimates:", error);
@@ -376,7 +396,7 @@ export function registerEstimateRoutes(app: any) {
   app.patch("/api/estimates/:id/schedule", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { repairTechId, repairTechName, scheduledDate, scheduledByUserId, scheduledByUserName } = req.body;
+      const { repairTechId, repairTechName, scheduledDate, scheduledByUserId, scheduledByUserName, deadlineAt, deadlineUnit, deadlineValue } = req.body;
       
       // Get the current estimate first to get property info
       const currentEstimate = await storage.getEstimate(id);
@@ -393,6 +413,9 @@ export function registerEstimateRoutes(app: any) {
         scheduledAt: new Date(),
         scheduledByUserId,
         scheduledByUserName,
+        deadlineAt: deadlineAt ? new Date(deadlineAt) : null,
+        deadlineUnit: deadlineUnit || "hours",
+        deadlineValue: deadlineValue || null,
       });
       
       // Create a linked service repair job in the Repair Queue
