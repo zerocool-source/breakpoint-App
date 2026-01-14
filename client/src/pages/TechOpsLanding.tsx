@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Wrench, Droplets, AlertTriangle, ChevronRight, CalendarIcon,
-  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2
+  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind
 } from "lucide-react";
 import type { TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,15 @@ const techOpsOptions = [
     description: "Log chemicals delivered or dropped off at a property"
   },
   { 
+    id: "windy-day-cleanup",
+    entryType: "windy_day_cleanup",
+    label: "Windy Day Clean Up", 
+    href: "/tech-ops/windy-day-cleanup",
+    icon: Wind, 
+    color: "bg-cyan-100 text-cyan-700 border-cyan-200",
+    description: "Request extra cleaning after windy conditions"
+  },
+  { 
     id: "report-issue",
     entryType: "report_issue",
     label: "Report Issues", 
@@ -70,6 +79,7 @@ const entryTypeLabels: Record<string, { label: string; color: string; icon: any 
   service_repairs: { label: "Service Repairs", color: "bg-purple-100 text-purple-700", icon: Wrench },
   chemical_order: { label: "Chemical Orders", color: "bg-blue-100 text-blue-700", icon: Droplets },
   chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-green-100 text-green-700", icon: Droplets },
+  windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-cyan-100 text-cyan-700", icon: Wind },
   report_issue: { label: "Report Issues", color: "bg-orange-100 text-orange-700", icon: AlertTriangle },
 };
 
@@ -269,6 +279,7 @@ export default function TechOpsLanding() {
                     <SelectItem value="repairs_needed">Repairs Needed</SelectItem>
                     <SelectItem value="chemical_order">Chemical Orders</SelectItem>
                     <SelectItem value="chemicals_dropoff">Chemicals Dropped-Off</SelectItem>
+                    <SelectItem value="windy_day_cleanup">Windy Day Clean Up</SelectItem>
                     <SelectItem value="report_issue">Report Issues</SelectItem>
                   </SelectContent>
                 </Select>
