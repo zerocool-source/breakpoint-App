@@ -1486,27 +1486,20 @@ Breakpoint Pool Service`);
                           )}
                           {estimate.status === "scheduled" && (
                             <>
-                              <Badge className="bg-[#DBEAFE] text-[#1E3A8A] border-[#93C5FD]">
-                                <CalendarIcon className="w-3 h-3 mr-1" />
-                                Scheduled
+                              <Badge className="bg-purple-100 text-purple-700 border-purple-200 animate-pulse">
+                                <Wrench className="w-3 h-3 mr-1" />
+                                In Progress
                               </Badge>
                               {estimate.repairTechName && (
                                 <span className="text-xs text-slate-500">
                                   Tech: {estimate.repairTechName}
                                 </span>
                               )}
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleComplete(estimate);
-                                }}
-                                className="bg-[#60A5FA] hover:bg-[#60A5FA]/90"
-                                data-testid={`button-complete-${estimate.id}`}
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Mark Complete
-                              </Button>
+                              {estimate.scheduledDate && (
+                                <span className="text-xs text-slate-400">
+                                  {format(new Date(estimate.scheduledDate), "MMM d")}
+                                </span>
+                              )}
                             </>
                           )}
                           {estimate.status === "completed" && (

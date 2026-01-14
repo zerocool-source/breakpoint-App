@@ -44,10 +44,30 @@ export function registerServiceRepairRoutes(app: any) {
 
   app.patch("/api/service-repairs/:id", async (req: Request, res: Response) => {
     try {
-      const job = await storage.updateServiceRepairJob(req.params.id, req.body);
+      const { id } = req.params;
+      const previousJob = await storage.getServiceRepairJob(id);
+      
+      const job = await storage.updateServiceRepairJob(id, req.body);
       if (!job) {
         return res.status(404).json({ error: "Service repair job not found" });
       }
+      
+      // Sync with linked estimate if status changed to completed
+      if (job.estimateId && req.body.status === "completed" && previousJob?.status !== "completed") {
+        await storage.updateEstimate(job.estimateId, {
+          status: "ready_to_invoice",
+          completedAt: new Date(),
+        });
+      }
+      
+      // If status changed from completed back to in_progress, update estimate too
+      if (job.estimateId && req.body.status === "in_progress" && previousJob?.status === "completed") {
+        await storage.updateEstimate(job.estimateId, {
+          status: "scheduled",
+          completedAt: null,
+        });
+      }
+      
       res.json(job);
     } catch (error) {
       console.error("Error updating service repair job:", error);

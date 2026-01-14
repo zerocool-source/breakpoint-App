@@ -378,6 +378,13 @@ export function registerEstimateRoutes(app: any) {
       const { id } = req.params;
       const { repairTechId, repairTechName, scheduledDate, scheduledByUserId, scheduledByUserName } = req.body;
       
+      // Get the current estimate first to get property info
+      const currentEstimate = await storage.getEstimate(id);
+      if (!currentEstimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      
+      // Update the estimate status to scheduled
       const estimate = await storage.updateEstimate(id, {
         status: "scheduled",
         repairTechId,
@@ -387,10 +394,31 @@ export function registerEstimateRoutes(app: any) {
         scheduledByUserId,
         scheduledByUserName,
       });
-      if (!estimate) {
-        return res.status(404).json({ error: "Estimate not found" });
-      }
-      res.json({ estimate });
+      
+      // Create a linked service repair job in the Repair Queue
+      const repairJob = await storage.createServiceRepairJob({
+        jobNumber: `EST-${currentEstimate.estimateNumber || id.slice(0, 8)}`,
+        propertyId: currentEstimate.propertyId,
+        propertyName: currentEstimate.propertyName,
+        customerId: null,
+        customerName: currentEstimate.customerName,
+        address: currentEstimate.address,
+        technicianId: repairTechId,
+        technicianName: repairTechName,
+        jobDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+        description: currentEstimate.title,
+        notes: currentEstimate.description,
+        totalAmount: currentEstimate.totalAmount || 0,
+        status: "in_progress",
+        estimateId: id,
+      });
+      
+      // Update estimate with the linked repair job ID
+      await storage.updateEstimate(id, {
+        assignedRepairJobId: repairJob.id,
+      });
+      
+      res.json({ estimate: { ...estimate, assignedRepairJobId: repairJob.id }, repairJob });
     } catch (error: any) {
       console.error("Error scheduling estimate:", error);
       res.status(500).json({ error: "Failed to schedule estimate" });

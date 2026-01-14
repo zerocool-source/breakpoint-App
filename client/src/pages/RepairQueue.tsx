@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
-  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target
+  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText
 } from "lucide-react";
 import type { ServiceRepairJob, Technician } from "@shared/schema";
 
@@ -119,7 +119,7 @@ export default function RepairQueue() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const response = await fetch(`/api/service-repairs/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
@@ -128,6 +128,7 @@ export default function RepairQueue() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service-repairs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       toast({ title: "Status Updated" });
     },
     onError: () => {
@@ -179,6 +180,15 @@ export default function RepairQueue() {
 
         {repair.description && (
           <p className="text-sm text-slate-600 mb-3 line-clamp-2">{repair.description}</p>
+        )}
+
+        {repair.estimateId && (
+          <div className="flex items-center gap-2 mb-3">
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
+              <FileText className="w-3 h-3 mr-1" />
+              From Estimate
+            </Badge>
+          </div>
         )}
 
         <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
