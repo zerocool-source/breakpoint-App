@@ -75,9 +75,47 @@ export const customers = pgTable("customers", {
   poolCount: integer("pool_count").default(0),
   tags: text("tags"),
   notes: text("notes"),
+  // Budget fields (optional)
+  chemicalsBudget: integer("chemicals_budget"), // Amount in cents
+  chemicalsBudgetPeriod: text("chemicals_budget_period").default("monthly"), // "monthly" or "annual"
+  repairsBudget: integer("repairs_budget"), // Amount in cents
+  repairsBudgetPeriod: text("repairs_budget_period").default("monthly"), // "monthly" or "annual"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Customer Tags (structured tags with pre-built and custom options)
+export const customerTags = pgTable("customer_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  color: text("color").default("#6B7280"), // Hex color for badge
+  isPrebuilt: boolean("is_prebuilt").default(false), // Pre-built vs custom
+  isWarningTag: boolean("is_warning_tag").default(false), // Shows as warning in field app
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Junction table for customer-tag relationships
+export const customerTagAssignments = pgTable("customer_tag_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull(),
+  tagId: varchar("tag_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCustomerTagSchema = createInsertSchema(customerTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomerTagAssignmentSchema = createInsertSchema(customerTagAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCustomerTag = z.infer<typeof insertCustomerTagSchema>;
+export type CustomerTag = typeof customerTags.$inferSelect;
+export type InsertCustomerTagAssignment = z.infer<typeof insertCustomerTagAssignmentSchema>;
+export type CustomerTagAssignment = typeof customerTagAssignments.$inferSelect;
 
 // Customer Addresses (multiple addresses per customer)
 export const customerAddresses = pgTable("customer_addresses", {

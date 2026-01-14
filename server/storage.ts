@@ -41,6 +41,8 @@ import {
   type PropertyContact, type InsertPropertyContact,
   type PropertyAccessNote, type InsertPropertyAccessNote,
   type TechOpsEntry, type InsertTechOpsEntry,
+  type CustomerTag, type InsertCustomerTag,
+  type CustomerTagAssignment, type InsertCustomerTagAssignment,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -48,7 +50,8 @@ import {
   estimates, serviceRepairJobs, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
-  properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries
+  properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
+  customerTags, customerTagAssignments
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -373,6 +376,18 @@ export interface IStorage {
   getFieldEntry(id: string): Promise<FieldEntry | undefined>;
   createFieldEntry(entry: InsertFieldEntry): Promise<FieldEntry>;
   updateFieldEntry(id: string, updates: Partial<InsertFieldEntry>): Promise<FieldEntry | undefined>;
+
+  // Customer Tags
+  getCustomerTags(): Promise<CustomerTag[]>;
+  getCustomerTag(id: string): Promise<CustomerTag | undefined>;
+  createCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag>;
+  updateCustomerTag(id: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined>;
+  deleteCustomerTag(id: string): Promise<void>;
+  getCustomerTagAssignments(customerId: string): Promise<CustomerTagAssignment[]>;
+  getCustomerTagsWithAssignments(customerId: string): Promise<CustomerTag[]>;
+  assignTagToCustomer(customerId: string, tagId: string): Promise<CustomerTagAssignment>;
+  removeTagFromCustomer(customerId: string, tagId: string): Promise<void>;
+  seedPrebuiltTags(): Promise<{ tagsCreated: number }>;
 }
 
 export class DbStorage implements IStorage {
@@ -2308,6 +2323,92 @@ export class DbStorage implements IStorage {
     return db.select().from(fieldEntries)
       .where(eq(fieldEntries.technicianId, technicianId))
       .orderBy(desc(fieldEntries.submittedAt));
+  }
+
+  // Customer Tags
+  async getCustomerTags(): Promise<CustomerTag[]> {
+    return db.select().from(customerTags).orderBy(customerTags.name);
+  }
+
+  async getCustomerTag(id: string): Promise<CustomerTag | undefined> {
+    const result = await db.select().from(customerTags).where(eq(customerTags.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createCustomerTag(tag: InsertCustomerTag): Promise<CustomerTag> {
+    const result = await db.insert(customerTags).values(tag as any).returning();
+    return result[0];
+  }
+
+  async updateCustomerTag(id: string, updates: Partial<InsertCustomerTag>): Promise<CustomerTag | undefined> {
+    const result = await db.update(customerTags)
+      .set(updates as any)
+      .where(eq(customerTags.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteCustomerTag(id: string): Promise<void> {
+    await db.delete(customerTagAssignments).where(eq(customerTagAssignments.tagId, id));
+    await db.delete(customerTags).where(eq(customerTags.id, id));
+  }
+
+  async getCustomerTagAssignments(customerId: string): Promise<CustomerTagAssignment[]> {
+    return db.select().from(customerTagAssignments)
+      .where(eq(customerTagAssignments.customerId, customerId));
+  }
+
+  async getCustomerTagsWithAssignments(customerId: string): Promise<CustomerTag[]> {
+    const assignments = await this.getCustomerTagAssignments(customerId);
+    if (assignments.length === 0) return [];
+    const tagIds = assignments.map(a => a.tagId);
+    return db.select().from(customerTags).where(inArray(customerTags.id, tagIds));
+  }
+
+  async assignTagToCustomer(customerId: string, tagId: string): Promise<CustomerTagAssignment> {
+    const existing = await db.select().from(customerTagAssignments)
+      .where(and(
+        eq(customerTagAssignments.customerId, customerId),
+        eq(customerTagAssignments.tagId, tagId)
+      ))
+      .limit(1);
+    if (existing.length > 0) return existing[0];
+    const result = await db.insert(customerTagAssignments)
+      .values({ customerId, tagId } as any)
+      .returning();
+    return result[0];
+  }
+
+  async removeTagFromCustomer(customerId: string, tagId: string): Promise<void> {
+    await db.delete(customerTagAssignments)
+      .where(and(
+        eq(customerTagAssignments.customerId, customerId),
+        eq(customerTagAssignments.tagId, tagId)
+      ));
+  }
+
+  async seedPrebuiltTags(): Promise<{ tagsCreated: number }> {
+    const prebuiltTags = [
+      { name: "Chemicals Only", color: "#10B981", isPrebuilt: true, isWarningTag: false },
+      { name: "Repairs Only", color: "#3B82F6", isPrebuilt: true, isWarningTag: false },
+      { name: "No Repairs Without Approval", color: "#EF4444", isPrebuilt: true, isWarningTag: true },
+      { name: "Free Chemicals", color: "#8B5CF6", isPrebuilt: true, isWarningTag: false },
+    ];
+
+    let created = 0;
+    for (const tag of prebuiltTags) {
+      const existing = await db.select().from(customerTags)
+        .where(and(
+          eq(customerTags.name, tag.name),
+          eq(customerTags.isPrebuilt, true)
+        ))
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(customerTags).values(tag as any);
+        created++;
+      }
+    }
+    return { tagsCreated: created };
   }
 }
 
