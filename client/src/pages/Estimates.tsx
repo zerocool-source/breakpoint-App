@@ -127,6 +127,9 @@ interface Estimate {
   woNumber: string | null;
   // Pool WO requirement (joined from pool data)
   woRequired?: boolean;
+  // Source tracking
+  sourceType: string | null;
+  sourceRepairJobId: string | null;
 }
 
 interface EstimateFormData {
@@ -258,6 +261,10 @@ export default function Estimates() {
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | undefined>(new Date());
   const [autoSelectedByWorkType, setAutoSelectedByWorkType] = useState(false);
+  const [customerFilter, setCustomerFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -441,17 +448,58 @@ export default function Estimates() {
 
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
+  // Get unique customer names for filter dropdown
+  const uniqueCustomers = useMemo(() => {
+    const customerSet = new Set<string>();
+    estimates.forEach((e: Estimate) => {
+      if (e.customerName) customerSet.add(e.customerName);
+    });
+    return Array.from(customerSet).sort();
+  }, [estimates]);
+
   // Filter out archived estimates from "all" tab, show archived only in archived tab
   // Group related statuses together in tabs
-  const filteredEstimates = activeTab === "all" 
-    ? estimates.filter(e => e.status !== "archived")
-    : activeTab === "archived"
-    ? estimates.filter(e => e.status === "archived")
-    : activeTab === "approved"
-    ? estimates.filter(e => e.status === "approved" || e.status === "needs_scheduling")
-    : activeTab === "completed"
-    ? estimates.filter(e => e.status === "completed" || e.status === "ready_to_invoice")
-    : estimates.filter(e => e.status === activeTab);
+  const filteredEstimates = useMemo(() => {
+    let result = activeTab === "all" 
+      ? estimates.filter((e: Estimate) => e.status !== "archived")
+      : activeTab === "archived"
+      ? estimates.filter((e: Estimate) => e.status === "archived")
+      : activeTab === "approved"
+      ? estimates.filter((e: Estimate) => e.status === "approved" || e.status === "needs_scheduling")
+      : activeTab === "completed"
+      ? estimates.filter((e: Estimate) => e.status === "completed" || e.status === "ready_to_invoice")
+      : estimates.filter((e: Estimate) => e.status === activeTab);
+
+    // Apply customer filter
+    if (customerFilter !== "all") {
+      result = result.filter((e: Estimate) => e.customerName === customerFilter);
+    }
+
+    // Apply source filter
+    if (sourceFilter !== "all") {
+      result = result.filter((e: Estimate) => 
+        sourceFilter === "service_repair" ? e.sourceType === "service_repair" : e.sourceType !== "service_repair"
+      );
+    }
+
+    // Apply date range filter
+    if (dateFrom) {
+      result = result.filter((e: Estimate) => {
+        const estimateDate = e.estimateDate ? new Date(e.estimateDate) : e.createdAt ? new Date(e.createdAt) : null;
+        return estimateDate && estimateDate >= dateFrom;
+      });
+    }
+    if (dateTo) {
+      const endDate = new Date(dateTo);
+      endDate.setHours(23, 59, 59, 999);
+      result = result.filter((e: Estimate) => {
+        const estimateDate = e.estimateDate ? new Date(e.estimateDate) : e.createdAt ? new Date(e.createdAt) : null;
+        return estimateDate && estimateDate <= endDate;
+      });
+    }
+
+    return result;
+  }, [estimates, activeTab, customerFilter, sourceFilter, dateFrom, dateTo]);
 
   const statusCounts = {
     all: estimates.filter(e => e.status !== "archived").length,
@@ -1149,7 +1197,87 @@ Breakpoint Pool Service`);
         )}
 
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 space-y-4">
+            {/* Filters Row */}
+            <div className="flex items-center gap-4 flex-wrap" data-testid="estimate-filters">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-slate-600 whitespace-nowrap">Customer:</Label>
+                <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                  <SelectTrigger className="w-[200px]" data-testid="filter-customer">
+                    <SelectValue placeholder="All Customers" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Customers</SelectItem>
+                    {uniqueCustomers.map((customer) => (
+                      <SelectItem key={customer} value={customer}>{customer}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-slate-600 whitespace-nowrap">Source:</Label>
+                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                  <SelectTrigger className="w-[180px]" data-testid="filter-source">
+                    <SelectValue placeholder="All Sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    <SelectItem value="service_repair">From Service Repairs</SelectItem>
+                    <SelectItem value="manual">Manual Entry</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-slate-600 whitespace-nowrap">From:</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal" data-testid="filter-date-from">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "MMM d, yyyy") : "Start Date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-slate-600 whitespace-nowrap">To:</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal" data-testid="filter-date-to">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "MMM d, yyyy") : "End Date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {(customerFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomerFilter("all");
+                    setSourceFilter("all");
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                  }}
+                  className="text-slate-500 hover:text-slate-700"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-[#F1F5F9]">
                 <TabsTrigger value="all" data-testid="tab-all">All ({statusCounts.all})</TabsTrigger>
@@ -1205,6 +1333,12 @@ Breakpoint Pool Service`);
                               <Badge className={`${config.color} border text-xs`}>
                                 {config.label}
                               </Badge>
+                              {estimate.sourceType === "service_repair" && (
+                                <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs">
+                                  <Wrench className="w-3 h-3 mr-1" />
+                                  From Service Repair
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
                               <span className="flex items-center gap-1">

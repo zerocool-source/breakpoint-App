@@ -698,6 +698,8 @@ export const estimates = pgTable("estimates", {
   acceptedDate: timestamp("accepted_date"),
   location: text("location"), // Service location/job site
   tags: text("tags").array(), // Tags for categorization
+  sourceType: text("source_type").default("manual"), // "manual" or "service_repair" - tracks origin
+  sourceRepairJobId: text("source_repair_job_id"), // Link to original service repair job if converted
   
   // Estimate details
   title: text("title").notNull(),

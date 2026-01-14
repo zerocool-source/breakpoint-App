@@ -113,7 +113,9 @@ export function registerServiceRepairRoutes(app: any) {
         totalAmount: totalAmount,
         description: descriptions.join('\n'),
         techNotes: notes || `Batch service repairs: ${ids.length} items`,
-        woRequired: false
+        woRequired: false,
+        sourceType: 'service_repair',
+        sourceRepairJobId: ids.length === 1 ? ids[0] : ids.join(','),
       });
       
       await storage.updateServiceRepairJobsStatus(ids, 'estimated', estimate.id);
