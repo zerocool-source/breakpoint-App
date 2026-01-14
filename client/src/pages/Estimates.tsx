@@ -1954,39 +1954,9 @@ Breakpoint Pool Service`);
                                 </DropdownMenuContent>
                               </DropdownMenu>
                               {estimate.repairTechName && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <button className="text-xs text-slate-500 hover:text-slate-700 hover:underline cursor-pointer flex items-center gap-1">
-                                      Tech: {estimate.repairTechName}
-                                      <ChevronDown className="w-3 h-3" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openSchedulingModal(estimate);
-                                      }}
-                                    >
-                                      <Users className="w-4 h-4 mr-2" />
-                                      Reassign to Another Tech
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        updateStatusMutation.mutate({ 
-                                          id: estimate.id, 
-                                          status: "needs_scheduling",
-                                          extras: { repairTechId: null, repairTechName: null, scheduledDate: null }
-                                        });
-                                      }}
-                                    >
-                                      <CalendarIcon className="w-4 h-4 mr-2" />
-                                      Move to Needs Scheduling
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                <span className="text-xs text-slate-500">
+                                  Tech: {estimate.repairTechName}
+                                </span>
                               )}
                               {estimate.scheduledDate && (
                                 <span className="text-xs text-slate-400">

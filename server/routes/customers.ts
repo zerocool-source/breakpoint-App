@@ -658,4 +658,116 @@ export function registerCustomerRoutes(app: any) {
       res.status(500).json({ error: error.message || "Failed to import customers" });
     }
   });
+
+  // ==================== CUSTOMER TAGS ====================
+
+  // Seed pre-built tags (run once on app startup or manually)
+  app.post("/api/customer-tags/seed", async (req: Request, res: Response) => {
+    try {
+      const result = await storage.seedPrebuiltTags();
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("Error seeding tags:", error);
+      res.status(500).json({ error: "Failed to seed tags" });
+    }
+  });
+
+  // Get all available tags
+  app.get("/api/customer-tags", async (req: Request, res: Response) => {
+    try {
+      const tags = await storage.getCustomerTags();
+      res.json({ tags });
+    } catch (error: any) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ error: "Failed to fetch tags" });
+    }
+  });
+
+  // Create custom tag
+  app.post("/api/customer-tags", async (req: Request, res: Response) => {
+    try {
+      const { name, color, isWarningTag } = req.body;
+      const tag = await storage.createCustomerTag({
+        name,
+        color: color || "#6B7280",
+        isPrebuilt: false,
+        isWarningTag: isWarningTag || false,
+      });
+      res.json({ success: true, tag });
+    } catch (error: any) {
+      console.error("Error creating tag:", error);
+      res.status(500).json({ error: "Failed to create tag" });
+    }
+  });
+
+  // Delete custom tag
+  app.delete("/api/customer-tags/:tagId", async (req: Request, res: Response) => {
+    try {
+      const { tagId } = req.params;
+      await storage.deleteCustomerTag(tagId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting tag:", error);
+      res.status(500).json({ error: "Failed to delete tag" });
+    }
+  });
+
+  // Get tags assigned to a customer
+  app.get("/api/customers/:customerId/tags", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const tags = await storage.getCustomerTagsWithAssignments(customerId);
+      res.json({ tags });
+    } catch (error: any) {
+      console.error("Error fetching customer tags:", error);
+      res.status(500).json({ error: "Failed to fetch customer tags" });
+    }
+  });
+
+  // Assign tag to customer
+  app.post("/api/customers/:customerId/tags/:tagId", async (req: Request, res: Response) => {
+    try {
+      const { customerId, tagId } = req.params;
+      const assignment = await storage.assignTagToCustomer(customerId, tagId);
+      res.json({ success: true, assignment });
+    } catch (error: any) {
+      console.error("Error assigning tag:", error);
+      res.status(500).json({ error: "Failed to assign tag" });
+    }
+  });
+
+  // Remove tag from customer
+  app.delete("/api/customers/:customerId/tags/:tagId", async (req: Request, res: Response) => {
+    try {
+      const { customerId, tagId } = req.params;
+      await storage.removeTagFromCustomer(customerId, tagId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing tag:", error);
+      res.status(500).json({ error: "Failed to remove tag" });
+    }
+  });
+
+  // ==================== CUSTOMER BUDGET ====================
+
+  // Update customer budget
+  app.patch("/api/customers/:customerId/budget", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const { chemicalsBudget, chemicalsBudgetPeriod, repairsBudget, repairsBudgetPeriod } = req.body;
+      const customer = await storage.updateCustomer(customerId, {
+        chemicalsBudget,
+        chemicalsBudgetPeriod,
+        repairsBudget,
+        repairsBudgetPeriod,
+      });
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      res.json({ success: true, customer });
+    } catch (error: any) {
+      console.error("Error updating customer budget:", error);
+      res.status(500).json({ error: "Failed to update budget" });
+    }
+  });
 }
