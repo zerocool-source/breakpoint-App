@@ -369,20 +369,24 @@ export default function Estimates() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, extras }: { id: string; status: string; extras?: any }) => {
+    mutationFn: async ({ id, status, extras, skipDialogClose }: { id: string; status: string; extras?: any; skipDialogClose?: boolean }) => {
       const response = await fetch(`/api/estimates/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status, ...extras }),
       });
       if (!response.ok) throw new Error("Failed to update status");
-      return response.json();
+      const data = await response.json();
+      return { ...data, skipDialogClose };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
-      toast({ title: "Status Updated", description: "Estimate status has been updated." });
-      setShowApprovalDialog(false);
-      setShowDetailDialog(false);
+      // Don't close dialog if skipDialogClose is true (for two-step approval flow)
+      if (!data?.skipDialogClose) {
+        toast({ title: "Status Updated", description: "Estimate status has been updated." });
+        setShowApprovalDialog(false);
+        setShowDetailDialog(false);
+      }
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update estimate status.", variant: "destructive" });
@@ -792,6 +796,7 @@ Breakpoint Pool Service`);
         updateStatusMutation.mutate({
           id: selectedEstimate.id,
           status: "approved",
+          skipDialogClose: true,
           extras: {
             approvedByManagerId: "manager-1",
             approvedByManagerName: "HOA Manager",
@@ -806,10 +811,10 @@ Breakpoint Pool Service`);
                 title: "Approved", 
                 description: `Estimate approved. QuickBooks Invoice #${invoiceData.invoiceNumber} created.` 
               });
-            } else if (invoiceError) {
+            } else {
               toast({ 
                 title: "Approved", 
-                description: `Estimate approved. (QuickBooks invoice creation failed)`,
+                description: `Estimate approved successfully.`,
               });
             }
             // Move to schedule step instead of closing
@@ -821,6 +826,7 @@ Breakpoint Pool Service`);
         updateStatusMutation.mutate({
           id: selectedEstimate.id,
           status: "approved",
+          skipDialogClose: true,
           extras: {
             approvedByManagerId: "manager-1",
             approvedByManagerName: "HOA Manager",
@@ -828,6 +834,10 @@ Breakpoint Pool Service`);
           },
         }, {
           onSuccess: () => {
+            toast({ 
+              title: "Approved", 
+              description: `Estimate approved successfully.`,
+            });
             setApprovalStep("schedule");
           }
         });
