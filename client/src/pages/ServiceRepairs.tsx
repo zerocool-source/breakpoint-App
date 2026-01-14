@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,28 +11,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { format } from "date-fns";
-import { 
-  FileText, Loader2, Wrench, Building2, User, Calendar as CalendarIcon, DollarSign,
-  Plus, Trash2
-} from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { 
+  FileText, Loader2, Wrench, Building2, User, Calendar as CalendarIcon, 
+  Plus, Trash2, Search, SortAsc, SortDesc, MapPin, Clock, Image, X,
+  ChevronLeft, ChevronRight
+} from "lucide-react";
 
 interface ServiceRepairJob {
   id: string;
   jobNumber: string;
   propertyId: string;
   propertyName: string;
+  address: string | null;
   technicianId: string | null;
   technicianName: string | null;
   description: string;
+  notes: string | null;
+  photos: string[] | null;
   laborAmount: number;
   partsAmount: number;
   totalAmount: number;
@@ -40,7 +43,6 @@ interface ServiceRepairJob {
   jobDate: string;
   estimateId: string | null;
   invoiceId: string | null;
-  notes: string | null;
   createdAt: string;
   batchedAt: string | null;
 }
@@ -69,6 +71,15 @@ function formatDate(dateStr: string | null | undefined): string {
   }
 }
 
+function formatDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  try {
+    return format(new Date(dateStr), "MMM d, yyyy 'at' h:mm a");
+  } catch {
+    return "—";
+  }
+}
+
 function generateJobNumber(): string {
   const year = new Date().getFullYear();
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
@@ -84,13 +95,28 @@ const emptyJobForm = {
   notes: "",
 };
 
+type SortOption = "newest" | "oldest" | "sr_asc" | "sr_desc";
+type DateRangeOption = "all" | "today" | "week" | "month" | "custom";
+
 export default function ServiceRepairs() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedRepairs, setSelectedRepairs] = useState<Set<string>>(new Set());
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [jobForm, setJobForm] = useState(emptyJobForm);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [technicianFilter, setTechnicianFilter] = useState<string>("all");
+  const [propertyFilter, setPropertyFilter] = useState<string>("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeOption>("all");
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
+  
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   
   const { data: serviceRepairsData, isLoading } = useQuery({
     queryKey: ["service-repairs"],
@@ -103,13 +129,102 @@ export default function ServiceRepairs() {
   });
 
   const serviceRepairs: ServiceRepairJob[] = serviceRepairsData || [];
-  const filteredRepairs = statusFilter === "all" 
-    ? serviceRepairs 
-    : serviceRepairs.filter(r => r.status === statusFilter);
+  
+  // Extract unique technicians and properties for filters
+  const uniqueTechnicians = useMemo(() => {
+    const techs = new Set<string>();
+    serviceRepairs.forEach(r => {
+      if (r.technicianName) techs.add(r.technicianName);
+    });
+    return Array.from(techs).sort();
+  }, [serviceRepairs]);
+  
+  const uniqueProperties = useMemo(() => {
+    const props = new Map<string, string>();
+    serviceRepairs.forEach(r => {
+      if (r.propertyId && r.propertyName) {
+        props.set(r.propertyId, r.propertyName);
+      }
+    });
+    return Array.from(props.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [serviceRepairs]);
+  
+  // Filter and sort logic
+  const filteredAndSortedRepairs = useMemo(() => {
+    let filtered = [...serviceRepairs];
+    
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(r => r.status === statusFilter);
+    }
+    
+    // Search filter (SR# or property name)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(r => 
+        r.jobNumber.toLowerCase().includes(query) ||
+        r.propertyName.toLowerCase().includes(query)
+      );
+    }
+    
+    // Technician filter
+    if (technicianFilter !== "all") {
+      filtered = filtered.filter(r => r.technicianName === technicianFilter);
+    }
+    
+    // Property filter
+    if (propertyFilter !== "all") {
+      filtered = filtered.filter(r => r.propertyId === propertyFilter);
+    }
+    
+    // Date range filter
+    if (dateRangeFilter !== "all") {
+      const now = new Date();
+      let startDate: Date | null = null;
+      
+      switch (dateRangeFilter) {
+        case "today":
+          startDate = startOfDay(now);
+          break;
+        case "week":
+          startDate = subDays(now, 7);
+          break;
+        case "month":
+          startDate = subDays(now, 30);
+          break;
+      }
+      
+      if (startDate) {
+        filtered = filtered.filter(r => {
+          const jobDate = new Date(r.jobDate || r.createdAt);
+          return isAfter(jobDate, startDate!);
+        });
+      }
+    }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortOption) {
+        case "newest":
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "sr_asc":
+          return a.jobNumber.localeCompare(b.jobNumber);
+        case "sr_desc":
+          return b.jobNumber.localeCompare(a.jobNumber);
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [serviceRepairs, statusFilter, searchQuery, technicianFilter, propertyFilter, dateRangeFilter, sortOption]);
   
   const statusCounts = {
     all: serviceRepairs.length,
     pending: serviceRepairs.filter(r => r.status === 'pending').length,
+    selected: serviceRepairs.filter(r => r.status === 'selected').length,
     estimated: serviceRepairs.filter(r => r.status === 'estimated').length,
     invoiced: serviceRepairs.filter(r => r.status === 'invoiced').length,
   };
@@ -127,12 +242,24 @@ export default function ServiceRepairs() {
   };
   
   const selectAllRepairs = () => {
-    const pendingIds = filteredRepairs.filter(r => r.status === 'pending').map(r => r.id);
+    const pendingIds = filteredAndSortedRepairs.filter(r => r.status === 'pending').map(r => r.id);
     setSelectedRepairs(new Set(pendingIds));
   };
   
   const clearRepairSelection = () => {
     setSelectedRepairs(new Set());
+  };
+  
+  const openLightbox = (photos: string[], index: number) => {
+    setLightboxImages(photos);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+  
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setLightboxImages([]);
+    setLightboxIndex(0);
   };
 
   const batchToEstimateMutation = useMutation({
@@ -243,13 +370,29 @@ export default function ServiceRepairs() {
     return repair?.status === 'pending';
   });
 
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setTechnicianFilter("all");
+    setPropertyFilter("all");
+    setDateRangeFilter("all");
+    setStatusFilter("all");
+  };
+
+  const hasActiveFilters = searchQuery || technicianFilter !== "all" || propertyFilter !== "all" || dateRangeFilter !== "all" || statusFilter !== "all";
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#1E293B]">Service Repairs</h1>
-            <p className="text-[#64748B]">Manage sub-$500 service tech jobs and batch into estimates</p>
+            <p className="text-[#64748B]">
+              Manage Code Canvas service repair submissions
+              <span className="ml-2 font-medium text-[#1E3A8A]">
+                ({filteredAndSortedRepairs.length} of {serviceRepairs.length} repairs)
+              </span>
+            </p>
           </div>
           <Button 
             className="bg-[#F97316] hover:bg-[#EA580C]"
@@ -261,187 +404,372 @@ export default function ServiceRepairs() {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4">
+        {/* Search and Filters Bar */}
+        <Card className="border-slate-200">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex flex-wrap gap-4 items-end">
+              {/* Search Input */}
+              <div className="flex-1 min-w-[250px]">
+                <Label className="text-xs text-slate-500 mb-1 block">Search by SR# or Property</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Search SR-2025-0001 or property name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search"
+                  />
+                </div>
+              </div>
+              
+              {/* Date Range Filter */}
+              <div className="w-[150px]">
+                <Label className="text-xs text-slate-500 mb-1 block">Date Range</Label>
+                <Select value={dateRangeFilter} onValueChange={(v) => setDateRangeFilter(v as DateRangeOption)}>
+                  <SelectTrigger data-testid="select-date-range">
+                    <SelectValue placeholder="All dates" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">Last 7 Days</SelectItem>
+                    <SelectItem value="month">Last 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Technician Filter */}
+              <div className="w-[180px]">
+                <Label className="text-xs text-slate-500 mb-1 block">Technician</Label>
+                <Select value={technicianFilter} onValueChange={setTechnicianFilter}>
+                  <SelectTrigger data-testid="select-technician">
+                    <SelectValue placeholder="All technicians" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Technicians</SelectItem>
+                    {uniqueTechnicians.map(tech => (
+                      <SelectItem key={tech} value={tech}>{tech}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Property Filter */}
+              <div className="w-[200px]">
+                <Label className="text-xs text-slate-500 mb-1 block">Property</Label>
+                <Select value={propertyFilter} onValueChange={setPropertyFilter}>
+                  <SelectTrigger data-testid="select-property">
+                    <SelectValue placeholder="All properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Properties</SelectItem>
+                    {uniqueProperties.map(prop => (
+                      <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Sort */}
+              <div className="w-[160px]">
+                <Label className="text-xs text-slate-500 mb-1 block">Sort By</Label>
+                <Select value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
+                  <SelectTrigger data-testid="select-sort">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="sr_asc">SR# (A-Z)</SelectItem>
+                    <SelectItem value="sr_desc">SR# (Z-A)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-slate-500">
+                  <X className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Status Tabs */}
+        <div className="flex gap-2 border-b pb-2">
           {Object.entries(statusCounts).map(([key, count]) => (
-            <Card 
-              key={key} 
-              className={`cursor-pointer transition-all ${statusFilter === key ? 'ring-2 ring-[#F97316]' : 'hover:shadow-md'}`}
+            <Button
+              key={key}
+              variant={statusFilter === key ? "default" : "ghost"}
+              size="sm"
+              className={statusFilter === key ? "bg-[#1E3A8A]" : ""}
               onClick={() => setStatusFilter(key)}
+              data-testid={`tab-${key}`}
             >
-              <CardContent className="pt-4 text-center">
-                <Wrench className="w-6 h-6 mx-auto mb-2 text-[#F97316]" />
-                <p className="text-2xl font-bold text-[#1E293B]">{count}</p>
-                <p className="text-xs text-[#64748B] capitalize">{key === 'all' ? 'All Jobs' : key}</p>
-              </CardContent>
-            </Card>
+              {key === 'all' ? 'All' : key.charAt(0).toUpperCase() + key.slice(1)}
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {count}
+              </Badge>
+            </Button>
           ))}
         </div>
 
-        {/* Main Content Card */}
-        <Card>
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-[#F97316]" />
-              Service Repair Jobs
-              <Badge className="bg-[#F97316]/10 text-[#F97316] border-[#F97316]/30">
-                Under $500
-              </Badge>
-            </CardTitle>
-            
-            {selectedRepairs.size > 0 && pendingInSelection.length > 0 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-slate-600">
-                  {selectedRepairs.size} selected
-                </span>
-                <span className="text-sm font-semibold text-[#1E293B]">
-                  Total: {formatCurrency(selectedTotal)}
-                </span>
-                <Button 
-                  size="sm" 
-                  className="bg-[#1E3A8A] hover:bg-[#1E40AF]"
-                  onClick={() => batchToEstimateMutation.mutate(pendingInSelection)}
-                  disabled={batchToEstimateMutation.isPending}
-                  data-testid="button-batch-to-estimate"
-                >
-                  {batchToEstimateMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                  ) : (
-                    <FileText className="w-4 h-4 mr-1" />
-                  )}
-                  Create Estimate ({pendingInSelection.length})
-                </Button>
-              </div>
-            )}
-          </CardHeader>
-          
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#F97316]" />
-              </div>
-            ) : filteredRepairs.length === 0 ? (
-              <div className="text-center py-12 text-[#64748B]">
-                <Wrench className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No {statusFilter === 'all' ? '' : statusFilter} service repairs found</p>
-                <p className="text-sm mt-2">Service repairs will appear here when service techs log small jobs</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Selection Controls */}
-                {statusFilter === 'pending' && filteredRepairs.length > 0 && (
-                  <div className="flex items-center gap-3 border-b pb-3">
-                    <Checkbox
-                      checked={selectedRepairs.size === filteredRepairs.length && filteredRepairs.length > 0}
-                      onCheckedChange={(checked) => checked ? selectAllRepairs() : clearRepairSelection()}
-                      data-testid="checkbox-select-all-repairs"
-                    />
-                    <span className="text-sm text-slate-600">
-                      {selectedRepairs.size > 0 ? `${selectedRepairs.size} selected` : "Select all pending"}
-                    </span>
-                    {selectedRepairs.size > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearRepairSelection}>
-                        Clear selection
-                      </Button>
-                    )}
-                  </div>
-                )}
+        {/* Batch Actions Bar */}
+        {selectedRepairs.size > 0 && pendingInSelection.length > 0 && (
+          <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <Checkbox
+              checked={selectedRepairs.size === filteredAndSortedRepairs.filter(r => r.status === 'pending').length}
+              onCheckedChange={(checked) => checked ? selectAllRepairs() : clearRepairSelection()}
+              data-testid="checkbox-select-all-repairs"
+            />
+            <span className="text-sm text-slate-600">
+              {selectedRepairs.size} selected
+            </span>
+            <span className="text-sm font-semibold text-[#1E293B]">
+              Total: {formatCurrency(selectedTotal)}
+            </span>
+            <Button 
+              size="sm" 
+              className="bg-[#1E3A8A] hover:bg-[#1E40AF] ml-auto"
+              onClick={() => batchToEstimateMutation.mutate(pendingInSelection)}
+              disabled={batchToEstimateMutation.isPending}
+              data-testid="button-batch-to-estimate"
+            >
+              {batchToEstimateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4 mr-1" />
+              )}
+              Create Estimate ({pendingInSelection.length})
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearRepairSelection}>
+              Clear
+            </Button>
+          </div>
+        )}
+
+        {/* Service Repair Cards */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-[#F97316]" />
+          </div>
+        ) : filteredAndSortedRepairs.length === 0 ? (
+          <div className="text-center py-12 text-[#64748B]">
+            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>No service repairs found</p>
+            <p className="text-sm mt-2">
+              {hasActiveFilters 
+                ? "Try adjusting your filters or search query" 
+                : "Service repairs will appear here when submitted from Code Canvas"}
+            </p>
+          </div>
+        ) : (
+          <ScrollArea className="h-[calc(100vh-400px)]">
+            <div className="grid gap-4">
+              {filteredAndSortedRepairs.map((repair) => {
+                const config = statusConfig[repair.status] || statusConfig.pending;
+                const photos = repair.photos || [];
                 
-                {/* Service Repairs Table */}
-                <ScrollArea className="h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {statusFilter === 'pending' && <TableHead className="w-10"></TableHead>}
-                        <TableHead>Job #</TableHead>
-                        <TableHead>Property</TableHead>
-                        <TableHead>Technician</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Labor</TableHead>
-                        <TableHead className="text-right">Parts</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredRepairs.map((repair) => {
-                        const config = statusConfig[repair.status] || statusConfig.pending;
-                        return (
-                          <TableRow 
-                            key={repair.id} 
-                            className={selectedRepairs.has(repair.id) ? "bg-blue-50" : ""}
-                            data-testid={`repair-row-${repair.id}`}
-                          >
-                            {statusFilter === 'pending' && (
-                              <TableCell>
-                                <Checkbox
-                                  checked={selectedRepairs.has(repair.id)}
-                                  onCheckedChange={() => toggleRepairSelection(repair.id)}
-                                  data-testid={`checkbox-repair-${repair.id}`}
-                                />
-                              </TableCell>
-                            )}
-                            <TableCell>
-                              <Badge variant="outline" className="font-mono text-xs bg-slate-50">
+                return (
+                  <Card 
+                    key={repair.id} 
+                    className={`border-l-4 transition-all ${
+                      selectedRepairs.has(repair.id) 
+                        ? "border-l-[#1E3A8A] bg-blue-50/50" 
+                        : "border-l-[#F97316] hover:shadow-md"
+                    }`}
+                    data-testid={`card-repair-${repair.id}`}
+                  >
+                    <CardContent className="pt-4 pb-4">
+                      <div className="flex gap-4">
+                        {/* Checkbox for pending items */}
+                        {repair.status === 'pending' && (
+                          <div className="pt-1">
+                            <Checkbox
+                              checked={selectedRepairs.has(repair.id)}
+                              onCheckedChange={() => toggleRepairSelection(repair.id)}
+                              data-testid={`checkbox-repair-${repair.id}`}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Main Content */}
+                        <div className="flex-1 space-y-3">
+                          {/* Header Row: SR# prominent */}
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <Badge 
+                                className="text-lg font-bold px-3 py-1 bg-[#1E3A8A] text-white"
+                                data-testid={`badge-sr-${repair.jobNumber}`}
+                              >
                                 {repair.jobNumber}
                               </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-slate-400" />
-                                <span className="font-medium">{repair.propertyName}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-slate-400" />
-                                {repair.technicianName || "—"}
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-[250px]">
-                              <p className="truncate" title={repair.description}>{repair.description}</p>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <CalendarIcon className="w-4 h-4 text-slate-400" />
-                                {formatDate(repair.jobDate)}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">{formatCurrency(repair.laborAmount)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(repair.partsAmount)}</TableCell>
-                            <TableCell className="text-right font-semibold text-[#1E3A8A]">
-                              {formatCurrency(repair.totalAmount)}
-                            </TableCell>
-                            <TableCell>
                               <Badge className={`${config.color} border`}>
                                 {config.label}
                               </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => deleteJobMutation.mutate(repair.id)}
-                                disabled={deleteJobMutation.isPending}
-                                data-testid={`button-delete-${repair.id}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => deleteJobMutation.mutate(repair.id)}
+                              disabled={deleteJobMutation.isPending}
+                              data-testid={`button-delete-${repair.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          
+                          {/* Property & Address */}
+                          <div className="bg-slate-50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 text-[#1E293B] font-medium">
+                              <Building2 className="w-4 h-4 text-[#F97316]" />
+                              {repair.propertyName}
+                            </div>
+                            {repair.address && (
+                              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1 ml-6">
+                                <MapPin className="w-3 h-3" />
+                                {repair.address}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Technician & Timestamp */}
+                          <div className="flex items-center gap-6 text-sm text-slate-600">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-slate-400" />
+                              <span>{repair.technicianName || "Unassigned"}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-slate-400" />
+                              <span>{formatDateTime(repair.jobDate || repair.createdAt)}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Description */}
+                          {repair.description && (
+                            <div className="text-slate-700">
+                              <p className="font-medium text-sm text-slate-500 mb-1">Description</p>
+                              <p>{repair.description}</p>
+                            </div>
+                          )}
+                          
+                          {/* Notes */}
+                          {repair.notes && (
+                            <div className="text-slate-600 text-sm bg-amber-50 p-2 rounded border border-amber-100">
+                              <p className="font-medium text-amber-700 mb-1">Notes</p>
+                              <p>{repair.notes}</p>
+                            </div>
+                          )}
+                          
+                          {/* Photos Gallery */}
+                          {photos.length > 0 && (
+                            <div>
+                              <p className="font-medium text-sm text-slate-500 mb-2 flex items-center gap-1">
+                                <Image className="w-4 h-4" />
+                                Attached Photos ({photos.length})
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
+                                {photos.map((photo, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#F97316] transition-all"
+                                    onClick={() => openLightbox(photos, idx)}
+                                    data-testid={`photo-${repair.id}-${idx}`}
+                                  >
+                                    <img
+                                      src={photo}
+                                      alt={`Repair photo ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Amounts */}
+                          <div className="flex items-center gap-4 pt-2 border-t">
+                            <div className="text-sm">
+                              <span className="text-slate-500">Labor:</span>
+                              <span className="ml-1 font-medium">{formatCurrency(repair.laborAmount)}</span>
+                            </div>
+                            <div className="text-sm">
+                              <span className="text-slate-500">Parts:</span>
+                              <span className="ml-1 font-medium">{formatCurrency(repair.partsAmount)}</span>
+                            </div>
+                            <div className="text-sm font-bold text-[#1E3A8A] ml-auto">
+                              Total: {formatCurrency(repair.totalAmount)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        )}
       </div>
+
+      {/* Lightbox */}
+      {lightboxOpen && lightboxImages.length > 0 && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
+          onClick={closeLightbox}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={closeLightbox}
+          >
+            <X className="w-6 h-6" />
+          </Button>
+          
+          {lightboxImages.length > 1 && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 text-white hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) => (prev > 0 ? prev - 1 : lightboxImages.length - 1));
+                }}
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 text-white hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) => (prev < lightboxImages.length - 1 ? prev + 1 : 0));
+                }}
+              >
+                <ChevronRight className="w-8 h-8" />
+              </Button>
+            </>
+          )}
+          
+          <img
+            src={lightboxImages[lightboxIndex]}
+            alt={`Photo ${lightboxIndex + 1} of ${lightboxImages.length}`}
+            className="max-w-[90vw] max-h-[90vh] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          <div className="absolute bottom-4 text-white text-sm">
+            {lightboxIndex + 1} / {lightboxImages.length}
+          </div>
+        </div>
+      )}
 
       {/* Add Job Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
