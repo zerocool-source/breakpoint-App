@@ -448,14 +448,19 @@ export default function Estimates() {
 
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
-  // Get unique customer names for filter dropdown
+  // Get unique customer names for filter dropdown - combine customers from API and estimates
   const uniqueCustomers = useMemo(() => {
     const customerSet = new Set<string>();
+    // Add customers from the customers API
+    customers.forEach((c: any) => {
+      if (c.name) customerSet.add(c.name);
+    });
+    // Also add any customer names from estimates that might not be in the customers list
     estimates.forEach((e: Estimate) => {
       if (e.customerName) customerSet.add(e.customerName);
     });
     return Array.from(customerSet).sort();
-  }, [estimates]);
+  }, [estimates, customers]);
 
   // Filter out archived estimates from "all" tab, show archived only in archived tab
   // Group related statuses together in tabs
