@@ -1,0 +1,76 @@
+Update the Estimates page UI to match QuickBooks dashboard styling while keeping ALL existing actions, buttons, and functionality exactly the same. Do not remove or modify any existing click handlers, API calls, or button actions.
+UI Changes Needed:
+
+Header Section: Add a clean white card header with the page title "Estimates" on the left and the "+ New Estimate" button on the right, similar to QuickBooks invoice pages
+Status Cards Row: Restyle the status summary cards (Draft, Pending Approval, Approved, Rejected, Scheduled, Completed, Invoiced, Archived) to use QuickBooks-style minimal cards with:
+
+Light gray background (#f9fafb)
+Subtle bottom border accent color matching status
+Larger, bolder numbers
+Smaller, muted label text below
+Cards should be in a single horizontal scrollable row on mobile
+
+
+Workflow Metrics Section: Convert to QuickBooks-style with:
+
+White background card
+Metrics displayed in a clean grid
+Green for positive values, red for concerning values
+"Last 30 days" pill badge in top right
+
+
+Filter Bar: Style like QuickBooks with:
+
+Clean inline filters with subtle borders
+Dropdown selects with consistent styling
+Date pickers matching QuickBooks aesthetic
+
+
+NEW: Add Estimate Value Filter Tabs - Add two new filter tabs alongside existing tabs:
+
+"Under $500" - filters to show only estimates with value less than $500
+"$500 & Above" - filters to show only estimates with value $500 or greater
+These should work alongside existing status tabs (All, Drafts, Pending, etc.)
+Clicking a value filter should combine with the current status filter
+
+
+Estimate List Items: Restyle each row to QuickBooks format:
+
+White card with subtle shadow on hover
+Left side: Icon, Title (bold), estimate number (muted), property name with location icon, date with calendar icon
+Right side: Amount in large bold text, action buttons (Edit, status-specific actions)
+Status badge with pill styling matching QuickBooks colors
+Three-dot menu for additional options
+Subtle divider between rows
+
+
+Color Scheme: Match QuickBooks:
+
+Primary green: #2CA01C for positive actions
+Blue: #0077C5 for primary buttons
+Orange: #FF6A00 for warnings/pending
+Gray text: #6B7280 for secondary text
+Background: #F3F4F6
+
+
+Typography:
+
+Use Inter or system font stack
+Estimate titles: 16px semibold
+Amounts: 18px bold
+Secondary text: 14px regular, gray
+
+
+
+Important: Keep all existing:
+
+Edit button functionality
+Send for Approval button and action
+Ready to Invoice button and action
+Invoice button and action
+In Progress dropdown and technician assignment
+Three-dot menu options
+Status change workflows
+All API integrations and data fetching
+
+Only change visual styling, not behavior.
