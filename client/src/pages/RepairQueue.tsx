@@ -545,17 +545,33 @@ export default function RepairQueue() {
                   </div>
                 </div>
                 <div className="lg:col-span-2">
-                  <h3 className="font-semibold text-[#1E293B] mb-3">
-                    {selectedTech ? `${selectedTech}'s Jobs` : "All Active Jobs"}
-                  </h3>
-                  <ScrollArea className="h-[600px]">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-4">
-                      {(selectedTech 
-                        ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
-                        : [...pendingRepairs, ...inProgressRepairs]
-                      ).map(renderRepairCard)}
-                    </div>
-                  </ScrollArea>
+                  <Card className="bg-white border border-slate-200 shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg font-semibold text-[#1E293B]">
+                        {selectedTech ? `${selectedTech}'s Jobs` : "All Active Jobs"}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[550px]">
+                        {(selectedTech 
+                          ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
+                          : [...pendingRepairs, ...inProgressRepairs]
+                        ).length === 0 ? (
+                          <div className="py-12 text-center text-slate-500">
+                            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                            <p>No active jobs</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-4">
+                            {(selectedTech 
+                              ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
+                              : [...pendingRepairs, ...inProgressRepairs]
+                            ).map(renderRepairCard)}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             )}
