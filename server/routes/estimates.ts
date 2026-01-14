@@ -158,6 +158,8 @@ export function registerEstimateRoutes(app: any) {
         approvedValue: 0,
         scheduledValue: 0,
         completedValue: 0,
+        readyToInvoiceValue: 0,
+        readyToInvoiceCount: 0,
         invoicedValue: 0,
         conversionRate: 0,
         avgApprovalTime: 0,
@@ -183,6 +185,10 @@ export function registerEstimateRoutes(app: any) {
         }
         if (["completed", "ready_to_invoice", "invoiced"].includes(status)) {
           metrics.completedValue += amount;
+        }
+        if (status === "ready_to_invoice") {
+          metrics.readyToInvoiceValue += amount;
+          metrics.readyToInvoiceCount += 1;
         }
         if (status === "invoiced") {
           metrics.invoicedValue += amount;

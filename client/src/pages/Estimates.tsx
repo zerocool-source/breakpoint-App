@@ -1270,7 +1270,7 @@ Breakpoint Pool Service`);
                 <h3 className="text-sm font-semibold text-[#1E3A8A]">Workflow Metrics</h3>
                 <Badge variant="outline" className="text-xs">Last 30 days</Badge>
               </div>
-              <div className="grid grid-cols-6 gap-4">
+              <div className="grid grid-cols-7 gap-4">
                 <div className="text-center">
                   <p className="text-xl font-bold text-[#1E3A8A]">{metrics.conversionRate}%</p>
                   <p className="text-xs text-[#64748B]">Approval Rate</p>
@@ -1282,6 +1282,10 @@ Breakpoint Pool Service`);
                 <div className="text-center">
                   <p className="text-xl font-bold text-[#1E3A8A]">${(metrics.scheduledValue || 0).toLocaleString()}</p>
                   <p className="text-xs text-[#64748B]">Scheduled Value</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xl font-bold text-[#F97316]">${(metrics.readyToInvoiceValue || 0).toLocaleString()}</p>
+                  <p className="text-xs text-[#64748B]">Ready to Invoice</p>
                 </div>
                 <div className="text-center">
                   <p className="text-xl font-bold text-purple-600">${(metrics.invoicedValue || 0).toLocaleString()}</p>
