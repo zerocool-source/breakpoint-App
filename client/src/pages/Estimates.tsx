@@ -20,7 +20,7 @@ import { format } from "date-fns";
 import { 
   FileText, Plus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
-  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight,
+  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
   Users, ClipboardList, MoreVertical, Archive
 } from "lucide-react";
@@ -1610,10 +1610,39 @@ Breakpoint Pool Service`);
                           )}
                           {estimate.status === "scheduled" && (
                             <>
-                              <Badge className="bg-purple-100 text-purple-700 border-purple-200 animate-pulse">
-                                <Wrench className="w-3 h-3 mr-1" />
-                                In Progress
-                              </Badge>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button variant="outline" size="sm" className="bg-purple-100 text-purple-700 border-purple-200 hover:bg-purple-200">
+                                    <Wrench className="w-3 h-3 mr-1" />
+                                    In Progress
+                                    <ChevronDown className="w-3 h-3 ml-1" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openSchedulingModal(estimate);
+                                    }}
+                                  >
+                                    <Users className="w-4 h-4 mr-2" />
+                                    Reassign to Another Tech
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateStatusMutation.mutate({ 
+                                        id: estimate.id, 
+                                        status: "needs_scheduling",
+                                        extras: { repairTechId: null, repairTechName: null, scheduledDate: null }
+                                      });
+                                    }}
+                                  >
+                                    <CalendarIcon className="w-4 h-4 mr-2" />
+                                    Move to Needs Scheduling
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                               {estimate.repairTechName && (
                                 <span className="text-xs text-slate-500">
                                   Tech: {estimate.repairTechName}
