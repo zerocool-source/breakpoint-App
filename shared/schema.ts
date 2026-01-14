@@ -820,6 +820,14 @@ export const estimates = pgTable("estimates", {
   customerNote: text("customer_note"), // Note to customer (visible on estimate)
   memoOnStatement: text("memo_on_statement"), // Internal memo (not visible to customer)
   
+  // Customer Approval Tracking (QuickBooks-style)
+  approvalToken: text("approval_token"), // Unique token for secure approval link (no login required)
+  approvalTokenExpiresAt: timestamp("approval_token_expires_at"),
+  approvalSentTo: text("approval_sent_to"), // Email address approval was sent to
+  approvalSentAt: timestamp("approval_sent_at"),
+  customerApproverName: text("customer_approver_name"), // Name of customer who approved/rejected
+  customerApproverTitle: text("customer_approver_title"), // Title/role of customer who approved/rejected
+  
   // Link to job once scheduled
   jobId: text("job_id"),
   invoiceId: text("invoice_id"),

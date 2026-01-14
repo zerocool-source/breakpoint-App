@@ -121,6 +121,13 @@ interface Estimate {
   memoOnStatement: string | null;
   jobId: string | null;
   invoiceId: string | null;
+  // Customer approval tracking
+  approvalToken: string | null;
+  approvalTokenExpiresAt: string | null;
+  approvalSentTo: string | null;
+  approvalSentAt: string | null;
+  customerApproverName: string | null;
+  customerApproverTitle: string | null;
   // WO tracking fields
   workType: string | null;
   woReceived: boolean | null;
@@ -797,12 +804,27 @@ export default function Estimates() {
     }
   };
 
-  const handleSendApprovalEmail = () => {
-    if (!selectedEstimate) return;
+  const handleSendApprovalEmail = async () => {
+    if (!selectedEstimate || !selectedApprovalEmail) return;
     
-    // Generate email content
-    const subject = encodeURIComponent(`Estimate Approval Request: ${selectedEstimate.title} - ${selectedEstimate.propertyName}`);
-    const body = encodeURIComponent(`Dear Property Manager,
+    try {
+      // Call the API to generate approval token and update status
+      const response = await fetch(`/api/estimates/${selectedEstimate.id}/send-for-approval`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: selectedApprovalEmail }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to send for approval");
+      }
+      
+      const { approvalUrl } = await response.json();
+      
+      // Generate email content with approval link
+      const subject = encodeURIComponent(`Estimate Approval Request: ${selectedEstimate.title} - ${selectedEstimate.propertyName}`);
+      const body = encodeURIComponent(`Dear Property Manager,
 
 We are requesting approval for the following repair estimate:
 
@@ -813,23 +835,34 @@ ${selectedEstimate.description ? `Description: ${selectedEstimate.description}` 
 
 Total Amount: $${((selectedEstimate.totalAmount || 0) / 100).toFixed(2)}
 
-Please review and respond with your approval or any questions.
+Please click the link below to review the full estimate and approve or decline:
+
+${approvalUrl}
+
+This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.
 
 Thank you,
 Breakpoint Pool Service`);
-    
-    // Open Outlook compose URL
-    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
-    window.open(outlookUrl, '_blank');
-    
-    // Update status to pending approval
-    updateStatusMutation.mutate({
-      id: selectedEstimate.id,
-      status: "pending_approval",
-    });
-    
-    setShowSendApprovalDialog(false);
-    toast({ title: "Approval Request Sent", description: `Email opened for ${selectedApprovalEmail}` });
+      
+      // Open Outlook compose URL
+      const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
+      window.open(outlookUrl, '_blank');
+      
+      // Refresh estimates list
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      
+      setShowSendApprovalDialog(false);
+      toast({ 
+        title: "Approval Request Sent", 
+        description: `Estimate sent to ${selectedApprovalEmail}. Status updated to Pending Approval.` 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to send for approval", 
+        variant: "destructive" 
+      });
+    }
   };
 
   const handleSendForApproval = (estimate: Estimate) => {
@@ -1852,6 +1885,25 @@ Breakpoint Pool Service`);
                           )}
                           {estimate.status === "pending_approval" && (
                             <>
+                              {estimate.approvalSentTo && (
+                                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                                  <Mail className="w-3 h-3" />
+                                  <span>Sent to {estimate.approvalSentTo}</span>
+                                </div>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendForApproval(estimate);
+                                }}
+                                className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                                data-testid={`button-resend-approval-${estimate.id}`}
+                              >
+                                <Send className="w-3 h-3 mr-1" />
+                                Resend
+                              </Button>
                               <Button
                                 size="sm"
                                 onClick={(e) => {

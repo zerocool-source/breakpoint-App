@@ -220,6 +220,7 @@ export interface IStorage {
   // Estimates
   getEstimates(status?: string): Promise<Estimate[]>;
   getEstimate(id: string): Promise<Estimate | undefined>;
+  getEstimateByApprovalToken(token: string): Promise<Estimate | undefined>;
   getEstimatesByProperty(propertyId: string): Promise<Estimate[]>;
   createEstimate(estimate: InsertEstimate): Promise<Estimate>;
   updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
@@ -1284,6 +1285,11 @@ export class DbStorage implements IStorage {
 
   async getEstimate(id: string): Promise<Estimate | undefined> {
     const result = await db.select().from(estimates).where(eq(estimates.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getEstimateByApprovalToken(token: string): Promise<Estimate | undefined> {
+    const result = await db.select().from(estimates).where(eq(estimates.approvalToken, token)).limit(1);
     return result[0];
   }
 

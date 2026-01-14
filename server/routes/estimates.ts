@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
+import crypto from "crypto";
 
 export function registerEstimateRoutes(app: any) {
   // Customer Billing Contacts (aggregate across all properties)
@@ -507,6 +508,168 @@ export function registerEstimateRoutes(app: any) {
     } catch (error: any) {
       console.error("Error invoicing estimate:", error);
       res.status(500).json({ error: "Failed to invoice estimate" });
+    }
+  });
+
+  // Send estimate for customer approval
+  app.post("/api/estimates/:id/send-for-approval", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email address is required" });
+      }
+      
+      // Generate a secure approval token
+      const approvalToken = crypto.randomBytes(32).toString("hex");
+      const tokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      
+      const estimate = await storage.updateEstimate(id, {
+        status: "pending_approval",
+        approvalToken,
+        approvalTokenExpiresAt: tokenExpiresAt,
+        approvalSentTo: email,
+        approvalSentAt: new Date(),
+        sentForApprovalAt: new Date(),
+      });
+      
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      
+      // Generate the approval URL
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.REPLIT_DEPLOYMENT_URL || "http://localhost:5000";
+      const approvalUrl = `${baseUrl}/approve/${approvalToken}`;
+      
+      res.json({ 
+        estimate, 
+        approvalUrl,
+        message: `Estimate sent for approval to ${email}` 
+      });
+    } catch (error: any) {
+      console.error("Error sending estimate for approval:", error);
+      res.status(500).json({ error: "Failed to send estimate for approval" });
+    }
+  });
+
+  // Public: Get estimate by approval token (no auth required)
+  app.get("/api/public/estimates/approve/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      
+      const estimate = await storage.getEstimateByApprovalToken(token);
+      
+      if (!estimate) {
+        return res.status(404).json({ error: "Estimate not found or link has expired" });
+      }
+      
+      // Check if token has expired
+      if (estimate.approvalTokenExpiresAt && new Date(estimate.approvalTokenExpiresAt) < new Date()) {
+        return res.status(410).json({ error: "This approval link has expired" });
+      }
+      
+      // Check if already approved or rejected
+      if (estimate.status === "approved" || estimate.status === "needs_scheduling" || estimate.status === "scheduled" || estimate.status === "completed") {
+        return res.json({ estimate, alreadyProcessed: true, action: "approved" });
+      }
+      if (estimate.status === "rejected") {
+        return res.json({ estimate, alreadyProcessed: true, action: "rejected" });
+      }
+      
+      res.json({ estimate, alreadyProcessed: false });
+    } catch (error: any) {
+      console.error("Error fetching estimate by token:", error);
+      res.status(500).json({ error: "Failed to fetch estimate" });
+    }
+  });
+
+  // Public: Approve estimate (no auth required)
+  app.post("/api/public/estimates/approve/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { approverName, approverTitle } = req.body;
+      
+      if (!approverName) {
+        return res.status(400).json({ error: "Your name is required to approve this estimate" });
+      }
+      
+      const existingEstimate = await storage.getEstimateByApprovalToken(token);
+      
+      if (!existingEstimate) {
+        return res.status(404).json({ error: "Estimate not found or link has expired" });
+      }
+      
+      // Check if token has expired
+      if (existingEstimate.approvalTokenExpiresAt && new Date(existingEstimate.approvalTokenExpiresAt) < new Date()) {
+        return res.status(410).json({ error: "This approval link has expired" });
+      }
+      
+      // Check if already processed
+      if (existingEstimate.status !== "pending_approval") {
+        return res.status(400).json({ error: "This estimate has already been processed" });
+      }
+      
+      // Approve the estimate and move to needs_scheduling
+      const estimate = await storage.updateEstimate(existingEstimate.id, {
+        status: "needs_scheduling",
+        approvedAt: new Date(),
+        customerApproverName: approverName,
+        customerApproverTitle: approverTitle || null,
+        acceptedBy: `${approverName}${approverTitle ? ` (${approverTitle})` : ""}`,
+        acceptedDate: new Date(),
+      });
+      
+      res.json({ 
+        estimate, 
+        message: "Estimate approved successfully. The team will contact you to schedule the work." 
+      });
+    } catch (error: any) {
+      console.error("Error approving estimate:", error);
+      res.status(500).json({ error: "Failed to approve estimate" });
+    }
+  });
+
+  // Public: Reject estimate (no auth required)
+  app.post("/api/public/estimates/reject/:token", async (req: Request, res: Response) => {
+    try {
+      const { token } = req.params;
+      const { approverName, approverTitle, rejectionReason } = req.body;
+      
+      const existingEstimate = await storage.getEstimateByApprovalToken(token);
+      
+      if (!existingEstimate) {
+        return res.status(404).json({ error: "Estimate not found or link has expired" });
+      }
+      
+      // Check if token has expired
+      if (existingEstimate.approvalTokenExpiresAt && new Date(existingEstimate.approvalTokenExpiresAt) < new Date()) {
+        return res.status(410).json({ error: "This approval link has expired" });
+      }
+      
+      // Check if already processed
+      if (existingEstimate.status !== "pending_approval") {
+        return res.status(400).json({ error: "This estimate has already been processed" });
+      }
+      
+      // Reject the estimate
+      const estimate = await storage.updateEstimate(existingEstimate.id, {
+        status: "rejected",
+        rejectedAt: new Date(),
+        customerApproverName: approverName || null,
+        customerApproverTitle: approverTitle || null,
+        rejectionReason: rejectionReason || null,
+      });
+      
+      res.json({ 
+        estimate, 
+        message: "Estimate has been declined. Thank you for your response." 
+      });
+    } catch (error: any) {
+      console.error("Error rejecting estimate:", error);
+      res.status(500).json({ error: "Failed to reject estimate" });
     }
   });
 }

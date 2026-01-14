@@ -36,6 +36,7 @@ import RepairQueue from "@/pages/RepairQueue";
 import Visits from "@/pages/Visits";
 import TechSupervisor from "@/pages/TechSupervisor";
 import TechForeman from "@/pages/TechForeman";
+import EstimateApproval from "@/pages/EstimateApproval";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
       <Route path="/settings" component={Settings} />
+      <Route path="/approve/:token" component={EstimateApproval} />
       <Route component={NotFound} />
     </Switch>
   );
