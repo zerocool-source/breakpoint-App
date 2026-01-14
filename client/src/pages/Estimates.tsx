@@ -273,6 +273,7 @@ export default function Estimates() {
   const [valueFilter, setValueFilter] = useState<string>("all");
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
+  const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -1254,17 +1255,19 @@ Breakpoint Pool Service`);
     return new Date(date).toLocaleDateString();
   };
 
-  // SR selection helpers - for service repair estimates under $500
-  const isSRSelectable = (estimate: Estimate) => {
-    return normalizeSourceType(estimate.sourceType) === "service_tech" && 
-           (estimate.totalAmount || 0) < 50000; // $500 in cents
+  // Selection helpers - for all estimates under $500 when that filter is active
+  const isUnder500Selectable = (estimate: Estimate) => {
+    return (estimate.totalAmount || 0) < 50000; // $500 in cents
   };
 
-  const selectableSREstimates = useMemo(() => {
-    return filteredEstimates.filter(isSRSelectable);
+  const selectableUnder500Estimates = useMemo(() => {
+    return filteredEstimates.filter(isUnder500Selectable);
   }, [filteredEstimates]);
+  
+  // Check if Under $500 filter is active
+  const isUnder500FilterActive = valueFilter === "under500";
 
-  const toggleSRSelection = (id: string) => {
+  const toggleUnder500Selection = (id: string) => {
     setSelectedSRIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -1276,16 +1279,16 @@ Breakpoint Pool Service`);
     });
   };
 
-  const selectAllSR = () => {
-    const allIds = selectableSREstimates.map(e => e.id);
+  const selectAllUnder500 = () => {
+    const allIds = selectableUnder500Estimates.map(e => e.id);
     setSelectedSRIds(new Set(allIds));
   };
 
-  const deselectAllSR = () => {
+  const deselectAllUnder500 = () => {
     setSelectedSRIds(new Set());
   };
 
-  const getSelectedSREstimates = () => {
+  const getSelectedUnder500Estimates = () => {
     return filteredEstimates.filter(e => selectedSRIds.has(e.id));
   };
 
@@ -1673,23 +1676,23 @@ Breakpoint Pool Service`);
             </div>
           </div>
 
-          {/* SR Selection Header - shows when service repair estimates are selectable */}
-          {sourceFilter === "service_tech" && selectableSREstimates.length > 0 && (
-            <div className="px-5 py-3 bg-purple-50 border-b border-purple-200 flex items-center justify-between">
+          {/* Bulk Invoice Selection Header - shows when Under $500 filter is active */}
+          {isUnder500FilterActive && selectableUnder500Estimates.length > 0 && (
+            <div className="px-5 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    checked={selectedSRIds.size > 0 && selectedSRIds.size === selectableSREstimates.length}
+                    checked={selectedSRIds.size > 0 && selectedSRIds.size === selectableUnder500Estimates.length}
                     onCheckedChange={(checked) => {
-                      if (checked) selectAllSR();
-                      else deselectAllSR();
+                      if (checked) selectAllUnder500();
+                      else deselectAllUnder500();
                     }}
-                    className="border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                    data-testid="checkbox-select-all-sr"
+                    className="border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    data-testid="checkbox-select-all-under500"
                   />
-                  <span className="text-sm text-purple-700 font-medium">
+                  <span className="text-sm text-blue-700 font-medium">
                     {selectedSRIds.size === 0 
-                      ? `Select all (${selectableSREstimates.length} under $500)`
+                      ? `Select all (${selectableUnder500Estimates.length} estimates)`
                       : `${selectedSRIds.size} selected`}
                   </span>
                 </div>
@@ -1697,24 +1700,23 @@ Breakpoint Pool Service`);
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={deselectAllSR}
-                    className="text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+                    onClick={deselectAllUnder500}
+                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
                     data-testid="button-deselect-all"
                   >
                     Clear selection
                   </Button>
                 )}
               </div>
-              {selectedSRIds.size > 0 && (
-                <Button
-                  onClick={() => setShowBatchInvoiceDialog(true)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  data-testid="button-batch-invoice"
-                >
-                  <Receipt className="w-4 h-4 mr-2" />
-                  Invoice ({selectedSRIds.size})
-                </Button>
-              )}
+              <Button
+                onClick={() => setShowBatchInvoiceDialog(true)}
+                disabled={selectedSRIds.size === 0}
+                className={`${selectedSRIds.size === 0 ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-[#0077C5] hover:bg-[#005fa3] text-white"}`}
+                data-testid="button-invoice-selected"
+              >
+                <Receipt className="w-4 h-4 mr-2" />
+                Invoice Selected {selectedSRIds.size > 0 ? `(${selectedSRIds.size})` : ""}
+              </Button>
             </div>
           )}
 
@@ -1739,12 +1741,12 @@ Breakpoint Pool Service`);
                 <div className="divide-y divide-gray-100">
                   {filteredEstimates.map((estimate) => {
                     const config = statusConfig[estimate.status] || statusConfig.draft;
-                    const isSelectable = isSRSelectable(estimate);
+                    const isSelectable = isUnder500FilterActive && isUnder500Selectable(estimate);
                     const isSelected = selectedSRIds.has(estimate.id);
                     return (
                       <div
                         key={estimate.id}
-                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-purple-500 bg-purple-50/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
+                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-blue-500 bg-blue-50/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
                         onClick={() => {
                           setSelectedEstimate(estimate);
                           setShowDetailDialog(true);
@@ -1752,7 +1754,7 @@ Breakpoint Pool Service`);
                         data-testid={`estimate-row-${estimate.id}`}
                       >
                         <div className="flex items-center gap-4 flex-1">
-                          {/* Checkbox for SR estimates under $500 */}
+                          {/* Checkbox for bulk invoice selection when Under $500 filter is active */}
                           {isSelectable && (
                             <div 
                               onClick={(e) => e.stopPropagation()} 
@@ -1760,9 +1762,9 @@ Breakpoint Pool Service`);
                             >
                               <Checkbox
                                 checked={isSelected}
-                                onCheckedChange={() => toggleSRSelection(estimate.id)}
-                                className="border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                data-testid={`checkbox-sr-${estimate.id}`}
+                                onCheckedChange={() => toggleUnder500Selection(estimate.id)}
+                                className="border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                data-testid={`checkbox-under500-${estimate.id}`}
                               />
                             </div>
                           )}
@@ -3470,36 +3472,73 @@ Breakpoint Pool Service`);
           </Dialog>
         )}
 
-        {/* Batch Invoice Dialog for Service Repairs */}
+        {/* Batch Invoice Dialog for Under $500 Estimates */}
         <Dialog open={showBatchInvoiceDialog} onOpenChange={setShowBatchInvoiceDialog}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-purple-700">
+              <DialogTitle className="flex items-center gap-2 text-[#0077C5]">
                 <Receipt className="w-5 h-5" />
-                Invoice Service Repairs
+                Invoice Selected Estimates
               </DialogTitle>
               <DialogDescription>
-                Create invoices for the selected service repair estimates
+                Create invoices for the selected estimates under $500
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-purple-700 mb-2">Selected Estimates ({selectedSRIds.size})</p>
+              {/* Invoice Type Selection */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-700 mb-3">How would you like to invoice?</p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-[#0077C5] transition-colors">
+                    <input 
+                      type="radio" 
+                      name="invoiceType" 
+                      value="combined"
+                      checked={invoiceType === "combined"}
+                      onChange={() => setInvoiceType("combined")}
+                      className="w-4 h-4 text-[#0077C5] focus:ring-[#0077C5]"
+                      data-testid="radio-combined-invoice"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-800">One Combined Invoice</p>
+                      <p className="text-xs text-gray-500">Batch all selected estimates into a single invoice</p>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-[#0077C5] transition-colors">
+                    <input 
+                      type="radio" 
+                      name="invoiceType" 
+                      value="separate"
+                      checked={invoiceType === "separate"}
+                      onChange={() => setInvoiceType("separate")}
+                      className="w-4 h-4 text-[#0077C5] focus:ring-[#0077C5]"
+                      data-testid="radio-separate-invoices"
+                    />
+                    <div>
+                      <p className="font-medium text-gray-800">Separate Invoices</p>
+                      <p className="text-xs text-gray-500">Create individual invoices for each estimate</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-[#0077C5] mb-2">Selected Estimates ({selectedSRIds.size})</p>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {getSelectedSREstimates().map((est) => (
-                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-purple-100">
+                  {getSelectedUnder500Estimates().map((est) => (
+                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-blue-100">
                       <div className="flex-1">
                         <p className="font-medium text-gray-800">{getEstimateTitle(est)}</p>
                         <p className="text-xs text-gray-500">{est.propertyName}</p>
                       </div>
-                      <span className="font-semibold text-purple-700">{formatCurrency(est.totalAmount)}</span>
+                      <span className="font-semibold text-[#0077C5]">{formatCurrency(est.totalAmount)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 pt-3 border-t border-purple-200 flex justify-between">
-                  <span className="text-sm font-medium text-purple-700">Total</span>
-                  <span className="text-lg font-bold text-purple-700">
-                    {formatCurrency(getSelectedSREstimates().reduce((sum, e) => sum + (e.totalAmount || 0), 0))}
+                <div className="mt-3 pt-3 border-t border-blue-200 flex justify-between">
+                  <span className="text-sm font-medium text-[#0077C5]">Total</span>
+                  <span className="text-lg font-bold text-[#0077C5]">
+                    {formatCurrency(getSelectedUnder500Estimates().reduce((sum, e) => sum + (e.totalAmount || 0), 0))}
                   </span>
                 </div>
               </div>
@@ -3507,7 +3546,9 @@ Breakpoint Pool Service`);
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-sm text-amber-700 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  This will mark all selected estimates as invoiced
+                  {invoiceType === "combined" 
+                    ? "This will create one combined invoice and mark all estimates as invoiced"
+                    : "This will create separate invoices and mark all estimates as invoiced"}
                 </p>
               </div>
             </div>
@@ -3519,7 +3560,7 @@ Breakpoint Pool Service`);
                 Cancel
               </Button>
               <Button
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-[#0077C5] hover:bg-[#005fa3]"
                 onClick={async () => {
                   try {
                     const selectedIds = Array.from(selectedSRIds);
@@ -3533,7 +3574,9 @@ Breakpoint Pool Service`);
                     queryClient.invalidateQueries({ queryKey: ["estimates"] });
                     toast({
                       title: "Invoiced",
-                      description: `${selectedIds.length} service repair estimate(s) marked as invoiced`,
+                      description: invoiceType === "combined" 
+                        ? `Combined ${selectedIds.length} estimates into one invoice`
+                        : `Created ${selectedIds.length} separate invoices`,
                     });
                     setSelectedSRIds(new Set());
                     setShowBatchInvoiceDialog(false);
@@ -3548,7 +3591,7 @@ Breakpoint Pool Service`);
                 data-testid="button-confirm-batch-invoice"
               >
                 <Receipt className="w-4 h-4 mr-2" />
-                Invoice All ({selectedSRIds.size})
+                {invoiceType === "combined" ? "Create Combined Invoice" : `Create ${selectedSRIds.size} Invoices`}
               </Button>
             </DialogFooter>
           </DialogContent>
