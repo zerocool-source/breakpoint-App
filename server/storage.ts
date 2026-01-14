@@ -268,6 +268,8 @@ export interface IStorage {
   updateTechOpsEntry(id: string, updates: Partial<InsertTechOpsEntry>): Promise<TechOpsEntry | undefined>;
   markTechOpsReviewed(id: string, reviewedBy: string): Promise<TechOpsEntry | undefined>;
   deleteTechOpsEntry(id: string): Promise<void>;
+  getTechOpsUnreadCounts(): Promise<Record<string, number>>;
+  markAllTechOpsRead(entryType?: string): Promise<void>;
 
   // Pool WO Settings
   updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void>;
@@ -1551,6 +1553,35 @@ export class DbStorage implements IStorage {
 
   async deleteTechOpsEntry(id: string): Promise<void> {
     await db.delete(techOpsEntries).where(eq(techOpsEntries.id, id));
+  }
+
+  async getTechOpsUnreadCounts(): Promise<Record<string, number>> {
+    const entries = await db.select({
+      entryType: techOpsEntries.entryType,
+    })
+      .from(techOpsEntries)
+      .where(eq(techOpsEntries.isRead, false));
+    
+    const counts: Record<string, number> = {};
+    for (const entry of entries) {
+      counts[entry.entryType] = (counts[entry.entryType] || 0) + 1;
+    }
+    return counts;
+  }
+
+  async markAllTechOpsRead(entryType?: string): Promise<void> {
+    if (entryType) {
+      await db.update(techOpsEntries)
+        .set({ isRead: true, updatedAt: new Date() } as any)
+        .where(and(
+          eq(techOpsEntries.entryType, entryType),
+          eq(techOpsEntries.isRead, false)
+        ));
+    } else {
+      await db.update(techOpsEntries)
+        .set({ isRead: true, updatedAt: new Date() } as any)
+        .where(eq(techOpsEntries.isRead, false));
+    }
   }
 
   // Pool WO Settings

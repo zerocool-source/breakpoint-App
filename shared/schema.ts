@@ -185,11 +185,14 @@ export const techOpsEntries = pgTable("tech_ops_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   entryType: text("entry_type").notNull(), // "repairs_needed", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "add_notes"
   technicianName: text("technician_name").notNull(),
+  technicianId: varchar("technician_id"), // Link to technician record
   propertyId: varchar("property_id"),
   propertyName: text("property_name"),
   description: text("description"),
+  notes: text("notes"), // Additional notes field
   priority: text("priority").default("normal"), // "low", "normal", "high", "urgent"
   status: text("status").default("pending"), // "pending", "reviewed", "completed", "cancelled"
+  isRead: boolean("is_read").default(false), // For tracking new/unread submissions
   chemicals: text("chemicals"), // For chemical orders/dropoffs - list of chemicals
   quantity: text("quantity"), // Quantity details for orders
   issueType: text("issue_type"), // For report issue - type of issue
