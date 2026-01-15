@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertTriangle, CalendarIcon, Filter, Clock, CheckCircle, ArrowLeft,
-  MapPin, Loader2, User, Search, AlertCircle, PlayCircle, FileText, Receipt, DollarSign
+  MapPin, Loader2, User, Search, AlertCircle, PlayCircle, FileText, Receipt, DollarSign, XCircle
 } from "lucide-react";
 import type { Emergency } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -155,6 +155,31 @@ export default function Emergencies() {
     },
     onError: () => {
       toast({ title: "Failed to invoice", variant: "destructive" });
+    },
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
+      const response = await fetch(`/api/emergencies/${id}/dismiss`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!response.ok) throw new Error("Failed to dismiss");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emergencies"] });
+      queryClient.invalidateQueries({ queryKey: ["emergencies-summary"] });
+      setSelectedEmergency(null);
+      setResolutionNotes("");
+      toast({ 
+        title: "Emergency Dismissed", 
+        description: "No further action needed"
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to dismiss", variant: "destructive" });
     },
   });
 
@@ -510,7 +535,7 @@ export default function Emergencies() {
                 <Button
                   variant="outline"
                   onClick={() => convertToEstimateMutation.mutate(selectedEmergency!.id)}
-                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending}
+                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending || dismissMutation.isPending}
                   data-testid="button-convert-estimate"
                   className="flex-1 sm:flex-initial"
                 >
@@ -520,12 +545,22 @@ export default function Emergencies() {
                 <Button
                   variant="outline"
                   onClick={() => invoiceDirectlyMutation.mutate(selectedEmergency!.id)}
-                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending}
+                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending || dismissMutation.isPending}
                   data-testid="button-invoice-directly"
                   className="flex-1 sm:flex-initial"
                 >
                   <Receipt className="w-4 h-4 mr-2" />
                   Invoice Directly
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => dismissMutation.mutate({ id: selectedEmergency!.id, reason: resolutionNotes || undefined })}
+                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending || dismissMutation.isPending}
+                  data-testid="button-dismiss"
+                  className="flex-1 sm:flex-initial text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Dismiss
                 </Button>
               </div>
             )}

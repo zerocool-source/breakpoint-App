@@ -235,4 +235,34 @@ export function registerEmergencyRoutes(app: Express) {
       res.status(500).json({ error: "Failed to invoice" });
     }
   });
+
+  // Dismiss emergency - resolves without conversion
+  app.post("/api/emergencies/:id/dismiss", async (req, res) => {
+    try {
+      const emergency = await storage.getEmergency(req.params.id);
+      if (!emergency) {
+        return res.status(404).json({ error: "Emergency not found" });
+      }
+
+      if (emergency.status === "resolved") {
+        return res.status(400).json({ error: "Emergency already resolved" });
+      }
+
+      const { reason } = req.body;
+
+      await storage.updateEmergency(emergency.id, {
+        status: "resolved",
+        resolvedAt: new Date(),
+        resolutionNotes: reason || "Dismissed - no action needed",
+      });
+
+      res.json({ 
+        message: "Emergency dismissed successfully",
+        emergency: { ...emergency, status: "resolved" }
+      });
+    } catch (error) {
+      console.error("Failed to dismiss emergency:", error);
+      res.status(500).json({ error: "Failed to dismiss emergency" });
+    }
+  });
 }
