@@ -1054,6 +1054,9 @@ export function registerEstimateRoutes(app: any) {
       // Generate the HTML email content (use existing estimate for now, will update after)
       const emailHtml = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl);
       
+      // Log HTML generation for debugging
+      console.log(`Generated HTML email - Length: ${emailHtml.length} chars, starts with: ${emailHtml.substring(0, 100)}`);
+      
       // Generate PDF attachment
       const pdfBuffer = generateEstimatePdf(existingEstimate);
       const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
