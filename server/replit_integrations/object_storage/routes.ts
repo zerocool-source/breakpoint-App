@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { setObjectAclPolicy, ObjectAclPolicy } from "./objectAcl";
 
 /**
  * Register object storage routes for file uploads.
@@ -59,6 +60,51 @@ export function registerObjectStorageRoutes(app: Express): void {
     } catch (error) {
       console.error("Error generating upload URL:", error);
       res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  /**
+   * Confirm upload and set object as public.
+   *
+   * POST /api/uploads/confirm
+   *
+   * Request body (JSON):
+   * {
+   *   "objectPath": "/objects/uploads/uuid"
+   * }
+   *
+   * This endpoint sets the uploaded object's ACL to public so it can be accessed
+   * without authentication.
+   */
+  app.post("/api/uploads/confirm", async (req, res) => {
+    try {
+      const { objectPath } = req.body;
+
+      if (!objectPath) {
+        return res.status(400).json({
+          error: "Missing required field: objectPath",
+        });
+      }
+
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+      
+      // Set ACL to public
+      const aclPolicy: ObjectAclPolicy = {
+        owner: "system",
+        visibility: "public",
+      };
+      await setObjectAclPolicy(objectFile, aclPolicy);
+
+      res.json({
+        success: true,
+        objectPath,
+      });
+    } catch (error) {
+      console.error("Error confirming upload:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.status(404).json({ error: "Object not found" });
+      }
+      res.status(500).json({ error: "Failed to confirm upload" });
     }
   });
 

@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import crypto from "crypto";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ObjectStorageService, ObjectNotFoundError } from "../replit_integrations/object_storage";
 
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: { finalY: number };
@@ -277,7 +278,8 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
 </html>`;
 }
 
-function generateEstimatePdf(estimate: any): Buffer {
+async function generateEstimatePdf(estimate: any): Promise<Buffer> {
+  const objectStorageService = new ObjectStorageService();
   const doc = new jsPDF() as JsPDFWithAutoTable;
   const pageWidth = doc.internal.pageSize.getWidth();
   
@@ -432,6 +434,84 @@ function generateEstimatePdf(estimate: any): Buffer {
   doc.text(formatCurrency(estimate.totalAmount || 0), pageWidth - 14, yPos + 4, { align: "right" });
   
   yPos += 20;
+  
+  // Add Supporting Photos section if photos exist
+  const validPhotos = (estimate.photos || []).filter((p: string) => p && !p.includes('[object Object]'));
+  if (validPhotos.length > 0) {
+    // Add section header
+    doc.addPage();
+    yPos = 20;
+    
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 95);
+    doc.setFont("helvetica", "bold");
+    doc.text("SUPPORTING PHOTOS", 14, yPos);
+    yPos += 10;
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "normal");
+    doc.text("The following photos document the work required:", 14, yPos);
+    yPos += 10;
+    
+    // Calculate photo layout - 2 photos per row
+    const photoWidth = 85;
+    const photoHeight = 65;
+    const margin = 14;
+    const gap = 10;
+    
+    for (let i = 0; i < validPhotos.length; i++) {
+      try {
+        const photoPath = validPhotos[i];
+        const objectFile = await objectStorageService.getObjectEntityFile(photoPath);
+        const [contents] = await objectFile.download();
+        const [metadata] = await objectFile.getMetadata();
+        
+        // Determine image format from content type
+        let format: "JPEG" | "PNG" = "JPEG";
+        if (metadata.contentType?.includes("png")) {
+          format = "PNG";
+        }
+        
+        // Convert buffer to base64
+        const base64Image = contents.toString("base64");
+        const imageData = `data:${metadata.contentType || "image/jpeg"};base64,${base64Image}`;
+        
+        // Calculate position (2 per row)
+        const col = i % 2;
+        const xPos = margin + col * (photoWidth + gap);
+        
+        // Check if we need a new page
+        if (yPos + photoHeight > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        
+        // Add image
+        doc.addImage(imageData, format, xPos, yPos, photoWidth, photoHeight);
+        
+        // Add photo number label
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Photo ${i + 1}`, xPos, yPos + photoHeight + 5);
+        
+        // Move to next row after every 2 photos
+        if (col === 1) {
+          yPos += photoHeight + 15;
+        }
+      } catch (error) {
+        console.error(`Error adding photo ${i + 1} to PDF:`, error);
+        // Continue with other photos if one fails
+      }
+    }
+    
+    // Adjust yPos if we ended on an odd photo (left column)
+    if (validPhotos.length % 2 === 1) {
+      yPos += photoHeight + 15;
+    }
+    
+    yPos += 10;
+  }
   
   doc.setFontSize(7);
   const complianceLines = doc.splitTextToSize(COMPLIANCE_TEXT, pageWidth - 32);
@@ -1004,7 +1084,7 @@ export function registerEstimateRoutes(app: any) {
         return res.status(404).json({ error: "Estimate not found" });
       }
       
-      const pdfBuffer = generateEstimatePdf(estimate);
+      const pdfBuffer = await generateEstimatePdf(estimate);
       const filename = `Estimate-${estimate.estimateNumber || id}.pdf`;
       
       res.setHeader("Content-Type", "application/pdf");

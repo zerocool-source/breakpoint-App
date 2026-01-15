@@ -39,6 +39,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { ImageIcon, Upload } from "lucide-react";
 
 interface EstimateLineItem {
   lineNumber: number;
@@ -178,6 +180,7 @@ interface EstimateFormData {
   memoOnStatement: string;
   techNotes: string;
   attachments: Attachment[];
+  photos: string[];
   workType: string;
   woReceived: boolean;
   woNumber: string;
@@ -233,6 +236,7 @@ const emptyFormData: EstimateFormData = {
   memoOnStatement: "",
   techNotes: "",
   attachments: [],
+  photos: [],
   workType: "repairs",
   woReceived: false,
   woNumber: "",
@@ -659,6 +663,7 @@ export default function Estimates() {
       memoOnStatement: estimate.memoOnStatement || "",
       techNotes: estimate.techNotes || "",
       attachments: estimate.attachments || [],
+      photos: estimate.photos || [],
       workType: estimate.workType || "repairs",
       woReceived: estimate.woReceived || false,
       woNumber: estimate.woNumber || "",
@@ -826,6 +831,22 @@ export default function Estimates() {
       
       const { approveUrl, declineUrl, approvalUrl, emailSubject } = await response.json();
       
+      // Get base URL for photo links
+      const baseUrl = window.location.origin;
+      
+      // Build supporting photos section if photos exist
+      const validPhotos = (selectedEstimate.photos || []).filter((p: string) => p && !p.includes('[object Object]'));
+      let photosSection = '';
+      if (validPhotos.length > 0) {
+        photosSection = `
+
+--- SUPPORTING PHOTOS ---
+The following photos are attached to this estimate (click to view full size):
+
+${validPhotos.map((photo: string, idx: number) => `Photo ${idx + 1}: ${baseUrl}${photo}`).join('\n')}
+`;
+      }
+      
       // Generate plain text email body
       const totalAmount = ((selectedEstimate.totalAmount || 0) / 100).toFixed(2);
       const emailBody = `Dear Property Manager,
@@ -838,7 +859,7 @@ Title: ${selectedEstimate.title}${selectedEstimate.description ? `
 Description: ${selectedEstimate.description}` : ''}
 
 Total Amount: $${totalAmount}
-
+${photosSection}
 Please click one of the links below to respond:
 
 ✓ APPROVE: ${approveUrl}
@@ -2543,6 +2564,95 @@ Breakpoint Commercial Pool Systems
                           rows={2}
                           data-testid="input-tech-notes"
                         />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-slate-500 flex items-center gap-2">
+                          <Camera className="w-3 h-3" />
+                          Supporting Photos (optional)
+                        </Label>
+                        <p className="text-xs text-slate-400 mt-0.5 mb-2">
+                          Upload photos of equipment, damage, before/after shots - these will be included in approval emails and PDFs
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <ObjectUploader
+                            maxNumberOfFiles={10}
+                            maxFileSize={10485760}
+                            onGetUploadParameters={async (file) => {
+                              const res = await fetch("/api/uploads/request-url", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  name: file.name,
+                                  size: file.size,
+                                  contentType: file.type,
+                                }),
+                              });
+                              const { uploadURL, objectPath } = await res.json();
+                              // Store objectPath in file meta for later retrieval
+                              (file as any).meta.objectPath = objectPath;
+                              return {
+                                method: "PUT" as const,
+                                url: uploadURL,
+                                headers: { "Content-Type": file.type },
+                              };
+                            }}
+                            onComplete={async (result) => {
+                              const uploadedFiles = result.successful || [];
+                              const newPhotoUrls: string[] = [];
+                              for (const file of uploadedFiles) {
+                                const objectPath = (file as any).meta?.objectPath;
+                                if (objectPath) {
+                                  // Confirm upload and set ACL to public
+                                  try {
+                                    await fetch("/api/uploads/confirm", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ objectPath }),
+                                    });
+                                    newPhotoUrls.push(objectPath);
+                                  } catch (error) {
+                                    console.error("Failed to confirm upload:", error);
+                                  }
+                                }
+                              }
+                              if (newPhotoUrls.length > 0) {
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  photos: [...prev.photos, ...newPhotoUrls] 
+                                }));
+                              }
+                            }}
+                            buttonClassName="bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                          >
+                            <Upload className="w-3 h-3 mr-1" />
+                            Upload Photos
+                          </ObjectUploader>
+                          <span className="text-xs text-slate-400">Max 10 MB per photo</span>
+                        </div>
+                        {formData.photos.length > 0 && (
+                          <div className="mt-3 grid grid-cols-4 gap-2">
+                            {formData.photos.map((photo, idx) => (
+                              <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200">
+                                <img 
+                                  src={photo} 
+                                  alt={`Photo ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({
+                                    ...prev,
+                                    photos: prev.photos.filter((_, i) => i !== idx)
+                                  }))}
+                                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  data-testid={`button-remove-photo-${idx}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <Label className="text-xs text-slate-500 flex items-center gap-2">
