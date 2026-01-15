@@ -1124,17 +1124,6 @@ export function registerEstimateRoutes(app: any) {
       const approveUrl = `${baseUrl}/approve/${approvalToken}?action=approve`;
       const declineUrl = `${baseUrl}/approve/${approvalToken}?action=decline`;
       
-      // Update the estimate with approval token first (before sending email)
-      const updatedEstimate = await storage.updateEstimate(id, {
-        approvalToken,
-        approvalTokenExpiresAt: tokenExpiresAt,
-        approvalSentTo: email,
-      });
-      
-      if (!updatedEstimate) {
-        return res.status(500).json({ error: "Failed to update estimate" });
-      }
-      
       // Generate email subject
       const emailSubject = `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
       
@@ -1146,7 +1135,7 @@ export function registerEstimateRoutes(app: any) {
       const pdfBase64 = pdfBuffer.toString("base64");
       const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
       
-      // Send email via Microsoft Graph
+      // Send email via Microsoft Graph - this must succeed before updating any state
       await sendEmail({
         to: email,
         subject: emailSubject,
@@ -1160,9 +1149,12 @@ export function registerEstimateRoutes(app: any) {
         ],
       });
       
-      // Update status to pending_approval after successful send
+      // Only update estimate after successful email send (atomic state update)
       const estimate = await storage.updateEstimate(id, {
         status: "pending_approval",
+        approvalToken,
+        approvalTokenExpiresAt: tokenExpiresAt,
+        approvalSentTo: email,
         approvalSentAt: new Date(),
         sentForApprovalAt: new Date(),
       });
