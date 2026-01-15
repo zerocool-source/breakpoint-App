@@ -1839,6 +1839,15 @@ Breakpoint Commercial Pool Systems
                               <Badge className={`${getSourceBadgeColor(estimate.sourceType)} border text-[11px] px-2 py-0.5 rounded-full`}>
                                 {getSourceLabel(estimate.sourceType)}
                               </Badge>
+                              {estimate.tags && estimate.tags.length > 0 && estimate.tags.map((tag, tagIdx) => (
+                                <Badge 
+                                  key={tagIdx} 
+                                  variant="outline" 
+                                  className="text-[11px] px-2 py-0.5 rounded-full border-slate-400 text-slate-600"
+                                >
+                                  {tag}
+                                </Badge>
+                              ))}
                             </div>
                             <div className="flex items-center gap-4 text-[14px] text-[#6B7280] mt-1.5">
                               <span className="flex items-center gap-1.5">
