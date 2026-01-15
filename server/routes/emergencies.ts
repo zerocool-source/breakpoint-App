@@ -1,8 +1,9 @@
 import { Express } from "express";
 import { storage } from "../storage";
-import { insertEmergencySchema, type InsertEmergency, type InsertEstimate, insertEstimateSchema } from "@shared/schema";
+import { insertEmergencySchema, type InsertEmergency, type InsertEstimate, insertEstimateSchema, estimates, emergencies } from "@shared/schema";
 import { z } from "zod";
 import { db } from "../db";
+import { eq } from "drizzle-orm";
 
 const statusUpdateSchema = z.object({
   status: z.enum(["pending_review", "in_progress", "resolved"]),
@@ -168,19 +169,25 @@ export function registerEmergencyRoutes(app: Express) {
         tags: ["Emergency"],
       };
 
-      // Use transaction to ensure atomicity
+      // Validate estimate data with schema
+      const validatedData = insertEstimateSchema.parse(estimateData);
+
+      // Use transaction to ensure atomicity - use tx handle directly
       const result = await db.transaction(async (tx) => {
-        const estimate = await storage.createEstimate(estimateData);
+        const [createdEstimate] = await tx.insert(estimates).values(validatedData as any).returning();
         
-        await storage.updateEmergency(emergency.id, {
-          convertedToEstimateId: estimate.id,
-          convertedAt: new Date(),
-          status: "resolved",
-          resolvedAt: new Date(),
-          resolutionNotes: `Converted to estimate ${estimateNumber}`,
-        });
+        await tx.update(emergencies)
+          .set({
+            convertedToEstimateId: createdEstimate.id,
+            convertedAt: new Date(),
+            status: "resolved",
+            resolvedAt: new Date(),
+            resolutionNotes: `Converted to estimate ${estimateNumber}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(emergencies.id, emergency.id));
         
-        return estimate;
+        return createdEstimate;
       });
 
       res.status(201).json({ estimate: result, emergency: { ...emergency, convertedToEstimateId: result.id } });
