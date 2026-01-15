@@ -3,6 +3,15 @@ import { storage } from "../storage";
 import { insertEmergencySchema, type InsertEmergency } from "@shared/schema";
 import { z } from "zod";
 
+const statusUpdateSchema = z.object({
+  status: z.enum(["pending_review", "in_progress", "resolved"]),
+  resolvedById: z.string().optional(),
+  resolvedByName: z.string().optional(),
+  resolutionNotes: z.string().max(2000).optional(),
+});
+
+const partialUpdateSchema = insertEmergencySchema.partial();
+
 export function registerEmergencyRoutes(app: Express) {
   app.get("/api/emergencies", async (req, res) => {
     try {
@@ -62,12 +71,16 @@ export function registerEmergencyRoutes(app: Express) {
 
   app.put("/api/emergencies/:id", async (req, res) => {
     try {
-      const emergency = await storage.updateEmergency(req.params.id, req.body);
+      const data = partialUpdateSchema.parse(req.body);
+      const emergency = await storage.updateEmergency(req.params.id, data);
       if (!emergency) {
         return res.status(404).json({ error: "Emergency not found" });
       }
       res.json(emergency);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
       console.error("Failed to update emergency:", error);
       res.status(500).json({ error: "Failed to update emergency" });
     }
@@ -75,17 +88,14 @@ export function registerEmergencyRoutes(app: Express) {
 
   app.put("/api/emergencies/:id/status", async (req, res) => {
     try {
-      const { status, resolvedById, resolvedByName, resolutionNotes } = req.body;
-      if (!status) {
-        return res.status(400).json({ error: "Status is required" });
-      }
+      const data = statusUpdateSchema.parse(req.body);
       
-      const updates: Partial<InsertEmergency> = { status };
-      if (status === 'resolved') {
+      const updates: Partial<InsertEmergency> = { status: data.status };
+      if (data.status === 'resolved') {
         updates.resolvedAt = new Date();
-        if (resolvedById) updates.resolvedById = resolvedById;
-        if (resolvedByName) updates.resolvedByName = resolvedByName;
-        if (resolutionNotes) updates.resolutionNotes = resolutionNotes;
+        if (data.resolvedById) updates.resolvedById = data.resolvedById;
+        if (data.resolvedByName) updates.resolvedByName = data.resolvedByName;
+        if (data.resolutionNotes) updates.resolutionNotes = data.resolutionNotes;
       }
       
       const emergency = await storage.updateEmergency(req.params.id, updates);
@@ -94,6 +104,9 @@ export function registerEmergencyRoutes(app: Express) {
       }
       res.json(emergency);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid status data", details: error.errors });
+      }
       console.error("Failed to update emergency status:", error);
       res.status(500).json({ error: "Failed to update status" });
     }
