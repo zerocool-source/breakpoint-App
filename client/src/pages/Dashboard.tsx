@@ -307,11 +307,18 @@ export default function Dashboard() {
                       )}
                     </div>
                     <p className="text-xs text-[#64748B] line-clamp-2 mb-2">{emergency.description}</p>
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
-                      <Users className="w-3 h-3" />
-                      <span>{emergency.submittedByName}</span>
-                      <span className="text-slate-300">•</span>
-                      <span className="capitalize">{emergency.submitterRole?.replace(/_/g, " ")}</span>
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1 text-slate-500">
+                        <Users className="w-3 h-3" />
+                        <span>{emergency.submittedByName}</span>
+                        <span className="text-slate-300">•</span>
+                        <span className="capitalize">{emergency.submitterRole?.replace(/_/g, " ")}</span>
+                      </div>
+                      {emergency.createdAt && (
+                        <span className="text-red-500 font-medium">
+                          {formatDistanceToNow(new Date(emergency.createdAt), { addSuffix: false })}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
