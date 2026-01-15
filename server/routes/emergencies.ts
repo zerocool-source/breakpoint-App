@@ -1,7 +1,8 @@
 import { Express } from "express";
 import { storage } from "../storage";
-import { insertEmergencySchema, type InsertEmergency } from "@shared/schema";
+import { insertEmergencySchema, type InsertEmergency, type InsertEstimate } from "@shared/schema";
 import { z } from "zod";
+import crypto from "crypto";
 
 const statusUpdateSchema = z.object({
   status: z.enum(["pending_review", "in_progress", "resolved"]),
@@ -119,6 +120,96 @@ export function registerEmergencyRoutes(app: Express) {
     } catch (error) {
       console.error("Failed to delete emergency:", error);
       res.status(500).json({ error: "Failed to delete emergency" });
+    }
+  });
+
+  app.post("/api/emergencies/:id/convert-to-estimate", async (req, res) => {
+    try {
+      const emergency = await storage.getEmergency(req.params.id);
+      if (!emergency) {
+        return res.status(404).json({ error: "Emergency not found" });
+      }
+
+      if (emergency.convertedToEstimateId) {
+        return res.status(400).json({ error: "Emergency already converted to estimate" });
+      }
+
+      const estimateNumber = `EM-${Date.now().toString(36).toUpperCase()}`;
+      const amountInCents = emergency.totalAmount || 0;
+      
+      const estimateData: InsertEstimate = {
+        propertyId: emergency.propertyId || "unknown",
+        propertyName: emergency.propertyName || "Unknown Property",
+        address: emergency.propertyAddress,
+        title: `Emergency Work - ${emergency.propertyName || "Unknown"}`,
+        description: emergency.description,
+        estimateNumber,
+        sourceType: "emergency",
+        sourceEmergencyId: emergency.id,
+        createdByTechId: emergency.submittedById || undefined,
+        createdByTechName: emergency.submittedByName || undefined,
+        photos: emergency.photos || [],
+        items: [{
+          lineNumber: 1,
+          productService: "Emergency Work",
+          description: emergency.description,
+          quantity: 1,
+          rate: amountInCents / 100,
+          amount: amountInCents / 100,
+          taxable: true,
+        }],
+        subtotal: amountInCents,
+        totalAmount: amountInCents,
+        status: "draft",
+        tags: ["Emergency"],
+      };
+
+      const estimate = await storage.createEstimate(estimateData);
+
+      await storage.updateEmergency(emergency.id, {
+        convertedToEstimateId: estimate.id,
+        convertedAt: new Date(),
+        status: "resolved",
+        resolvedAt: new Date(),
+        resolutionNotes: `Converted to estimate ${estimateNumber}`,
+      });
+
+      res.status(201).json({ estimate, emergency: { ...emergency, convertedToEstimateId: estimate.id } });
+    } catch (error) {
+      console.error("Failed to convert emergency to estimate:", error);
+      res.status(500).json({ error: "Failed to convert to estimate" });
+    }
+  });
+
+  app.post("/api/emergencies/:id/invoice-directly", async (req, res) => {
+    try {
+      const emergency = await storage.getEmergency(req.params.id);
+      if (!emergency) {
+        return res.status(404).json({ error: "Emergency not found" });
+      }
+
+      if (emergency.convertedToInvoiceId) {
+        return res.status(400).json({ error: "Emergency already invoiced" });
+      }
+
+      const invoiceNumber = `INV-EM-${Date.now().toString(36).toUpperCase()}`;
+
+      await storage.updateEmergency(emergency.id, {
+        convertedToInvoiceId: invoiceNumber,
+        convertedAt: new Date(),
+        status: "resolved",
+        resolvedAt: new Date(),
+        resolutionNotes: `Invoiced directly as ${invoiceNumber}`,
+      });
+
+      res.json({ 
+        invoiceId: invoiceNumber,
+        emergency: { ...emergency, convertedToInvoiceId: invoiceNumber },
+        message: `Emergency invoiced as ${invoiceNumber}` 
+      });
+    } catch (error) {
+      console.error("Failed to invoice emergency:", error);
+      res.status(500).json({ error: "Failed to invoice" });
     }
   });
 }
