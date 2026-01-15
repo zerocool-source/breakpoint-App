@@ -210,7 +210,7 @@ export default function EstimateApproval() {
   const billToAddress = estimate.billingAddress || estimate.address || "";
 
   const canSubmitApproval = approverName.trim().length >= 2;
-  const canSubmitDecline = approverName.trim().length >= 2;
+  const canSubmitDecline = approverName.trim().length >= 2 && rejectionReason.trim().length >= 5;
 
   const renderEstimateContent = () => (
     <>
@@ -623,17 +623,18 @@ export default function EstimateApproval() {
 
                 <div>
                   <Label htmlFor="rejectionReason" className="text-sm font-medium text-slate-700">
-                    Reason for Declining <span className="text-slate-400">(optional)</span>
+                    Reason for Declining <span className="text-red-500">*</span>
                   </Label>
                   <Textarea
                     id="rejectionReason"
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Help us understand your decision..."
+                    placeholder="Please tell us why you're declining this estimate..."
                     rows={2}
                     className="mt-1"
                     data-testid="textarea-rejection-reason"
                   />
+                  <p className="text-xs text-slate-500 mt-1">Minimum 5 characters required</p>
                 </div>
 
                 <div className="flex gap-3">

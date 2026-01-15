@@ -53,7 +53,133 @@ function generateLineItemsHtml(items: any[]): string {
   return html;
 }
 
-function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl: string, customMessage?: string): string {
+const OFFICE_NOTIFICATION_EMAIL = "business.development@breakpointpools.com";
+
+async function sendOfficeNotificationEmail(params: {
+  type: "approved" | "declined";
+  estimate: any;
+  approverName: string;
+  approverTitle?: string;
+  rejectionReason?: string;
+}): Promise<void> {
+  const { type, estimate, approverName, approverTitle, rejectionReason } = params;
+  const isApproved = type === "approved";
+  
+  const statusColor = isApproved ? "#27ae60" : "#e74c3c";
+  const statusText = isApproved ? "APPROVED" : "DECLINED";
+  const statusEmoji = isApproved ? "✅" : "❌";
+  
+  const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+    ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+    : process.env.REPLIT_DEPLOYMENT_URL || "http://localhost:5000";
+  const estimateLink = `${baseUrl}/estimates`;
+  
+  const subject = `${statusEmoji} Estimate ${statusText}: ${estimate.title || 'Pool Service Estimate'} - ${estimate.propertyName}`;
+  
+  const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="background-color: ${statusColor}; padding: 25px 30px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Estimate ${statusText}</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px;">
+        <p style="margin: 0 0 20px 0; font-size: 16px; color: #333;">
+          A customer has <strong style="color: ${statusColor};">${type}</strong> an estimate.
+        </p>
+        
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="40%" style="padding: 8px 0; color: #666; font-size: 14px;">Estimate #:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #333;">${estimate.estimateNumber || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Project:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #333;">${estimate.title || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Property:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #333;">${estimate.propertyName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Customer:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #333;">${estimate.customerName || estimate.propertyName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-size: 14px;">Total Amount:</td>
+              <td style="padding: 8px 0; font-weight: bold; color: #1e3a5f; font-size: 18px;">${formatCurrency(estimate.totalAmount || 0)}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="background-color: ${isApproved ? '#f0fdf4' : '#fef2f2'}; border: 1px solid ${isApproved ? '#86efac' : '#fecaca'}; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 15px 0; color: ${statusColor}; font-size: 16px;">Response Details</h3>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="40%" style="padding: 6px 0; color: #666; font-size: 14px;">Responded By:</td>
+              <td style="padding: 6px 0; font-weight: bold; color: #333;">
+                ${approverName}${approverTitle ? ` (${approverTitle})` : ''}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #666; font-size: 14px;">Response Time:</td>
+              <td style="padding: 6px 0; color: #333;">${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', dateStyle: 'medium', timeStyle: 'short' })}</td>
+            </tr>
+            ${!isApproved && rejectionReason ? `
+            <tr>
+              <td colspan="2" style="padding: 12px 0 0 0;">
+                <p style="margin: 0 0 5px 0; color: #666; font-size: 14px;">Reason for Declining:</p>
+                <div style="background-color: #fee2e2; padding: 12px; border-radius: 6px; border-left: 4px solid #e74c3c;">
+                  <p style="margin: 0; color: #991b1b; font-size: 14px;">${rejectionReason}</p>
+                </div>
+              </td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+        
+        ${isApproved ? `
+        <div style="background-color: #fef3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+          <p style="margin: 0; color: #856404; font-size: 14px;">
+            <strong>Next Steps:</strong> This estimate is now ready for scheduling. Please assign a technician and schedule the work.
+          </p>
+        </div>
+        ` : ''}
+        
+        <div style="text-align: center; margin-top: 25px;">
+          <a href="${estimateLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 14px 30px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 6px;">
+            View in Pool Brain Genius
+          </a>
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #1e3a5f; padding: 20px 30px; text-align: center;">
+        <p style="color: #ffffff; margin: 0; font-size: 12px;">
+          ${COMPANY_INFO.name} • Automated Notification
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  await sendEmail({
+    to: OFFICE_NOTIFICATION_EMAIL,
+    subject,
+    htmlContent,
+  });
+}
+
+function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl: string, customMessage?: string, photoUrls?: string[]): string {
   const items = estimate.items || [];
   const lineItemsHtml = generateLineItemsHtml(items);
   
@@ -217,6 +343,30 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
         </table>
       </td>
     </tr>
+
+    ${photoUrls && photoUrls.length > 0 ? `
+    <!-- Supporting Photos Section -->
+    <tr>
+      <td style="padding: 0 30px 20px 30px;">
+        <div style="border: 1px solid #e0e0e0; padding: 15px; background-color: #fafafa;">
+          <h4 style="color: #e67e22; margin: 0 0 15px 0; font-size: 14px;">SUPPORTING PHOTOS</h4>
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              ${photoUrls.map((url, index) => `
+                <td style="padding: 5px; text-align: center; vertical-align: top; width: ${100 / Math.min(photoUrls.length, 3)}%;">
+                  <a href="${url}" target="_blank" style="display: block;">
+                    <img src="${url}" alt="Photo ${index + 1}" style="max-width: 100%; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;" />
+                  </a>
+                  <p style="margin: 5px 0 0 0; font-size: 11px; color: #666;">Photo ${index + 1}</p>
+                </td>
+              `).join('')}
+            </tr>
+          </table>
+          <p style="margin: 15px 0 0 0; font-size: 11px; color: #999;">Photos are also attached to this email for download.</p>
+        </div>
+      </td>
+    </tr>
+    ` : ''}
 
     <!-- Compliance Section -->
     <tr>
@@ -1143,26 +1293,63 @@ export function registerEstimateRoutes(app: any) {
       // Use custom subject or default
       const emailSubject = subject || `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
       
-      // Generate the full branded HTML email with optional custom message
-      const htmlContent = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl, customMessage);
+      // Get base URL for photo links in email
+      const photoBaseUrl = baseUrl;
+      
+      // Fetch photos from object storage for attachments
+      const objectStorageService = new ObjectStorageService();
+      const validPhotos = (existingEstimate.photos || []).filter((p: string) => p && typeof p === 'string' && p.startsWith('/objects/'));
+      const photoAttachments: { name: string; contentType: string; contentBytes: string }[] = [];
+      const photoUrls: string[] = [];
+      
+      for (let i = 0; i < validPhotos.length; i++) {
+        try {
+          const photoPath = validPhotos[i];
+          const objectFile = await objectStorageService.getObjectEntityFile(photoPath);
+          const [metadata] = await objectFile.getMetadata();
+          const [buffer] = await objectFile.download();
+          
+          const contentType = metadata.contentType || 'image/jpeg';
+          const extension = contentType.includes('png') ? 'png' : contentType.includes('gif') ? 'gif' : 'jpg';
+          const filename = `Photo-${i + 1}.${extension}`;
+          
+          photoAttachments.push({
+            name: filename,
+            contentType,
+            contentBytes: buffer.toString('base64'),
+          });
+          
+          // Build public URL for thumbnail in email
+          photoUrls.push(`${photoBaseUrl}${photoPath}`);
+        } catch (error) {
+          console.error(`Failed to fetch photo ${validPhotos[i]}:`, error);
+        }
+      }
+      
+      // Generate the full branded HTML email with optional custom message and photos
+      const htmlContent = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl, customMessage, photoUrls);
       
       // Generate the PDF for attachment
       const pdfBuffer = await generateEstimatePdf(existingEstimate);
       const pdfBase64 = pdfBuffer.toString("base64");
       const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
       
+      // Build all attachments: PDF first, then photos
+      const allAttachments = [
+        {
+          name: pdfFilename,
+          contentType: "application/pdf",
+          contentBytes: pdfBase64,
+        },
+        ...photoAttachments,
+      ];
+      
       // Send email via Microsoft Graph - this must succeed before updating any state
       await sendEmail({
         to: email,
         subject: emailSubject,
         htmlContent,
-        attachments: [
-          {
-            name: pdfFilename,
-            contentType: "application/pdf",
-            contentBytes: pdfBase64,
-          },
-        ],
+        attachments: allAttachments,
       });
       
       // Only update estimate after successful email send (atomic state update)
@@ -1252,6 +1439,15 @@ export function registerEstimateRoutes(app: any) {
         acceptedDate: new Date(),
       });
       
+      // Send notification email to office staff (async, don't block response)
+      // Use updated estimate object to include approval timestamp and new status
+      sendOfficeNotificationEmail({
+        type: "approved",
+        estimate: { ...existingEstimate, ...estimate, status: "needs_scheduling", approvedAt: new Date() },
+        approverName,
+        approverTitle,
+      }).catch(err => console.error("Failed to send approval notification:", err));
+      
       res.json({ 
         estimate, 
         message: "Estimate approved successfully. The team will contact you to schedule the work." 
@@ -1267,6 +1463,14 @@ export function registerEstimateRoutes(app: any) {
     try {
       const { token } = req.params;
       const { approverName, approverTitle, rejectionReason } = req.body;
+      
+      if (!approverName || approverName.trim().length < 2) {
+        return res.status(400).json({ error: "Your name is required to decline this estimate" });
+      }
+      
+      if (!rejectionReason || rejectionReason.trim().length < 5) {
+        return res.status(400).json({ error: "Please provide a reason for declining (minimum 5 characters)" });
+      }
       
       const existingEstimate = await storage.getEstimateByApprovalToken(token);
       
@@ -1292,6 +1496,16 @@ export function registerEstimateRoutes(app: any) {
         customerApproverTitle: approverTitle || null,
         rejectionReason: rejectionReason || null,
       });
+      
+      // Send notification email to office staff (async, don't block response)
+      // Use updated estimate object to include rejection timestamp and new status
+      sendOfficeNotificationEmail({
+        type: "declined",
+        estimate: { ...existingEstimate, ...estimate, status: "rejected", rejectedAt: new Date() },
+        approverName,
+        approverTitle,
+        rejectionReason,
+      }).catch(err => console.error("Failed to send decline notification:", err));
       
       res.json({ 
         estimate, 

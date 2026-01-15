@@ -3512,6 +3512,63 @@ export default function Estimates() {
                   </div>
                 </div>
 
+                {/* Customer Response Details Section - shows when estimate is approved or rejected */}
+                {(selectedEstimate.status === "approved" || selectedEstimate.status === "needs_scheduling" || selectedEstimate.status === "scheduled" || selectedEstimate.status === "completed" || selectedEstimate.status === "rejected") && (
+                  <div className={`border rounded-lg overflow-hidden ${selectedEstimate.status === "rejected" ? "border-red-200" : "border-green-200"}`}>
+                    <div className={`px-4 py-3 border-b ${selectedEstimate.status === "rejected" ? "bg-red-50" : "bg-green-50"}`}>
+                      <h4 className={`font-semibold flex items-center gap-2 ${selectedEstimate.status === "rejected" ? "text-red-800" : "text-green-800"}`}>
+                        {selectedEstimate.status === "rejected" ? (
+                          <XCircle className="w-4 h-4" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4" />
+                        )}
+                        Customer Response
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wide">Response</p>
+                          <p className={`font-semibold ${selectedEstimate.status === "rejected" ? "text-red-600" : "text-green-600"}`}>
+                            {selectedEstimate.status === "rejected" ? "Declined" : "Approved"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wide">Responded By</p>
+                          <p className="font-medium text-slate-900">
+                            {selectedEstimate.customerApproverName || "Unknown"}
+                            {selectedEstimate.customerApproverTitle && (
+                              <span className="text-slate-500 font-normal"> ({selectedEstimate.customerApproverTitle})</span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wide">Response Date</p>
+                          <p className="font-medium text-slate-900">
+                            {selectedEstimate.status === "rejected" && selectedEstimate.rejectedAt
+                              ? formatDate(selectedEstimate.rejectedAt)
+                              : selectedEstimate.approvedAt
+                              ? formatDate(selectedEstimate.approvedAt)
+                              : selectedEstimate.acceptedDate
+                              ? formatDate(selectedEstimate.acceptedDate)
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 uppercase tracking-wide">Sent To</p>
+                          <p className="font-medium text-slate-900">{selectedEstimate.approvalSentTo || "N/A"}</p>
+                        </div>
+                      </div>
+                      {selectedEstimate.status === "rejected" && selectedEstimate.rejectionReason && (
+                        <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md">
+                          <p className="text-xs text-red-600 uppercase tracking-wide mb-1">Reason for Declining</p>
+                          <p className="text-sm text-red-800">{selectedEstimate.rejectionReason}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="border rounded-lg overflow-hidden">
                   <div className="bg-slate-100 px-4 py-3 border-b">
                     <h4 className="font-semibold text-slate-900 flex items-center gap-2">
