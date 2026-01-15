@@ -1,8 +1,8 @@
 import { Express } from "express";
 import { storage } from "../storage";
-import { insertEmergencySchema, type InsertEmergency, type InsertEstimate } from "@shared/schema";
+import { insertEmergencySchema, type InsertEmergency, type InsertEstimate, insertEstimateSchema } from "@shared/schema";
 import { z } from "zod";
-import crypto from "crypto";
+import { db } from "../db";
 
 const statusUpdateSchema = z.object({
   status: z.enum(["pending_review", "in_progress", "resolved"]),
@@ -168,18 +168,26 @@ export function registerEmergencyRoutes(app: Express) {
         tags: ["Emergency"],
       };
 
-      const estimate = await storage.createEstimate(estimateData);
-
-      await storage.updateEmergency(emergency.id, {
-        convertedToEstimateId: estimate.id,
-        convertedAt: new Date(),
-        status: "resolved",
-        resolvedAt: new Date(),
-        resolutionNotes: `Converted to estimate ${estimateNumber}`,
+      // Use transaction to ensure atomicity
+      const result = await db.transaction(async (tx) => {
+        const estimate = await storage.createEstimate(estimateData);
+        
+        await storage.updateEmergency(emergency.id, {
+          convertedToEstimateId: estimate.id,
+          convertedAt: new Date(),
+          status: "resolved",
+          resolvedAt: new Date(),
+          resolutionNotes: `Converted to estimate ${estimateNumber}`,
+        });
+        
+        return estimate;
       });
 
-      res.status(201).json({ estimate, emergency: { ...emergency, convertedToEstimateId: estimate.id } });
+      res.status(201).json({ estimate: result, emergency: { ...emergency, convertedToEstimateId: result.id } });
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid estimate data", details: error.errors });
+      }
       console.error("Failed to convert emergency to estimate:", error);
       res.status(500).json({ error: "Failed to convert to estimate" });
     }
