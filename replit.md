@@ -68,6 +68,11 @@ Routes are organized into domain-specific modules in `server/routes/`:
     - Metrics dashboard showing approval rate, values by status, average times
     - Scheduling modal for assigning jobs to repair technicians
 - `serviceRepairs.ts` - Service repair jobs management (sub-$500 jobs), batch-to-estimate workflow
+- `emergencies.ts` - Emergency tracking for urgent follow-up work:
+    - Workflow: pending_review → in_progress → resolved
+    - Convert to Estimate or Invoice Directly actions with atomic transactions
+    - Tracks source type, totalAmount, and conversion status
+    - Integrates with Estimates via sourceEmergencyId tracking
 
 **Data Flow:**
 1. Pool Brain API client fetches raw alerts, customers, and pool data
