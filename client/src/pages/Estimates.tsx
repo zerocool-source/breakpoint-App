@@ -822,43 +822,36 @@ export default function Estimates() {
       
       const { approveUrl, declineUrl, approvalUrl, emailSubject } = await response.json();
       
-      // Generate HTML email body for Outlook
+      // Generate plain text email body
       const totalAmount = ((selectedEstimate.totalAmount || 0) / 100).toFixed(2);
-      const emailBodyHtml = `
-<p>Dear Property Manager,</p>
+      const emailBody = `Dear Property Manager,
 
-<p>We are requesting approval for the following repair estimate:</p>
+We are requesting approval for the following repair estimate:
 
-<p>
-<strong>Property:</strong> ${selectedEstimate.propertyName}<br>
-<strong>Estimate #:</strong> ${selectedEstimate.estimateNumber || 'N/A'}<br>
-<strong>Title:</strong> ${selectedEstimate.title}${selectedEstimate.description ? `<br><strong>Description:</strong> ${selectedEstimate.description}` : ''}
-</p>
+Property: ${selectedEstimate.propertyName}
+Estimate #: ${selectedEstimate.estimateNumber || 'N/A'}
+Title: ${selectedEstimate.title}${selectedEstimate.description ? `
+Description: ${selectedEstimate.description}` : ''}
 
-<p><strong>Total Amount: $${totalAmount}</strong></p>
+Total Amount: $${totalAmount}
 
-<p>Please use one of the links below to respond:</p>
+Please click one of the links below to respond:
 
-<p>
-✓ <a href="${approveUrl}" style="color: #27ae60; font-weight: bold; text-decoration: none;"><strong>APPROVE</strong></a>
-</p>
+✓ APPROVE: ${approveUrl}
 
-<p>
-✗ <a href="${declineUrl}" style="color: #e74c3c; font-weight: bold; text-decoration: none;"><strong>DECLINE</strong></a>
-</p>
+✗ DECLINE: ${declineUrl}
 
-<p>Or <a href="${approvalUrl}">view the full estimate here</a>.</p>
+Or view the full estimate here: ${approvalUrl}
 
-<p>This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.</p>
+This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.
 
-<p>Thank you,<br>
-Breakpoint Commercial Pool Systems<br>
-(951) 653-3333 | info@breakpointpools.com</p>
-`.trim();
+Thank you,
+Breakpoint Commercial Pool Systems
+(951) 653-3333 | info@breakpointpools.com`;
 
-      // Open Outlook compose URL with HTML body
+      // Open Outlook compose URL with plain text body
       const subject = encodeURIComponent(emailSubject);
-      const body = encodeURIComponent(emailBodyHtml);
+      const body = encodeURIComponent(emailBody);
       const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
       window.open(outlookUrl, '_blank');
       
