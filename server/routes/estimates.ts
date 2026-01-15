@@ -53,7 +53,7 @@ function generateLineItemsHtml(items: any[]): string {
   return html;
 }
 
-function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl: string): string {
+function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl: string, customMessage?: string): string {
   const items = estimate.items || [];
   const lineItemsHtml = generateLineItemsHtml(items);
   
@@ -64,6 +64,20 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
   const hasProjectTitle = !!estimate.title;
   const projectTitle = estimate.title || "";
   const projectDescription = estimate.description || "";
+
+  // Build custom message section if provided
+  const customMessageHtml = customMessage ? `
+    <!-- Custom Message from Office Staff -->
+    <tr>
+      <td style="padding: 20px 30px 0 30px;">
+        <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 15px 20px; margin-bottom: 10px;">
+          <p style="margin: 0; color: #1e3a5f; font-size: 14px; line-height: 1.6;">
+            ${customMessage.replace(/\n/g, '<br>')}
+          </p>
+        </div>
+      </td>
+    </tr>
+  ` : '';
 
   return `<!DOCTYPE html>
 <html>
@@ -93,6 +107,8 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
         </table>
       </td>
     </tr>
+
+    ${customMessageHtml}
 
     <!-- Estimate Title -->
     <tr>
@@ -1101,7 +1117,7 @@ export function registerEstimateRoutes(app: any) {
   app.post("/api/estimates/:id/send-for-approval", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { email } = req.body;
+      const { email, subject, customMessage } = req.body;
       
       if (!email) {
         return res.status(400).json({ error: "Email address is required" });
@@ -1124,11 +1140,11 @@ export function registerEstimateRoutes(app: any) {
       const approveUrl = `${baseUrl}/approve/${approvalToken}?action=approve`;
       const declineUrl = `${baseUrl}/approve/${approvalToken}?action=decline`;
       
-      // Generate email subject
-      const emailSubject = `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
+      // Use custom subject or default
+      const emailSubject = subject || `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
       
-      // Generate the full branded HTML email
-      const htmlContent = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl);
+      // Generate the full branded HTML email with optional custom message
+      const htmlContent = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl, customMessage);
       
       // Generate the PDF for attachment
       const pdfBuffer = await generateEstimatePdf(existingEstimate);

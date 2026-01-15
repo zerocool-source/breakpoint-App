@@ -265,6 +265,8 @@ export default function Estimates() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSendApprovalDialog, setShowSendApprovalDialog] = useState(false);
   const [selectedApprovalEmail, setSelectedApprovalEmail] = useState("");
+  const [approvalSubject, setApprovalSubject] = useState("");
+  const [approvalMessage, setApprovalMessage] = useState("");
   const [propertyContacts, setPropertyContacts] = useState<{id: string; name: string; email: string; type: string}[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
@@ -768,6 +770,8 @@ export default function Estimates() {
   const openSendApprovalDialog = async (estimate: Estimate) => {
     setSelectedEstimate(estimate);
     setSelectedApprovalEmail("");
+    setApprovalSubject(`Estimate Approval Request: ${estimate.title || 'Pool Service Estimate'} - ${estimate.propertyName}`);
+    setApprovalMessage("");
     setLoadingContacts(true);
     setShowSendApprovalDialog(true);
     
@@ -821,7 +825,11 @@ export default function Estimates() {
       const response = await fetch(`/api/estimates/${selectedEstimate.id}/send-for-approval`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: selectedApprovalEmail }),
+        body: JSON.stringify({ 
+          email: selectedApprovalEmail,
+          subject: approvalSubject,
+          customMessage: approvalMessage,
+        }),
       });
       
       if (!response.ok) {
@@ -2973,28 +2981,32 @@ export default function Estimates() {
         </Dialog>
 
         <Dialog open={showSendApprovalDialog} onOpenChange={setShowSendApprovalDialog}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5 text-[#F97316]" />
                 Send for Approval
               </DialogTitle>
               <DialogDescription>
-                Select a contact to send the approval request email to.
+                Customize and send the approval request email.
               </DialogDescription>
             </DialogHeader>
             {selectedEstimate && (
               <div className="space-y-4">
-                <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
-                  <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
-                  <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
-                  <p className="text-lg font-bold text-[#1E3A8A] mt-2">
-                    {formatCurrency(selectedEstimate.totalAmount)}
-                  </p>
+                <div className="p-3 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
+                      <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
+                    </div>
+                    <p className="text-lg font-bold text-[#1E3A8A]">
+                      {formatCurrency(selectedEstimate.totalAmount)}
+                    </p>
+                  </div>
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-medium text-[#1E293B]">Send approval request to:</Label>
+                  <Label className="text-sm font-medium text-[#1E293B]">Recipient</Label>
                   {loadingContacts ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
@@ -3002,7 +3014,7 @@ export default function Estimates() {
                     </div>
                   ) : propertyContacts.length > 0 ? (
                     <Select value={selectedApprovalEmail} onValueChange={setSelectedApprovalEmail}>
-                      <SelectTrigger className="mt-2" data-testid="select-approval-email">
+                      <SelectTrigger className="mt-1" data-testid="select-approval-email">
                         <SelectValue placeholder="Select email..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -3018,18 +3030,43 @@ export default function Estimates() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="mt-2 p-3 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
-                      <p className="text-sm text-[#D97706]">No contacts found for this property.</p>
+                    <div className="mt-1">
                       <Input
                         type="email"
-                        placeholder="Enter email manually..."
+                        placeholder="Enter email address..."
                         value={selectedApprovalEmail}
                         onChange={(e) => setSelectedApprovalEmail(e.target.value)}
-                        className="mt-2"
                         data-testid="input-manual-email"
                       />
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">Subject Line</Label>
+                  <Input
+                    value={approvalSubject}
+                    onChange={(e) => setApprovalSubject(e.target.value)}
+                    placeholder="Email subject..."
+                    className="mt-1"
+                    data-testid="input-approval-subject"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">
+                    Personal Message <span className="text-[#94A3B8] font-normal">(optional)</span>
+                  </Label>
+                  <Textarea
+                    value={approvalMessage}
+                    onChange={(e) => setApprovalMessage(e.target.value)}
+                    placeholder="Add a personal note to the customer... (e.g., 'Please review at your earliest convenience' or 'This covers the repairs we discussed on Monday')"
+                    className="mt-1 min-h-[80px]"
+                    data-testid="textarea-approval-message"
+                  />
+                  <p className="text-xs text-[#94A3B8] mt-1">
+                    This message will appear at the top of the email before the estimate details.
+                  </p>
                 </div>
               </div>
             )}
@@ -3039,7 +3076,7 @@ export default function Estimates() {
               </Button>
               <Button
                 onClick={handleSendApprovalEmail}
-                disabled={!selectedApprovalEmail}
+                disabled={!selectedApprovalEmail || !approvalSubject.trim()}
                 className="bg-[#F97316] hover:bg-[#F97316]/90"
                 data-testid="button-send-approval-email"
               >
