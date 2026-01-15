@@ -820,16 +820,48 @@ export default function Estimates() {
         throw new Error(error.error || "Failed to send for approval");
       }
       
-      const { emailSent, emailId, message } = await response.json();
+      const { approveUrl, declineUrl, approvalUrl, emailSubject } = await response.json();
       
-      // Email sent successfully via Resend API - just refresh and show success
+      // Generate plain text email body with clickable links
+      const emailBody = `Dear Property Manager,
+
+We are requesting approval for the following repair estimate:
+
+Property: ${selectedEstimate.propertyName}
+Estimate #: ${selectedEstimate.estimateNumber || 'N/A'}
+Title: ${selectedEstimate.title}
+${selectedEstimate.description ? `Description: ${selectedEstimate.description}` : ''}
+
+Total Amount: $${((selectedEstimate.totalAmount || 0) / 100).toFixed(2)}
+
+Please use one of the links below to respond:
+
+✓ APPROVE: ${approveUrl}
+
+✗ DECLINE: ${declineUrl}
+
+Or view the full estimate here: ${approvalUrl}
+
+This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.
+
+Thank you,
+Breakpoint Commercial Pool Systems
+(951) 653-3333 | info@breakpointpools.com`;
+
+      // Open Outlook compose URL
+      const subject = encodeURIComponent(emailSubject);
+      const body = encodeURIComponent(emailBody);
+      const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
+      window.open(outlookUrl, '_blank');
+      
+      // Refresh estimates list
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       queryClient.invalidateQueries({ queryKey: ["/api/estimates/metrics"] });
       
       setShowSendApprovalDialog(false);
       toast({ 
-        title: "Email Sent Successfully", 
-        description: `Estimate approval request sent to ${selectedApprovalEmail}. Status updated to Pending Approval.` 
+        title: "Email Ready", 
+        description: `Outlook opened with approval request for ${selectedApprovalEmail}. Status updated to Pending Approval.` 
       });
     } catch (error: any) {
       toast({ 

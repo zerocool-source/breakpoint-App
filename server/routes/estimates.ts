@@ -3,7 +3,6 @@ import { storage } from "../storage";
 import crypto from "crypto";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Resend } from "resend";
 
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: { finalY: number };
@@ -1027,11 +1026,6 @@ export function registerEstimateRoutes(app: any) {
         return res.status(400).json({ error: "Email address is required" });
       }
       
-      // Check if Resend API key is configured
-      if (!process.env.RESEND_API_KEY) {
-        return res.status(500).json({ error: "Email service not configured. Please add RESEND_API_KEY to secrets." });
-      }
-      
       // Get the estimate first to check if it exists
       const existingEstimate = await storage.getEstimate(id);
       if (!existingEstimate) {
@@ -1051,42 +1045,7 @@ export function registerEstimateRoutes(app: any) {
       const approvalUrl = `${baseUrl}/approve/${approvalToken}`;
       const pdfUrl = `${baseUrl}/api/estimates/${id}/pdf`;
       
-      // Generate the HTML email content (use existing estimate for now, will update after)
-      const emailHtml = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl);
-      
-      // Log HTML generation for debugging
-      console.log(`Generated HTML email - Length: ${emailHtml.length} chars, starts with: ${emailHtml.substring(0, 100)}`);
-      
-      // Generate PDF attachment
-      const pdfBuffer = generateEstimatePdf(existingEstimate);
-      const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
-      const emailSubject = `Estimate ${existingEstimate.estimateNumber || ""} from ${COMPANY_INFO.name} - Approval Required`;
-      
-      // Initialize Resend and send the email
-      // Note: Using onboarding@resend.dev for testing until domain is verified
-      // Once domain is verified, set RESEND_FROM_EMAIL to your verified sender address
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      const fromEmail = process.env.RESEND_FROM_EMAIL || "Breakpoint Commercial Pool Systems <onboarding@resend.dev>";
-      
-      const { data: emailResult, error: emailError } = await resend.emails.send({
-        from: fromEmail,
-        to: [email],
-        subject: emailSubject,
-        html: emailHtml,
-        attachments: [
-          {
-            filename: pdfFilename,
-            content: pdfBuffer,
-          },
-        ],
-      });
-      
-      if (emailError) {
-        console.error("Resend API error:", emailError);
-        return res.status(500).json({ error: `Failed to send email: ${emailError.message}` });
-      }
-      
-      // Email sent successfully - now update the estimate status
+      // Update the estimate with approval token and status
       const estimate = await storage.updateEstimate(id, {
         status: "pending_approval",
         approvalToken,
@@ -1097,15 +1056,11 @@ export function registerEstimateRoutes(app: any) {
       });
       
       if (!estimate) {
-        console.error("Email sent but failed to update estimate status");
-        return res.status(500).json({ 
-          error: "Email was sent but failed to update estimate status. Please try again.",
-          emailSent: true,
-          emailId: emailResult?.id
-        });
+        return res.status(500).json({ error: "Failed to update estimate status" });
       }
       
-      console.log(`Email sent successfully via Resend. Email ID: ${emailResult?.id}`);
+      // Generate email subject
+      const emailSubject = `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
       
       res.json({ 
         estimate, 
@@ -1113,9 +1068,8 @@ export function registerEstimateRoutes(app: any) {
         approveUrl,
         declineUrl,
         pdfUrl,
-        emailSent: true,
-        emailId: emailResult?.id,
-        message: `Estimate sent for approval to ${email}` 
+        emailSubject,
+        message: `Estimate ready for approval. Opening email client...` 
       });
     } catch (error: any) {
       console.error("Error sending estimate for approval:", error);
