@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 700px; margin: 0 auto; background-color: #ffffff;">
+    
+    <!-- Header -->
+    <tr>
+      <td style="background-color: #1e3a5f; padding: 20px 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td>
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Breakpoint Commercial Pool Systems</h1>
+              <p style="color: #ffffff; margin: 5px 0 0 0; font-style: italic;">Keeping People Safe</p>
+            </td>
+            <td style="text-align: right; color: #ffffff; font-size: 12px;">
+              <p style="margin: 0;">6236 River Crest Drive Suite C</p>
+              <p style="margin: 0;">Riverside, CA 92507</p>
+              <p style="margin: 0;">(951) 653-3333</p>
+              <p style="margin: 0;">info@breakpointpools.com</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Estimate Title -->
+    <tr>
+      <td style="padding: 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td>
+              <h2 style="color: #1e3a5f; margin: 0; font-size: 28px;">ESTIMATE</h2>
+            </td>
+            <td style="text-align: right;">
+              <p style="margin: 0; color: #666;">Estimate #: <strong>{{ESTIMATE_NUMBER}}</strong></p>
+              <p style="margin: 0; color: #666;">Date: <strong>{{ESTIMATE_DATE}}</strong></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Bill To / Ship To -->
+    <tr>
+      <td style="padding: 0 30px 20px 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="48%" style="background-color: #f8f9fa; padding: 15px; vertical-align: top;">
+              <p style="margin: 0 0 5px 0; color: #666; font-size: 12px; text-transform: uppercase;">Bill To</p>
+              <p style="margin: 0; font-weight: bold;">{{BILL_TO_NAME}}</p>
+              <p style="margin: 0; color: #666;">{{BILL_TO_ADDRESS}}</p>
+            </td>
+            <td width="4%"></td>
+            <td width="48%" style="background-color: #f8f9fa; padding: 15px; vertical-align: top;">
+              <p style="margin: 0 0 5px 0; color: #666; font-size: 12px; text-transform: uppercase;">Service Location / Ship To</p>
+              <p style="margin: 0; font-weight: bold;">{{SERVICE_LOCATION_NAME}}</p>
+              <p style="margin: 0; color: #666;">{{SERVICE_LOCATION_ADDRESS}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Project Title -->
+    <tr>
+      <td style="padding: 0 30px 10px 30px;">
+        <h3 style="color: #e67e22; margin: 0;">Project: {{PROJECT_TITLE}}</h3>
+      </td>
+    </tr>
+
+    <!-- Description -->
+    <tr>
+      <td style="padding: 0 30px 20px 30px;">
+        <div style="border-left: 4px solid #3498db; padding-left: 15px; color: #666;">
+          {{PROJECT_DESCRIPTION}}
+        </div>
+      </td>
+    </tr>
+
+    <!-- Line Items Header -->
+    <tr>
+      <td style="padding: 0 30px;">
+        <table width="100%" cellpadding="10" cellspacing="0" style="border-collapse: collapse;">
+          <tr style="background-color: #1e3a5f;">
+            <td style="color: #ffffff; font-weight: bold; width: 50%;">Description</td>
+            <td style="color: #ffffff; font-weight: bold; text-align: center;">Qty</td>
+            <td style="color: #ffffff; font-weight: bold; text-align: right;">Rate</td>
+            <td style="color: #ffffff; font-weight: bold; text-align: right;">Amount</td>
+          </tr>
+          {{LINE_ITEMS}}
+        </table>
+      </td>
+    </tr>
+
+    <!-- Totals -->
+    <tr>
+      <td style="padding: 20px 30px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="60%"></td>
+            <td width="40%">
+              <table width="100%" cellpadding="8" cellspacing="0">
+                <tr>
+                  <td style="text-align: right; color: #666;">Subtotal</td>
+                  <td style="text-align: right;">{{SUBTOTAL}}</td>
+                </tr>
+                <tr>
+                  <td style="text-align: right; color: #666;">Tax</td>
+                  <td style="text-align: right;">{{TAX}}</td>
+                </tr>
+                <tr style="font-size: 18px; font-weight: bold;">
+                  <td style="text-align: right; color: #1e3a5f;">Total</td>
+                  <td style="text-align: right; color: #e67e22;">{{TOTAL}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Compliance Section -->
+    <tr>
+      <td style="padding: 0 30px 20px 30px;">
+        <div style="border: 1px solid #e0e0e0; padding: 15px; background-color: #fafafa;">
+          <h4 style="color: #e67e22; margin: 0 0 10px 0; font-size: 14px;">COMPLIANCE & AUTHORIZATION</h4>
+          <p style="margin: 0; font-size: 11px; color: #666; line-height: 1.5;">
+            All work performed under this estimate will comply with applicable regulatory standards including but not limited to: California Title 22 (Health & Safety Code), California Title 24 (Building Standards), NEC Article 680 (Swimming Pools, Fountains, and Similar Installations), NFPA 54 (National Fuel Gas Code), ANSI/NSF 50 (Equipment for Swimming Pools, Spas, Hot Tubs, and Other Recreational Water Facilities), DOE (Department of Energy) efficiency standards, ADA (Americans with Disabilities Act) accessibility requirements, and VGB Act (Virginia Graeme Baker Pool and Spa Safety Act) compliance.
+          </p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Terms Section -->
+    <tr>
+      <td style="padding: 0 30px 30px 30px;">
+        <div style="border: 1px solid #e0e0e0; padding: 15px; background-color: #fafafa;">
+          <h4 style="color: #e67e22; margin: 0 0 10px 0; font-size: 14px;">TERMS & CONDITIONS</h4>
+          <p style="margin: 0; font-size: 11px; color: #666; line-height: 1.5;">
+            This estimate is valid for 60 days from the date shown above. For projects exceeding $500, a deposit of 10% or $1,000 (whichever is greater) is required to schedule work. For repairs exceeding $10,000, a 35% deposit is required. Final payment is due upon completion of work. All materials remain the property of Breakpoint Commercial Pool Systems until paid in full.
+          </p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Approval Section -->
+    <tr>
+      <td style="padding: 0 30px 30px 30px;">
+        <div style="border: 2px solid #1e3a5f; border-radius: 8px; padding: 25px; text-align: center; background-color: #f8f9fa;">
+          <h3 style="color: #1e3a5f; margin: 0 0 10px 0;">Your Response Required</h3>
+          <p style="color: #666; margin: 0 0 20px 0;">Please review the estimate above and click one of the buttons below:</p>
+          
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td width="48%" style="text-align: center;">
+                <a href="{{APPROVE_URL}}" style="display: inline-block; background-color: #27ae60; color: #ffffff; padding: 15px 40px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 5px;">✓ APPROVE ESTIMATE</a>
+              </td>
+              <td width="4%"></td>
+              <td width="48%" style="text-align: center;">
+                <a href="{{DECLINE_URL}}" style="display: inline-block; background-color: #e74c3c; color: #ffffff; padding: 15px 40px; text-decoration: none; font-size: 16px; font-weight: bold; border-radius: 5px;">✗ DECLINE ESTIMATE</a>
+              </td>
+            </tr>
+          </table>
+          
+          <p style="color: #999; font-size: 11px; margin: 20px 0 0 0;">This link is secure and does not require you to log in. You will be asked to enter your name and title when responding.</p>
+        </div>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="background-color: #1e3a5f; padding: 20px 30px; text-align: center;">
+        <p style="color: #ffffff; margin: 0; font-size: 12px;">Breakpoint Commercial Pool Systems • (951) 653-3333 • info@breakpointpools.com</p>
+        <p style="color: #ffffff; margin: 5px 0 0 0; font-size: 12px;">www.BreakpointPools.com</p>
+      </td>
+    </tr>
+
+  </table>
+</body>
+</html>
