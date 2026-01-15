@@ -808,7 +808,7 @@ export default function Estimates() {
     if (!selectedEstimate || !selectedApprovalEmail) return;
     
     try {
-      // Call the API to send the approval email via Resend
+      // Call the API to generate approval token and update status
       const response = await fetch(`/api/estimates/${selectedEstimate.id}/send-for-approval`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -820,7 +820,47 @@ export default function Estimates() {
         throw new Error(error.error || "Failed to send for approval");
       }
       
-      const { emailSent, message } = await response.json();
+      const { approveUrl, declineUrl, approvalUrl, emailSubject } = await response.json();
+      
+      // Generate HTML email body for Outlook
+      const totalAmount = ((selectedEstimate.totalAmount || 0) / 100).toFixed(2);
+      const emailBodyHtml = `
+<p>Dear Property Manager,</p>
+
+<p>We are requesting approval for the following repair estimate:</p>
+
+<p>
+<strong>Property:</strong> ${selectedEstimate.propertyName}<br>
+<strong>Estimate #:</strong> ${selectedEstimate.estimateNumber || 'N/A'}<br>
+<strong>Title:</strong> ${selectedEstimate.title}${selectedEstimate.description ? `<br><strong>Description:</strong> ${selectedEstimate.description}` : ''}
+</p>
+
+<p><strong>Total Amount: $${totalAmount}</strong></p>
+
+<p>Please use one of the links below to respond:</p>
+
+<p>
+✓ <a href="${approveUrl}" style="color: #27ae60; font-weight: bold; text-decoration: none;"><strong>APPROVE</strong></a>
+</p>
+
+<p>
+✗ <a href="${declineUrl}" style="color: #e74c3c; font-weight: bold; text-decoration: none;"><strong>DECLINE</strong></a>
+</p>
+
+<p>Or <a href="${approvalUrl}">view the full estimate here</a>.</p>
+
+<p>This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.</p>
+
+<p>Thank you,<br>
+Breakpoint Commercial Pool Systems<br>
+(951) 653-3333 | info@breakpointpools.com</p>
+`.trim();
+
+      // Open Outlook compose URL with HTML body
+      const subject = encodeURIComponent(emailSubject);
+      const body = encodeURIComponent(emailBodyHtml);
+      const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
+      window.open(outlookUrl, '_blank');
       
       // Refresh estimates list
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
@@ -828,8 +868,8 @@ export default function Estimates() {
       
       setShowSendApprovalDialog(false);
       toast({ 
-        title: "Email Sent Successfully", 
-        description: `Estimate approval request sent to ${selectedApprovalEmail}. Status updated to Pending Approval.` 
+        title: "Email Ready", 
+        description: `Outlook opened with approval request for ${selectedApprovalEmail}. Status updated to Pending Approval.` 
       });
     } catch (error: any) {
       toast({ 
