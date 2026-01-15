@@ -134,6 +134,10 @@ export function registerEmergencyRoutes(app: Express) {
         return res.status(400).json({ error: "Emergency already converted to estimate" });
       }
 
+      if (emergency.convertedToInvoiceId) {
+        return res.status(400).json({ error: "Emergency already invoiced directly - cannot also create estimate" });
+      }
+
       const estimateNumber = `EM-${Date.now().toString(36).toUpperCase()}`;
       const amountInCents = emergency.totalAmount || 0;
       
@@ -190,6 +194,10 @@ export function registerEmergencyRoutes(app: Express) {
 
       if (emergency.convertedToInvoiceId) {
         return res.status(400).json({ error: "Emergency already invoiced" });
+      }
+
+      if (emergency.convertedToEstimateId) {
+        return res.status(400).json({ error: "Emergency already converted to estimate - cannot also invoice directly" });
       }
 
       const invoiceNumber = `INV-EM-${Date.now().toString(36).toUpperCase()}`;

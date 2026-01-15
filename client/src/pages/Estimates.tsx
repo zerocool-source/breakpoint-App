@@ -137,6 +137,8 @@ interface Estimate {
   // Source tracking
   sourceType: string | null;
   sourceRepairJobId: string | null;
+  sourceEmergencyId: string | null;
+  serviceRepairCount: number | null;
 }
 
 interface EstimateFormData {
@@ -361,6 +363,7 @@ export default function Estimates() {
       case "repair_tech": return "Repair Tech";
       case "service_tech": return "Service Tech";
       case "office_staff": return "Office Staff";
+      case "emergency": return "Emergency";
       default: return "Office Staff";
     }
   };
@@ -371,6 +374,7 @@ export default function Estimates() {
       case "repair_tech": return "bg-blue-100 text-blue-700 border-blue-200";
       case "service_tech": return "bg-purple-100 text-purple-700 border-purple-200";
       case "office_staff": return "bg-gray-100 text-gray-700 border-gray-200";
+      case "emergency": return "bg-red-100 text-red-700 border-red-200";
       default: return "bg-gray-100 text-gray-700 border-gray-200";
     }
   };
