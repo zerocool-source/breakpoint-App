@@ -1439,3 +1439,35 @@ export const insertQuickbooksTokenSchema = createInsertSchema(quickbooksTokens).
 
 export type InsertQuickbooksToken = z.infer<typeof insertQuickbooksTokenSchema>;
 export type QuickbooksToken = typeof quickbooksTokens.$inferSelect;
+
+// Emergencies (Completed but not completed - needs follow-up)
+export const emergencies = pgTable("emergencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id"),
+  propertyName: text("property_name"),
+  propertyAddress: text("property_address"),
+  submittedById: varchar("submitted_by_id"),
+  submittedByName: text("submitted_by_name"),
+  submitterRole: text("submitter_role").notNull(), // service_technician, repair_technician, supervisor, repair_foreman
+  description: text("description").notNull(),
+  photos: text("photos").array(),
+  originalServiceDate: timestamp("original_service_date"),
+  originalMarkedCompleteAt: timestamp("original_marked_complete_at"),
+  status: text("status").notNull().default("pending_review"), // pending_review, in_progress, resolved
+  priority: text("priority").default("normal"), // low, normal, high, critical
+  resolvedAt: timestamp("resolved_at"),
+  resolvedById: varchar("resolved_by_id"),
+  resolvedByName: text("resolved_by_name"),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEmergencySchema = createInsertSchema(emergencies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEmergency = z.infer<typeof insertEmergencySchema>;
+export type Emergency = typeof emergencies.$inferSelect;

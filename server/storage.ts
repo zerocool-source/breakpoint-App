@@ -43,6 +43,7 @@ import {
   type TechOpsEntry, type InsertTechOpsEntry,
   type CustomerTag, type InsertCustomerTag,
   type CustomerTagAssignment, type InsertCustomerTagAssignment,
+  type Emergency, type InsertEmergency,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -51,7 +52,7 @@ import {
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
-  customerTags, customerTagAssignments
+  customerTags, customerTagAssignments, emergencies
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -2415,6 +2416,79 @@ export class DbStorage implements IStorage {
       }
     }
     return { tagsCreated: created };
+  }
+
+  // Emergencies
+  async getEmergencies(filters?: { 
+    submitterRole?: string; 
+    propertySearch?: string;
+    startDate?: Date;
+    endDate?: Date;
+    status?: string;
+  }): Promise<Emergency[]> {
+    let query = db.select().from(emergencies);
+    const conditions = [];
+
+    if (filters?.submitterRole && filters.submitterRole !== 'all') {
+      conditions.push(eq(emergencies.submitterRole, filters.submitterRole));
+    }
+    if (filters?.propertySearch) {
+      conditions.push(or(
+        ilike(emergencies.propertyName, `%${filters.propertySearch}%`),
+        ilike(emergencies.propertyAddress, `%${filters.propertySearch}%`)
+      ));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(emergencies.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(emergencies.createdAt, filters.endDate));
+    }
+    if (filters?.status && filters.status !== 'all') {
+      conditions.push(eq(emergencies.status, filters.status));
+    }
+
+    if (conditions.length > 0) {
+      return db.select().from(emergencies)
+        .where(and(...conditions))
+        .orderBy(emergencies.createdAt);
+    }
+    return db.select().from(emergencies).orderBy(emergencies.createdAt);
+  }
+
+  async getEmergency(id: string): Promise<Emergency | undefined> {
+    const result = await db.select().from(emergencies).where(eq(emergencies.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createEmergency(emergency: InsertEmergency): Promise<Emergency> {
+    const result = await db.insert(emergencies).values(emergency as any).returning();
+    return result[0];
+  }
+
+  async updateEmergency(id: string, updates: Partial<InsertEmergency>): Promise<Emergency | undefined> {
+    const result = await db.update(emergencies)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(emergencies.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEmergency(id: string): Promise<void> {
+    await db.delete(emergencies).where(eq(emergencies.id, id));
+  }
+
+  async getEmergenciesCount(): Promise<{ total: number; byRole: Record<string, number>; byStatus: Record<string, number> }> {
+    const all = await db.select().from(emergencies);
+    const byRole: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    
+    for (const e of all) {
+      byRole[e.submitterRole] = (byRole[e.submitterRole] || 0) + 1;
+      byStatus[e.status] = (byStatus[e.status] || 0) + 1;
+    }
+    
+    return { total: all.length, byRole, byStatus };
   }
 }
 
