@@ -19,15 +19,6 @@ import { cn } from "@/lib/utils";
 
 const techOpsOptions = [
   { 
-    id: "emergencies",
-    entryType: "emergencies",
-    label: "Emergencies", 
-    href: "/emergencies",
-    icon: AlertTriangle, 
-    color: "bg-red-100 text-red-700 border-red-200",
-    description: "Completed but not completed - urgent follow-up needed"
-  },
-  { 
     id: "repairs-needed",
     entryType: "repairs_needed",
     label: "Repairs Needed", 
