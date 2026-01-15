@@ -99,6 +99,7 @@ export default function EstimateApproval() {
       }
       return res.json();
     },
+    enabled: !!token,
   });
 
   const approveMutation = useMutation({
@@ -153,12 +154,26 @@ export default function EstimateApproval() {
     });
   };
 
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">
+            Invalid Link
+          </h2>
+          <p className="text-slate-600 text-sm">This approval link appears to be invalid or incomplete. Please check the link in your email.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#1E3A8A] mx-auto mb-3" />
-          <p className="text-slate-600">Loading...</p>
+          <p className="text-slate-600">Loading estimate...</p>
         </div>
       </div>
     );
@@ -178,7 +193,21 @@ export default function EstimateApproval() {
     );
   }
 
-  const { estimate, alreadyProcessed, action } = data!;
+  if (!data || !data.estimate) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">
+            Estimate Not Found
+          </h2>
+          <p className="text-slate-600 text-sm">This estimate could not be found or the approval link may have expired.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { estimate, alreadyProcessed, action } = data;
   const items = estimate.items || [];
   const itemCount = items.length;
 
