@@ -173,6 +173,29 @@ export default function Emergencies() {
     return `${days} days waiting`;
   };
 
+  const propertyMetrics = useMemo(() => {
+    const byProperty: Record<string, { name: string; count: number; pending: number; totalAmount: number }> = {};
+    
+    emergencies.forEach((e) => {
+      const propId = e.propertyId || "unknown";
+      const propName = e.propertyName || "Unknown Property";
+      
+      if (!byProperty[propId]) {
+        byProperty[propId] = { name: propName, count: 0, pending: 0, totalAmount: 0 };
+      }
+      byProperty[propId].count++;
+      if (e.status === "pending_review" || e.status === "in_progress") {
+        byProperty[propId].pending++;
+      }
+      byProperty[propId].totalAmount += e.totalAmount || 0;
+    });
+
+    return Object.entries(byProperty)
+      .map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [emergencies]);
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -281,6 +304,42 @@ export default function Emergencies() {
                 <div className="text-sm text-green-600">Resolved</div>
               </div>
             </div>
+
+            {propertyMetrics.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Top Properties by Emergencies
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                  {propertyMetrics.map((prop, index) => (
+                    <div 
+                      key={prop.id} 
+                      className="p-3 bg-white border border-slate-200 rounded-lg hover:border-red-200 hover:bg-red-50/30 transition-colors cursor-pointer"
+                      onClick={() => setPropertySearch(prop.name)}
+                      data-testid={`property-metric-${index}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-lg font-bold text-[#1E293B]">{prop.count}</span>
+                        {prop.pending > 0 && (
+                          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5">
+                            {prop.pending} open
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-600 truncate" title={prop.name}>
+                        {prop.name}
+                      </div>
+                      {prop.totalAmount > 0 && (
+                        <div className="text-xs text-green-600 mt-1">
+                          ${(prop.totalAmount / 100).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
