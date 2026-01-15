@@ -1,0 +1,171 @@
+Step 1 — Identify the stack and architecture
+
+Read package.json (or requirements files) and list:
+
+framework (Next.js / React / Express / Fastify / etc.)
+
+database library (Prisma / Sequelize / Knex / Supabase / Firebase / etc.)
+
+auth library (NextAuth / JWT / Clerk / etc.)
+
+any external APIs being used
+
+Show the full folder structure and explain what each major folder does:
+
+src/, app/, pages/, server/, api/, routes/, prisma/, etc.
+
+Step 2 — Discover all existing “data entities”
+
+Search the project for:
+
+database schema files (prisma/schema.prisma, migrations, SQL, models)
+
+types/interfaces (types/, interfaces/, zod schemas)
+
+any sample JSON payloads
+
+Output a list of entities like:
+
+User
+
+Property/Account
+
+Pool
+
+Route
+
+Route Stops
+
+Assignments
+
+Field Entries / Service Logs
+
+Repairs / Work Orders
+
+Estimates
+
+Chemical Orders / Dropoffs
+
+Quick Actions
+
+Inventory / Truck Inventory
+
+Attachments / Photos
+
+For each entity, output:
+
+fields + types
+
+required vs optional
+
+relationships (FKs / joins)
+
+any enumerations (roles, statuses, incident types, etc.)
+
+Step 3 — Find all existing API calls the Admin App makes
+
+Search for:
+
+fetch(, axios, api. client calls, trpc, /api/ routes
+
+environment variables like process.env.*
+
+any base URL configuration
+
+Output:
+
+every API endpoint the Admin App calls (method + URL)
+
+headers used (Authorization, API keys, etc.)
+
+example request body (JSON)
+
+example response body (JSON)
+
+where in the UI it is called (file path)
+
+Step 4 — Find all internal API routes already inside the Admin App
+
+If this is Next.js / Express etc., locate:
+
+pages/api/* or app/api/*
+
+routes/*
+
+server handlers
+
+Output:
+
+a list of all routes/endpoints
+
+what they do
+
+what data they read/write
+
+validation rules
+
+Step 5 — Auth + Roles mapping
+
+Locate where auth is implemented:
+
+login flow
+
+session/JWT handling
+
+role checks
+
+Output:
+
+what roles exist (Supervisor, Foreman, Repair Tech, Service Tech, GM)
+
+what screens/actions each role can access
+
+what data visibility rules exist
+
+Step 6 — Produce the “Backend API Blueprint” we will build
+
+Based on everything found above, generate:
+
+Proposed API endpoints (REST) that fully support the Admin App’s current functionality
+For each endpoint include:
+
+method + path
+
+request schema (JSON)
+
+response schema (JSON)
+
+auth required? (which roles)
+
+DB tables touched
+
+Database schema proposal (Postgres) that matches the Admin App needs
+
+tables + fields
+
+indexes for key queries
+
+relationships
+
+Migration plan if the Admin App currently stores data locally / in a different DB
+
+Output format (strict)
+
+Return your findings in this exact structure:
+
+A) Stack & folder map
+B) Entities + schema details
+C) Outbound API calls list (Admin App → other services)
+D) Existing internal API routes list (if any)
+E) Auth & RBAC summary
+F) Backend API blueprint (endpoints + JSON contracts)
+G) DB schema proposal (tables + relationships)
+H) Gaps / unknowns (what couldn’t be determined)
+
+IMPORTANT:
+
+Do not guess. If something is unclear, report it as “unknown” and point to the files you checked.
+
+Include file paths for every discovery.
+
+Keep the output detailed and implementation-ready.
