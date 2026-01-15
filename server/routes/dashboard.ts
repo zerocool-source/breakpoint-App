@@ -9,11 +9,13 @@ export function registerDashboardRoutes(app: any) {
         serviceRepairs,
         techniciansList,
         alerts,
+        emergencies,
       ] = await Promise.all([
         storage.getEstimates(),
         storage.getServiceRepairJobs(),
         storage.getTechnicians(),
         storage.getAlerts(),
+        storage.getEmergencies(),
       ]);
 
       const now = new Date();
@@ -41,6 +43,13 @@ export function registerDashboardRoutes(app: any) {
       const activeAlerts = alerts.filter((a: any) => 
         a.status === "Active" || a.status?.toLowerCase() === "active"
       );
+
+      // Emergency metrics
+      const openEmergencies = emergencies.filter((e: any) => 
+        e.status === "pending_review" || e.status === "in_progress"
+      );
+      const pendingReviewEmergencies = emergencies.filter((e: any) => e.status === "pending_review");
+      const inProgressEmergencies = emergencies.filter((e: any) => e.status === "in_progress");
 
       const totalEstimateValue = estimates.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
       const pendingApprovalValue = pendingApprovals.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
@@ -73,6 +82,16 @@ export function registerDashboardRoutes(app: any) {
       }).slice(0, 10);
 
       const urgentItems = [
+        ...openEmergencies.slice(0, 5).map((e: any) => ({
+          type: "emergency",
+          id: e.id,
+          title: `Emergency: ${e.propertyName || "Unknown Property"}`,
+          description: e.description?.substring(0, 100) || "No description",
+          severity: e.priority === "critical" ? "critical" : e.priority === "high" ? "warning" : "info",
+          property: e.propertyName || "Unknown",
+          reportedBy: e.submittedByName || "Unknown",
+          submitterRole: e.submitterRole || "Unknown",
+        })),
         ...urgentAlerts.slice(0, 5).map((a: any) => ({
           type: "alert",
           id: a.id,
@@ -132,6 +151,21 @@ export function registerDashboardRoutes(app: any) {
             urgent: urgentAlerts.length,
             active: activeAlerts.length,
             total: alerts.length,
+          },
+          emergencies: {
+            open: openEmergencies.length,
+            pendingReview: pendingReviewEmergencies.length,
+            inProgress: inProgressEmergencies.length,
+            total: emergencies.length,
+            recentOpen: openEmergencies.slice(0, 3).map((e: any) => ({
+              id: e.id,
+              propertyName: e.propertyName || "Unknown Property",
+              submittedByName: e.submittedByName || "Unknown",
+              submitterRole: e.submitterRole || "Unknown",
+              priority: e.priority || "normal",
+              description: e.description?.substring(0, 80) || "",
+              createdAt: e.createdAt,
+            })),
           },
         },
         recentActivity,

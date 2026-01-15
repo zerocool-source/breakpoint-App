@@ -25,6 +25,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
 
+interface OpenEmergency {
+  id: string;
+  propertyName: string;
+  submittedByName: string;
+  submitterRole: string;
+  priority: string;
+  description: string;
+  createdAt: string;
+}
+
 interface DashboardData {
   metrics: {
     estimates: {
@@ -58,6 +68,13 @@ interface DashboardData {
       urgent: number;
       active: number;
       total: number;
+    };
+    emergencies: {
+      open: number;
+      pendingReview: number;
+      inProgress: number;
+      total: number;
+      recentOpen: OpenEmergency[];
     };
   };
   recentActivity: Array<{
@@ -256,6 +273,52 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {(metrics?.emergencies?.open ?? 0) > 0 && (
+          <Card className="border-l-4 border-l-red-500" data-testid="card-emergencies">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                  Open Emergencies
+                  <Badge className="bg-red-100 text-red-700 ml-2">{metrics?.emergencies?.open ?? 0}</Badge>
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {metrics?.emergencies?.recentOpen?.map((emergency, index) => (
+                  <div 
+                    key={emergency.id}
+                    className="p-3 rounded-lg border border-red-200 bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors"
+                    onClick={() => navigate("/emergencies")}
+                    data-testid={`emergency-card-${index}`}
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-sm font-medium text-[#1E293B] truncate flex-1">{emergency.propertyName}</span>
+                      {emergency.priority === "critical" && (
+                        <Badge className="bg-red-600 text-white text-[10px] shrink-0">Critical</Badge>
+                      )}
+                      {emergency.priority === "high" && (
+                        <Badge className="bg-orange-100 text-orange-700 text-[10px] shrink-0">High</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#64748B] line-clamp-2 mb-2">{emergency.description}</p>
+                    <div className="flex items-center gap-1 text-xs text-slate-500">
+                      <Users className="w-3 h-3" />
+                      <span>{emergency.submittedByName}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="capitalize">{emergency.submitterRole?.replace(/_/g, " ")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-2 gap-6">
           <Card>
