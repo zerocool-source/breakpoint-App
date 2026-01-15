@@ -22,7 +22,7 @@ import {
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -289,6 +289,9 @@ export default function Estimates() {
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
+  const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
+  const [verbalApproverName, setVerbalApproverName] = useState("");
+  const [verbalApproverTitle, setVerbalApproverTitle] = useState("");
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -859,6 +862,48 @@ export default function Estimates() {
 
   const handleSendForApproval = (estimate: Estimate) => {
     openSendApprovalDialog(estimate);
+  };
+
+  const openVerbalApprovalDialog = (estimate: Estimate) => {
+    setSelectedEstimate(estimate);
+    setVerbalApproverName("");
+    setVerbalApproverTitle("");
+    setShowVerbalApprovalDialog(true);
+  };
+
+  const handleVerbalApproval = async () => {
+    if (!selectedEstimate || !verbalApproverName.trim()) return;
+    
+    try {
+      const response = await fetch(`/api/estimates/${selectedEstimate.id}/verbal-approval`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          approverName: verbalApproverName.trim(),
+          approverTitle: verbalApproverTitle.trim() || null,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to record verbal approval");
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/metrics"] });
+      
+      setShowVerbalApprovalDialog(false);
+      toast({ 
+        title: "Verbal Approval Recorded", 
+        description: `Estimate approved by ${verbalApproverName}. Ready for scheduling.` 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to record verbal approval", 
+        variant: "destructive" 
+      });
+    }
   };
 
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
@@ -1871,18 +1916,29 @@ export default function Estimates() {
                             Edit
                           </Button>
                           {estimate.status === "draft" && (
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSendForApproval(estimate);
-                              }}
-                              className="bg-[#FF6A00] hover:bg-[#e55f00] text-white"
-                              data-testid={`button-send-approval-${estimate.id}`}
-                            >
-                              <Send className="w-3 h-3 mr-1" />
-                              Send for Approval
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="sm"
+                                  className="bg-[#FF6A00] hover:bg-[#e55f00] text-white"
+                                  data-testid={`button-send-approval-${estimate.id}`}
+                                >
+                                  <Send className="w-3 h-3 mr-1" />
+                                  Send for Approval
+                                  <ChevronDown className="w-3 h-3 ml-1" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onClick={() => handleSendForApproval(estimate)}>
+                                  <Mail className="w-4 h-4 mr-2" />
+                                  Send Email for Approval
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openVerbalApprovalDialog(estimate)}>
+                                  <Phone className="w-4 h-4 mr-2" />
+                                  Record Verbal Approval
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                           {estimate.status === "pending_approval" && (
                             <>
@@ -3082,6 +3138,83 @@ export default function Estimates() {
               >
                 <Send className="w-4 h-4 mr-2" />
                 Send Email
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Verbal Approval Dialog */}
+        <Dialog open={showVerbalApprovalDialog} onOpenChange={setShowVerbalApprovalDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Phone className="w-5 h-5 text-[#2CA01C]" />
+                Record Verbal Approval
+              </DialogTitle>
+              <DialogDescription>
+                For special situations when approval was received verbally (phone, in-person, etc.)
+              </DialogDescription>
+            </DialogHeader>
+            {selectedEstimate && (
+              <div className="space-y-4">
+                <div className="p-3 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
+                      <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
+                    </div>
+                    <p className="text-lg font-bold text-[#1E3A8A]">
+                      {formatCurrency(selectedEstimate.totalAmount)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm text-amber-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    This bypasses email approval. Use only for confirmed verbal approvals.
+                  </p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">
+                    Name of Approver <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    value={verbalApproverName}
+                    onChange={(e) => setVerbalApproverName(e.target.value)}
+                    placeholder="Who verbally approved this estimate?"
+                    className="mt-1"
+                    data-testid="input-verbal-approver-name"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B]">
+                    Title <span className="text-[#94A3B8] font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    value={verbalApproverTitle}
+                    onChange={(e) => setVerbalApproverTitle(e.target.value)}
+                    placeholder="e.g., Property Manager, HOA President"
+                    className="mt-1"
+                    data-testid="input-verbal-approver-title"
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setShowVerbalApprovalDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleVerbalApproval}
+                disabled={!verbalApproverName.trim()}
+                className="bg-[#2CA01C] hover:bg-[#249017]"
+                data-testid="button-confirm-verbal-approval"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Record Approval
               </Button>
             </DialogFooter>
           </DialogContent>

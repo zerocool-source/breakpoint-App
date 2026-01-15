@@ -1372,6 +1372,46 @@ export function registerEstimateRoutes(app: any) {
     }
   });
 
+  // Record verbal approval (for special situations)
+  app.post("/api/estimates/:id/verbal-approval", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { approverName, approverTitle } = req.body;
+      
+      if (!approverName || approverName.trim().length < 2) {
+        return res.status(400).json({ error: "Approver name is required (minimum 2 characters)" });
+      }
+      
+      const existingEstimate = await storage.getEstimate(id);
+      if (!existingEstimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      
+      // Only allow verbal approval for draft estimates
+      if (existingEstimate.status !== "draft") {
+        return res.status(400).json({ error: "Verbal approval can only be recorded for draft estimates" });
+      }
+      
+      // Update estimate to needs_scheduling status
+      const estimate = await storage.updateEstimate(id, {
+        status: "needs_scheduling",
+        approvedAt: new Date(),
+        customerApproverName: approverName.trim(),
+        customerApproverTitle: approverTitle?.trim() || null,
+        acceptedBy: `${approverName.trim()}${approverTitle ? ` (${approverTitle.trim()})` : ""} (Verbal)`,
+        acceptedDate: new Date(),
+      });
+      
+      res.json({ 
+        estimate, 
+        message: `Verbal approval recorded. Estimate is ready for scheduling.` 
+      });
+    } catch (error: any) {
+      console.error("Error recording verbal approval:", error);
+      res.status(500).json({ error: "Failed to record verbal approval" });
+    }
+  });
+
   // Public: Get estimate by approval token (no auth required)
   app.get("/api/public/estimates/approve/:token", async (req: Request, res: Response) => {
     try {
