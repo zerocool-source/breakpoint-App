@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import crypto from "crypto";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Resend } from "resend";
 
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: { finalY: number };
@@ -1026,22 +1027,20 @@ export function registerEstimateRoutes(app: any) {
         return res.status(400).json({ error: "Email address is required" });
       }
       
+      // Check if Resend API key is configured
+      if (!process.env.RESEND_API_KEY) {
+        return res.status(500).json({ error: "Email service not configured. Please add RESEND_API_KEY to secrets." });
+      }
+      
+      // Get the estimate first to check if it exists
+      const existingEstimate = await storage.getEstimate(id);
+      if (!existingEstimate) {
+        return res.status(404).json({ error: "Estimate not found" });
+      }
+      
       // Generate a secure approval token
       const approvalToken = crypto.randomBytes(32).toString("hex");
       const tokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-      
-      const estimate = await storage.updateEstimate(id, {
-        status: "pending_approval",
-        approvalToken,
-        approvalTokenExpiresAt: tokenExpiresAt,
-        approvalSentTo: email,
-        approvalSentAt: new Date(),
-        sentForApprovalAt: new Date(),
-      });
-      
-      if (!estimate) {
-        return res.status(404).json({ error: "Estimate not found" });
-      }
       
       // Generate the approval URLs
       const baseUrl = process.env.REPLIT_DEV_DOMAIN 
@@ -1052,13 +1051,58 @@ export function registerEstimateRoutes(app: any) {
       const approvalUrl = `${baseUrl}/approve/${approvalToken}`;
       const pdfUrl = `${baseUrl}/api/estimates/${id}/pdf`;
       
-      // Generate the HTML email content
-      const emailHtml = generateApprovalEmailHtml(estimate, approveUrl, declineUrl);
+      // Generate the HTML email content (use existing estimate for now, will update after)
+      const emailHtml = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl);
       
-      // Generate PDF attachment as base64
-      const pdfBuffer = generateEstimatePdf(estimate);
-      const pdfBase64 = pdfBuffer.toString("base64");
-      const pdfFilename = `Estimate-${estimate.estimateNumber || id}.pdf`;
+      // Generate PDF attachment
+      const pdfBuffer = generateEstimatePdf(existingEstimate);
+      const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
+      const emailSubject = `Estimate ${existingEstimate.estimateNumber || ""} from ${COMPANY_INFO.name} - Approval Required`;
+      
+      // Initialize Resend and send the email
+      // Note: Using onboarding@resend.dev for testing until domain is verified
+      // Once domain is verified, set RESEND_FROM_EMAIL to your verified sender address
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "Breakpoint Commercial Pool Systems <onboarding@resend.dev>";
+      
+      const { data: emailResult, error: emailError } = await resend.emails.send({
+        from: fromEmail,
+        to: [email],
+        subject: emailSubject,
+        html: emailHtml,
+        attachments: [
+          {
+            filename: pdfFilename,
+            content: pdfBuffer,
+          },
+        ],
+      });
+      
+      if (emailError) {
+        console.error("Resend API error:", emailError);
+        return res.status(500).json({ error: `Failed to send email: ${emailError.message}` });
+      }
+      
+      // Email sent successfully - now update the estimate status
+      const estimate = await storage.updateEstimate(id, {
+        status: "pending_approval",
+        approvalToken,
+        approvalTokenExpiresAt: tokenExpiresAt,
+        approvalSentTo: email,
+        approvalSentAt: new Date(),
+        sentForApprovalAt: new Date(),
+      });
+      
+      if (!estimate) {
+        console.error("Email sent but failed to update estimate status");
+        return res.status(500).json({ 
+          error: "Email was sent but failed to update estimate status. Please try again.",
+          emailSent: true,
+          emailId: emailResult?.id
+        });
+      }
+      
+      console.log(`Email sent successfully via Resend. Email ID: ${emailResult?.id}`);
       
       res.json({ 
         estimate, 
@@ -1066,13 +1110,8 @@ export function registerEstimateRoutes(app: any) {
         approveUrl,
         declineUrl,
         pdfUrl,
-        pdfAttachment: {
-          filename: pdfFilename,
-          content: pdfBase64,
-          contentType: "application/pdf",
-        },
-        emailHtml,
-        emailSubject: `Estimate ${estimate.estimateNumber || ""} from ${COMPANY_INFO.name} - Approval Required`,
+        emailSent: true,
+        emailId: emailResult?.id,
         message: `Estimate sent for approval to ${email}` 
       });
     } catch (error: any) {
