@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import crypto from "crypto";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Resend } from "resend";
 
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: { finalY: number };
@@ -1026,6 +1027,11 @@ export function registerEstimateRoutes(app: any) {
         return res.status(400).json({ error: "Email address is required" });
       }
       
+      // Check if Resend API key is configured
+      if (!process.env.RESEND_API_KEY) {
+        return res.status(500).json({ error: "Email service not configured. Please add RESEND_API_KEY to secrets." });
+      }
+      
       // Get the estimate first to check if it exists
       const existingEstimate = await storage.getEstimate(id);
       if (!existingEstimate) {
@@ -1045,7 +1051,37 @@ export function registerEstimateRoutes(app: any) {
       const approvalUrl = `${baseUrl}/approve/${approvalToken}`;
       const pdfUrl = `${baseUrl}/api/estimates/${id}/pdf`;
       
-      // Update the estimate with approval token and status
+      // Generate the HTML email content
+      const emailHtml = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl);
+      
+      // Generate PDF attachment
+      const pdfBuffer = generateEstimatePdf(existingEstimate);
+      const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
+      const emailSubject = `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
+      
+      // Initialize Resend and send the email
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "Breakpoint Commercial Pool Systems <onboarding@resend.dev>";
+      
+      const { data: emailResult, error: emailError } = await resend.emails.send({
+        from: fromEmail,
+        to: [email],
+        subject: emailSubject,
+        html: emailHtml,
+        attachments: [
+          {
+            filename: pdfFilename,
+            content: pdfBuffer,
+          },
+        ],
+      });
+      
+      if (emailError) {
+        console.error("Resend API error:", emailError);
+        return res.status(500).json({ error: `Failed to send email: ${emailError.message}` });
+      }
+      
+      // Email sent successfully - now update the estimate status
       const estimate = await storage.updateEstimate(id, {
         status: "pending_approval",
         approvalToken,
@@ -1056,11 +1092,15 @@ export function registerEstimateRoutes(app: any) {
       });
       
       if (!estimate) {
-        return res.status(500).json({ error: "Failed to update estimate status" });
+        console.error("Email sent but failed to update estimate status");
+        return res.status(500).json({ 
+          error: "Email was sent but failed to update estimate status. Please try again.",
+          emailSent: true,
+          emailId: emailResult?.id
+        });
       }
       
-      // Generate email subject
-      const emailSubject = `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
+      console.log(`Email sent successfully via Resend. Email ID: ${emailResult?.id}`);
       
       res.json({ 
         estimate, 
@@ -1068,8 +1108,9 @@ export function registerEstimateRoutes(app: any) {
         approveUrl,
         declineUrl,
         pdfUrl,
-        emailSubject,
-        message: `Estimate ready for approval. Opening email client...` 
+        emailSent: true,
+        emailId: emailResult?.id,
+        message: `Estimate sent for approval to ${email}` 
       });
     } catch (error: any) {
       console.error("Error sending estimate for approval:", error);
