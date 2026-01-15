@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ObjectStorageService, ObjectNotFoundError } from "../replit_integrations/object_storage";
+import { sendEmail } from "../services/microsoftGraph";
 
 interface JsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: { finalY: number };
@@ -1096,7 +1097,7 @@ export function registerEstimateRoutes(app: any) {
     }
   });
 
-  // Send estimate for customer approval (generates token and URLs, opens email client)
+  // Send estimate for customer approval via Microsoft Graph email
   app.post("/api/estimates/:id/send-for-approval", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -1122,38 +1123,57 @@ export function registerEstimateRoutes(app: any) {
         : process.env.REPLIT_DEPLOYMENT_URL || "http://localhost:5000";
       const approveUrl = `${baseUrl}/approve/${approvalToken}?action=approve`;
       const declineUrl = `${baseUrl}/approve/${approvalToken}?action=decline`;
-      const approvalUrl = `${baseUrl}/approve/${approvalToken}`;
-      const pdfUrl = `${baseUrl}/api/estimates/${id}/pdf`;
+      
+      // Update the estimate with approval token first (before sending email)
+      const updatedEstimate = await storage.updateEstimate(id, {
+        approvalToken,
+        approvalTokenExpiresAt: tokenExpiresAt,
+        approvalSentTo: email,
+      });
+      
+      if (!updatedEstimate) {
+        return res.status(500).json({ error: "Failed to update estimate" });
+      }
       
       // Generate email subject
       const emailSubject = `Estimate Approval Request: ${existingEstimate.title || 'Pool Service Estimate'} - ${existingEstimate.propertyName}`;
       
-      // Update the estimate with approval token and status
+      // Generate the full branded HTML email
+      const htmlContent = generateApprovalEmailHtml(existingEstimate, approveUrl, declineUrl);
+      
+      // Generate the PDF for attachment
+      const pdfBuffer = await generateEstimatePdf(existingEstimate);
+      const pdfBase64 = pdfBuffer.toString("base64");
+      const pdfFilename = `Estimate-${existingEstimate.estimateNumber || id}.pdf`;
+      
+      // Send email via Microsoft Graph
+      await sendEmail({
+        to: email,
+        subject: emailSubject,
+        htmlContent,
+        attachments: [
+          {
+            name: pdfFilename,
+            contentType: "application/pdf",
+            contentBytes: pdfBase64,
+          },
+        ],
+      });
+      
+      // Update status to pending_approval after successful send
       const estimate = await storage.updateEstimate(id, {
         status: "pending_approval",
-        approvalToken,
-        approvalTokenExpiresAt: tokenExpiresAt,
-        approvalSentTo: email,
         approvalSentAt: new Date(),
         sentForApprovalAt: new Date(),
       });
       
-      if (!estimate) {
-        return res.status(500).json({ error: "Failed to update estimate status" });
-      }
-      
       res.json({ 
         estimate, 
-        approvalUrl,
-        approveUrl,
-        declineUrl,
-        pdfUrl,
-        emailSubject,
-        message: `Estimate ready for approval. Opening email client...` 
+        message: `Estimate approval email sent successfully to ${email}` 
       });
     } catch (error: any) {
-      console.error("Error preparing estimate for approval:", error);
-      res.status(500).json({ error: "Failed to prepare estimate for approval" });
+      console.error("Error sending estimate for approval:", error);
+      res.status(500).json({ error: `Failed to send approval email: ${error.message}` });
     }
   });
 

@@ -817,7 +817,7 @@ export default function Estimates() {
     if (!selectedEstimate || !selectedApprovalEmail) return;
     
     try {
-      // Call the API to generate approval token and update status
+      // Call the API to send the approval email via Microsoft Graph
       const response = await fetch(`/api/estimates/${selectedEstimate.id}/send-for-approval`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -829,56 +829,7 @@ export default function Estimates() {
         throw new Error(error.error || "Failed to send for approval");
       }
       
-      const { approveUrl, declineUrl, approvalUrl, emailSubject } = await response.json();
-      
-      // Get base URL for photo links
-      const baseUrl = window.location.origin;
-      
-      // Build supporting photos section if photos exist
-      const validPhotos = (selectedEstimate.photos || []).filter((p: string) => p && !p.includes('[object Object]'));
-      let photosSection = '';
-      if (validPhotos.length > 0) {
-        photosSection = `
-
---- SUPPORTING PHOTOS ---
-The following photos are attached to this estimate (click to view full size):
-
-${validPhotos.map((photo: string, idx: number) => `Photo ${idx + 1}: ${baseUrl}${photo}`).join('\n')}
-`;
-      }
-      
-      // Generate plain text email body
-      const totalAmount = ((selectedEstimate.totalAmount || 0) / 100).toFixed(2);
-      const emailBody = `Dear Property Manager,
-
-We are requesting approval for the following repair estimate:
-
-Property: ${selectedEstimate.propertyName}
-Estimate #: ${selectedEstimate.estimateNumber || 'N/A'}
-Title: ${selectedEstimate.title}${selectedEstimate.description ? `
-Description: ${selectedEstimate.description}` : ''}
-
-Total Amount: $${totalAmount}
-${photosSection}
-Please click one of the links below to respond:
-
-✓ APPROVE: ${approveUrl}
-
-✗ DECLINE: ${declineUrl}
-
-Or view the full estimate here: ${approvalUrl}
-
-This link is secure and does not require you to log in. You will be asked to enter your name and title when approving.
-
-Thank you,
-Breakpoint Commercial Pool Systems
-(951) 653-3333 | info@breakpointpools.com`;
-
-      // Open Outlook compose URL with plain text body
-      const subject = encodeURIComponent(emailSubject);
-      const body = encodeURIComponent(emailBody);
-      const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(selectedApprovalEmail)}&subject=${subject}&body=${body}`;
-      window.open(outlookUrl, '_blank');
+      const { message } = await response.json();
       
       // Refresh estimates list
       queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
@@ -886,13 +837,13 @@ Breakpoint Commercial Pool Systems
       
       setShowSendApprovalDialog(false);
       toast({ 
-        title: "Email Ready", 
-        description: `Outlook opened with approval request for ${selectedApprovalEmail}. Status updated to Pending Approval.` 
+        title: "Email Sent", 
+        description: message || `Approval email sent successfully to ${selectedApprovalEmail}` 
       });
     } catch (error: any) {
       toast({ 
         title: "Error", 
-        description: error.message || "Failed to send for approval", 
+        description: error.message || "Failed to send approval email", 
         variant: "destructive" 
       });
     }
