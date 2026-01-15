@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   AlertTriangle, CalendarIcon, Filter, Clock, CheckCircle, ArrowLeft,
-  MapPin, Loader2, User, Search, AlertCircle, PlayCircle
+  MapPin, Loader2, User, Search, AlertCircle, PlayCircle, FileText, Receipt, DollarSign
 } from "lucide-react";
 import type { Emergency } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -108,6 +108,53 @@ export default function Emergencies() {
     },
     onError: () => {
       toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const convertToEstimateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/emergencies/${id}/convert-to-estimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to convert to estimate");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["emergencies"] });
+      queryClient.invalidateQueries({ queryKey: ["emergencies-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      setSelectedEmergency(null);
+      toast({ 
+        title: "Converted to Estimate", 
+        description: `Estimate ${data.estimate.estimateNumber} created successfully`
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to convert to estimate", variant: "destructive" });
+    },
+  });
+
+  const invoiceDirectlyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/emergencies/${id}/invoice-directly`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to invoice");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["emergencies"] });
+      queryClient.invalidateQueries({ queryKey: ["emergencies-summary"] });
+      setSelectedEmergency(null);
+      toast({ 
+        title: "Invoiced Successfully", 
+        description: data.message
+      });
+    },
+    onError: () => {
+      toast({ title: "Failed to invoice", variant: "destructive" });
     },
   });
 
@@ -351,6 +398,24 @@ export default function Emergencies() {
                     <span className="text-sm text-right max-w-[200px]">{selectedEmergency.propertyAddress}</span>
                   </div>
                 )}
+                {selectedEmergency.totalAmount !== null && selectedEmergency.totalAmount !== undefined && selectedEmergency.totalAmount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Amount</span>
+                    <span className="text-sm font-medium text-green-700">${(selectedEmergency.totalAmount / 100).toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedEmergency.convertedToEstimateId && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Converted To</span>
+                    <Badge className="bg-purple-100 text-purple-700">Estimate Created</Badge>
+                  </div>
+                )}
+                {selectedEmergency.convertedToInvoiceId && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Invoiced As</span>
+                    <Badge className="bg-blue-100 text-blue-700">{selectedEmergency.convertedToInvoiceId}</Badge>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -380,18 +445,59 @@ export default function Emergencies() {
             </div>
           )}
 
-          <DialogFooter>
-            {selectedEmergency?.status === "pending_review" && (
-              <>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            {selectedEmergency?.status !== "resolved" && (
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  onClick={() => updateStatusMutation.mutate({ id: selectedEmergency.id, status: "in_progress" })}
-                  disabled={updateStatusMutation.isPending}
-                  data-testid="button-start-progress"
+                  onClick={() => convertToEstimateMutation.mutate(selectedEmergency!.id)}
+                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending}
+                  data-testid="button-convert-estimate"
+                  className="flex-1 sm:flex-initial"
                 >
-                  <PlayCircle className="w-4 h-4 mr-2" />
-                  Start Progress
+                  <FileText className="w-4 h-4 mr-2" />
+                  Convert to Estimate
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => invoiceDirectlyMutation.mutate(selectedEmergency!.id)}
+                  disabled={convertToEstimateMutation.isPending || invoiceDirectlyMutation.isPending}
+                  data-testid="button-invoice-directly"
+                  className="flex-1 sm:flex-initial"
+                >
+                  <Receipt className="w-4 h-4 mr-2" />
+                  Invoice Directly
+                </Button>
+              </div>
+            )}
+            <div className="flex gap-2 w-full sm:w-auto">
+              {selectedEmergency?.status === "pending_review" && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => updateStatusMutation.mutate({ id: selectedEmergency.id, status: "in_progress" })}
+                    disabled={updateStatusMutation.isPending}
+                    data-testid="button-start-progress"
+                  >
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Start Progress
+                  </Button>
+                  <Button
+                    onClick={() => updateStatusMutation.mutate({ 
+                      id: selectedEmergency.id, 
+                      status: "resolved",
+                      notes: resolutionNotes 
+                    })}
+                    disabled={updateStatusMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                    data-testid="button-resolve"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Mark Resolved
+                  </Button>
+                </>
+              )}
+              {selectedEmergency?.status === "in_progress" && (
                 <Button
                   onClick={() => updateStatusMutation.mutate({ 
                     id: selectedEmergency.id, 
@@ -405,28 +511,18 @@ export default function Emergencies() {
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Mark Resolved
                 </Button>
-              </>
-            )}
-            {selectedEmergency?.status === "in_progress" && (
-              <Button
-                onClick={() => updateStatusMutation.mutate({ 
-                  id: selectedEmergency.id, 
-                  status: "resolved",
-                  notes: resolutionNotes 
-                })}
-                disabled={updateStatusMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
-                data-testid="button-resolve"
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Mark Resolved
-              </Button>
-            )}
-            {selectedEmergency?.status === "resolved" && (
-              <Button variant="outline" onClick={() => setSelectedEmergency(null)}>
-                Close
-              </Button>
-            )}
+              )}
+              {selectedEmergency?.status === "resolved" && !selectedEmergency.convertedToEstimateId && !selectedEmergency.convertedToInvoiceId && (
+                <Button variant="outline" onClick={() => setSelectedEmergency(null)}>
+                  Close
+                </Button>
+              )}
+              {selectedEmergency?.status === "resolved" && (selectedEmergency.convertedToEstimateId || selectedEmergency.convertedToInvoiceId) && (
+                <Button variant="outline" onClick={() => setSelectedEmergency(null)}>
+                  Close
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
