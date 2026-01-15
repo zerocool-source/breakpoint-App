@@ -5,19 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2,
   XCircle,
   Loader2,
-  User,
-  Briefcase,
   AlertTriangle,
   Phone,
   Mail,
-  Globe,
-  MapPin,
-  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface EstimateItem {
@@ -65,16 +61,9 @@ interface Estimate {
 const COMPANY_INFO = {
   name: "Breakpoint Commercial Pool Systems",
   tagline: "Keeping People Safe",
-  address: "6236 River Crest Drive Suite C",
-  cityStateZip: "Riverside, CA 92507",
   phone: "(951) 653-3333",
   email: "info@breakpointpools.com",
-  website: "www.BreakpointPools.com",
 };
-
-const COMPLIANCE_TEXT = `All work performed under this estimate will comply with applicable regulatory standards including but not limited to: California Title 22 (Health & Safety Code), California Title 24 (Building Standards), NEC Article 680 (Swimming Pools, Fountains, and Similar Installations), NFPA 54 (National Fuel Gas Code), ANSI/NSF 50 (Equipment for Swimming Pools, Spas, Hot Tubs, and Other Recreational Water Facilities), DOE (Department of Energy) efficiency standards, ADA (Americans with Disabilities Act) accessibility requirements, and VGB Act (Virginia Graeme Baker Pool and Spa Safety Act) compliance.`;
-
-const TERMS_TEXT = `This estimate is valid for 60 days from the date shown above. For projects exceeding $500, a deposit of 10% or $1,000 (whichever is greater) is required to schedule work. For repairs exceeding $10,000, a 35% deposit is required. Final payment is due upon completion of work. All materials remain the property of Breakpoint Commercial Pool Systems until paid in full.`;
 
 export default function EstimateApproval() {
   const { token } = useParams<{ token: string }>();
@@ -85,17 +74,14 @@ export default function EstimateApproval() {
   const [approverName, setApproverName] = useState("");
   const [approverTitle, setApproverTitle] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectForm, setShowRejectForm] = useState(false);
   const [selectedAction, setSelectedAction] = useState<"approve" | "decline" | null>(null);
+  const [showFullDetails, setShowFullDetails] = useState(false);
   
-  // Set initial action based on URL parameter
   useEffect(() => {
     if (actionFromUrl === "approve") {
       setSelectedAction("approve");
-      setShowRejectForm(false);
     } else if (actionFromUrl === "decline") {
       setSelectedAction("decline");
-      setShowRejectForm(true);
     }
   }, [actionFromUrl]);
 
@@ -142,7 +128,7 @@ export default function EstimateApproval() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Failed to reject estimate");
+        throw new Error(err.error || "Failed to decline estimate");
       }
       return res.json();
     },
@@ -162,26 +148,17 @@ export default function EstimateApproval() {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
-      month: "long",
+      month: "short",
       day: "numeric",
-    });
-  };
-
-  const formatShortDate = (dateString: string) => {
-    if (!dateString) return "";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
     });
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-[#1E3A8A] mx-auto mb-4" />
-          <p className="text-slate-600">Loading estimate...</p>
+          <Loader2 className="w-10 h-10 animate-spin text-[#1E3A8A] mx-auto mb-3" />
+          <p className="text-slate-600">Loading...</p>
         </div>
       </div>
     );
@@ -189,508 +166,336 @@ export default function EstimateApproval() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-            Unable to Load Estimate
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">
+            Unable to Load
           </h2>
-          <p className="text-slate-600">{(error as Error).message}</p>
+          <p className="text-slate-600 text-sm">{(error as Error).message}</p>
         </div>
       </div>
     );
   }
 
   const { estimate, alreadyProcessed, action } = data!;
-
-  const isLaborItem = (item: EstimateItem) => {
-    const classVal = (item.class || "").toLowerCase();
-    const productVal = (item.productService || "").toLowerCase();
-    const skuVal = (item.sku || "").toLowerCase();
-    return classVal.includes("labor") || productVal.includes("labor") || skuVal.includes("labor");
-  };
-
-  const laborItems = (estimate.items || []).filter(isLaborItem);
-  const partsItems = (estimate.items || []).filter((item) => !isLaborItem(item));
-
-  const canSubmit = approverName.trim().length > 0 && approverTitle.trim().length > 0;
+  const items = estimate.items || [];
+  const itemCount = items.length;
 
   if (alreadyProcessed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-xl p-8 max-w-lg w-full text-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full text-center">
           {action === "approved" ? (
             <>
-              <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-12 h-12 text-green-600" />
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-10 h-10 text-green-600" />
               </div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-3">
-                Estimate Approved
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                Approved
               </h2>
-              <p className="text-lg text-slate-600 mb-6">
-                Thank you for approving this estimate. Our team will be in touch shortly to schedule the work.
+              <p className="text-slate-600 mb-4">
+                Thank you! Our team will contact you to schedule the work.
               </p>
               {estimate.customerApproverName && (
-                <div className="bg-slate-50 rounded-lg p-4 text-left">
-                  <p className="text-sm text-slate-500">Approved by</p>
-                  <p className="font-semibold text-slate-800">
+                <div className="bg-slate-50 rounded-lg p-3 text-left text-sm">
+                  <span className="text-slate-500">Approved by </span>
+                  <span className="font-medium text-slate-800">
                     {estimate.customerApproverName}
-                    {estimate.customerApproverTitle && ` - ${estimate.customerApproverTitle}`}
-                  </p>
+                    {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
+                  </span>
                   {estimate.approvedAt && (
-                    <p className="text-sm text-slate-500 mt-1">
-                      on {formatDate(estimate.approvedAt)}
-                    </p>
+                    <span className="text-slate-500"> on {formatDate(estimate.approvedAt)}</span>
                   )}
                 </div>
               )}
             </>
           ) : (
             <>
-              <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-6">
-                <XCircle className="w-12 h-12 text-red-600" />
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <XCircle className="w-10 h-10 text-red-600" />
               </div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-3">
-                Estimate Declined
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                Declined
               </h2>
-              <p className="text-lg text-slate-600 mb-6">
-                This estimate has been declined. If you have questions, please contact us.
+              <p className="text-slate-600 mb-4">
+                This estimate has been declined. Contact us if you have questions.
               </p>
               {estimate.rejectionReason && (
-                <div className="bg-slate-50 rounded-lg p-4 text-left">
-                  <p className="text-sm font-medium text-slate-700 mb-1">Reason provided:</p>
-                  <p className="text-slate-600">{estimate.rejectionReason}</p>
+                <div className="bg-slate-50 rounded-lg p-3 text-left text-sm">
+                  <span className="text-slate-500">Reason: </span>
+                  <span className="text-slate-700">{estimate.rejectionReason}</span>
                 </div>
               )}
             </>
           )}
-          <div className="mt-8 pt-6 border-t">
-            <p className="text-sm text-slate-500">
-              {COMPANY_INFO.name} • {COMPANY_INFO.phone}
-            </p>
+          <div className="mt-6 pt-4 border-t text-xs text-slate-400">
+            {COMPANY_INFO.name} • {COMPANY_INFO.phone}
           </div>
         </div>
       </div>
     );
   }
 
+  const canSubmitApproval = approverName.trim().length >= 2;
+  const canSubmitDecline = approverName.trim().length >= 2;
+
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-8">
-        <div className="bg-white border border-slate-200 shadow-lg rounded-lg overflow-hidden" style={{ fontFamily: "Arial, sans-serif" }}>
-          <div className="bg-[#1E3A8A] text-white p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                  {COMPANY_INFO.name}
-                </h1>
-                <p className="text-blue-200 text-lg italic mt-1">{COMPANY_INFO.tagline}</p>
-              </div>
-              <div className="text-right text-sm">
-                <div className="flex items-center gap-2 justify-end">
-                  <MapPin className="w-4 h-4" />
-                  <span>{COMPANY_INFO.address}</span>
-                </div>
-                <p>{COMPANY_INFO.cityStateZip}</p>
-                <div className="flex items-center gap-2 justify-end mt-2">
-                  <Phone className="w-4 h-4" />
-                  <span>{COMPANY_INFO.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 justify-end">
-                  <Mail className="w-4 h-4" />
-                  <span>{COMPANY_INFO.email}</span>
-                </div>
-                <div className="flex items-center gap-2 justify-end">
-                  <Globe className="w-4 h-4" />
-                  <span>{COMPANY_INFO.website}</span>
-                </div>
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-50 py-4 px-4">
+      <div className="max-w-md mx-auto">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-[#1E3A8A] text-white p-4 text-center">
+            <h1 className="text-lg font-bold">{COMPANY_INFO.name}</h1>
+            <p className="text-blue-200 text-sm italic">{COMPANY_INFO.tagline}</p>
           </div>
 
-          <div className="p-6 sm:p-8">
-            <div className="flex justify-between items-start mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-[#1E3A8A] tracking-wide">ESTIMATE</h2>
-              </div>
-              <div className="text-right">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <span className="text-slate-600 font-medium">Estimate #:</span>
-                  <span className="font-bold text-slate-800">{estimate.estimateNumber || "—"}</span>
-                  <span className="text-slate-600 font-medium">Date:</span>
-                  <span className="text-slate-800">{formatShortDate(estimate.estimateDate || estimate.createdAt)}</span>
-                  {estimate.expirationDate && (
-                    <>
-                      <span className="text-slate-600 font-medium">Valid Until:</span>
-                      <span className="text-slate-800">{formatShortDate(estimate.expirationDate)}</span>
-                    </>
-                  )}
+          <div className="p-4">
+            <div className="bg-slate-50 rounded-lg p-4 mb-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Estimate</p>
+                  <p className="font-bold text-slate-800">{estimate.estimateNumber || "—"}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500">Date</p>
+                  <p className="text-sm text-slate-700">{formatDate(estimate.estimateDate || estimate.createdAt)}</p>
                 </div>
               </div>
-            </div>
+              
+              <div className="border-t pt-3 mt-3">
+                <p className="font-semibold text-slate-800">{estimate.propertyName}</p>
+                {estimate.address && <p className="text-sm text-slate-600">{estimate.address}</p>}
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bill To</h3>
-                <div className="text-slate-800">
-                  <p className="font-semibold text-lg">{estimate.customerName || estimate.propertyName}</p>
-                  {estimate.managementCompany && (
-                    <p className="text-slate-600">C/O {estimate.managementCompany}</p>
-                  )}
-                  {estimate.billingAddress ? (
-                    <p className="text-slate-600 mt-1">{estimate.billingAddress}</p>
-                  ) : estimate.address && (
-                    <p className="text-slate-600 mt-1">{estimate.address}</p>
-                  )}
-                  {estimate.customerEmail && (
-                    <p className="text-slate-600 mt-1">{estimate.customerEmail}</p>
+              {estimate.title && (
+                <div className="mt-3 pt-3 border-t">
+                  <p className="font-medium text-[#1E3A8A]">{estimate.title}</p>
+                  {estimate.description && (
+                    <p className="text-sm text-slate-600 mt-1">{estimate.description}</p>
                   )}
                 </div>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-4">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Service Location / Ship To</h3>
-                <div className="text-slate-800">
-                  <p className="font-semibold text-lg">{estimate.propertyName}</p>
-                  {estimate.address && (
-                    <p className="text-slate-600 mt-1">{estimate.address}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {estimate.title && (
-              <div className="mb-6">
-                <h3 className="text-lg font-bold text-[#1E3A8A] mb-2">Project: {estimate.title}</h3>
-                {estimate.description && (
-                  <p className="text-slate-600 bg-blue-50 rounded-lg p-4 border-l-4 border-[#1E3A8A]">
-                    {estimate.description}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <table className="w-full border-collapse" data-testid="table-estimate-items">
-                <thead>
-                  <tr className="bg-[#1E3A8A] text-white">
-                    <th className="text-left p-3 font-semibold text-sm">Description</th>
-                    <th className="text-center p-3 font-semibold text-sm w-20">Qty</th>
-                    <th className="text-right p-3 font-semibold text-sm w-28">Rate</th>
-                    <th className="text-right p-3 font-semibold text-sm w-28">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {partsItems.length > 0 && (
-                    <>
-                      <tr className="bg-slate-100">
-                        <td colSpan={4} className="p-2 font-bold text-slate-700 text-sm uppercase tracking-wide">
-                          Parts & Equipment
-                        </td>
-                      </tr>
-                      {partsItems.map((item, idx) => (
-                        <tr key={`parts-${idx}`} className="border-b border-slate-200" data-testid={`row-parts-${idx}`}>
-                          <td className="p-3">
-                            <p className="font-medium text-slate-800">{item.productService}</p>
-                            {item.description && (
-                              <p className="text-sm text-slate-500 mt-1">{item.description}</p>
-                            )}
-                          </td>
-                          <td className="p-3 text-center text-slate-700">{item.quantity}</td>
-                          <td className="p-3 text-right text-slate-700">{formatCurrency(item.rate)}</td>
-                          <td className="p-3 text-right font-medium text-slate-800">{formatCurrency(item.amount)}</td>
-                        </tr>
-                      ))}
-                    </>
-                  )}
-                  {laborItems.length > 0 && (
-                    <>
-                      <tr className="bg-slate-100">
-                        <td colSpan={4} className="p-2 font-bold text-slate-700 text-sm uppercase tracking-wide">
-                          Labor
-                        </td>
-                      </tr>
-                      {laborItems.map((item, idx) => (
-                        <tr key={`labor-${idx}`} className="border-b border-slate-200" data-testid={`row-labor-${idx}`}>
-                          <td className="p-3">
-                            <p className="font-medium text-slate-800">{item.productService}</p>
-                            {item.description && (
-                              <p className="text-sm text-slate-500 mt-1">{item.description}</p>
-                            )}
-                          </td>
-                          <td className="p-3 text-center text-slate-700">{item.quantity}</td>
-                          <td className="p-3 text-right text-slate-700">{formatCurrency(item.rate)}</td>
-                          <td className="p-3 text-right font-medium text-slate-800">{formatCurrency(item.amount)}</td>
-                        </tr>
-                      ))}
-                    </>
-                  )}
-                  {partsItems.length === 0 && laborItems.length === 0 && (estimate.items || []).map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-200" data-testid={`row-item-${idx}`}>
-                      <td className="p-3">
-                        <p className="font-medium text-slate-800">{item.productService}</p>
-                        {item.description && (
-                          <p className="text-sm text-slate-500 mt-1">{item.description}</p>
-                        )}
-                      </td>
-                      <td className="p-3 text-center text-slate-700">{item.quantity}</td>
-                      <td className="p-3 text-right text-slate-700">{formatCurrency(item.rate)}</td>
-                      <td className="p-3 text-right font-medium text-slate-800">{formatCurrency(item.amount)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end mb-8">
-              <div className="w-full sm:w-72 bg-slate-50 rounded-lg p-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Subtotal</span>
-                    <span className="font-medium text-slate-800">{formatCurrency(estimate.subtotal)}</span>
-                  </div>
-                  {estimate.discountAmount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Discount</span>
-                      <span>-{formatCurrency(estimate.discountAmount)}</span>
-                    </div>
-                  )}
-                  {estimate.salesTaxAmount > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">
-                        Sales Tax {estimate.salesTaxRate ? `(${estimate.salesTaxRate}%)` : ""}
-                      </span>
-                      <span className="text-slate-800">{formatCurrency(estimate.salesTaxAmount)}</span>
-                    </div>
-                  )}
-                  <Separator className="my-2" />
-                  <div className="flex justify-between text-lg font-bold">
-                    <span className="text-slate-800">Total</span>
-                    <span className="text-[#1E3A8A]">{formatCurrency(estimate.totalAmount)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6 mb-8">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-bold text-[#1E3A8A] mb-2 text-sm uppercase tracking-wide">
-                  Compliance & Authorization
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {COMPLIANCE_TEXT}
-                </p>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <h4 className="font-bold text-amber-800 mb-2 text-sm uppercase tracking-wide">
-                  Terms & Conditions
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  {TERMS_TEXT}
-                </p>
-              </div>
-            </div>
-
-            <Separator className="my-8" />
-
-            <div className={`rounded-xl p-6 ${selectedAction === "approve" ? "bg-green-50 border-2 border-green-200" : selectedAction === "decline" ? "bg-red-50 border-2 border-red-200" : "bg-slate-50"}`}>
-              {selectedAction === "approve" ? (
-                <>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                      <CheckCircle2 className="w-6 h-6 text-green-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-green-800">
-                      Approve This Estimate
-                    </h3>
-                  </div>
-                  <p className="text-slate-600 text-center mb-6">
-                    Please enter your information to confirm approval.
-                  </p>
-                </>
-              ) : selectedAction === "decline" ? (
-                <>
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                      <XCircle className="w-6 h-6 text-red-600" />
-                    </div>
-                    <h3 className="text-xl font-bold text-red-800">
-                      Decline This Estimate
-                    </h3>
-                  </div>
-                  <p className="text-slate-600 text-center mb-6">
-                    Please enter your information and reason for declining.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3 className="text-xl font-bold text-slate-800 mb-2 text-center">
-                    Your Approval Required
-                  </h3>
-                  <p className="text-slate-600 text-center mb-6">
-                    Please enter your information and select Approve or Decline below.
-                  </p>
-                </>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="mt-4 flex justify-between items-center">
                 <div>
-                  <Label htmlFor="approverName" className="flex items-center gap-2 text-slate-700 font-medium">
-                    <User className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm text-slate-500">{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-[#1E3A8A]">{formatCurrency(estimate.totalAmount)}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowFullDetails(!showFullDetails)}
+                className="mt-3 w-full flex items-center justify-center gap-1 text-sm text-[#1E3A8A] hover:underline"
+                data-testid="button-toggle-details"
+              >
+                {showFullDetails ? (
+                  <>Hide details <ChevronUp className="w-4 h-4" /></>
+                ) : (
+                  <>View all items <ChevronDown className="w-4 h-4" /></>
+                )}
+              </button>
+
+              {showFullDetails && (
+                <div className="mt-3 pt-3 border-t space-y-2">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm" data-testid={`row-item-${idx}`}>
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-800">{item.productService}</p>
+                        {item.description && (
+                          <p className="text-xs text-slate-500">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="text-right pl-2">
+                        <p className="font-medium text-slate-800">{formatCurrency(item.amount)}</p>
+                        <p className="text-xs text-slate-500">x{item.quantity}</p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="pt-2 border-t mt-2 space-y-1 text-sm">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Subtotal</span>
+                      <span>{formatCurrency(estimate.subtotal)}</span>
+                    </div>
+                    {estimate.discountAmount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Discount</span>
+                        <span>-{formatCurrency(estimate.discountAmount)}</span>
+                      </div>
+                    )}
+                    {estimate.salesTaxAmount > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>Tax{estimate.salesTaxRate ? ` (${estimate.salesTaxRate}%)` : ""}</span>
+                        <span>{formatCurrency(estimate.salesTaxAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {selectedAction === "approve" ? (
+              <div className="space-y-4" data-testid="form-approve">
+                <div className="text-center mb-4">
+                  <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  </div>
+                  <h2 className="text-lg font-bold text-green-800">Approve Estimate</h2>
+                  <p className="text-sm text-slate-600">Enter your name to confirm approval</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="approverName" className="text-sm font-medium text-slate-700">
                     Your Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="approverName"
                     value={approverName}
                     onChange={(e) => setApproverName(e.target.value)}
-                    placeholder="Enter your full name"
-                    className="mt-2 bg-white"
+                    placeholder="Full name"
+                    className="mt-1"
+                    autoFocus
                     data-testid="input-approver-name"
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="approverTitle" className="flex items-center gap-2 text-slate-700 font-medium">
-                    <Briefcase className="w-4 h-4 text-slate-500" />
-                    Your Title / Role <span className="text-red-500">*</span>
+                  <Label htmlFor="approverTitle" className="text-sm font-medium text-slate-700">
+                    Your Title <span className="text-slate-400">(optional)</span>
                   </Label>
                   <Input
                     id="approverTitle"
                     value={approverTitle}
                     onChange={(e) => setApproverTitle(e.target.value)}
-                    placeholder="e.g., Property Manager, HOA President"
-                    className="mt-2 bg-white"
+                    placeholder="e.g., Property Manager"
+                    className="mt-1"
                     data-testid="input-approver-title"
                   />
                 </div>
-              </div>
 
-              {showRejectForm && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                  <Label htmlFor="rejectionReason" className="text-red-800 font-medium">
-                    Reason for declining (optional)
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-bold"
+                  onClick={() => approveMutation.mutate()}
+                  disabled={!canSubmitApproval || approveMutation.isPending}
+                  data-testid="button-confirm-approve"
+                >
+                  {approveMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                  )}
+                  Confirm Approval
+                </Button>
+
+                <button
+                  onClick={() => setSelectedAction(null)}
+                  className="w-full text-center text-sm text-slate-500 hover:text-slate-700 py-2"
+                  data-testid="button-back"
+                >
+                  Back to options
+                </button>
+              </div>
+            ) : selectedAction === "decline" ? (
+              <div className="space-y-4" data-testid="form-decline">
+                <div className="text-center mb-4">
+                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-2">
+                    <XCircle className="w-6 h-6 text-red-600" />
+                  </div>
+                  <h2 className="text-lg font-bold text-red-800">Decline Estimate</h2>
+                  <p className="text-sm text-slate-600">Let us know why you're declining</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="approverName" className="text-sm font-medium text-slate-700">
+                    Your Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="approverName"
+                    value={approverName}
+                    onChange={(e) => setApproverName(e.target.value)}
+                    placeholder="Full name"
+                    className="mt-1"
+                    autoFocus
+                    data-testid="input-approver-name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="rejectionReason" className="text-sm font-medium text-slate-700">
+                    Reason <span className="text-slate-400">(optional)</span>
                   </Label>
                   <Textarea
                     id="rejectionReason"
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Please let us know why you're declining this estimate so we can better address your needs..."
-                    rows={3}
-                    className="mt-2 bg-white"
+                    placeholder="Why are you declining?"
+                    rows={2}
+                    className="mt-1"
                     data-testid="textarea-rejection-reason"
                   />
                 </div>
-              )}
 
-              {!canSubmit && !selectedAction && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6 flex items-center gap-2 justify-center">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm text-amber-800">Please enter your name and title/role to approve or decline this estimate</span>
-                </div>
-              )}
-
-              {selectedAction === "approve" ? (
-                <div className="flex flex-col gap-4">
-                  {!canSubmit && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 justify-center">
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      <span className="text-sm text-amber-800">Please enter your name and title above to confirm approval</span>
-                    </div>
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-6 text-lg font-bold"
+                  onClick={() => rejectMutation.mutate()}
+                  disabled={!canSubmitDecline || rejectMutation.isPending}
+                  data-testid="button-confirm-decline"
+                >
+                  {rejectMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="w-5 h-5 mr-2" />
                   )}
-                  <Button
-                    className="w-full bg-[#2CA01C] hover:bg-[#248a17] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                    onClick={() => approveMutation.mutate()}
-                    disabled={!canSubmit || approveMutation.isPending}
-                    data-testid="button-approve"
-                  >
-                    {approveMutation.isPending ? (
-                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-6 h-6 mr-2" />
-                    )}
-                    Confirm Approval
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="text-slate-600 hover:text-slate-800"
-                    onClick={() => {
-                      setSelectedAction(null);
-                      setShowRejectForm(false);
-                    }}
-                    data-testid="button-back-to-options"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Options
-                  </Button>
-                </div>
-              ) : selectedAction === "decline" ? (
-                <div className="flex flex-col gap-4">
-                  {!canSubmit && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2 justify-center">
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                      <span className="text-sm text-amber-800">Please enter your name and title above to confirm decline</span>
-                    </div>
-                  )}
-                  <Button
-                    className="w-full bg-[#DC2626] hover:bg-[#b91c1c] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                    onClick={() => rejectMutation.mutate()}
-                    disabled={!canSubmit || rejectMutation.isPending}
-                    data-testid="button-reject"
-                  >
-                    {rejectMutation.isPending ? (
-                      <Loader2 className="w-6 h-6 mr-2 animate-spin" />
-                    ) : (
-                      <XCircle className="w-6 h-6 mr-2" />
-                    )}
-                    Confirm Decline
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="text-slate-600 hover:text-slate-800"
-                    onClick={() => {
-                      setSelectedAction(null);
-                      setShowRejectForm(false);
-                    }}
-                    data-testid="button-back-to-options"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Options
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    className="flex-1 bg-[#2CA01C] hover:bg-[#248a17] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                    onClick={() => {
-                      setSelectedAction("approve");
-                      setShowRejectForm(false);
-                    }}
-                    data-testid="button-select-approve"
-                  >
-                    <CheckCircle2 className="w-6 h-6 mr-2" />
-                    Approve Estimate
-                  </Button>
-                  <Button
-                    className="flex-1 bg-[#DC2626] hover:bg-[#b91c1c] text-white py-7 text-lg font-bold shadow-lg hover:shadow-xl transition-all"
-                    onClick={() => {
-                      setSelectedAction("decline");
-                      setShowRejectForm(true);
-                    }}
-                    data-testid="button-select-decline"
-                  >
-                    <XCircle className="w-6 h-6 mr-2" />
-                    Decline Estimate
-                  </Button>
-                </div>
-              )}
-            </div>
+                  Confirm Decline
+                </Button>
 
-            <div className="mt-8 pt-6 border-t border-slate-200 text-center">
-              <p className="text-sm text-slate-500">
-                {COMPANY_INFO.name} • {COMPANY_INFO.phone} • {COMPANY_INFO.email}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {COMPANY_INFO.website}
-              </p>
+                <button
+                  onClick={() => setSelectedAction(null)}
+                  className="w-full text-center text-sm text-slate-500 hover:text-slate-700 py-2"
+                  data-testid="button-back"
+                >
+                  Back to options
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3" data-testid="action-buttons">
+                <p className="text-center text-sm text-slate-600 mb-4">
+                  Please review the estimate above and select your response:
+                </p>
+                
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-bold shadow-md"
+                  onClick={() => setSelectedAction("approve")}
+                  data-testid="button-approve"
+                >
+                  <CheckCircle2 className="w-6 h-6 mr-2" />
+                  APPROVE ESTIMATE
+                </Button>
+                
+                <Button
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-6 text-lg font-bold shadow-md"
+                  onClick={() => setSelectedAction("decline")}
+                  data-testid="button-decline"
+                >
+                  <XCircle className="w-6 h-6 mr-2" />
+                  DECLINE ESTIMATE
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-slate-50 px-4 py-3 text-center border-t">
+            <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
+              <a href={`tel:${COMPANY_INFO.phone}`} className="flex items-center gap-1 hover:text-slate-700">
+                <Phone className="w-3 h-3" />
+                {COMPANY_INFO.phone}
+              </a>
+              <a href={`mailto:${COMPANY_INFO.email}`} className="flex items-center gap-1 hover:text-slate-700">
+                <Mail className="w-3 h-3" />
+                {COMPANY_INFO.email}
+              </a>
             </div>
           </div>
         </div>
