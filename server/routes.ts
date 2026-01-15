@@ -19,6 +19,7 @@ import { registerServiceRepairRoutes } from "./routes/serviceRepairs";
 import { registerTechOpsRoutes } from "./routes/techOps";
 import { registerDashboardRoutes } from "./routes/dashboard";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { registerEmergencyRoutes } from "./routes/emergencies";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -47,4 +48,5 @@ function setupRoutes(app: any) {
   registerTechOpsRoutes(app);
   registerDashboardRoutes(app);
   registerObjectStorageRoutes(app);
+  registerEmergencyRoutes(app);
 }
