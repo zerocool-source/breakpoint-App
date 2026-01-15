@@ -740,8 +740,10 @@ export const estimates = pgTable("estimates", {
   acceptedDate: timestamp("accepted_date"),
   location: text("location"), // Service location/job site
   tags: text("tags").array(), // Tags for categorization
-  sourceType: text("source_type").default("office_staff"), // "office_staff", "repair_tech", "service_tech" - tracks origin
+  sourceType: text("source_type").default("office_staff"), // "office_staff", "repair_tech", "service_tech", "emergency" - tracks origin
   sourceRepairJobId: text("source_repair_job_id"), // Link to original service repair job if converted
+  sourceEmergencyId: text("source_emergency_id"), // Link to original emergency if converted from emergency
+  serviceRepairCount: integer("service_repair_count"), // Count of service repairs bundled into this estimate
   
   // Estimate details
   title: text("title").notNull(),
@@ -1450,8 +1452,12 @@ export const emergencies = pgTable("emergencies", {
   submittedByName: text("submitted_by_name"),
   submitterRole: text("submitter_role").notNull(), // service_technician, repair_technician, supervisor, repair_foreman
   description: text("description").notNull(),
+  totalAmount: integer("total_amount").default(0), // Amount in cents for the work done
   photos: text("photos").array(),
   originalServiceDate: timestamp("original_service_date"),
+  convertedToEstimateId: text("converted_to_estimate_id"), // If converted to estimate
+  convertedToInvoiceId: text("converted_to_invoice_id"), // If invoiced directly
+  convertedAt: timestamp("converted_at"), // When it was converted
   originalMarkedCompleteAt: timestamp("original_marked_complete_at"),
   status: text("status").notNull().default("pending_review"), // pending_review, in_progress, resolved
   priority: text("priority").default("normal"), // low, normal, high, critical
