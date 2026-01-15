@@ -19,6 +19,15 @@ import { cn } from "@/lib/utils";
 
 const techOpsOptions = [
   { 
+    id: "emergencies",
+    entryType: "emergencies",
+    label: "Emergencies", 
+    href: "/emergencies",
+    icon: AlertTriangle, 
+    color: "bg-red-100 text-red-700 border-red-200",
+    description: "Completed but not completed - urgent follow-up needed"
+  },
+  { 
     id: "repairs-needed",
     entryType: "repairs_needed",
     label: "Repairs Needed", 
@@ -143,6 +152,16 @@ export default function TechOpsLanding() {
     },
   });
 
+  const { data: emergenciesCount = 0 } = useQuery<number>({
+    queryKey: ["emergencies-count-landing"],
+    queryFn: async () => {
+      const response = await fetch("/api/emergencies/summary");
+      if (!response.ok) return 0;
+      const data = await response.json();
+      return (data.byStatus?.pending_review || 0) + (data.byStatus?.in_progress || 0);
+    },
+  });
+
   // Fetch unread counts for new submission badges
   const { data: unreadCounts = {} } = useQuery<Record<string, number>>({
     queryKey: ["tech-ops-unread-counts"],
@@ -156,6 +175,7 @@ export default function TechOpsLanding() {
 
   const getCountForType = (entryType: string): number => {
     if (entryType === "service_repairs") return serviceRepairsCount;
+    if (entryType === "emergencies") return emergenciesCount;
     return summary?.byType?.[entryType] || 0;
   };
 
