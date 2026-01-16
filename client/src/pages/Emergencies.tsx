@@ -442,7 +442,7 @@ export default function Emergencies() {
       </div>
 
       <Dialog open={!!selectedEmergency} onOpenChange={(open) => !open && setSelectedEmergency(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-red-600" />
