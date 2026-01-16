@@ -141,6 +141,10 @@ interface Estimate {
   sourceRepairJobId: string | null;
   sourceEmergencyId: string | null;
   serviceRepairCount: number | null;
+  // Conversion tracking
+  convertedByUserId: string | null;
+  convertedByUserName: string | null;
+  convertedAt: string | null;
 }
 
 interface EstimateFormData {
@@ -1893,10 +1897,20 @@ export default function Estimates() {
                                 </span>
                               )}
                             </div>
-                            <div className="mt-2">
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <Badge className={`${getSourceBadgeColor(estimate)} text-[11px] px-3 py-1 rounded`}>
                                 {getSourceLabel(estimate)}
                               </Badge>
+                              {(estimate.createdByTechName || estimate.officeMemberName) && (
+                                <span className="text-[11px] text-[#6B7280]" data-testid={`text-created-by-${estimate.id}`}>
+                                  Created by: {estimate.createdByTechName || estimate.officeMemberName}
+                                </span>
+                              )}
+                              {estimate.convertedByUserName && (
+                                <span className="text-[11px] text-[#6B7280]" data-testid={`text-converted-by-${estimate.id}`}>
+                                  Converted by: {estimate.convertedByUserName}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="text-right mr-4">
