@@ -853,6 +853,17 @@ export const estimates = pgTable("estimates", {
   woRequired: boolean("wo_required").default(false), // Flag if this property requires a work order
   woReceived: boolean("wo_received").default(false),
   woNumber: text("wo_number"),
+  
+  // Soft Delete and Archive Tracking
+  isDeleted: boolean("is_deleted").default(false),
+  deletedAt: timestamp("deleted_at"),
+  deletedByUserId: text("deleted_by_user_id"),
+  deletedByUserName: text("deleted_by_user_name"),
+  deletedReason: text("deleted_reason"),
+  archivedAt: timestamp("archived_at"),
+  archivedByUserId: text("archived_by_user_id"),
+  archivedByUserName: text("archived_by_user_name"),
+  archivedReason: text("archived_reason"),
 });
 
 export const insertEstimateSchema = createInsertSchema(estimates).omit({
@@ -862,6 +873,58 @@ export const insertEstimateSchema = createInsertSchema(estimates).omit({
 
 export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
 export type Estimate = typeof estimates.$inferSelect;
+
+// Estimate History Log (Audit Trail)
+export const estimateHistoryActionEnum = ["created", "updated", "sent_for_approval", "approved", "rejected", "verbal_approval", "needs_scheduling", "scheduled", "completed", "invoiced", "archived", "deleted", "restored"] as const;
+export type EstimateHistoryAction = typeof estimateHistoryActionEnum[number];
+
+export const estimateHistoryLog = pgTable("estimate_history_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  estimateId: text("estimate_id").notNull(),
+  estimateNumber: text("estimate_number"),
+  propertyId: text("property_id"),
+  propertyName: text("property_name"),
+  customerId: text("customer_id"),
+  customerName: text("customer_name"),
+  estimateValue: integer("estimate_value"), // Amount in cents
+  
+  // Action tracking
+  actionType: text("action_type").notNull(), // created, sent_for_approval, approved, rejected, verbal_approval, archived, deleted, restored
+  actionDescription: text("action_description"), // Human-readable description
+  
+  // Who performed the action
+  performedByUserId: text("performed_by_user_id"),
+  performedByUserName: text("performed_by_user_name"),
+  performedAt: timestamp("performed_at").defaultNow(),
+  
+  // Approval details (for approval actions)
+  approvalMethod: text("approval_method"), // "email" or "verbal"
+  approverName: text("approver_name"), // Customer who approved
+  approverTitle: text("approver_title"), // Property Manager, HOA President, etc.
+  approverContactMethod: text("approver_contact_method"), // "email_link", "phone", "in_person", "other"
+  
+  // For archive/delete actions
+  reason: text("reason"),
+  notes: text("notes"),
+  
+  // Previous and new status for tracking transitions
+  previousStatus: text("previous_status"),
+  newStatus: text("new_status"),
+  
+  // Metadata
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertEstimateHistoryLogSchema = createInsertSchema(estimateHistoryLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEstimateHistoryLog = z.infer<typeof insertEstimateHistoryLogSchema>;
+export type EstimateHistoryLog = typeof estimateHistoryLog.$inferSelect;
 
 // Service Repair Jobs (from service techs, under $500)
 export const serviceRepairJobs = pgTable("service_repair_jobs", {
