@@ -44,6 +44,7 @@ export const technicians = pgTable("technicians", {
   lastName: text("last_name").notNull(),
   phone: text("phone"),
   email: text("email"),
+  photoUrl: text("photo_url"), // Profile photo URL
   role: text("role").default("service"), // "service", "repair", "supervisor", "foreman"
   supervisorId: varchar("supervisor_id"), // Self-referential FK for team hierarchy
   active: boolean("active").default(true),
@@ -221,7 +222,7 @@ export type PropertyAccessNote = typeof propertyAccessNotes.$inferSelect;
 // Tech Ops Entries (field technician submissions)
 export const techOpsEntries = pgTable("tech_ops_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  entryType: text("entry_type").notNull(), // "repairs_needed", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "add_notes"
+  entryType: text("entry_type").notNull(), // "repairs_needed", "service_repairs", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "supervisor_concerns", "add_notes"
   technicianName: text("technician_name").notNull(),
   technicianId: varchar("technician_id"), // Link to technician record
   propertyId: varchar("property_id"),
