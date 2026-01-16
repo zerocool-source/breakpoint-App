@@ -31,6 +31,12 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
     color: "bg-red-100 text-red-700 border-red-200",
     description: "Report equipment or pool repairs needed at a property"
   },
+  service_repairs: { 
+    label: "Service Repairs", 
+    icon: Wrench, 
+    color: "bg-purple-100 text-purple-700 border-purple-200",
+    description: "Sub-$500 service repairs submitted by technicians"
+  },
   chemical_order: { 
     label: "Chemical Order", 
     icon: Droplets, 
@@ -54,6 +60,12 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
     icon: AlertTriangle, 
     color: "bg-orange-100 text-orange-700 border-orange-200",
     description: "Report any issue or concern at a property"
+  },
+  supervisor_concerns: { 
+    label: "Supervisor Concerns", 
+    icon: User, 
+    color: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    description: "Concerns or issues escalated to supervisors"
   },
 };
 

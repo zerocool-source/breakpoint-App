@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Wrench, Droplets, AlertTriangle, ChevronRight, CalendarIcon,
-  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive
+  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive, Users
 } from "lucide-react";
 import type { TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,24 @@ const techOpsOptions = [
     color: "bg-orange-100 text-orange-700 border-orange-200",
     description: "Report any issue or concern at a property"
   },
+  { 
+    id: "supervisor-concerns",
+    entryType: "supervisor_concerns",
+    label: "Supervisor Concerns", 
+    href: "/tech-ops/supervisor-concerns",
+    icon: User, 
+    color: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    description: "Concerns or issues escalated to supervisors"
+  },
+  { 
+    id: "supervisor-management",
+    entryType: "supervisor_management",
+    label: "Supervisor Management", 
+    href: "/supervisor-teams",
+    icon: Users, 
+    color: "bg-slate-100 text-slate-700 border-slate-200",
+    description: "Manage supervisor teams and technician assignments"
+  },
 ];
 
 const entryTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
@@ -81,6 +99,7 @@ const entryTypeLabels: Record<string, { label: string; color: string; icon: any 
   chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-green-100 text-green-700", icon: Droplets },
   windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-cyan-100 text-cyan-700", icon: Wind },
   report_issue: { label: "Report Issues", color: "bg-orange-100 text-orange-700", icon: AlertTriangle },
+  supervisor_concerns: { label: "Supervisor Concerns", color: "bg-indigo-100 text-indigo-700", icon: User },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -312,10 +331,12 @@ export default function TechOpsLanding() {
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="repairs_needed">Repairs Needed</SelectItem>
+                    <SelectItem value="service_repairs">Service Repairs</SelectItem>
                     <SelectItem value="chemical_order">Chemical Orders</SelectItem>
                     <SelectItem value="chemicals_dropoff">Chemicals Dropped-Off</SelectItem>
                     <SelectItem value="windy_day_cleanup">Windy Day Clean Up</SelectItem>
                     <SelectItem value="report_issue">Report Issues</SelectItem>
+                    <SelectItem value="supervisor_concerns">Supervisor Concerns</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

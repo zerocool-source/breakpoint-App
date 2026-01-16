@@ -1,0 +1,525 @@
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Users, User, ChevronDown, ChevronRight, Phone, Mail, Plus, 
+  UserMinus, UserPlus, Loader2, Search, ArrowRight
+} from "lucide-react";
+import type { Technician } from "@shared/schema";
+import { cn } from "@/lib/utils";
+
+interface SupervisorWithTeam extends Technician {
+  teamMembers: Technician[];
+}
+
+export default function SupervisorTeams() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [expandedSupervisors, setExpandedSupervisors] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showReassignDialog, setShowReassignDialog] = useState(false);
+  const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
+  const [targetSupervisorId, setTargetSupervisorId] = useState<string>("");
+
+  const { data: allTechnicians = [], isLoading } = useQuery<Technician[]>({
+    queryKey: ["technicians-stored"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians/stored");
+      if (!response.ok) throw new Error("Failed to fetch technicians");
+      const data = await response.json();
+      return data.technicians || [];
+    },
+  });
+
+  const supervisors = allTechnicians.filter(t => t.role === "supervisor" && t.active);
+  const unassignedTechnicians = allTechnicians.filter(
+    t => t.role === "service" && t.active && !t.supervisorId
+  );
+
+  const supervisorsWithTeams: SupervisorWithTeam[] = supervisors.map(supervisor => ({
+    ...supervisor,
+    teamMembers: allTechnicians.filter(
+      t => t.supervisorId === supervisor.id && t.active
+    ),
+  }));
+
+  const toggleExpand = (supervisorId: string) => {
+    setExpandedSupervisors(prev => {
+      const next = new Set(prev);
+      if (next.has(supervisorId)) {
+        next.delete(supervisorId);
+      } else {
+        next.add(supervisorId);
+      }
+      return next;
+    });
+  };
+
+  const assignMutation = useMutation({
+    mutationFn: async ({ technicianId, supervisorId }: { technicianId: string; supervisorId: string | null }) => {
+      const response = await fetch(`/api/technicians/${technicianId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supervisorId }),
+      });
+      if (!response.ok) throw new Error("Failed to update assignment");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["technicians-stored"] });
+      setShowAssignDialog(false);
+      setShowReassignDialog(false);
+      setSelectedTechnician(null);
+      setTargetSupervisorId("");
+      toast({ title: "Assignment Updated", description: "Technician assignment has been updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update assignment", variant: "destructive" });
+    },
+  });
+
+  const handleAssignTechnician = (technician: Technician) => {
+    setSelectedTechnician(technician);
+    setTargetSupervisorId("");
+    setShowAssignDialog(true);
+  };
+
+  const handleReassignTechnician = (technician: Technician) => {
+    setSelectedTechnician(technician);
+    setTargetSupervisorId(technician.supervisorId || "");
+    setShowReassignDialog(true);
+  };
+
+  const handleRemoveFromTeam = (technician: Technician) => {
+    assignMutation.mutate({ technicianId: technician.id, supervisorId: null });
+  };
+
+  const confirmAssignment = () => {
+    if (selectedTechnician && targetSupervisorId) {
+      assignMutation.mutate({ technicianId: selectedTechnician.id, supervisorId: targetSupervisorId });
+    }
+  };
+
+  const filteredUnassigned = unassignedTechnicians.filter(t => {
+    const fullName = `${t.firstName} ${t.lastName}`.toLowerCase();
+    return fullName.includes(searchTerm.toLowerCase());
+  });
+
+  const getInitials = (firstName: string, lastName: string) => {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  return (
+    <AppLayout>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-[#1E3A8A]/10 flex items-center justify-center">
+              <Users className="w-6 h-6 text-[#1E3A8A]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">
+                Supervisor Team Management
+              </h1>
+              <p className="text-slate-500 text-sm">
+                Manage supervisor teams and technician assignments
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5 text-[#1E3A8A]" />
+                  Supervisors & Teams
+                  <Badge className="ml-2 bg-slate-100 text-slate-700">
+                    {supervisors.length} Supervisors
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
+                  </div>
+                ) : supervisorsWithTeams.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No supervisors found</p>
+                    <p className="text-sm mt-1">Add technicians with the "supervisor" role to get started</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-[600px]">
+                    <div className="space-y-3">
+                      {supervisorsWithTeams.map((supervisor) => {
+                        const isExpanded = expandedSupervisors.has(supervisor.id);
+                        return (
+                          <div
+                            key={supervisor.id}
+                            className="border border-slate-200 rounded-lg overflow-hidden"
+                            data-testid={`supervisor-card-${supervisor.id}`}
+                          >
+                            <button
+                              onClick={() => toggleExpand(supervisor.id)}
+                              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-[#1E3A8A] to-[#3B82F6] text-white hover:from-[#1E40AF] hover:to-[#2563EB] transition-colors"
+                              data-testid={`supervisor-header-${supervisor.id}`}
+                            >
+                              <Avatar className="h-10 w-10 border-2 border-white/30">
+                                <AvatarImage src={supervisor.photoUrl || undefined} />
+                                <AvatarFallback className="bg-white/20 text-white">
+                                  {getInitials(supervisor.firstName, supervisor.lastName)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 text-left">
+                                <div className="font-semibold">
+                                  {supervisor.firstName} {supervisor.lastName}
+                                </div>
+                                <div className="text-blue-100 text-sm flex items-center gap-3">
+                                  {supervisor.phone && (
+                                    <span className="flex items-center gap-1">
+                                      <Phone className="w-3 h-3" /> {supervisor.phone}
+                                    </span>
+                                  )}
+                                  {supervisor.email && (
+                                    <span className="flex items-center gap-1">
+                                      <Mail className="w-3 h-3" /> {supervisor.email}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge className="bg-white/20 text-white border-white/30">
+                                {supervisor.teamMembers.length} Technicians
+                              </Badge>
+                              {isExpanded ? (
+                                <ChevronDown className="w-5 h-5" />
+                              ) : (
+                                <ChevronRight className="w-5 h-5" />
+                              )}
+                            </button>
+
+                            {isExpanded && (
+                              <div className="bg-white divide-y divide-slate-100">
+                                {supervisor.teamMembers.length === 0 ? (
+                                  <div className="p-4 text-center text-slate-500 text-sm">
+                                    No technicians assigned to this supervisor
+                                  </div>
+                                ) : (
+                                  supervisor.teamMembers.map((tech) => (
+                                    <div
+                                      key={tech.id}
+                                      className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors"
+                                      data-testid={`technician-row-${tech.id}`}
+                                    >
+                                      <Avatar className="h-9 w-9">
+                                        <AvatarImage src={tech.photoUrl || undefined} />
+                                        <AvatarFallback className="bg-slate-100 text-slate-600 text-sm">
+                                          {getInitials(tech.firstName, tech.lastName)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-slate-700">
+                                          {tech.firstName} {tech.lastName}
+                                        </div>
+                                        <div className="text-sm text-slate-500 flex items-center gap-3">
+                                          {tech.phone && (
+                                            <span className="flex items-center gap-1">
+                                              <Phone className="w-3 h-3" /> {tech.phone}
+                                            </span>
+                                          )}
+                                          {tech.email && (
+                                            <span className="flex items-center gap-1 truncate">
+                                              <Mail className="w-3 h-3" /> {tech.email}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs capitalize">
+                                        {tech.role}
+                                      </Badge>
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          onClick={() => handleReassignTechnician(tech)}
+                                          data-testid={`button-reassign-${tech.id}`}
+                                        >
+                                          <ArrowRight className="w-4 h-4 mr-1" />
+                                          Reassign
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          onClick={() => handleRemoveFromTeam(tech)}
+                                          data-testid={`button-remove-${tech.id}`}
+                                        >
+                                          <UserMinus className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <User className="w-5 h-5 text-amber-600" />
+                  Unassigned Technicians
+                  <Badge className="ml-2 bg-amber-100 text-amber-700">
+                    {unassignedTechnicians.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input
+                    placeholder="Search technicians..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-search-technicians"
+                  />
+                </div>
+
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                  </div>
+                ) : filteredUnassigned.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-sm">
+                    {searchTerm ? "No matching technicians" : "All technicians are assigned"}
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-[400px]">
+                    <div className="space-y-2">
+                      {filteredUnassigned.map((tech) => (
+                        <div
+                          key={tech.id}
+                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-[#1E3A8A] transition-colors"
+                          data-testid={`unassigned-tech-${tech.id}`}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={tech.photoUrl || undefined} />
+                            <AvatarFallback className="bg-amber-100 text-amber-700 text-xs">
+                              {getInitials(tech.firstName, tech.lastName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-700 text-sm truncate">
+                              {tech.firstName} {tech.lastName}
+                            </div>
+                            {tech.phone && (
+                              <div className="text-xs text-slate-500 truncate">{tech.phone}</div>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0 text-[#1E3A8A] border-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
+                            onClick={() => handleAssignTechnician(tech)}
+                            data-testid={`button-assign-${tech.id}`}
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-50 border-dashed">
+              <CardContent className="pt-6">
+                <div className="text-center text-slate-600">
+                  <Users className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium">Team Summary</p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Total Supervisors:</span>
+                      <span className="font-semibold">{supervisors.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Technicians:</span>
+                      <span className="font-semibold">
+                        {allTechnicians.filter(t => t.role === "service" && t.active).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-amber-600">
+                      <span>Unassigned:</span>
+                      <span className="font-semibold">{unassignedTechnicians.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-[#1E3A8A]" />
+              Assign to Supervisor
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedTechnician && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={selectedTechnician.photoUrl || undefined} />
+                    <AvatarFallback className="bg-amber-100 text-amber-700">
+                      {getInitials(selectedTechnician.firstName, selectedTechnician.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">
+                      {selectedTechnician.firstName} {selectedTechnician.lastName}
+                    </div>
+                    <div className="text-sm text-slate-500 capitalize">{selectedTechnician.role}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Select Supervisor</label>
+              <Select value={targetSupervisorId} onValueChange={setTargetSupervisorId}>
+                <SelectTrigger data-testid="select-supervisor">
+                  <SelectValue placeholder="Choose a supervisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {supervisors.map((sup) => (
+                    <SelectItem key={sup.id} value={sup.id}>
+                      {sup.firstName} {sup.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#1E3A8A] hover:bg-[#1E40AF]"
+              onClick={confirmAssignment}
+              disabled={!targetSupervisorId || assignMutation.isPending}
+              data-testid="button-confirm-assign"
+            >
+              {assignMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <UserPlus className="w-4 h-4 mr-1" />
+              )}
+              Assign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReassignDialog} onOpenChange={setShowReassignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRight className="w-5 h-5 text-blue-600" />
+              Reassign Technician
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedTechnician && (
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={selectedTechnician.photoUrl || undefined} />
+                    <AvatarFallback className="bg-blue-100 text-blue-700">
+                      {getInitials(selectedTechnician.firstName, selectedTechnician.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">
+                      {selectedTechnician.firstName} {selectedTechnician.lastName}
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      Currently assigned to:{" "}
+                      {supervisors.find(s => s.id === selectedTechnician.supervisorId)
+                        ? `${supervisors.find(s => s.id === selectedTechnician.supervisorId)?.firstName} ${supervisors.find(s => s.id === selectedTechnician.supervisorId)?.lastName}`
+                        : "None"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Move to Supervisor</label>
+              <Select value={targetSupervisorId} onValueChange={setTargetSupervisorId}>
+                <SelectTrigger data-testid="select-new-supervisor">
+                  <SelectValue placeholder="Choose a supervisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {supervisors
+                    .filter(sup => sup.id !== selectedTechnician?.supervisorId)
+                    .map((sup) => (
+                      <SelectItem key={sup.id} value={sup.id}>
+                        {sup.firstName} {sup.lastName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReassignDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={confirmAssignment}
+              disabled={!targetSupervisorId || targetSupervisorId === selectedTechnician?.supervisorId || assignMutation.isPending}
+              data-testid="button-confirm-reassign"
+            >
+              {assignMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <ArrowRight className="w-4 h-4 mr-1" />
+              )}
+              Reassign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppLayout>
+  );
+}
