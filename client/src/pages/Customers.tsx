@@ -1422,6 +1422,24 @@ function CustomerDetailPanel({
     },
   });
 
+  const deleteTagMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const res = await fetch(`/api/customer-tags/${tagId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete tag");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customer-tags"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", customer.id, "tags"] });
+      toast({ title: "Tag Deleted", description: "The tag was permanently deleted." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete tag. Please try again.", variant: "destructive" });
+    },
+  });
+
   const saveRouteScheduleMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!selectedPropertyId) throw new Error("No property selected");
@@ -2381,19 +2399,35 @@ function CustomerDetailPanel({
                 {allTags
                   .filter((tag) => !customerTags.some((ct) => ct.id === tag.id))
                   .map((tag) => (
-                    <Badge
-                      key={tag.id}
-                      variant="outline"
-                      className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
-                      style={{ borderColor: tag.color, color: tag.color }}
-                      onClick={() => assignTagMutation.mutate(tag.id)}
-                      data-testid={`badge-available-tag-${tag.id}`}
-                    >
-                      {tag.isWarningTag && <AlertTriangle className="h-3 w-3" />}
-                      <Plus className="h-3 w-3" />
-                      {tag.name}
-                      {tag.isPrebuilt && <span className="text-[10px] opacity-60 ml-1">(built-in)</span>}
-                    </Badge>
+                    <div key={tag.id} className="flex items-center gap-1">
+                      <Badge
+                        variant="outline"
+                        className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
+                        style={{ borderColor: tag.color, color: tag.color }}
+                        onClick={() => assignTagMutation.mutate(tag.id)}
+                        data-testid={`badge-available-tag-${tag.id}`}
+                      >
+                        {tag.isWarningTag && <AlertTriangle className="h-3 w-3" />}
+                        <Plus className="h-3 w-3" />
+                        {tag.name}
+                        {tag.isPrebuilt && <span className="text-[10px] opacity-60 ml-1">(built-in)</span>}
+                      </Badge>
+                      {!tag.isPrebuilt && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Are you sure you want to delete the tag "${tag.name}"? This will remove it from all customers.`)) {
+                              deleteTagMutation.mutate(tag.id);
+                            }
+                          }}
+                          className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                          title="Delete tag"
+                          data-testid={`btn-delete-tag-${tag.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   ))}
                 {allTags.filter((tag) => !customerTags.some((ct) => ct.id === tag.id)).length === 0 && (
                   <p className="text-sm text-slate-400">All tags are already assigned</p>
