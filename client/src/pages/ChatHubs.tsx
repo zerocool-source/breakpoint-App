@@ -96,7 +96,7 @@ export default function ChatHubs() {
             <h1 className="text-2xl font-bold text-slate-800">Supervisor Messages</h1>
             <p className="text-slate-500 mt-1">Direct messages from supervisors to the office</p>
           </div>
-          <Badge className="bg-[#2374AB]1A text-[#2374AB] text-lg px-4 py-2">
+          <Badge className="bg-[#0078D4]1A text-[#0078D4] text-lg px-4 py-2">
             {supervisorMessages.length} Messages
           </Badge>
         </div>
@@ -185,7 +185,7 @@ export default function ChatHubs() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-[#2374AB]" />
+              <MessageSquare className="w-5 h-5 text-[#0078D4]" />
               Messages from Supervisors
             </CardTitle>
           </CardHeader>
@@ -206,17 +206,17 @@ export default function ChatHubs() {
                   {supervisorMessages.map((message) => (
                     <div
                       key={message.id}
-                      className="p-4 border border-slate-200 rounded-lg hover:border-[#2374AB]33 hover:shadow-sm transition-all"
+                      className="p-4 border border-slate-200 rounded-lg hover:border-[#0078D4]33 hover:shadow-sm transition-all"
                       data-testid={`message-${message.id}`}
                     >
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-full bg-[#2374AB]1A flex items-center justify-center">
-                          <User className="w-6 h-6 text-[#2374AB]" />
+                        <div className="w-12 h-12 rounded-full bg-[#0078D4]1A flex items-center justify-center">
+                          <User className="w-6 h-6 text-[#0078D4]" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium text-slate-700 text-base">{message.technicianName}</span>
-                            <Badge className="bg-[#2374AB]1A text-[#2374AB] text-xs">
+                            <Badge className="bg-[#0078D4]1A text-[#0078D4] text-xs">
                               Supervisor
                             </Badge>
                             {message.status === "reviewed" && (

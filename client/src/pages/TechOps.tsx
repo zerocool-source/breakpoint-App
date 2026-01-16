@@ -40,7 +40,7 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
   chemical_order: { 
     label: "Chemical Order", 
     icon: Droplets, 
-    color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33",
+    color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33",
     description: "Request chemicals to be ordered for a property"
   },
   chemicals_dropoff: { 
@@ -64,14 +64,14 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
   supervisor_concerns: { 
     label: "Supervisor Concerns", 
     icon: User, 
-    color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33",
+    color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33",
     description: "Concerns or issues escalated to supervisors"
   },
 };
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33", icon: Clock, label: "Pending" },
-  reviewed: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", icon: CheckCircle, label: "Reviewed" },
+  reviewed: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: CheckCircle, label: "Reviewed" },
   completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle, label: "Cancelled" },
   archived: { color: "bg-slate-100 text-slate-500 border-slate-200", icon: XCircle, label: "Archived" },
@@ -429,7 +429,7 @@ export default function TechOps() {
             </div>
           </div>
           <Button
-            className="bg-[#2374AB] hover:bg-[#1E40AF]"
+            className="bg-[#0078D4] hover:bg-[#1E40AF]"
             onClick={() => setShowAddDialog(true)}
             data-testid="button-add-entry"
           >
@@ -510,7 +510,7 @@ export default function TechOps() {
             <CardTitle className="text-lg flex items-center gap-2">
               {entryType === "windy_day_cleanup" ? (
                 <>
-                  <Building className="w-5 h-5 text-[#2374AB]" />
+                  <Building className="w-5 h-5 text-[#0078D4]" />
                   Entries by Property
                 </>
               ) : (
@@ -521,7 +521,7 @@ export default function TechOps() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -536,7 +536,7 @@ export default function TechOps() {
                   {entriesByProperty.map(([propertyKey, group]) => (
                     <div key={propertyKey} className="border border-slate-200 rounded-lg overflow-hidden" data-testid={`property-group-${propertyKey}`}>
                       {/* Property Header */}
-                      <div className="bg-gradient-to-r from-[#2374AB] to-[#3B82F6] text-white p-4">
+                      <div className="bg-gradient-to-r from-[#0078D4] to-[#3B82F6] text-white p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
                             <Building className="w-5 h-5" />
@@ -544,7 +544,7 @@ export default function TechOps() {
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg">{group.propertyName}</h3>
                             {group.propertyAddress && (
-                              <p className="text-[#2374AB]1A text-sm">{group.propertyAddress}</p>
+                              <p className="text-[#0078D4]1A text-sm">{group.propertyAddress}</p>
                             )}
                           </div>
                           <Badge className="bg-white/20 text-white border-white/30">
@@ -606,7 +606,7 @@ export default function TechOps() {
                                         <button
                                           key={idx}
                                           onClick={() => openLightbox(photos, idx)}
-                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#2374AB] transition-colors"
+                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#0078D4] transition-colors"
                                         >
                                           <img
                                             src={photo}
@@ -724,7 +724,7 @@ export default function TechOps() {
                             {/* Property Info */}
                             <div className="bg-slate-50 rounded-md p-3 space-y-1">
                               <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-[#2374AB]" />
+                                <MapPin className="w-4 h-4 text-[#0078D4]" />
                                 <span className="font-semibold text-[#1E293B]">{entry.propertyName || "No property"}</span>
                               </div>
                               {(entry as any).propertyAddress && (
@@ -741,8 +741,8 @@ export default function TechOps() {
 
                             {/* Description/Notes */}
                             {(entry.description || entry.notes) && (
-                              <div className="bg-[#2374AB]1A border border-[#2374AB]1A rounded-md p-3">
-                                <h4 className="text-xs font-semibold text-[#2374AB] uppercase mb-1">Description / Notes</h4>
+                              <div className="bg-[#0078D4]1A border border-[#0078D4]1A rounded-md p-3">
+                                <h4 className="text-xs font-semibold text-[#0078D4] uppercase mb-1">Description / Notes</h4>
                                 {entry.description && (
                                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.description}</p>
                                 )}
@@ -777,7 +777,7 @@ export default function TechOps() {
                                     <button
                                       key={idx}
                                       onClick={() => openLightbox(photos, idx)}
-                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#2374AB] transition-colors"
+                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#0078D4] transition-colors"
                                       data-testid={`photo-thumb-${entry.id}-${idx}`}
                                     >
                                       <img
@@ -804,7 +804,7 @@ export default function TechOps() {
                               <>
                                 <Button
                                   size="sm"
-                                  className="bg-[#2374AB] hover:bg-[#1E40AF] text-white"
+                                  className="bg-[#0078D4] hover:bg-[#1E40AF] text-white"
                                   onClick={() => handleOpenConvertDialog(entry)}
                                   data-testid={`button-convert-${entry.id}`}
                                 >
@@ -1009,7 +1009,7 @@ export default function TechOps() {
               Cancel
             </Button>
             <Button
-              className="bg-[#2374AB] hover:bg-[#1E40AF]"
+              className="bg-[#0078D4] hover:bg-[#1E40AF]"
               onClick={handleSubmit}
               disabled={!form.technicianName || !form.propertyId || createMutation.isPending}
               data-testid="button-submit-entry"
@@ -1029,7 +1029,7 @@ export default function TechOps() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileUp className="w-5 h-5 text-[#2374AB]" />
+              <FileUp className="w-5 h-5 text-[#0078D4]" />
               Convert to Estimate
             </DialogTitle>
           </DialogHeader>
@@ -1074,7 +1074,7 @@ export default function TechOps() {
               Cancel
             </Button>
             <Button
-              className="bg-[#2374AB] hover:bg-[#1E40AF]"
+              className="bg-[#0078D4] hover:bg-[#1E40AF]"
               onClick={handleConvertToEstimate}
               disabled={convertToEstimateMutation.isPending}
               data-testid="button-confirm-convert"

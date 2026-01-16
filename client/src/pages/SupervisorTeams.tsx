@@ -220,7 +220,7 @@ export default function SupervisorTeams() {
   const getPriorityColor = (priority: string | null) => {
     switch (priority) {
       case "high": return "bg-red-100 text-red-700 border-red-200";
-      case "normal": return "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33";
+      case "normal": return "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33";
       case "low": return "bg-slate-100 text-slate-600 border-slate-200";
       default: return "bg-slate-100 text-slate-600 border-slate-200";
     }
@@ -231,8 +231,8 @@ export default function SupervisorTeams() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#2374AB]/10 flex items-center justify-center">
-              <Users className="w-6 h-6 text-[#2374AB]" />
+            <div className="w-12 h-12 rounded-lg bg-[#0078D4]/10 flex items-center justify-center">
+              <Users className="w-6 h-6 text-[#0078D4]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">
@@ -250,7 +250,7 @@ export default function SupervisorTeams() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="w-5 h-5 text-[#2374AB]" />
+                  <Users className="w-5 h-5 text-[#0078D4]" />
                   Supervisors & Teams
                   <Badge className="ml-2 bg-slate-100 text-slate-700">
                     {supervisors.length} Supervisors
@@ -260,7 +260,7 @@ export default function SupervisorTeams() {
               <CardContent>
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+                    <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
                   </div>
                 ) : supervisorsWithTeams.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
@@ -281,7 +281,7 @@ export default function SupervisorTeams() {
                           >
                             <button
                               onClick={() => toggleExpand(supervisor.id)}
-                              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-[#2374AB] to-[#3B82F6] text-white hover:from-[#1E40AF] hover:to-[#2563EB] transition-colors"
+                              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-[#0078D4] to-[#3B82F6] text-white hover:from-[#1E40AF] hover:to-[#2563EB] transition-colors"
                               data-testid={`supervisor-header-${supervisor.id}`}
                             >
                               <Avatar className="h-10 w-10 border-2 border-white/30">
@@ -294,7 +294,7 @@ export default function SupervisorTeams() {
                                 <div className="font-semibold">
                                   {supervisor.firstName} {supervisor.lastName}
                                 </div>
-                                <div className="text-[#2374AB]1A text-sm flex items-center gap-3">
+                                <div className="text-[#0078D4]1A text-sm flex items-center gap-3">
                                   {supervisor.phone && (
                                     <span className="flex items-center gap-1">
                                       <Phone className="w-3 h-3" /> {supervisor.phone}
@@ -360,7 +360,7 @@ export default function SupervisorTeams() {
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="text-[#2374AB] hover:text-[#2374AB] hover:bg-[#2374AB]1A"
+                                          className="text-[#0078D4] hover:text-[#0078D4] hover:bg-[#0078D4]1A"
                                           onClick={() => handleReassignTechnician(tech)}
                                           data-testid={`button-reassign-${tech.id}`}
                                         >
@@ -429,7 +429,7 @@ export default function SupervisorTeams() {
                       {filteredUnassigned.map((tech) => (
                         <div
                           key={tech.id}
-                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-[#2374AB] transition-colors"
+                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-[#0078D4] transition-colors"
                           data-testid={`unassigned-tech-${tech.id}`}
                         >
                           <Avatar className="h-8 w-8">
@@ -449,7 +449,7 @@ export default function SupervisorTeams() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="shrink-0 text-[#2374AB] border-[#2374AB] hover:bg-[#2374AB] hover:text-white"
+                            className="shrink-0 text-[#0078D4] border-[#0078D4] hover:bg-[#0078D4] hover:text-white"
                             onClick={() => handleAssignTechnician(tech)}
                             data-testid={`button-assign-${tech.id}`}
                           >
@@ -667,7 +667,7 @@ export default function SupervisorTeams() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2" data-testid="text-activity-title">
-                  <ClipboardList className="w-5 h-5 text-[#2374AB]" />
+                  <ClipboardList className="w-5 h-5 text-[#0078D4]" />
                   Activity Log
                   <Badge className="ml-2 bg-slate-100 text-slate-700" data-testid="badge-activity-count">
                     {filteredActivity.length + filteredAssignments.length} Items
@@ -726,8 +726,8 @@ export default function SupervisorTeams() {
                         className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200"
                         data-testid={`activity-assignment-${idx}`}
                       >
-                        <div className="w-8 h-8 rounded-full bg-[#2374AB]/10 flex items-center justify-center">
-                          <UserPlus className="w-4 h-4 text-[#2374AB]" />
+                        <div className="w-8 h-8 rounded-full bg-[#0078D4]/10 flex items-center justify-center">
+                          <UserPlus className="w-4 h-4 text-[#0078D4]" />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm text-slate-700">
@@ -758,7 +758,7 @@ export default function SupervisorTeams() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-[#2374AB]" />
+              <UserPlus className="w-5 h-5 text-[#0078D4]" />
               Assign to Supervisor
             </DialogTitle>
           </DialogHeader>
@@ -803,7 +803,7 @@ export default function SupervisorTeams() {
               Cancel
             </Button>
             <Button
-              className="bg-[#2374AB] hover:bg-[#1E40AF]"
+              className="bg-[#0078D4] hover:bg-[#1E40AF]"
               onClick={confirmAssignment}
               disabled={!targetSupervisorId || assignMutation.isPending}
               data-testid="button-confirm-assign"
@@ -823,7 +823,7 @@ export default function SupervisorTeams() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ArrowRight className="w-5 h-5 text-[#2374AB]" />
+              <ArrowRight className="w-5 h-5 text-[#0078D4]" />
               Reassign Technician
             </DialogTitle>
           </DialogHeader>
@@ -833,7 +833,7 @@ export default function SupervisorTeams() {
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedTechnician.photoUrl || undefined} />
-                    <AvatarFallback className="bg-[#2374AB]1A text-[#2374AB]">
+                    <AvatarFallback className="bg-[#0078D4]1A text-[#0078D4]">
                       {getInitials(selectedTechnician.firstName, selectedTechnician.lastName)}
                     </AvatarFallback>
                   </Avatar>
@@ -875,7 +875,7 @@ export default function SupervisorTeams() {
               Cancel
             </Button>
             <Button
-              className="bg-[#2374AB] hover:bg-[#2374AB]"
+              className="bg-[#0078D4] hover:bg-[#0078D4]"
               onClick={confirmAssignment}
               disabled={!targetSupervisorId || targetSupervisorId === selectedTechnician?.supervisorId || assignMutation.isPending}
               data-testid="button-confirm-reassign"

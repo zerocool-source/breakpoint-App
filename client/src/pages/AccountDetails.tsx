@@ -17,7 +17,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const MESSAGE_TYPES = [
-  { value: "update", label: "Update", icon: MessageCircle, color: "bg-[#2374AB]/20 text-[#2374AB] border-[#2374AB]/50" },
+  { value: "update", label: "Update", icon: MessageCircle, color: "bg-[#0078D4]/20 text-[#0078D4] border-[#0078D4]/50" },
   { value: "assist", label: "Assist", icon: HelpCircle, color: "bg-[#22D69A]/20 text-green-300 border-green-400/50" },
   { value: "issue", label: "Issue", icon: AlertTriangle, color: "bg-red-500/20 text-red-300 border-red-400/50" },
   { value: "repair", label: "Repair Needed", icon: Wrench, color: "bg-[#FF8000]/20 text-orange-300 border-orange-400/50" },
@@ -203,7 +203,7 @@ function ThreadPanel({ threadId, accountName }: { threadId: string; accountName:
                 variant={taggedRoles.includes(role.value) ? "default" : "outline"}
                 size="sm"
                 onClick={() => toggleRole(role.value)}
-                className={taggedRoles.includes(role.value) ? "bg-[#2374AB] text-white" : "border-slate-600 text-slate-400"}
+                className={taggedRoles.includes(role.value) ? "bg-[#0078D4] text-white" : "border-slate-600 text-slate-400"}
                 data-testid={`btn-tag-${role.value}`}
               >
                 {role.label}
@@ -228,7 +228,7 @@ function ThreadPanel({ threadId, accountName }: { threadId: string; accountName:
           <Button 
             onClick={handleSend} 
             disabled={!newMessage.trim() || createMessage.isPending}
-            className="bg-[#2374AB] hover:bg-[#2374AB] text-white px-6"
+            className="bg-[#0078D4] hover:bg-[#0078D4] text-white px-6"
             data-testid="btn-send-message"
           >
             <Send className="w-4 h-4" />
@@ -267,7 +267,7 @@ function MessageCard({
             {message.taggedRoles && message.taggedRoles.length > 0 && (
               <div className="flex gap-1">
                 {message.taggedRoles.map(role => (
-                  <Badge key={role} variant="outline" className="text-xs border-[#2374AB]/50 text-[#2374AB]">
+                  <Badge key={role} variant="outline" className="text-xs border-[#0078D4]/50 text-[#0078D4]">
                     @{role}
                   </Badge>
                 ))}
@@ -318,7 +318,7 @@ function WorkOrdersTab({ accountId }: { accountId: string }) {
                   <Badge className={job.isCompleted ? "bg-[#22D69A]/20 text-green-300" : "bg-[#FF8000]/20 text-[#FF8000]"}>
                     {job.isCompleted ? "Complete" : job.status || "Pending"}
                   </Badge>
-                  <p className="text-sm text-[#2374AB] mt-1">${(job.price || 0).toLocaleString()}</p>
+                  <p className="text-sm text-[#0078D4] mt-1">${(job.price || 0).toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -445,8 +445,8 @@ export default function AccountDetails() {
         <Card className="flex-1 bg-slate-900/50 border-slate-700 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-[#2374AB]/20 flex items-center justify-center">
-                <Building className="w-6 h-6 text-[#2374AB]" />
+              <div className="w-12 h-12 rounded-full bg-[#0078D4]/20 flex items-center justify-center">
+                <Building className="w-6 h-6 text-[#0078D4]" />
               </div>
               <div>
                 <CardTitle className="text-xl text-white">{accountName}</CardTitle>
@@ -457,19 +457,19 @@ export default function AccountDetails() {
           <CardContent className="flex-1 pt-4">
             <Tabs defaultValue="thread" className="h-full flex flex-col">
               <TabsList className="bg-slate-800/50 border border-slate-700 mb-4">
-                <TabsTrigger value="thread" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-thread">
+                <TabsTrigger value="thread" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white" data-testid="tab-thread">
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Thread
                 </TabsTrigger>
-                <TabsTrigger value="workorders" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-workorders">
+                <TabsTrigger value="workorders" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white" data-testid="tab-workorders">
                   <ClipboardList className="w-4 h-4 mr-2" />
                   Work Orders
                 </TabsTrigger>
-                <TabsTrigger value="photos" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-photos">
+                <TabsTrigger value="photos" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white" data-testid="tab-photos">
                   <Camera className="w-4 h-4 mr-2" />
                   Photos
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-notes">
+                <TabsTrigger value="notes" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white" data-testid="tab-notes">
                   <FileText className="w-4 h-4 mr-2" />
                   Notes
                 </TabsTrigger>

@@ -31,7 +31,7 @@ interface ParsedPayload {
 }
 
 const entryTypeConfig: Record<string, { label: string; color: string; icon: any }> = {
-  service: { label: "Service Visit", color: "bg-[#2374AB]1A text-[#2374AB]", icon: ClipboardCheck },
+  service: { label: "Service Visit", color: "bg-[#0078D4]1A text-[#0078D4]", icon: ClipboardCheck },
   repair: { label: "Repair", color: "bg-[#FF8000]1A text-[#FF8000]", icon: FileText },
   reading: { label: "Reading", color: "bg-[#22D69A]1A text-[#22D69A]", icon: Droplets },
   note: { label: "Note", color: "bg-slate-100 text-slate-600", icon: FileText },
@@ -197,7 +197,7 @@ export default function Visits() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : visits.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -229,7 +229,7 @@ export default function Visits() {
                             <div className="flex items-center gap-2 flex-wrap mb-2">
                               <Badge className={typeConfig.color}>{typeConfig.label}</Badge>
                               {payload.bodyOfWater && (
-                                <Badge variant="outline" className="text-[#2374AB] border-blue-300">
+                                <Badge variant="outline" className="text-[#0078D4] border-blue-300">
                                   <Droplets className="w-3 h-3 mr-1" />
                                   {payload.bodyOfWater}
                                 </Badge>
@@ -390,7 +390,7 @@ export default function Visits() {
                 onClick={() => setCurrentImageIndex(idx)}
                 className={cn(
                   "w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 transition-colors",
-                  idx === currentImageIndex ? "border-[#2374AB]" : "border-slate-200 hover:border-slate-400"
+                  idx === currentImageIndex ? "border-[#0078D4]" : "border-slate-200 hover:border-slate-400"
                 )}
               >
                 <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />

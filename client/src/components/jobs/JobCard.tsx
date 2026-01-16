@@ -21,7 +21,7 @@ export function PriceDisplay({ price, productName, testId }: { price: number; pr
     );
   }
   return (
-    <span className="font-ui font-bold text-[#2374AB]" data-testid={testId}>
+    <span className="font-ui font-bold text-[#0078D4]" data-testid={testId}>
       {formatPrice(price)}
     </span>
   );
@@ -43,21 +43,21 @@ export function ExpandableJobCard({ job }: { job: Job }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className={`bg-slate-800/60 hover:border-[#2374AB]/50 transition-all duration-200 ${isPastDue ? 'border-red-500/50' : 'border-slate-600/50'}`} data-testid={`job-card-${job.jobId}`}>
+      <Card className={`bg-slate-800/60 hover:border-[#0078D4]/50 transition-all duration-200 ${isPastDue ? 'border-red-500/50' : 'border-slate-600/50'}`} data-testid={`job-card-${job.jobId}`}>
         <CollapsibleTrigger className="w-full">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isOpen ? (
-                  <ChevronDown className="w-5 h-5 text-[#2374AB]" />
+                  <ChevronDown className="w-5 h-5 text-[#0078D4]" />
                 ) : (
                   <ChevronRight className="w-5 h-5 text-slate-400" />
                 )}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                  job.isCompleted ? 'bg-[#2374AB]/30' : isPastDue ? 'bg-red-500/30' : 'bg-[#FF8000]/30'
+                  job.isCompleted ? 'bg-[#0078D4]/30' : isPastDue ? 'bg-red-500/30' : 'bg-[#FF8000]/30'
                 }`}>
                   {job.isCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-[#2374AB]" />
+                    <CheckCircle2 className="w-4 h-4 text-[#0078D4]" />
                   ) : isPastDue ? (
                     <AlertTriangle className="w-4 h-4 text-red-400" />
                   ) : (
@@ -85,7 +85,7 @@ export function ExpandableJobCard({ job }: { job: Job }) {
                   </Badge>
                 )}
                 <Badge variant="outline" className={
-                  job.isCompleted ? "border-[#2374AB]/50 text-[#2374AB]" : isPastDue ? "border-red-500/50 text-red-400" : "border-[#FF8000]/50 text-[#FF8000]"
+                  job.isCompleted ? "border-[#0078D4]/50 text-[#0078D4]" : isPastDue ? "border-red-500/50 text-red-400" : "border-[#FF8000]/50 text-[#FF8000]"
                 }>
                   {job.status}
                 </Badge>
@@ -103,7 +103,7 @@ export function ExpandableJobCard({ job }: { job: Job }) {
                 <div>
                   <p className="text-xs text-slate-400 uppercase tracking-wider">Customer</p>
                   <Link href={`/accounts/${job.customerId}`}>
-                    <p className="text-sm font-medium text-[#2374AB] hover:text-[#2374AB] cursor-pointer flex items-center gap-1">
+                    <p className="text-sm font-medium text-[#0078D4] hover:text-[#0078D4] cursor-pointer flex items-center gap-1">
                       {job.customerName}
                       <MessageCircle className="w-3 h-3" />
                     </p>
@@ -194,7 +194,7 @@ export function ExpandableJobCard({ job }: { job: Job }) {
                     <Button
                       size="sm"
                       onClick={() => archive.unarchiveJob(String(job.jobId))}
-                      className="gap-1 bg-[#2374AB] text-white hover:bg-[#2374AB] border-0 shadow-sm"
+                      className="gap-1 bg-[#0078D4] text-white hover:bg-[#0078D4] border-0 shadow-sm"
                       data-testid={`btn-unarchive-${job.jobId}`}
                     >
                       <ArchiveRestore className="w-3 h-3" />
@@ -233,16 +233,16 @@ export function ExpandableJobCard({ job }: { job: Job }) {
 export function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
   return (
     <div 
-      className="flex items-center justify-between py-3 px-4 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:border-[#2374AB]/50 transition-colors cursor-pointer"
+      className="flex items-center justify-between py-3 px-4 bg-slate-800/50 rounded-lg border border-slate-600/50 hover:border-[#0078D4]/50 transition-colors cursor-pointer"
       data-testid={`job-row-${job.jobId}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          job.isCompleted ? 'bg-[#2374AB]/30' : 'bg-[#FF8000]/30'
+          job.isCompleted ? 'bg-[#0078D4]/30' : 'bg-[#FF8000]/30'
         }`}>
           {job.isCompleted ? (
-            <CheckCircle2 className="w-4 h-4 text-[#2374AB]" />
+            <CheckCircle2 className="w-4 h-4 text-[#0078D4]" />
           ) : (
             <Clock className="w-4 h-4 text-[#FF8000]" />
           )}
@@ -267,7 +267,7 @@ export function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
       </div>
       <div className="flex items-center gap-4 shrink-0">
         <Badge variant="outline" className={
-          job.isCompleted ? "border-[#2374AB]/50 text-[#2374AB]" : "border-[#FF8000]/50 text-[#FF8000]"
+          job.isCompleted ? "border-[#0078D4]/50 text-[#0078D4]" : "border-[#FF8000]/50 text-[#FF8000]"
         }>
           {job.isCompleted ? "Complete" : "Pending"}
         </Badge>

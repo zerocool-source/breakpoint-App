@@ -139,7 +139,7 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Alert className="bg-[#2374AB]/10 border-[#2374AB]/30">
+            <Alert className="bg-[#0078D4]/10 border-[#0078D4]/30">
               <AlertCircle className="h-4 w-4 text-blue-400" />
               <AlertDescription className="text-blue-300 text-sm">
                 <strong>Pro Tip:</strong> For better security, add <code className="bg-black/30 px-1 rounded">POOLBRAIN_ACCESS_KEY</code> and <code className="bg-black/30 px-1 rounded">POOLBRAIN_COMPANY_ID</code> to your Replit Secrets instead. They'll override these settings.

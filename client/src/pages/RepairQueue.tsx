@@ -27,12 +27,12 @@ import type { ServiceRepairJob, Technician } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33", icon: Clock, label: "Pending" },
-  assigned: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", icon: User, label: "Assigned" },
+  assigned: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: User, label: "Assigned" },
   in_progress: { color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Wrench, label: "In Progress" },
   completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
   estimated: { color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: DollarSign, label: "Estimated" },
-  batched: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", icon: Target, label: "Batched" },
+  batched: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: Target, label: "Batched" },
 };
 
 const defaultStatus = { color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock, label: "Unknown" };
@@ -255,7 +255,7 @@ export default function RepairQueue() {
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold text-[#2374AB]">
+            <span className="font-mono text-sm font-semibold text-[#0078D4]">
               {repair.jobNumber || "—"}
             </span>
             <Badge className={statusCfg.color}>
@@ -291,7 +291,7 @@ export default function RepairQueue() {
 
         {repair.estimateId && (
           <div className="flex items-center gap-2 mb-3">
-            <Badge className="bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33 text-xs">
+            <Badge className="bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33 text-xs">
               <FileText className="w-3 h-3 mr-1" />
               From Estimate
             </Badge>
@@ -303,7 +303,7 @@ export default function RepairQueue() {
             <Button
               size="sm"
               variant="outline"
-              className="text-[#2374AB] hover:text-[#2374AB] hover:bg-[#2374AB]1A"
+              className="text-[#0078D4] hover:text-[#0078D4] hover:bg-[#0078D4]1A"
               onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
               data-testid={`button-start-${repair.id}`}
             >
@@ -368,14 +368,14 @@ export default function RepairQueue() {
     return (
       <Card
         key={techData.tech}
-        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#2374AB] shadow-lg' : ''}`}
+        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#0078D4] shadow-lg' : ''}`}
         onClick={() => setSelectedTech(selectedTech === techData.tech ? null : techData.tech)}
         data-testid={`tech-card-${techData.tech.replace(/\s+/g, '-').toLowerCase()}`}
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
-              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#2374AB] text-white"}>
+              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#0078D4] text-white"}>
                 {getInitials(techData.tech)}
               </AvatarFallback>
             </Avatar>
@@ -448,7 +448,7 @@ export default function RepairQueue() {
 
         {/* Dashboard Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" data-testid="dashboard-metrics">
-          <Card className="bg-gradient-to-br from-[#2374AB] to-[#3B82F6] text-white">
+          <Card className="bg-gradient-to-br from-[#0078D4] to-[#3B82F6] text-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 opacity-80" />
@@ -495,7 +495,7 @@ export default function RepairQueue() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-[#2374AB]" />
+                <Users className="w-4 h-4 text-[#0078D4]" />
                 <span className="text-sm text-slate-600">Active Techs</span>
               </div>
               <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.activeTechs}</div>
@@ -534,7 +534,7 @@ export default function RepairQueue() {
           <TabsContent value="by-tech" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -580,7 +580,7 @@ export default function RepairQueue() {
           <TabsContent value="pending" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : pendingRepairs.length === 0 ? (
               <Card>

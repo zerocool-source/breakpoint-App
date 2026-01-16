@@ -301,9 +301,9 @@ export default function Payroll() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card/50 border-[#2374AB]/30">
+          <Card className="bg-card/50 border-[#0078D4]/30">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[#2374AB]/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#0078D4]/20 flex items-center justify-center">
                 <Briefcase className="w-6 h-6 text-blue-400" />
               </div>
               <div>
@@ -377,7 +377,7 @@ export default function Payroll() {
                         ${!isSameMonth(day, currentMonth) ? "text-muted-foreground/40" : "text-foreground"}
                         ${isToday(day) ? "ring-2 ring-primary" : ""}
                         ${isPayday ? "bg-[#22D69A]/20 border border-[#22D69A]/50" : ""}
-                        ${isPeriodStart ? "bg-[#2374AB]/10 border-l-2 border-l-#2374AB" : ""}
+                        ${isPeriodStart ? "bg-[#0078D4]/10 border-l-2 border-l-#0078D4" : ""}
                         ${isInCurrentPeriod && !isPayday && !isPeriodStart ? "bg-primary/5" : ""}
                         ${selectedPeriod && dbPeriod?.id === selectedPeriod.id ? "ring-2 ring-#17BEBB" : ""}
                         hover:bg-white/5
@@ -407,7 +407,7 @@ export default function Payroll() {
                   <span>Payday (Friday)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-[#2374AB]/10 border-l-2 border-l-#2374AB" />
+                  <div className="w-3 h-3 rounded bg-[#0078D4]/10 border-l-2 border-l-#0078D4" />
                   <span>Period Start</span>
                 </div>
                 <div className="flex items-center gap-2">

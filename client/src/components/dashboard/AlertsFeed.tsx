@@ -42,7 +42,7 @@ export function AlertsFeed({ className }: AlertsFeedProps) {
       case "Critical": return "bg-destructive/20 text-destructive border-destructive/50";
       case "High": return "bg-[#FF8000]/20 text-orange-400 border-[#FF8000]/50";
       case "Medium": return "bg-[#FF8000]/20 text-yellow-400 border-[#FF8000]/50";
-      case "Low": return "bg-[#2374AB]/20 text-blue-400 border-[#2374AB]/50";
+      case "Low": return "bg-[#0078D4]/20 text-blue-400 border-[#0078D4]/50";
       default: return "bg-white/10 text-white border-white/20";
     }
   };

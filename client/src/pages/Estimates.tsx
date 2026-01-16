@@ -196,7 +196,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   approved: { label: "Approved", color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle2 },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
   needs_scheduling: { label: "Needs Scheduling", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: CalendarIcon },
-  scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#2374AB] border-[#93C5FD]", icon: CalendarIcon },
+  scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#0078D4] border-[#93C5FD]", icon: CalendarIcon },
   completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
   ready_to_invoice: { label: "Ready to Invoice", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Receipt },
   invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Receipt },
@@ -395,11 +395,11 @@ export default function Estimates() {
   const getSourceBadgeColor = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
-      case "repair_tech": return "bg-[#2374AB]/20 text-[#2374AB]";
-      case "service_tech": return "bg-[#2374AB]/20 text-[#2374AB]";
-      case "office_staff": return "bg-[#2374AB]/20 text-[#2374AB]";
+      case "repair_tech": return "bg-[#0078D4]/20 text-[#0078D4]";
+      case "service_tech": return "bg-[#0078D4]/20 text-[#0078D4]";
+      case "office_staff": return "bg-[#0078D4]/20 text-[#0078D4]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
-      default: return "bg-[#2374AB]/20 text-[#2374AB]";
+      default: return "bg-[#0078D4]/20 text-[#0078D4]";
     }
   };
 
@@ -1526,13 +1526,13 @@ export default function Estimates() {
         {/* Estimate Source Metrics */}
         <div className="grid grid-cols-3 gap-4">
           <div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-#2374AB p-4 cursor-pointer hover:shadow-md transition-all"
+            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-#0078D4 p-4 cursor-pointer hover:shadow-md transition-all"
             onClick={() => setSourceFilter("repair_tech")}
             data-testid="metric-repair-tech"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-[#2374AB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.repairTech.count}</p>
+                <p className="text-2xl font-bold text-[#0078D4]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.repairTech.count}</p>
                 <p className="text-sm text-[#6B7280] mt-1">Repair Tech Estimates</p>
               </div>
               <div className="text-right">
@@ -1624,13 +1624,13 @@ export default function Estimates() {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <h4 className="text-sm font-medium text-[#6B7280] mb-3">By Source</h4>
               <div className="grid grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-2 bg-[#2374AB]1A rounded-lg border border-[#2374AB]1A">
+                <div className="flex items-center justify-between p-2 bg-[#0078D4]1A rounded-lg border border-[#0078D4]1A">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#2374AB]" />
+                    <div className="w-2 h-2 rounded-full bg-[#0078D4]" />
                     <span className="text-sm text-[#1E293B]">Repair Tech</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-semibold text-[#2374AB]">{sourceMetrics.repairTech.count}</span>
+                    <span className="text-sm font-semibold text-[#0078D4]">{sourceMetrics.repairTech.count}</span>
                     <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
@@ -1778,7 +1778,7 @@ export default function Estimates() {
 
           {/* Bulk Invoice Selection Header - shows when Under $500 filter is active */}
           {isUnder500FilterActive && selectableUnder500Estimates.length > 0 && (
-            <div className="px-5 py-3 bg-[#2374AB]1A border-b border-[#2374AB]33 flex items-center justify-between">
+            <div className="px-5 py-3 bg-[#0078D4]1A border-b border-[#0078D4]33 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -1787,10 +1787,10 @@ export default function Estimates() {
                       if (checked) selectAllUnder500();
                       else deselectAllUnder500();
                     }}
-                    className="border-blue-400 data-[state=checked]:bg-[#2374AB] data-[state=checked]:border-[#2374AB]"
+                    className="border-blue-400 data-[state=checked]:bg-[#0078D4] data-[state=checked]:border-[#0078D4]"
                     data-testid="checkbox-select-all-under500"
                   />
-                  <span className="text-sm text-[#2374AB] font-medium">
+                  <span className="text-sm text-[#0078D4] font-medium">
                     {selectedSRIds.size === 0 
                       ? `Select all (${selectableUnder500Estimates.length} estimates)`
                       : `${selectedSRIds.size} selected`}
@@ -1801,7 +1801,7 @@ export default function Estimates() {
                     variant="ghost"
                     size="sm"
                     onClick={deselectAllUnder500}
-                    className="text-[#2374AB] hover:text-blue-800 hover:bg-[#2374AB]1A"
+                    className="text-[#0078D4] hover:text-blue-800 hover:bg-[#0078D4]1A"
                     data-testid="button-deselect-all"
                   >
                     Clear selection
@@ -1846,7 +1846,7 @@ export default function Estimates() {
                     return (
                       <div
                         key={estimate.id}
-                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-#2374AB bg-[#2374AB]1A/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
+                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-#0078D4 bg-[#0078D4]1A/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
                         onClick={() => {
                           setSelectedEstimate(estimate);
                           setShowDetailDialog(true);
@@ -1863,7 +1863,7 @@ export default function Estimates() {
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={() => toggleUnder500Selection(estimate.id)}
-                                className="border-blue-400 data-[state=checked]:bg-[#2374AB] data-[state=checked]:border-[#2374AB]"
+                                className="border-blue-400 data-[state=checked]:bg-[#0078D4] data-[state=checked]:border-[#0078D4]"
                                 data-testid={`checkbox-under500-${estimate.id}`}
                               />
                             </div>
@@ -2250,7 +2250,7 @@ export default function Estimates() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-slate-500">Amount</p>
-                  <p className="text-3xl font-bold text-[#2374AB]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</p>
                 </div>
               </div>
             </DialogHeader>
@@ -2463,7 +2463,7 @@ export default function Estimates() {
                           <Button
                             size="sm"
                             onClick={addLineItem}
-                            className="bg-[#2374AB] hover:bg-[#2374AB]/90"
+                            className="bg-[#0078D4] hover:bg-[#0078D4]/90"
                             data-testid="button-add-line"
                           >
                             <Plus className="w-3 h-3 mr-1" />
@@ -2798,7 +2798,7 @@ export default function Estimates() {
 
                         <div className="flex justify-between text-lg font-bold border-t pt-3 border-slate-300">
                           <span>Estimate total</span>
-                          <span className="text-[#2374AB]">{formatCurrency(calculateTotals.totalAmount)}</span>
+                          <span className="text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</span>
                         </div>
 
                         <div className="space-y-1 border-t pt-3">
@@ -2855,7 +2855,7 @@ export default function Estimates() {
               <Button
                 onClick={handleSaveEstimate}
                 disabled={!formData.propertyName}
-                className="bg-[#2374AB] hover:bg-[#2374AB]/90"
+                className="bg-[#0078D4] hover:bg-[#0078D4]/90"
                 data-testid="button-save-estimate"
               >
                 {isEditing ? "Save Changes" : "Save Estimate"}
@@ -2887,7 +2887,7 @@ export default function Estimates() {
                 <div className="p-4 bg-slate-50 rounded-lg">
                   <h4 className="font-semibold">{selectedEstimate.title}</h4>
                   <p className="text-sm text-slate-600">{selectedEstimate.propertyName}</p>
-                  <p className="text-lg font-bold text-[#2374AB] mt-2">
+                  <p className="text-lg font-bold text-[#0078D4] mt-2">
                     {formatCurrency(selectedEstimate.totalAmount)}
                   </p>
                 </div>
@@ -2977,8 +2977,8 @@ export default function Estimates() {
                                 key={tech.id}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${
                                   selectedTechId === tech.id 
-                                    ? "border-[#2374AB] bg-[#2374AB]/5 ring-2 ring-[#2374AB]" 
-                                    : "border-[#E2E8F0] hover:border-[#2374AB] hover:shadow-sm"
+                                    ? "border-[#0078D4] bg-[#0078D4]/5 ring-2 ring-[#0078D4]" 
+                                    : "border-[#E2E8F0] hover:border-[#0078D4] hover:shadow-sm"
                                 }`}
                                 onClick={() => {
                                   setSelectedTechId(tech.id);
@@ -2988,8 +2988,8 @@ export default function Estimates() {
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-[#2374AB]/10 flex items-center justify-center">
-                                      <User className="w-4 h-4 text-[#2374AB]" />
+                                    <div className="w-8 h-8 rounded-full bg-[#0078D4]/10 flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#0078D4]" />
                                     </div>
                                     <div>
                                       <p className="font-medium text-[#1E293B] text-sm">{tech.name}</p>
@@ -2997,7 +2997,7 @@ export default function Estimates() {
                                     </div>
                                   </div>
                                   {selectedTechId === tech.id && (
-                                    <CheckCircle2 className="w-5 h-5 text-[#2374AB]" />
+                                    <CheckCircle2 className="w-5 h-5 text-[#0078D4]" />
                                   )}
                                 </div>
                               </div>
@@ -3053,7 +3053,7 @@ export default function Estimates() {
                   <Button
                     onClick={handleScheduleFromApproval}
                     disabled={!selectedTechId}
-                    className="bg-[#2374AB] hover:bg-[#2374AB]/90"
+                    className="bg-[#0078D4] hover:bg-[#0078D4]/90"
                     data-testid="button-schedule-now"
                   >
                     <CalendarIcon className="w-4 h-4 mr-2" />
@@ -3084,7 +3084,7 @@ export default function Estimates() {
                       <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                       <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
                     </div>
-                    <p className="text-lg font-bold text-[#2374AB]">
+                    <p className="text-lg font-bold text-[#0078D4]">
                       {formatCurrency(selectedEstimate.totalAmount)}
                     </p>
                   </div>
@@ -3192,7 +3192,7 @@ export default function Estimates() {
                       <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                       <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
                     </div>
-                    <p className="text-lg font-bold text-[#2374AB]">
+                    <p className="text-lg font-bold text-[#0078D4]">
                       {formatCurrency(selectedEstimate.totalAmount)}
                     </p>
                   </div>
@@ -3315,7 +3315,7 @@ export default function Estimates() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-[#2374AB]" />
+                <Receipt className="w-5 h-5 text-[#0078D4]" />
                 Create Invoice
               </DialogTitle>
               <DialogDescription>
@@ -3328,7 +3328,7 @@ export default function Estimates() {
                   <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                   <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <p className="text-lg font-bold text-[#2374AB]">
+                    <p className="text-lg font-bold text-[#0078D4]">
                       {formatCurrency(selectedEstimate.totalAmount)}
                     </p>
                     {selectedEstimate.workType && (
@@ -3401,7 +3401,7 @@ export default function Estimates() {
               <Button
                 onClick={handleCreateInvoice}
                 disabled={!selectedInvoiceEmail || isCreatingInvoice}
-                className="bg-[#2374AB] hover:bg-[#2374AB]/90"
+                className="bg-[#0078D4] hover:bg-[#0078D4]/90"
                 data-testid="button-create-invoice"
               >
                 {isCreatingInvoice ? (
@@ -3424,7 +3424,7 @@ export default function Estimates() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-[#2374AB]" />
+                <CalendarIcon className="w-5 h-5 text-[#0078D4]" />
                 Schedule Job to Repair Technician
               </DialogTitle>
               <DialogDescription>
@@ -3436,7 +3436,7 @@ export default function Estimates() {
                 <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
                   <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                   <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
-                  <p className="text-lg font-bold text-[#2374AB] mt-2">
+                  <p className="text-lg font-bold text-[#0078D4] mt-2">
                     {formatCurrency(selectedEstimate.totalAmount)}
                   </p>
                 </div>
@@ -3473,14 +3473,14 @@ export default function Estimates() {
                         {repairTechs.map((tech: any) => (
                           <div
                             key={tech.id}
-                            className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-[#2374AB] hover:shadow-md cursor-pointer transition-all"
+                            className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-[#0078D4] hover:shadow-md cursor-pointer transition-all"
                             onClick={() => handleScheduleToTech(tech)}
                             data-testid={`tech-card-${tech.id}`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[#2374AB]/10 flex items-center justify-center">
-                                  <User className="w-5 h-5 text-[#2374AB]" />
+                                <div className="w-10 h-10 rounded-full bg-[#0078D4]/10 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-[#0078D4]" />
                                 </div>
                                 <div>
                                   <p className="font-medium text-[#1E293B]">{tech.name}</p>
@@ -3545,7 +3545,7 @@ export default function Estimates() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Total Amount</p>
-                      <p className="text-3xl font-bold text-[#2374AB]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                      <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                     </div>
                   </div>
                 </div>
@@ -3562,9 +3562,9 @@ export default function Estimates() {
 
                 <div className="space-y-3">
                   <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#2374AB">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#0078D4">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Building2 className="w-3 h-3 text-[#2374AB]" />
+                        <Building2 className="w-3 h-3 text-[#0078D4]" />
                         <span className="text-xs text-gray-500">Property / Location</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.propertyName}</p>
@@ -3722,7 +3722,7 @@ export default function Estimates() {
                       )}
                       <div className="text-right pl-6 border-l border-slate-300">
                         <p className="text-sm text-slate-500">Total Amount</p>
-                        <p className="text-2xl font-bold text-[#2374AB]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                        <p className="text-2xl font-bold text-[#0078D4]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                       </div>
                     </div>
                     {(selectedEstimate.depositAmount || 0) > 0 && (
@@ -3842,8 +3842,8 @@ export default function Estimates() {
                 </div>
 
                 {selectedEstimate.customerNote && (
-                  <div className="p-4 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33">
-                    <p className="text-sm font-semibold text-[#2374AB] flex items-center gap-2">
+                  <div className="p-4 bg-[#0078D4]1A rounded-lg border border-[#0078D4]33">
+                    <p className="text-sm font-semibold text-[#0078D4] flex items-center gap-2">
                       <FileText className="w-4 h-4" />
                       Note to Customer
                     </p>
@@ -3983,11 +3983,11 @@ export default function Estimates() {
                 </div>
               </div>
 
-              <div className="bg-[#2374AB]1A border border-[#2374AB]33 rounded-lg p-4">
+              <div className="bg-[#0078D4]1A border border-[#0078D4]33 rounded-lg p-4">
                 <p className="text-sm font-medium text-[#0077C5] mb-2">Selected Estimates ({selectedSRIds.size})</p>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {getSelectedUnder500Estimates().map((est) => (
-                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-[#2374AB]1A">
+                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-[#0078D4]1A">
                       <div className="flex-1">
                         <p className="font-medium text-gray-800">{getEstimateTitle(est)}</p>
                         <p className="text-xs text-gray-500">{est.propertyName}</p>
@@ -3996,7 +3996,7 @@ export default function Estimates() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 pt-3 border-t border-[#2374AB]33 flex justify-between">
+                <div className="mt-3 pt-3 border-t border-[#0078D4]33 flex justify-between">
                   <span className="text-sm font-medium text-[#0077C5]">Total</span>
                   <span className="text-lg font-bold text-[#0077C5]">
                     {formatCurrency(getSelectedUnder500Estimates().reduce((sum, e) => sum + (e.totalAmount || 0), 0))}

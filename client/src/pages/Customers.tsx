@@ -103,7 +103,7 @@ interface Pool {
 }
 
 const POOL_TYPES = [
-  { value: "Pool", label: "Pool", color: "bg-[#2374AB]" },
+  { value: "Pool", label: "Pool", color: "bg-[#0078D4]" },
   { value: "Spa", label: "Spa", color: "bg-[#17BEBB]" },
   { value: "Fountain", label: "Fountain", color: "bg-[#17BEBB]" },
   { value: "Pond", label: "Pond", color: "bg-[#22D69A]" },
@@ -143,7 +143,7 @@ const EQUIPMENT_TYPES: Record<string, string[]> = {
 const STATUS_OPTIONS = [
   { value: "active", label: "Active", color: "bg-[#22D69A]" },
   { value: "inactive", label: "Inactive", color: "bg-red-500" },
-  { value: "lead", label: "Lead", color: "bg-[#2374AB]" },
+  { value: "lead", label: "Lead", color: "bg-[#0078D4]" },
   { value: "pending", label: "Pending", color: "bg-[#FF8000]" },
 ];
 
@@ -171,7 +171,7 @@ function CustomerListItem({
       onClick={onClick}
       className={cn(
         "p-4 border-b border-slate-100 cursor-pointer hover:bg-slate-50 transition-colors",
-        isSelected && "bg-[#2374AB]1A border-l-4 border-l-#2374AB"
+        isSelected && "bg-[#0078D4]1A border-l-4 border-l-#0078D4"
       )}
       data-testid={`customer-row-${customer.id}`}
     >
@@ -404,7 +404,7 @@ function AddCustomerModal({
           <Button 
             onClick={handleSubmit}
             disabled={!formData.name.trim()}
-            className="bg-[#2374AB] hover:bg-[#2374AB]"
+            className="bg-[#0078D4] hover:bg-[#0078D4]"
           >
             {customer ? "Save Changes" : "Add Customer"}
           </Button>
@@ -519,7 +519,7 @@ function AddPropertyModal({
           <Button 
             onClick={handleSubmit}
             disabled={!formData.street.trim()}
-            className="bg-[#2374AB] hover:bg-[#2374AB]"
+            className="bg-[#0078D4] hover:bg-[#0078D4]"
           >
             Add Property
           </Button>
@@ -609,7 +609,7 @@ function AddContactModal({
           <Button 
             onClick={handleSubmit}
             disabled={!formData.name.trim()}
-            className="bg-[#2374AB] hover:bg-[#2374AB]"
+            className="bg-[#0078D4] hover:bg-[#0078D4]"
           >
             Add Contact
           </Button>
@@ -816,7 +816,7 @@ function AddEquipmentModal({
           <Button 
             onClick={handleSubmit}
             disabled={!finalEquipmentType.trim()}
-            className="bg-[#2374AB] hover:bg-[#2374AB]"
+            className="bg-[#0078D4] hover:bg-[#0078D4]"
           >
             Add Equipment
           </Button>
@@ -944,7 +944,7 @@ function AddPoolModal({
           <Button 
             onClick={handleSubmit}
             disabled={!formData.name.trim()}
-            className="bg-[#2374AB] hover:bg-[#2374AB]"
+            className="bg-[#0078D4] hover:bg-[#0078D4]"
           >
             Add Body of Water
           </Button>
@@ -993,7 +993,7 @@ function AddBillingContactModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-[#2374AB]" />
+            <Mail className="h-5 w-5 text-[#0078D4]" />
             Add Billing Contact
           </DialogTitle>
         </DialogHeader>
@@ -1051,7 +1051,7 @@ function AddBillingContactModal({
           <Button 
             onClick={handleSubmit}
             disabled={!formData.name.trim() || !formData.email.trim()}
-            className="bg-[#2374AB] hover:bg-[#2374AB]"
+            className="bg-[#0078D4] hover:bg-[#0078D4]"
           >
             Add Billing Contact
           </Button>
@@ -1459,8 +1459,8 @@ function CustomerDetailPanel({
     <div className="flex flex-col h-full">
       <div className="p-4 border-b bg-white flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-[#2374AB]1A flex items-center justify-center">
-            <User className="h-6 w-6 text-[#2374AB]" />
+          <div className="w-12 h-12 rounded-full bg-[#0078D4]1A flex items-center justify-center">
+            <User className="h-6 w-6 text-[#0078D4]" />
           </div>
           <div>
             <h2 className="font-bold text-lg text-slate-900">{customer.name}</h2>
@@ -1587,7 +1587,7 @@ function CustomerDetailPanel({
         <TabsContent value="properties" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-700">Properties</h3>
-            <Button size="sm" onClick={() => setShowAddProperty(true)} className="bg-[#2374AB] hover:bg-[#2374AB]">
+            <Button size="sm" onClick={() => setShowAddProperty(true)} className="bg-[#0078D4] hover:bg-[#0078D4]">
               <Plus className="h-4 w-4 mr-1" />
               Add Property
             </Button>
@@ -1604,7 +1604,7 @@ function CustomerDetailPanel({
             ) : (
               <div className="space-y-3">
                 {properties.map((prop) => (
-                  <Card key={prop.id} className="border-l-4 border-l-#2374AB">
+                  <Card key={prop.id} className="border-l-4 border-l-#0078D4">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
@@ -1659,7 +1659,7 @@ function CustomerDetailPanel({
         <TabsContent value="contacts" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-700">Contacts</h3>
-            <Button size="sm" onClick={() => setShowAddContact(true)} className="bg-[#2374AB] hover:bg-[#2374AB]">
+            <Button size="sm" onClick={() => setShowAddContact(true)} className="bg-[#0078D4] hover:bg-[#0078D4]">
               <Plus className="h-4 w-4 mr-1" />
               Add Contact
             </Button>
@@ -1804,14 +1804,14 @@ function CustomerDetailPanel({
                           className={cn(
                             "flex items-center gap-3 p-3 border rounded-lg transition-colors",
                             isSelected 
-                              ? "bg-[#2374AB]1A border-blue-300" 
-                              : "bg-slate-50 border-slate-200 hover:border-[#2374AB]33"
+                              ? "bg-[#0078D4]1A border-blue-300" 
+                              : "bg-slate-50 border-slate-200 hover:border-[#0078D4]33"
                           )}
                         >
                           <div className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center font-medium text-sm",
                             isSelected 
-                              ? "bg-[#2374AB] text-white" 
+                              ? "bg-[#0078D4] text-white" 
                               : "bg-slate-200 text-slate-600"
                           )}>
                             {label.slice(0, 2).toUpperCase()}
@@ -1819,7 +1819,7 @@ function CustomerDetailPanel({
                           <div className="flex-1 text-left">
                             <p className={cn(
                               "text-sm font-medium",
-                              isSelected ? "text-[#2374AB]" : "text-slate-600"
+                              isSelected ? "text-[#0078D4]" : "text-slate-600"
                             )}>{label}</p>
                             <p className="text-xs text-slate-400">
                               {isSelected ? "Scheduled" : "Not scheduled"}
@@ -1842,7 +1842,7 @@ function CustomerDetailPanel({
                         name="frequency" 
                         checked={frequency === "weekly"}
                         onChange={() => setFrequency("weekly")}
-                        className="text-[#2374AB]" 
+                        className="text-[#0078D4]" 
                       />
                       <span className="text-sm">Every week</span>
                     </label>
@@ -1852,7 +1852,7 @@ function CustomerDetailPanel({
                         name="frequency" 
                         checked={frequency === "biweekly"}
                         onChange={() => setFrequency("biweekly")}
-                        className="text-[#2374AB]" 
+                        className="text-[#0078D4]" 
                       />
                       <span className="text-sm">Every other week (biweekly)</span>
                     </label>
@@ -1862,7 +1862,7 @@ function CustomerDetailPanel({
                         name="frequency" 
                         checked={frequency === "custom"}
                         onChange={() => setFrequency("custom")}
-                        className="text-[#2374AB]" 
+                        className="text-[#0078D4]" 
                       />
                       <span className="text-sm">Custom interval</span>
                     </label>
@@ -1915,7 +1915,7 @@ function CustomerDetailPanel({
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-xs",
-                                visit.status === "scheduled" ? "bg-[#22D69A]" : visit.status === "completed" ? "bg-[#2374AB]" : "bg-[#FF8000]"
+                                visit.status === "scheduled" ? "bg-[#22D69A]" : visit.status === "completed" ? "bg-[#0078D4]" : "bg-[#FF8000]"
                               )}>
                                 {dayName}
                               </div>
@@ -1928,7 +1928,7 @@ function CustomerDetailPanel({
                             </div>
                             {visit.routeName ? (
                               <div className="text-right">
-                                <p className="text-sm font-medium text-[#2374AB]">{visit.routeName}</p>
+                                <p className="text-sm font-medium text-[#0078D4]">{visit.routeName}</p>
                                 <p className="text-xs text-slate-500">{visit.technicianName || "Unassigned"}</p>
                               </div>
                             ) : (
@@ -1945,7 +1945,7 @@ function CustomerDetailPanel({
               <Button 
                 onClick={handleSaveRouteSchedule}
                 disabled={saveRouteScheduleMutation.isPending}
-                className="w-full bg-[#2374AB] hover:bg-[#2374AB]"
+                className="w-full bg-[#0078D4] hover:bg-[#0078D4]"
               >
                 {saveRouteScheduleMutation.isPending ? "Saving..." : "Save Route Schedule"}
               </Button>
@@ -1957,7 +1957,7 @@ function CustomerDetailPanel({
         <TabsContent value="water" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-700">Bodies of Water</h3>
-            <Button size="sm" onClick={() => setShowAddPool(true)} className="bg-[#2374AB] hover:bg-[#2374AB]">
+            <Button size="sm" onClick={() => setShowAddPool(true)} className="bg-[#0078D4] hover:bg-[#0078D4]">
               <Plus className="h-4 w-4 mr-1" />
               Add Body of Water
             </Button>
@@ -2119,7 +2119,7 @@ function CustomerDetailPanel({
         <TabsContent value="equipment" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-700">Equipment</h3>
-            <Button size="sm" onClick={() => setShowAddEquipment(true)} className="bg-[#2374AB] hover:bg-[#2374AB]">
+            <Button size="sm" onClick={() => setShowAddEquipment(true)} className="bg-[#0078D4] hover:bg-[#0078D4]">
               <Plus className="h-4 w-4 mr-1" />
               Add Equipment
             </Button>
@@ -2151,7 +2151,7 @@ function CustomerDetailPanel({
                               <div>
                                 <p className="font-medium text-sm">
                                   {equip.quantity && equip.quantity > 1 && (
-                                    <span className="text-[#2374AB] mr-1">{equip.quantity}x</span>
+                                    <span className="text-[#0078D4] mr-1">{equip.quantity}x</span>
                                   )}
                                   {equip.equipmentType}
                                 </p>
@@ -2167,7 +2167,7 @@ function CustomerDetailPanel({
                                   </p>
                                 )}
                                 {equip.poolId && (
-                                  <p className="text-xs text-[#2374AB]">
+                                  <p className="text-xs text-[#0078D4]">
                                     {poolsList.find(p => p.id === equip.poolId)?.name || "Linked"}
                                   </p>
                                 )}
@@ -2208,14 +2208,14 @@ function CustomerDetailPanel({
         <TabsContent value="billing" className="flex-1 m-0 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-slate-700">Billing Contacts</h3>
-            <Button size="sm" onClick={() => setShowAddBillingContact(true)} className="bg-[#2374AB] hover:bg-[#2374AB]">
+            <Button size="sm" onClick={() => setShowAddBillingContact(true)} className="bg-[#0078D4] hover:bg-[#0078D4]">
               <Plus className="h-4 w-4 mr-1" />
               Add Billing Contact
             </Button>
           </div>
           
-          <div className="mb-4 p-3 bg-[#2374AB]1A border border-[#2374AB]33 rounded-lg">
-            <p className="text-sm text-[#2374AB]">
+          <div className="mb-4 p-3 bg-[#0078D4]1A border border-[#0078D4]33 rounded-lg">
+            <p className="text-sm text-[#0078D4]">
               <strong>Billing contacts</strong> are used to route invoices based on work type. 
               Assign contacts to specific work types (Repairs, Chemicals) or as Primary billing.
             </p>
@@ -2237,7 +2237,7 @@ function CustomerDetailPanel({
                     "border-l-4",
                     contact.contactType === "repairs" && "border-l-[#FF8000]",
                     contact.contactType === "chemicals" && "border-l-[#60A5FA]",
-                    contact.contactType === "primary" && "border-l-[#2374AB]"
+                    contact.contactType === "primary" && "border-l-[#0078D4]"
                   )}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -2253,8 +2253,8 @@ function CustomerDetailPanel({
                                 className={cn(
                                   "text-xs capitalize",
                                   contact.contactType === "repairs" && "border-[#FF8000] text-[#FF8000] bg-[#FF8000]1A",
-                                  contact.contactType === "chemicals" && "border-[#60A5FA] text-[#60A5FA] bg-[#2374AB]1A",
-                                  contact.contactType === "primary" && "border-[#2374AB] text-[#2374AB] bg-[#2374AB]1A"
+                                  contact.contactType === "chemicals" && "border-[#60A5FA] text-[#60A5FA] bg-[#0078D4]1A",
+                                  contact.contactType === "primary" && "border-[#0078D4] text-[#0078D4] bg-[#0078D4]1A"
                                 )}
                               >
                                 {contact.contactType}
@@ -2301,8 +2301,8 @@ function CustomerDetailPanel({
             <h3 className="font-semibold text-slate-700">Customer Tags</h3>
           </div>
           
-          <div className="mb-4 p-3 bg-[#2374AB]1A border border-[#2374AB]33 rounded-lg">
-            <p className="text-sm text-[#2374AB]">
+          <div className="mb-4 p-3 bg-[#0078D4]1A border border-[#0078D4]33 rounded-lg">
+            <p className="text-sm text-[#0078D4]">
               <strong>Tags</strong> help categorize customers and control field tech behavior. 
               Warning tags show alerts to technicians when they service this customer.
             </p>
@@ -2539,7 +2539,7 @@ export default function Customers() {
               <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
               <Button 
                 onClick={() => setShowAddCustomer(true)}
-                className="bg-[#2374AB] hover:bg-[#2374AB]"
+                className="bg-[#0078D4] hover:bg-[#0078D4]"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 New Customer

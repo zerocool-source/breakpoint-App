@@ -49,14 +49,14 @@ export function Header() {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="relative text-[#64748B] hover:text-[#2374AB] hover:bg-[#EFF6FF] rounded-lg w-9 h-9"
+          className="relative text-[#64748B] hover:text-[#0078D4] hover:bg-[#EFF6FF] rounded-lg w-9 h-9"
         >
           <div className="absolute top-1 right-1 w-2 h-2 bg-[#FF8000] rounded-full" />
           <Bell className="w-5 h-5" />
         </Button>
         
         <div className="flex items-center gap-2 pl-2">
-          <div className="w-8 h-8 rounded-full bg-[#2374AB] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-[#0078D4] flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
         </div>

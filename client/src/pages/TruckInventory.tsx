@@ -153,8 +153,8 @@ export default function TruckInventory() {
           <Card className="bg-white shadow-sm">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#2374AB]1A rounded-lg">
-                  <Package className="h-5 w-5 text-[#2374AB]" />
+                <div className="p-2 bg-[#0078D4]1A rounded-lg">
+                  <Package className="h-5 w-5 text-[#0078D4]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{inventoryItems.length}</p>
@@ -269,8 +269,8 @@ export default function TruckInventory() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#2374AB]1A rounded-lg">
-                        <Truck className="h-5 w-5 text-[#2374AB]" />
+                      <div className="p-2 bg-[#0078D4]1A rounded-lg">
+                        <Truck className="h-5 w-5 text-[#0078D4]" />
                       </div>
                       <div>
                         <CardTitle className="text-lg">Truck #{truck.truckNumber}</CardTitle>
@@ -383,7 +383,7 @@ export default function TruckInventory() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-[#2374AB]" />
+              <Package className="h-5 w-5 text-[#0078D4]" />
               Add Inventory Item
             </DialogTitle>
             <DialogDescription>Add a new item to truck inventory.</DialogDescription>

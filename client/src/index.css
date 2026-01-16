@@ -26,7 +26,7 @@
   --color-popover-foreground: #1E293B;
 
   /* Primary: Rich Cerulean (Blue) */
-  --color-primary: #2374AB;
+  --color-primary: #0078D4;
   --color-primary-foreground: #FFFFFF;
 
   /* Secondary: Vivid Tangerine (Orange) */
@@ -49,20 +49,20 @@
 
   --color-border: #E2E8F0;
   --color-input: #F1F5F9;
-  --color-ring: #2374AB;
+  --color-ring: #0078D4;
 
   /* Chart colors - Brand only */
-  --color-chart-1: #2374AB;
+  --color-chart-1: #0078D4;
   --color-chart-2: #FF8000;
   --color-chart-3: #17BEBB;
   --color-chart-4: #22D69A;
   --color-chart-5: #EF4444;
   
   /* Sidebar - Rich Cerulean Background */
-  --color-sidebar: #2374AB;
+  --color-sidebar: #0078D4;
   --color-sidebar-foreground: #FFFFFF;
   --color-sidebar-primary: #FFFFFF;
-  --color-sidebar-primary-foreground: #2374AB;
+  --color-sidebar-primary-foreground: #0078D4;
   --color-sidebar-accent: rgba(255, 255, 255, 0.15);
   --color-sidebar-accent-foreground: #FFFFFF;
   --color-sidebar-border: rgba(255, 255, 255, 0.1);
@@ -92,7 +92,7 @@
 
   /* Status badge styles - Brand colors with 20% opacity backgrounds */
   .badge-primary {
-    @apply bg-[#2374AB]/20 text-[#2374AB];
+    @apply bg-[#0078D4]/20 text-[#0078D4];
   }
   
   .badge-accent {
@@ -116,7 +116,7 @@
   }
   
   .badge-scheduled {
-    @apply bg-[#2374AB]/20 text-[#2374AB];
+    @apply bg-[#0078D4]/20 text-[#0078D4];
   }
   
   .badge-pending {
@@ -136,7 +136,7 @@
   }
   
   .badge-in-progress {
-    @apply bg-[#2374AB]/20 text-[#2374AB];
+    @apply bg-[#0078D4]/20 text-[#0078D4];
   }
 }
 

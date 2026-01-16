@@ -242,7 +242,7 @@ export default function Repairs() {
     if (upper.includes("CRITICAL")) return "bg-destructive/20 text-destructive border-destructive/50";
     if (upper.includes("HIGH")) return "bg-[#FF8000]/20 text-orange-400 border-[#FF8000]/50";
     if (upper.includes("MEDIUM")) return "bg-[#FF8000]/20 text-yellow-400 border-[#FF8000]/50";
-    return "bg-[#2374AB]/20 text-blue-400 border-[#2374AB]/50";
+    return "bg-[#0078D4]/20 text-blue-400 border-[#0078D4]/50";
   };
 
   const urgentCount = incompleteRepairs.filter(a => a.severity.toUpperCase() === "URGENT").length;
@@ -573,7 +573,7 @@ export default function Repairs() {
                             size="sm"
                             variant="outline"
                             onClick={() => archiveMutation.mutate({ alertId: String(alert.alertId), archive: false })}
-                            className="gap-1 text-blue-400 border-[#2374AB]/30 hover:bg-[#2374AB]/10"
+                            className="gap-1 text-blue-400 border-[#0078D4]/30 hover:bg-[#0078D4]/10"
                             data-testid={`btn-unarchive-${alert.alertId}`}
                           >
                             <ArchiveRestore className="w-3 h-3" />

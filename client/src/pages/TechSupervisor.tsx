@@ -18,7 +18,7 @@ import type { Technician, TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 const roleConfig: Record<string, { label: string; color: string }> = {
-  service: { label: "Service Tech", color: "bg-[#2374AB]1A text-[#2374AB]" },
+  service: { label: "Service Tech", color: "bg-[#0078D4]1A text-[#0078D4]" },
   repair: { label: "Repair Tech", color: "bg-[#FF8000]1A text-[#FF8000]" },
   supervisor: { label: "Supervisor", color: "bg-[#17BEBB]1A text-[#17BEBB]" },
   foreman: { label: "Foreman", color: "bg-[#22D69A]1A text-[#22D69A]" },
@@ -163,8 +163,8 @@ export default function TechSupervisor() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#2374AB]1A flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#2374AB]" />
+                <div className="w-10 h-10 rounded-lg bg-[#0078D4]1A flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#0078D4]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{technicians.filter(t => t.supervisorId && t.active).length}</p>
@@ -190,7 +190,7 @@ export default function TechSupervisor() {
 
         {loadingTechs ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
           </div>
         ) : displayedSupervisors.length === 0 ? (
           <Card>
@@ -238,7 +238,7 @@ export default function TechSupervisor() {
                             {teamMembers.map(member => (
                               <div key={member.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-[#2374AB]1A text-[#2374AB] text-xs">
+                                  <AvatarFallback className="bg-[#0078D4]1A text-[#0078D4] text-xs">
                                     {getInitials(member.firstName, member.lastName)}
                                   </AvatarFallback>
                                 </Avatar>

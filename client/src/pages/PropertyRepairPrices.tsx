@@ -539,7 +539,7 @@ export default function PropertyRepairPrices() {
                           <CardTitle className="text-lg font-ui text-foreground flex items-center gap-2" data-testid={`property-name-${property.propertyId}`}>
                             {property.propertyName}
                             {property.poolNames.length > 0 && (
-                              <Badge variant="outline" className="text-xs text-blue-400 border-[#2374AB]/30">
+                              <Badge variant="outline" className="text-xs text-blue-400 border-[#0078D4]/30">
                                 {property.poolNames.length} {property.poolNames.length === 1 ? 'pool' : 'pools'}
                               </Badge>
                             )}

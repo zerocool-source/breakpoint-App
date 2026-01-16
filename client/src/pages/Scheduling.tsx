@@ -217,7 +217,7 @@ function DroppableRouteCard({ route, children, dayOfWeek }: { route: Route; chil
   return (
     <div
       ref={setNodeRef}
-      className={`transition-all ${isOver ? "ring-2 ring-#2374AB ring-offset-1" : ""}`}
+      className={`transition-all ${isOver ? "ring-2 ring-#0078D4 ring-offset-1" : ""}`}
     >
       {children}
     </div>
@@ -637,7 +637,7 @@ export default function Scheduling() {
               </button>
 
               {filterCustomerName && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2374AB] rounded-md text-white text-xs">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0078D4] rounded-md text-white text-xs">
                   <span>Filtering: {filterCustomerName}</span>
                   <Link href="/scheduling">
                     <button className="hover:text-white/80">×</button>
@@ -651,7 +651,7 @@ export default function Scheduling() {
               <Button
                 size="sm"
                 onClick={() => setShowCreateRouteDialog(true)}
-                className="bg-[#2374AB] hover:bg-[#2374AB] text-white text-xs font-medium h-8"
+                className="bg-[#0078D4] hover:bg-[#0078D4] text-white text-xs font-medium h-8"
                 data-testid="btn-new-route"
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
@@ -735,7 +735,7 @@ export default function Scheduling() {
                   onClick={() => setShowMapPanel(!showMapPanel)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                     showMapPanel 
-                      ? "bg-[#2374AB]/20 border border-[#2374AB]/40 text-blue-400" 
+                      ? "bg-[#0078D4]/20 border border-[#0078D4]/40 text-blue-400" 
                       : "text-white/70 hover:text-white"
                   }`}
                 >
@@ -821,7 +821,7 @@ export default function Scheduling() {
                           <span className="text-white font-medium text-sm">{dateStr}</span>
                           <span className="text-white/60 text-sm">{dayName}</span>
                           {isToday && (
-                            <span className="ml-auto text-[10px] bg-[#2374AB] text-white px-1.5 py-0.5 rounded font-medium">
+                            <span className="ml-auto text-[10px] bg-[#0078D4] text-white px-1.5 py-0.5 rounded font-medium">
                               TODAY
                             </span>
                           )}
@@ -989,7 +989,7 @@ export default function Scheduling() {
                                     {hasActivity && (
                                       <div className="h-1 bg-slate-100">
                                         <div 
-                                          className="h-full bg-[#2374AB]" 
+                                          className="h-full bg-[#0078D4]" 
                                           style={{ width: `${Math.min(100, stopCount * 10)}%` }}
                                         />
                                       </div>
@@ -1049,7 +1049,7 @@ export default function Scheduling() {
                                           <Button
                                             size="sm"
                                             variant="ghost"
-                                            className="w-full text-xs h-8 text-[#2374AB] hover:text-[#2374AB] hover:bg-[#2374AB]1A"
+                                            className="w-full text-xs h-8 text-[#0078D4] hover:text-[#0078D4] hover:bg-[#0078D4]1A"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setSelectedRoute(route);
@@ -1268,7 +1268,7 @@ export default function Scheduling() {
                         variant={newRoute.dayOfWeek === day.value ? "default" : "outline"}
                         size="sm"
                         onClick={() => setNewRoute({ ...newRoute, dayOfWeek: day.value })}
-                        className={newRoute.dayOfWeek === day.value ? "bg-[#2374AB] hover:bg-[#2374AB]" : ""}
+                        className={newRoute.dayOfWeek === day.value ? "bg-[#0078D4] hover:bg-[#0078D4]" : ""}
                       >
                         {day.short}
                       </Button>
@@ -1321,7 +1321,7 @@ export default function Scheduling() {
                         return (
                           <span 
                             key={id} 
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-[#2374AB]1A text-[#2374AB] text-xs rounded-full"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-[#0078D4]1A text-[#0078D4] text-xs rounded-full"
                           >
                             {customer?.name || "Unknown"}
                             <button
@@ -1345,7 +1345,7 @@ export default function Scheduling() {
                 <Button
                   onClick={() => createRouteMutation.mutate({ ...newRoute, customerIds: selectedCustomerIds })}
                   disabled={!newRoute.name}
-                  className="bg-[#2374AB] hover:bg-[#2374AB]"
+                  className="bg-[#0078D4] hover:bg-[#0078D4]"
                 >
                   Create Route
                 </Button>
@@ -1400,7 +1400,7 @@ export default function Scheduling() {
                     id: selectedRoute.id,
                     updates: { name: newRoute.name, color: newRoute.color, technicianName: newRoute.technicianName }
                   })}
-                  className="bg-[#2374AB] hover:bg-[#2374AB]"
+                  className="bg-[#0078D4] hover:bg-[#0078D4]"
                 >
                   Save Changes
                 </Button>
@@ -1455,7 +1455,7 @@ export default function Scheduling() {
                 <Button
                   onClick={() => selectedRoute && createStopMutation.mutate({ routeId: selectedRoute.id, stop: newStop })}
                   disabled={!newStop.poolName}
-                  className="bg-[#2374AB] hover:bg-[#2374AB]"
+                  className="bg-[#0078D4] hover:bg-[#0078D4]"
                 >
                   Add Stop
                 </Button>
@@ -1468,7 +1468,7 @@ export default function Scheduling() {
             {activeDragItem && (
               <div className="flex items-center gap-2 text-xs py-2 px-3 rounded-md bg-white border-2 border-blue-400 shadow-lg cursor-grabbing">
                 <GripVertical className="h-3 w-3 text-blue-400 flex-shrink-0" />
-                <MapPin className="h-3 w-3 text-[#2374AB] flex-shrink-0" />
+                <MapPin className="h-3 w-3 text-[#0078D4] flex-shrink-0" />
                 <span className="font-medium">{activeDragItem.customerName || activeDragItem.propertyName}</span>
               </div>
             )}

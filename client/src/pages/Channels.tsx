@@ -271,7 +271,7 @@ export default function Channels() {
         className={`group flex gap-3 p-3 hover:bg-slate-800/30 rounded-lg transition-colors ${message.isPinned ? 'bg-yellow-900/20 border-l-2 border-[#FF8000]' : ''}`}
         data-testid={`message-${message.id}`}
       >
-        <Avatar className="h-9 w-9 bg-gradient-to-br from-[#2374AB] to-[#2374AB]">
+        <Avatar className="h-9 w-9 bg-gradient-to-br from-[#0078D4] to-[#0078D4]">
           <AvatarFallback className="text-xs font-bold text-white">
             {getInitials(message.authorName)}
           </AvatarFallback>
@@ -303,7 +303,7 @@ export default function Channels() {
           {!isThreadReply && message.replyCount > 0 && (
             <button
               onClick={() => setShowThread(message.id)}
-              className="flex items-center gap-1 mt-2 text-xs text-[#2374AB] hover:text-[#2374AB] transition-colors"
+              className="flex items-center gap-1 mt-2 text-xs text-[#0078D4] hover:text-[#0078D4] transition-colors"
               data-testid={`button-view-replies-${message.id}`}
             >
               <MessageSquare className="w-3 h-3" />

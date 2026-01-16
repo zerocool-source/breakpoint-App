@@ -401,7 +401,7 @@ export default function Equipment() {
   const getEquipmentTypeIcon = (type: string) => {
     const t = type.toLowerCase();
     if (t.includes("heater")) return <Flame className="h-4 w-4 text-[#FF8000]" />;
-    if (t.includes("filter")) return <Filter className="h-4 w-4 text-[#2374AB]" />;
+    if (t.includes("filter")) return <Filter className="h-4 w-4 text-[#0078D4]" />;
     if (t.includes("pump")) return <Droplets className="h-4 w-4 text-[#17BEBB]" />;
     return <Wrench className="h-4 w-4 text-slate-500" />;
   };
@@ -434,10 +434,10 @@ export default function Equipment() {
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-[#2374AB]1A to-[#2374AB]1A border-[#2374AB]33">
+          <Card className="bg-gradient-to-br from-[#0078D4]1A to-[#0078D4]1A border-[#0078D4]33">
             <CardContent className="p-4">
-              <p className="text-sm text-[#2374AB] font-medium">Properties</p>
-              <p className="text-3xl font-bold text-[#2374AB]" data-testid="stat-properties">
+              <p className="text-sm text-[#0078D4] font-medium">Properties</p>
+              <p className="text-3xl font-bold text-[#0078D4]" data-testid="stat-properties">
                 {dashboardStats.properties}
               </p>
             </CardContent>
@@ -511,7 +511,7 @@ export default function Equipment() {
             <ScrollArea className="h-[calc(100vh-400px)]">
               {customersLoading ? (
                 <div className="flex items-center justify-center py-20">
-                  <RefreshCw className="h-8 w-8 animate-spin text-[#2374AB]" />
+                  <RefreshCw className="h-8 w-8 animate-spin text-[#0078D4]" />
                   <span className="ml-3 text-slate-500">Loading properties...</span>
                 </div>
               ) : filteredCustomers.length === 0 ? (
@@ -533,8 +533,8 @@ export default function Equipment() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-[#2374AB]1A rounded-lg flex items-center justify-center">
-                              <Building className="h-5 w-5 text-[#2374AB]" />
+                            <div className="w-10 h-10 bg-[#0078D4]1A rounded-lg flex items-center justify-center">
+                              <Building className="h-5 w-5 text-[#0078D4]" />
                             </div>
                             <div>
                               <p className="font-medium text-slate-800">{customer.name}</p>
@@ -613,7 +613,7 @@ export default function Equipment() {
                       </>
                     )}
                     {selectedProperty.region && (
-                      <Badge variant="secondary" className="bg-[#2374AB] text-white text-xs">
+                      <Badge variant="secondary" className="bg-[#0078D4] text-white text-xs">
                         {selectedProperty.region}
                       </Badge>
                     )}
@@ -642,7 +642,7 @@ export default function Equipment() {
 
                   <TabsContent value="equipment" className="mt-0 p-4">
                     <Button
-                      className="w-full mb-4 bg-[#2374AB]1A text-[#2374AB] hover:bg-[#2374AB]1A border border-[#2374AB]33"
+                      className="w-full mb-4 bg-[#0078D4]1A text-[#0078D4] hover:bg-[#0078D4]1A border border-[#0078D4]33"
                       variant="outline"
                       onClick={() => setAddEquipmentOpen(true)}
                       data-testid="button-add-equipment"
@@ -676,7 +676,7 @@ export default function Equipment() {
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-2 mb-1">
-                                          <Badge variant="outline" className="text-xs bg-[#2374AB]1A text-[#2374AB]">
+                                          <Badge variant="outline" className="text-xs bg-[#0078D4]1A text-[#0078D4]">
                                             <Droplets className="h-3 w-3 mr-1" />
                                             {schedule.waterType}
                                           </Badge>
@@ -699,10 +699,10 @@ export default function Equipment() {
                                           </p>
                                         )}
                                         <div className="flex gap-2 mt-2">
-                                          <Button variant="link" size="sm" className="h-6 px-0 text-[#2374AB]">
+                                          <Button variant="link" size="sm" className="h-6 px-0 text-[#0078D4]">
                                             Edit
                                           </Button>
-                                          <Button variant="link" size="sm" className="h-6 px-0 text-[#2374AB]">
+                                          <Button variant="link" size="sm" className="h-6 px-0 text-[#0078D4]">
                                             Service
                                           </Button>
                                           <Button variant="link" size="sm" className="h-6 px-0 text-red-600">
@@ -767,7 +767,7 @@ export default function Equipment() {
                                       {repair.type || "Issue"}
                                     </Badge>
                                     {repair.pictures && repair.pictures.length > 0 && (
-                                      <Button variant="link" size="sm" className="h-6 px-0 text-[#2374AB] gap-1">
+                                      <Button variant="link" size="sm" className="h-6 px-0 text-[#0078D4] gap-1">
                                         <Camera className="h-3 w-3" />
                                         View Pictures
                                       </Button>
@@ -797,7 +797,7 @@ export default function Equipment() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    className="flex-1 bg-[#2374AB]1A text-[#2374AB] hover:bg-[#2374AB]1A border-[#2374AB]33"
+                                    className="flex-1 bg-[#0078D4]1A text-[#0078D4] hover:bg-[#0078D4]1A border-[#0078D4]33"
                                     data-testid={`button-convert-estimate-${repair.alertId}`}
                                   >
                                     <FileCheck className="h-4 w-4 mr-1" />
@@ -941,14 +941,14 @@ export default function Equipment() {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5 text-[#2374AB]" />
+                <Plus className="h-5 w-5 text-[#0078D4]" />
                 Add New Equipment
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {selectedProperty && (
-                <div className="bg-[#2374AB]1A p-3 rounded-lg border border-[#2374AB]33">
-                  <p className="text-sm text-[#2374AB]">Adding equipment to:</p>
+                <div className="bg-[#0078D4]1A p-3 rounded-lg border border-[#0078D4]33">
+                  <p className="text-sm text-[#0078D4]">Adding equipment to:</p>
                   <p className="font-semibold text-blue-800">{selectedProperty.name}</p>
                 </div>
               )}

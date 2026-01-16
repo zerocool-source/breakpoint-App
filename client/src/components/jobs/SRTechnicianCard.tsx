@@ -34,15 +34,15 @@ export function SRAccountSubfolder({ accountName, jobs }: { accountName: string;
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className={`border rounded-lg bg-slate-700/50 overflow-hidden ${readyToInvoice ? 'border-[#2374AB]' : 'border-slate-600/50'}`}>
+      <div className={`border rounded-lg bg-slate-700/50 overflow-hidden ${readyToInvoice ? 'border-[#0078D4]' : 'border-slate-600/50'}`}>
         <CollapsibleTrigger className="w-full p-3 flex items-center justify-between hover:bg-slate-600/50 transition-colors">
           <div className="flex items-center gap-2">
             {isOpen ? (
-              <ChevronDown className="w-4 h-4 text-[#2374AB]" />
+              <ChevronDown className="w-4 h-4 text-[#0078D4]" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-[#2374AB]" />
+              <ChevronRight className="w-4 h-4 text-[#0078D4]" />
             )}
-            <Building2 className="w-4 h-4 text-[#2374AB]" />
+            <Building2 className="w-4 h-4 text-[#0078D4]" />
             <span className="font-ui font-medium text-white">{accountName}</span>
             <Badge className="text-xs bg-slate-600/50 text-slate-300 border-slate-500/50">
               {jobs.length} jobs
@@ -54,14 +54,14 @@ export function SRAccountSubfolder({ accountName, jobs }: { accountName: string;
               </Badge>
             )}
             {readyToInvoice && (
-              <Badge className="bg-[#2374AB] text-white border-[#2374AB] animate-pulse text-xs shadow-sm">
+              <Badge className="bg-[#0078D4] text-white border-[#0078D4] animate-pulse text-xs shadow-sm">
                 Ready to Invoice
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-slate-400">{completedCount}/{jobs.length} done</span>
-            <span className={`font-ui font-bold ${readyToInvoice ? 'text-[#2374AB]' : 'text-white'}`}>
+            <span className={`font-ui font-bold ${readyToInvoice ? 'text-[#0078D4]' : 'text-white'}`}>
               {formatPrice(totalValue)}
             </span>
           </div>
@@ -87,7 +87,7 @@ export function SRAccountSubfolder({ accountName, jobs }: { accountName: string;
             {readyToInvoice && (
               <button
                 onClick={handleSendInvoice}
-                className="w-full mb-3 py-2 px-4 bg-[#2374AB] hover:bg-[#2374AB] border border-[#2374AB] rounded-lg text-white font-ui font-semibold text-sm flex items-center justify-center gap-2 transition-colors shadow-md"
+                className="w-full mb-3 py-2 px-4 bg-[#0078D4] hover:bg-[#0078D4] border border-[#0078D4] rounded-lg text-white font-ui font-semibold text-sm flex items-center justify-center gap-2 transition-colors shadow-md"
                 data-testid={`send-invoice-${accountName}`}
               >
                 <Mail className="w-4 h-4" />
@@ -126,35 +126,35 @@ export function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: J
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#2374AB]/40 hover:border-[#2374AB]/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`sr-tech-${techName}`}>
+      <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#0078D4]/40 hover:border-[#0078D4]/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`sr-tech-${techName}`}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3 cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-lg">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-[#2374AB]" />
+                  <ChevronDown className="w-5 h-5 text-[#0078D4]" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-[#2374AB]" />
+                  <ChevronRight className="w-5 h-5 text-[#0078D4]" />
                 )}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2374AB]/40 to-sky-600/30 flex items-center justify-center border border-[#2374AB]/50 shadow-md">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0078D4]/40 to-sky-600/30 flex items-center justify-center border border-[#0078D4]/50 shadow-md">
                   <Settings className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-ui text-lg font-bold text-white">{techName}</p>
-                    <Badge className="bg-[#2374AB] text-white border-[#2374AB] shadow-sm">SR</Badge>
+                    <Badge className="bg-[#0078D4] text-white border-[#0078D4] shadow-sm">SR</Badge>
                   </div>
-                  <p className="text-xs text-[#2374AB]/80 mt-0.5">
+                  <p className="text-xs text-[#0078D4]/80 mt-0.5">
                     Service Repairs (&lt;$500) • {jobsByAccount.length} accounts
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-[#2374AB]/30 text-sky-200 border-[#2374AB]/50 text-xs shadow-sm" data-testid={`sr-commission10-${techName}`}>
+                  <Badge className="bg-[#0078D4]/30 text-sky-200 border-[#0078D4]/50 text-xs shadow-sm" data-testid={`sr-commission10-${techName}`}>
                     10%: {formatPrice(commission10)}
                   </Badge>
-                  <Badge className="bg-sky-600/30 text-[#2374AB1A] border-[#2374AB]/50 text-xs shadow-sm" data-testid={`sr-commission15-${techName}`}>
+                  <Badge className="bg-sky-600/30 text-[#0078D41A] border-[#0078D4]/50 text-xs shadow-sm" data-testid={`sr-commission15-${techName}`}>
                     15%: {formatPrice(commission15)}
                   </Badge>
                 </div>
@@ -162,7 +162,7 @@ export function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: J
                   <p className="font-ui font-bold text-xl text-white">
                     {formatPrice(totalValue)}
                   </p>
-                  <p className="text-xs text-[#2374AB]/80">
+                  <p className="text-xs text-[#0078D4]/80">
                     {completedCount}/{jobs.length} complete ({completionPercent}%)
                   </p>
                 </div>
@@ -170,14 +170,14 @@ export function SRTechnicianCard({ techName, jobs }: { techName: string; jobs: J
             </CardTitle>
             <div className="w-full bg-slate-600 rounded-full h-2 mt-3">
               <div 
-                className="bg-[#2374AB] h-2 rounded-full transition-all duration-300 shadow-sm"
+                className="bg-[#0078D4] h-2 rounded-full transition-all duration-300 shadow-sm"
                 style={{ width: `${completionPercent}%` }}
               />
             </div>
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-[#2374AB]/20">
+          <CardContent className="pt-0 border-t border-[#0078D4]/20">
             <div className="space-y-3 pt-4">
               {jobsByAccount.map(([accountName, accountJobs]) => (
                 <SRAccountSubfolder key={accountName} accountName={accountName} jobs={accountJobs} />

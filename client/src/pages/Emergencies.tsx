@@ -29,7 +29,7 @@ import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
-  service_technician: { label: "Service Tech", color: "bg-[#2374AB]1A text-[#2374AB]" },
+  service_technician: { label: "Service Tech", color: "bg-[#0078D4]1A text-[#0078D4]" },
   repair_technician: { label: "Repair Tech", color: "bg-[#17BEBB]1A text-[#17BEBB]" },
   supervisor: { label: "Supervisor", color: "bg-[#22D69A]1A text-[#22D69A]" },
   repair_foreman: { label: "Repair Foreman", color: "bg-[#FF8000]1A text-[#FF8000]" },
@@ -37,7 +37,7 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   pending_review: { label: "Pending Review", color: "bg-[#FF8000]1A text-[#FF8000]", icon: Clock },
-  in_progress: { label: "In Progress", color: "bg-[#2374AB]1A text-[#2374AB]", icon: PlayCircle },
+  in_progress: { label: "In Progress", color: "bg-[#0078D4]1A text-[#0078D4]", icon: PlayCircle },
   resolved: { label: "Resolved", color: "bg-[#22D69A]1A text-[#22D69A]", icon: CheckCircle },
 };
 
@@ -245,7 +245,7 @@ export default function Emergencies() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#2374AB]" />
+                <Filter className="w-5 h-5 text-[#0078D4]" />
                 Filter Emergencies
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
@@ -313,16 +313,16 @@ export default function Emergencies() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-slate-50 rounded-lg border border-slate-200" data-testid="metric-total">
-                <div className="text-2xl font-bold text-[#2374AB]">{summary?.total || 0}</div>
+                <div className="text-2xl font-bold text-[#0078D4]">{summary?.total || 0}</div>
                 <div className="text-sm text-slate-500">Total Emergencies</div>
               </div>
               <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-pending">
                 <div className="text-2xl font-bold text-[#FF8000]">{summary?.byStatus?.pending_review || 0}</div>
                 <div className="text-sm text-[#FF8000]">Pending Review</div>
               </div>
-              <div className="p-4 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33" data-testid="metric-in-progress">
-                <div className="text-2xl font-bold text-[#2374AB]">{summary?.byStatus?.in_progress || 0}</div>
-                <div className="text-sm text-[#2374AB]">In Progress</div>
+              <div className="p-4 bg-[#0078D4]1A rounded-lg border border-[#0078D4]33" data-testid="metric-in-progress">
+                <div className="text-2xl font-bold text-[#0078D4]">{summary?.byStatus?.in_progress || 0}</div>
+                <div className="text-sm text-[#0078D4]">In Progress</div>
               </div>
               <div className="p-4 bg-[#22D69A]1A rounded-lg border border-[#22D69A]33" data-testid="metric-resolved">
                 <div className="text-2xl font-bold text-[#22D69A]">{summary?.byStatus?.resolved || 0}</div>
@@ -368,7 +368,7 @@ export default function Emergencies() {
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : emergencies.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -497,7 +497,7 @@ export default function Emergencies() {
                 {selectedEmergency.convertedToInvoiceId && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Invoiced As</span>
-                    <Badge className="bg-[#2374AB]1A text-[#2374AB]">{selectedEmergency.convertedToInvoiceId}</Badge>
+                    <Badge className="bg-[#0078D4]1A text-[#0078D4]">{selectedEmergency.convertedToInvoiceId}</Badge>
                   </div>
                 )}
               </div>

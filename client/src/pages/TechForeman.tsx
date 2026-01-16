@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#FF8000]" },
-  in_progress: { label: "In Progress", color: "bg-[#2374AB]1A text-[#2374AB]" },
+  in_progress: { label: "In Progress", color: "bg-[#0078D4]1A text-[#0078D4]" },
   completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#22D69A]" },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-500" },
 };
@@ -159,8 +159,8 @@ export default function TechForeman() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#2374AB]1A flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-[#2374AB]" />
+                <div className="w-10 h-10 rounded-lg bg-[#0078D4]1A flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-[#0078D4]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{activeJobs.length}</p>
@@ -244,7 +244,7 @@ export default function TechForeman() {
                             <p className="font-medium">{tech.firstName} {tech.lastName}</p>
                             <p className="text-xs text-slate-500">{tech.email || tech.phone || "No contact"}</p>
                           </div>
-                          <Badge variant="outline" className={techJobs.length > 0 ? "bg-[#2374AB]1A text-[#2374AB]" : ""}>
+                          <Badge variant="outline" className={techJobs.length > 0 ? "bg-[#0078D4]1A text-[#0078D4]" : ""}>
                             {techJobs.length} active {techJobs.length === 1 ? 'job' : 'jobs'}
                           </Badge>
                         </div>
@@ -259,7 +259,7 @@ export default function TechForeman() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-[#2374AB]" />
+                <ClipboardList className="w-5 h-5 text-[#0078D4]" />
                 Job Overview
               </CardTitle>
             </CardHeader>
@@ -280,8 +280,8 @@ export default function TechForeman() {
                       {repairJobs.filter(j => j.status === "pending").length}
                     </p>
                   </div>
-                  <div className="p-3 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33">
-                    <p className="text-xs text-[#2374AB] font-medium">In Progress</p>
+                  <div className="p-3 bg-[#0078D4]1A rounded-lg border border-[#0078D4]33">
+                    <p className="text-xs text-[#0078D4] font-medium">In Progress</p>
                     <p className="text-xl font-bold text-blue-900">
                       {repairJobs.filter(j => j.status === "in_progress").length}
                     </p>
@@ -325,7 +325,7 @@ export default function TechForeman() {
                         <Badge className={
                           request.priority === "urgent" ? "bg-red-100 text-red-700" :
                           request.priority === "high" ? "bg-[#FF8000]1A text-[#FF8000]" :
-                          "bg-[#2374AB]1A text-[#2374AB]"
+                          "bg-[#0078D4]1A text-[#0078D4]"
                         }>
                           {request.priority}
                         </Badge>

@@ -156,13 +156,13 @@ export default function Dashboard() {
       draft: "bg-gray-100 text-gray-700",
       pending_approval: "bg-[#FF8000]1A text-[#FF8000]",
       approved: "bg-[#22D69A]1A text-[#22D69A]",
-      scheduled: "bg-[#2374AB]1A text-[#2374AB]",
-      completed: "bg-[#2374AB1A] text-sky-700",
+      scheduled: "bg-[#0078D4]1A text-[#0078D4]",
+      completed: "bg-[#0078D41A] text-sky-700",
       ready_to_invoice: "bg-[#17BEBB]1A text-[#17BEBB]",
       invoiced: "bg-[#22D69A]1A text-[#22D69A]",
       pending: "bg-[#FF8000]1A text-[#FF8000]",
-      open: "bg-[#2374AB]1A text-[#2374AB]",
-      in_progress: "bg-[#2374AB1A] text-sky-700",
+      open: "bg-[#0078D4]1A text-[#0078D4]",
+      in_progress: "bg-[#0078D41A] text-sky-700",
     };
     return colors[status] || "bg-gray-100 text-gray-700";
   };
@@ -171,7 +171,7 @@ export default function Dashboard() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
         </div>
       </AppLayout>
     );
@@ -188,7 +188,7 @@ export default function Dashboard() {
           <Button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
-            className="gap-2 bg-[#2374AB] hover:bg-[#2374AB]/90"
+            className="gap-2 bg-[#0078D4] hover:bg-[#0078D4]/90"
             data-testid="button-sync-poolbrain"
           >
             <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
@@ -217,7 +217,7 @@ export default function Dashboard() {
           </Card>
 
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#2374AB]/50 transition-all border-l-4 border-l-[#2374AB]"
+            className="cursor-pointer hover:shadow-md hover:border-[#0078D4]/50 transition-all border-l-4 border-l-[#0078D4]"
             onClick={() => navigate("/estimates")}
             data-testid="card-needs-scheduling"
           >
@@ -226,10 +226,10 @@ export default function Dashboard() {
                 <div>
                   <p className="text-xs text-[#64748B] uppercase tracking-wide">Needs Scheduling</p>
                   <p className="text-3xl font-bold text-[#1E293B]">{summary?.needsScheduling || 0}</p>
-                  <p className="text-sm text-[#2374AB]">Approved jobs awaiting</p>
+                  <p className="text-sm text-[#0078D4]">Approved jobs awaiting</p>
                 </div>
-                <div className="p-3 rounded-full bg-[#2374AB]/10">
-                  <Calendar className="w-6 h-6 text-[#2374AB]" />
+                <div className="p-3 rounded-full bg-[#0078D4]/10">
+                  <Calendar className="w-6 h-6 text-[#0078D4]" />
                 </div>
               </div>
             </CardContent>
@@ -333,7 +333,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#2374AB]" />
+                    <FileText className="w-5 h-5 text-[#0078D4]" />
                     Estimate Pipeline
                   </CardTitle>
                   <CardDescription>Job estimates by status</CardDescription>
@@ -366,12 +366,12 @@ export default function Dashboard() {
                   </div>
                   <Badge className="bg-[#22D69A]1A text-[#22D69A]">{metrics?.estimates.approved || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[#2374AB]1A hover:bg-[#2374AB]1A cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[#0078D4]1A hover:bg-[#0078D4]1A cursor-pointer" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#2374AB]"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#0078D4]"></div>
                     <span className="text-sm text-[#1E293B]">Scheduled</span>
                   </div>
-                  <Badge className="bg-[#2374AB]1A text-[#2374AB]">{metrics?.estimates.scheduled || 0}</Badge>
+                  <Badge className="bg-[#0078D4]1A text-[#0078D4]">{metrics?.estimates.scheduled || 0}</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 hover:bg-[#17BEBB]1A cursor-pointer" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
@@ -398,10 +398,10 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-[#2374AB]/5 to-[#60A5FA]/5 border border-[#2374AB]/20">
+                <div className="p-4 rounded-lg bg-gradient-to-r from-[#0078D4]/5 to-[#60A5FA]/5 border border-[#0078D4]/20">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-[#64748B]">Total Pipeline Value</span>
-                    <span className="text-2xl font-bold text-[#2374AB]">{formatCurrency(metrics?.values.total || 0)}</span>
+                    <span className="text-2xl font-bold text-[#0078D4]">{formatCurrency(metrics?.values.total || 0)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -409,9 +409,9 @@ export default function Dashboard() {
                     <p className="text-xs text-[#64748B]">Pending Approval</p>
                     <p className="text-lg font-semibold text-[#FF8000]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-[#2374AB]1A text-center">
+                  <div className="p-3 rounded-lg bg-[#0078D4]1A text-center">
                     <p className="text-xs text-[#64748B]">Scheduled</p>
-                    <p className="text-lg font-semibold text-[#2374AB]">{formatCurrency(metrics?.values.scheduled || 0)}</p>
+                    <p className="text-lg font-semibold text-[#0078D4]">{formatCurrency(metrics?.values.scheduled || 0)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-purple-50 text-center">
                     <p className="text-xs text-[#64748B]">Ready to Invoice</p>
@@ -448,9 +448,9 @@ export default function Dashboard() {
                         data-testid={`activity-item-${item.id}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#2374AB]/10" : "bg-[#FF8000]/10"}`}>
+                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#0078D4]/10" : "bg-[#FF8000]/10"}`}>
                             {item.type === "estimate" ? (
-                              <FileText className="w-4 h-4 text-[#2374AB]" />
+                              <FileText className="w-4 h-4 text-[#0078D4]" />
                             ) : (
                               <Wrench className="w-4 h-4 text-[#FF8000]" />
                             )}
@@ -540,8 +540,8 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/tech-ops")} data-testid="card-tech-ops">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#2374AB]/10">
-                  <Users className="w-5 h-5 text-[#2374AB]" />
+                <div className="p-2 rounded-lg bg-[#0078D4]/10">
+                  <Users className="w-5 h-5 text-[#0078D4]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#1E293B]">Tech Ops</p>
