@@ -278,6 +278,7 @@ export function Sidebar() {
       label: "Estimates", 
       children: [
         { label: "All Estimates", href: "/estimates" },
+        { label: "History Log", href: "/estimate-history" },
       ]
     },
     { 

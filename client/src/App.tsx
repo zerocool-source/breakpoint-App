@@ -37,6 +37,7 @@ import Visits from "@/pages/Visits";
 import TechSupervisor from "@/pages/TechSupervisor";
 import TechForeman from "@/pages/TechForeman";
 import EstimateApproval from "@/pages/EstimateApproval";
+import EstimateHistory from "@/pages/EstimateHistory";
 import Emergencies from "@/pages/Emergencies";
 import NotFound from "@/pages/not-found";
 
@@ -52,6 +53,7 @@ function Router() {
       <Route path="/accounts/:accountId" component={AccountDetails} />
       <Route path="/channels" component={Channels} />
       <Route path="/estimates" component={Estimates} />
+      <Route path="/estimate-history" component={EstimateHistory} />
       <Route path="/service-repairs" component={ServiceRepairs} />
       <Route path="/scheduling" component={Scheduling} />
       <Route path="/customers" component={Customers} />
