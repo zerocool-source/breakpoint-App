@@ -50,7 +50,7 @@ export default function SupervisorTeams() {
       const response = await fetch("/api/tech-ops?entryType=supervisor_concerns");
       if (!response.ok) throw new Error("Failed to fetch supervisor concerns");
       const data = await response.json();
-      return data.entries || [];
+      return Array.isArray(data) ? data : (data.entries || []);
     },
   });
 
@@ -60,7 +60,7 @@ export default function SupervisorTeams() {
       const response = await fetch("/api/tech-ops?entryType=report_issue");
       if (!response.ok) throw new Error("Failed to fetch office messages");
       const data = await response.json();
-      return data.entries || [];
+      return Array.isArray(data) ? data : (data.entries || []);
     },
   });
 
@@ -70,7 +70,7 @@ export default function SupervisorTeams() {
       const response = await fetch("/api/tech-ops?status=reviewed");
       if (!response.ok) throw new Error("Failed to fetch activity");
       const data = await response.json();
-      return data.entries || [];
+      return Array.isArray(data) ? data : (data.entries || []);
     },
   });
 
