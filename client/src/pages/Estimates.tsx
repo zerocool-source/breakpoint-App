@@ -292,6 +292,9 @@ export default function Estimates() {
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
   const [verbalApproverTitle, setVerbalApproverTitle] = useState("");
+  const [officeStaffName, setOfficeStaffName] = useState("");
+  const [approvedByMethod, setApprovedByMethod] = useState<"email" | "phone" | "other">("phone");
+  const [otherMethodDetails, setOtherMethodDetails] = useState("");
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -868,11 +871,14 @@ export default function Estimates() {
     setSelectedEstimate(estimate);
     setVerbalApproverName("");
     setVerbalApproverTitle("");
+    setOfficeStaffName("");
+    setApprovedByMethod("phone");
+    setOtherMethodDetails("");
     setShowVerbalApprovalDialog(true);
   };
 
   const handleVerbalApproval = async () => {
-    if (!selectedEstimate || !verbalApproverName.trim()) return;
+    if (!selectedEstimate || !verbalApproverName.trim() || !officeStaffName.trim()) return;
     
     try {
       const response = await fetch(`/api/estimates/${selectedEstimate.id}/verbal-approval`, {
@@ -881,6 +887,9 @@ export default function Estimates() {
         body: JSON.stringify({ 
           approverName: verbalApproverName.trim(),
           approverTitle: verbalApproverTitle.trim() || null,
+          officeStaffName: officeStaffName.trim(),
+          approvedByMethod,
+          otherMethodDetails: approvedByMethod === "other" ? otherMethodDetails.trim() : null,
         }),
       });
       
@@ -893,6 +902,11 @@ export default function Estimates() {
       queryClient.invalidateQueries({ queryKey: ["/api/estimates/metrics"] });
       
       setShowVerbalApprovalDialog(false);
+      setVerbalApproverName("");
+      setVerbalApproverTitle("");
+      setOfficeStaffName("");
+      setApprovedByMethod("phone");
+      setOtherMethodDetails("");
       toast({ 
         title: "Verbal Approval Recorded", 
         description: `Estimate approved by ${verbalApproverName}. Ready for scheduling.` 
@@ -3176,30 +3190,92 @@ export default function Estimates() {
                   </p>
                 </div>
                 
-                <div>
-                  <Label className="text-sm font-medium text-[#1E293B]">
-                    Name of Approver <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    value={verbalApproverName}
-                    onChange={(e) => setVerbalApproverName(e.target.value)}
-                    placeholder="Who verbally approved this estimate?"
-                    className="mt-1"
-                    data-testid="input-verbal-approver-name"
-                  />
-                </div>
+                {/* Property Section */}
+                <div className="space-y-3">
+                  <span className="inline-block px-3 py-1 bg-[#F97316] text-white text-sm font-medium rounded-md">
+                    Property
+                  </span>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-[#1E293B]">
+                      Name of Approver at Property <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={verbalApproverName}
+                      onChange={(e) => setVerbalApproverName(e.target.value)}
+                      placeholder="Who verbally approved this estimate?"
+                      className="mt-1"
+                      data-testid="input-verbal-approver-name"
+                    />
+                  </div>
 
-                <div>
-                  <Label className="text-sm font-medium text-[#1E293B]">
-                    Title <span className="text-[#94A3B8] font-normal">(optional)</span>
-                  </Label>
-                  <Input
-                    value={verbalApproverTitle}
-                    onChange={(e) => setVerbalApproverTitle(e.target.value)}
-                    placeholder="e.g., Property Manager, HOA President"
-                    className="mt-1"
-                    data-testid="input-verbal-approver-title"
-                  />
+                  <div>
+                    <Label className="text-sm text-[#64748B]">
+                      Title <span className="font-normal">(optional)</span>
+                    </Label>
+                    <Input
+                      value={verbalApproverTitle}
+                      onChange={(e) => setVerbalApproverTitle(e.target.value)}
+                      placeholder="e.g., Property Manager, HOA President"
+                      className="mt-1"
+                      data-testid="input-verbal-approver-title"
+                    />
+                  </div>
+                </div>
+                
+                {/* Office Staff Section */}
+                <div className="space-y-3">
+                  <span className="inline-block px-3 py-1 bg-[#F97316] text-white text-sm font-medium rounded-md">
+                    Office Staff
+                  </span>
+                  
+                  <div>
+                    <Label className="text-sm font-medium text-[#1E293B]">
+                      Recipient (of the approval) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={officeStaffName}
+                      onChange={(e) => setOfficeStaffName(e.target.value)}
+                      placeholder="Name"
+                      className="mt-1"
+                      data-testid="input-office-staff-name"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-medium text-[#1E293B]">
+                      Approved by: <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={approvedByMethod} onValueChange={(val: "email" | "phone" | "other") => setApprovedByMethod(val)}>
+                      <SelectTrigger className="mt-1" data-testid="select-approved-by-method">
+                        <SelectValue placeholder="Select one of the following" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="phone">Phone</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {approvedByMethod === "other" && (
+                    <div>
+                      <Label className="text-sm text-[#64748B]">
+                        Please specify
+                      </Label>
+                      <Input
+                        value={otherMethodDetails}
+                        onChange={(e) => setOtherMethodDetails(e.target.value.slice(0, 100))}
+                        placeholder="Describe how approval was received"
+                        className="mt-1"
+                        maxLength={100}
+                        data-testid="input-other-method-details"
+                      />
+                      <p className="text-xs text-[#94A3B8] mt-1 text-right">
+                        {otherMethodDetails.length}/100
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -3209,7 +3285,7 @@ export default function Estimates() {
               </Button>
               <Button
                 onClick={handleVerbalApproval}
-                disabled={!verbalApproverName.trim()}
+                disabled={!verbalApproverName.trim() || !officeStaffName.trim()}
                 className="bg-[#2CA01C] hover:bg-[#249017]"
                 data-testid="button-confirm-verbal-approval"
               >

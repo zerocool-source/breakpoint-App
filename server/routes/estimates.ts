@@ -1376,10 +1376,14 @@ export function registerEstimateRoutes(app: any) {
   app.post("/api/estimates/:id/verbal-approval", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { approverName, approverTitle } = req.body;
+      const { approverName, approverTitle, officeStaffName, approvedByMethod, otherMethodDetails } = req.body;
       
       if (!approverName || approverName.trim().length < 2) {
         return res.status(400).json({ error: "Approver name is required (minimum 2 characters)" });
+      }
+      
+      if (!officeStaffName || officeStaffName.trim().length < 2) {
+        return res.status(400).json({ error: "Office staff name is required" });
       }
       
       const existingEstimate = await storage.getEstimate(id);
@@ -1392,14 +1396,24 @@ export function registerEstimateRoutes(app: any) {
         return res.status(400).json({ error: "Verbal approval can only be recorded for draft estimates" });
       }
       
+      // Build method display string
+      const methodDisplay = approvedByMethod === "other" && otherMethodDetails 
+        ? `Other: ${otherMethodDetails.slice(0, 100)}` 
+        : approvedByMethod === "email" 
+          ? "Email" 
+          : "Phone";
+      
       // Update estimate to needs_scheduling status
       const estimate = await storage.updateEstimate(id, {
         status: "needs_scheduling",
         approvedAt: new Date(),
         customerApproverName: approverName.trim(),
         customerApproverTitle: approverTitle?.trim() || null,
-        acceptedBy: `${approverName.trim()}${approverTitle ? ` (${approverTitle.trim()})` : ""} (Verbal)`,
+        acceptedBy: `${approverName.trim()}${approverTitle ? ` (${approverTitle.trim()})` : ""} (Verbal - ${methodDisplay})`,
         acceptedDate: new Date(),
+        verbalApprovalRecordedBy: officeStaffName.trim(),
+        verbalApprovalMethod: approvedByMethod || "phone",
+        verbalApprovalMethodDetails: approvedByMethod === "other" ? otherMethodDetails?.slice(0, 100) : null,
       });
       
       res.json({ 

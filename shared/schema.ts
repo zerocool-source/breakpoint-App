@@ -830,6 +830,11 @@ export const estimates = pgTable("estimates", {
   customerApproverName: text("customer_approver_name"), // Name of customer who approved/rejected
   customerApproverTitle: text("customer_approver_title"), // Title/role of customer who approved/rejected
   
+  // Verbal Approval Tracking
+  verbalApprovalRecordedBy: text("verbal_approval_recorded_by"), // Office staff who recorded the verbal approval
+  verbalApprovalMethod: text("verbal_approval_method"), // "email", "phone", or "other"
+  verbalApprovalMethodDetails: text("verbal_approval_method_details"), // Details if method is "other" (max 100 chars)
+  
   // Link to job once scheduled
   jobId: text("job_id"),
   invoiceId: text("invoice_id"),
