@@ -398,7 +398,7 @@ export default function Estimates() {
       case "repair_tech": return "bg-[#1E3A8A] text-white";
       case "service_tech": return "bg-[#1E3A8A] text-white";
       case "office_staff": return "bg-[#1E3A8A] text-white";
-      case "emergency": return "bg-[#FF6A00] text-white";
+      case "emergency": return "bg-[#DC2626] text-white";
       default: return "bg-[#1E3A8A] text-white";
     }
   };
