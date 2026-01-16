@@ -1897,18 +1897,21 @@ export default function Estimates() {
                                 </span>
                               )}
                             </div>
-                            <div className="mt-2 flex items-center gap-2 flex-wrap">
-                              <Badge className={`${getSourceBadgeColor(estimate)} text-[11px] px-3 py-1 rounded`}>
+                            <div className="mt-2 flex items-center gap-3 flex-wrap">
+                              <button 
+                                className={`${getSourceBadgeColor(estimate)} text-[12px] font-semibold px-4 py-1.5 rounded-md shadow-sm border-0 cursor-default`}
+                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                              >
                                 {getSourceLabel(estimate)}
-                              </Badge>
+                              </button>
                               {(estimate.createdByTechName || estimate.officeMemberName) && (
-                                <span className="text-[11px] text-[#6B7280]" data-testid={`text-created-by-${estimate.id}`}>
-                                  Created by: {estimate.createdByTechName || estimate.officeMemberName}
+                                <span className="text-[13px] font-medium text-[#374151] bg-gray-100 px-2.5 py-1 rounded-md" data-testid={`text-created-by-${estimate.id}`}>
+                                  Created by: <span className="font-semibold text-[#1E293B]">{estimate.createdByTechName || estimate.officeMemberName}</span>
                                 </span>
                               )}
                               {estimate.convertedByUserName && (
-                                <span className="text-[11px] text-[#6B7280]" data-testid={`text-converted-by-${estimate.id}`}>
-                                  Converted by: {estimate.convertedByUserName}
+                                <span className="text-[13px] font-medium text-[#374151] bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200" data-testid={`text-converted-by-${estimate.id}`}>
+                                  Converted by: <span className="font-semibold text-amber-700">{estimate.convertedByUserName}</span>
                                 </span>
                               )}
                             </div>
