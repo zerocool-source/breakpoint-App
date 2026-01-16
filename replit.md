@@ -124,3 +124,42 @@ Routes are organized into domain-specific modules in `server/routes/`:
 - "New York" style variant selected
 
 **Rationale:** Pool Brain provides the source of truth for operational data. Neon offers low-latency serverless PostgreSQL without infrastructure management. The external AI service separation allows independent scaling and model updates. Email automation via Outlook URLs avoids SMTP complexity while maintaining familiar UX.
+
+## Deployment (Render)
+
+### Database Migrations
+
+This project uses Drizzle ORM with a migration-based workflow for production deployments.
+
+**Scripts:**
+- `npm run db:generate` - Generate migration files from schema changes (run locally)
+- `npm run db:migrate` - Apply migrations to database (non-interactive, CI-safe, handles existing tables gracefully)
+- `npm run db:push` - Push schema directly (interactive, development only)
+
+**One-time setup (run in Replit before first deploy):**
+```bash
+npm run db:generate
+git add drizzle/
+git commit -m "Add database migrations"
+git push
+```
+
+**When you change the schema:**
+```bash
+npm run db:generate
+git add drizzle/
+git commit -m "Add migration for [description]"
+git push
+```
+
+**Render Build Command:**
+```
+npm install && npm run db:migrate && npm run build
+```
+
+**Render Start Command:**
+```
+npm run start
+```
+
+Migration files are stored in `drizzle/` and must be committed to the repository.
