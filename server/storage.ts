@@ -228,9 +228,9 @@ export interface IStorage {
   updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined>;
   deleteEstimate(id: string): Promise<void>;
-  softDeleteEstimate(id: string, deletedByUserId: string, deletedByUserName: string, reason: string): Promise<Estimate | undefined>;
-  archiveEstimate(id: string, archivedByUserId: string, archivedByUserName: string, reason: string): Promise<Estimate | undefined>;
-  restoreEstimate(id: string): Promise<Estimate | undefined>;
+  softDeleteEstimateWithHistory(id: string, existingEstimate: Estimate, deletedByUserId: string, deletedByUserName: string, reason: string): Promise<Estimate | undefined>;
+  archiveEstimateWithHistory(id: string, existingEstimate: Estimate, archivedByUserId: string, archivedByUserName: string, reason: string): Promise<Estimate | undefined>;
+  restoreEstimateWithHistory(id: string, existingEstimate: Estimate, restoredByUserId: string, restoredByUserName: string): Promise<Estimate | undefined>;
   
   // Estimate History Log
   getEstimateHistoryLogs(filters?: { estimateId?: string; actionType?: string; propertyId?: string; performedByUserName?: string; approvalMethod?: string; startDate?: Date; endDate?: Date }): Promise<EstimateHistoryLog[]>;
@@ -1350,51 +1350,130 @@ export class DbStorage implements IStorage {
     await db.delete(estimates).where(eq(estimates.id, id));
   }
 
-  async softDeleteEstimate(id: string, deletedByUserId: string, deletedByUserName: string, reason: string): Promise<Estimate | undefined> {
-    const [updated] = await db.update(estimates)
-      .set({
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletedByUserId,
-        deletedByUserName,
-        deletedReason: reason,
-      })
-      .where(eq(estimates.id, id))
-      .returning();
-    return updated;
+  async softDeleteEstimateWithHistory(
+    id: string, 
+    existingEstimate: Estimate,
+    deletedByUserId: string, 
+    deletedByUserName: string, 
+    reason: string
+  ): Promise<Estimate | undefined> {
+    return db.transaction(async (tx) => {
+      const [updated] = await tx.update(estimates)
+        .set({
+          isDeleted: true,
+          deletedAt: new Date(),
+          deletedByUserId,
+          deletedByUserName,
+          deletedReason: reason,
+        })
+        .where(eq(estimates.id, id))
+        .returning();
+
+      await tx.insert(estimateHistoryLog).values({
+        estimateId: id,
+        estimateNumber: existingEstimate.estimateNumber,
+        propertyId: existingEstimate.propertyId,
+        propertyName: existingEstimate.propertyName,
+        customerId: null,
+        customerName: existingEstimate.customerName,
+        estimateValue: existingEstimate.totalAmount,
+        actionType: "deleted",
+        actionDescription: `Estimate deleted: ${reason}`,
+        performedByUserId: deletedByUserId,
+        performedByUserName: deletedByUserName,
+        performedAt: new Date(),
+        previousStatus: existingEstimate.status,
+        newStatus: "deleted",
+        reason: reason,
+      });
+
+      return updated;
+    });
   }
 
-  async archiveEstimate(id: string, archivedByUserId: string, archivedByUserName: string, reason: string): Promise<Estimate | undefined> {
-    const [updated] = await db.update(estimates)
-      .set({
-        status: "archived",
-        archivedAt: new Date(),
-        archivedByUserId,
-        archivedByUserName,
-        archivedReason: reason,
-      })
-      .where(eq(estimates.id, id))
-      .returning();
-    return updated;
+  async archiveEstimateWithHistory(
+    id: string, 
+    existingEstimate: Estimate,
+    archivedByUserId: string, 
+    archivedByUserName: string, 
+    reason: string
+  ): Promise<Estimate | undefined> {
+    return db.transaction(async (tx) => {
+      const [updated] = await tx.update(estimates)
+        .set({
+          status: "archived",
+          archivedAt: new Date(),
+          archivedByUserId,
+          archivedByUserName,
+          archivedReason: reason,
+        })
+        .where(eq(estimates.id, id))
+        .returning();
+
+      await tx.insert(estimateHistoryLog).values({
+        estimateId: id,
+        estimateNumber: existingEstimate.estimateNumber,
+        propertyId: existingEstimate.propertyId,
+        propertyName: existingEstimate.propertyName,
+        customerId: null,
+        customerName: existingEstimate.customerName,
+        estimateValue: existingEstimate.totalAmount,
+        actionType: "archived",
+        actionDescription: `Estimate archived: ${reason}`,
+        performedByUserId: archivedByUserId,
+        performedByUserName: archivedByUserName,
+        performedAt: new Date(),
+        previousStatus: existingEstimate.status,
+        newStatus: "archived",
+        reason: reason,
+      });
+
+      return updated;
+    });
   }
 
-  async restoreEstimate(id: string): Promise<Estimate | undefined> {
-    const [updated] = await db.update(estimates)
-      .set({
-        isDeleted: false,
-        deletedAt: null,
-        deletedByUserId: null,
-        deletedByUserName: null,
-        deletedReason: null,
-        status: "draft",
-        archivedAt: null,
-        archivedByUserId: null,
-        archivedByUserName: null,
-        archivedReason: null,
-      })
-      .where(eq(estimates.id, id))
-      .returning();
-    return updated;
+  async restoreEstimateWithHistory(
+    id: string, 
+    existingEstimate: Estimate,
+    restoredByUserId: string, 
+    restoredByUserName: string
+  ): Promise<Estimate | undefined> {
+    return db.transaction(async (tx) => {
+      const [updated] = await tx.update(estimates)
+        .set({
+          isDeleted: false,
+          deletedAt: null,
+          deletedByUserId: null,
+          deletedByUserName: null,
+          deletedReason: null,
+          status: "draft",
+          archivedAt: null,
+          archivedByUserId: null,
+          archivedByUserName: null,
+          archivedReason: null,
+        })
+        .where(eq(estimates.id, id))
+        .returning();
+
+      await tx.insert(estimateHistoryLog).values({
+        estimateId: id,
+        estimateNumber: existingEstimate.estimateNumber,
+        propertyId: existingEstimate.propertyId,
+        propertyName: existingEstimate.propertyName,
+        customerId: null,
+        customerName: existingEstimate.customerName,
+        estimateValue: existingEstimate.totalAmount,
+        actionType: "restored",
+        actionDescription: "Estimate restored",
+        performedByUserId: restoredByUserId,
+        performedByUserName: restoredByUserName,
+        performedAt: new Date(),
+        previousStatus: existingEstimate.status,
+        newStatus: "draft",
+      });
+
+      return updated;
+    });
   }
 
   // Estimate History Log
