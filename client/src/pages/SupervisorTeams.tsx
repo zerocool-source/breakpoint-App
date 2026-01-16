@@ -271,7 +271,7 @@ export default function SupervisorTeams() {
 
   const formatActionType = (type: string): string => {
     switch (type) {
-      case 'checked_out': return 'Account Checked Out';
+      case 'checked_out': return 'Inspected Property';
       case 'assignment_created': return 'Assignment Created';
       case 'resolved_not_completed': return 'Not Completed Resolved';
       case 'resolved_need_assistance': return 'Need Assistance Resolved';
@@ -282,7 +282,7 @@ export default function SupervisorTeams() {
 
   const getActionIcon = (type: string) => {
     switch (type) {
-      case 'checked_out': return <ShoppingCart className="w-4 h-4" />;
+      case 'checked_out': return <MapPin className="w-4 h-4" />;
       case 'assignment_created': return <ClipboardList className="w-4 h-4" />;
       case 'resolved_not_completed': return <FileCheck2 className="w-4 h-4" />;
       case 'resolved_need_assistance': return <HandHelping className="w-4 h-4" />;
@@ -1110,7 +1110,7 @@ export default function SupervisorTeams() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">All Actions</SelectItem>
-                            <SelectItem value="checked_out">Checked Out</SelectItem>
+                            <SelectItem value="checked_out">Inspected Property</SelectItem>
                             <SelectItem value="assignment_created">Assignments</SelectItem>
                             <SelectItem value="resolved_not_completed">Not Completed</SelectItem>
                             <SelectItem value="resolved_need_assistance">Need Assistance</SelectItem>

@@ -125,7 +125,7 @@ export function registerSupervisorActivityRoutes(app: Express) {
 
 function formatActionType(type: string): string {
   switch (type) {
-    case 'checked_out': return 'Account Checked Out';
+    case 'checked_out': return 'Inspected Property';
     case 'assignment_created': return 'Assignment Created';
     case 'resolved_not_completed': return 'Not Completed Resolved';
     case 'resolved_need_assistance': return 'Need Assistance Resolved';
