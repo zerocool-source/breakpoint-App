@@ -233,7 +233,7 @@ function DroppableUnscheduledArea({ dayOfWeek, children }: { dayOfWeek: number; 
   return (
     <div
       ref={setNodeRef}
-      className={`transition-all ${isOver ? "ring-2 ring-[#FF8000] bg-[#FF8000]1A" : ""}`}
+      className={`transition-all ${isOver ? "ring-2 ring-[#D35400] bg-[#D3540033]" : ""}`}
     >
       {children}
     </div>
@@ -679,10 +679,10 @@ export default function Scheduling() {
               <Popover open={showUnscheduledPanel} onOpenChange={setShowUnscheduledPanel}>
                 <PopoverTrigger asChild>
                   <button 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]/20 border border-[#FF8000]/40 rounded-md text-[#D35400] hover:bg-[#FF8000]/30 text-xs font-medium transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#D3540033] border border-[#D3540066] rounded-md text-[#D35400] hover:bg-[#D3540050] text-xs font-medium transition-colors"
                     data-testid="btn-unscheduled"
                   >
-                    <div className="w-2 h-2 bg-[#FF8000] rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-[#D35400] rounded-full animate-pulse" />
                     {totalUnscheduled} Route Stops
                   </button>
                 </PopoverTrigger>
@@ -692,15 +692,15 @@ export default function Scheduling() {
                   sideOffset={8}
                   disablePortal={true}
                 >
-                  <div className="p-3 bg-[#FF8000]1A border-b border-[#FF8000]33 flex items-center justify-between">
+                  <div className="p-3 bg-[#FF800033] border-b border-[#FF800050] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-[#FF8000] rounded-full animate-pulse" />
-                      <h3 className="font-semibold text-amber-800 text-sm">Unscheduled Stops</h3>
-                      <span className="bg-[#FF8000] text-white text-xs px-2 py-0.5 rounded-full">{totalUnscheduled}</span>
+                      <div className="w-2 h-2 bg-[#D35400] rounded-full animate-pulse" />
+                      <h3 className="font-semibold text-[#D35400] text-sm">Unscheduled Stops</h3>
+                      <span className="bg-[#D35400] text-white text-xs px-2 py-0.5 rounded-full">{totalUnscheduled}</span>
                     </div>
                     <button 
                       onClick={() => setShowUnscheduledPanel(false)}
-                      className="text-[#D35400] hover:text-amber-800 p-1"
+                      className="text-[#D35400] hover:text-[#B34700] p-1"
                     >
                       <X className="h-4 w-4" />
                     </button>
