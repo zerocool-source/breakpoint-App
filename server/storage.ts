@@ -45,6 +45,7 @@ import {
   type CustomerTagAssignment, type InsertCustomerTagAssignment,
   type Emergency, type InsertEmergency,
   type EstimateHistoryLog, type InsertEstimateHistoryLog,
+  type SupervisorActivity, type InsertSupervisorActivity,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -53,7 +54,7 @@ import {
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
-  customerTags, customerTagAssignments, emergencies, estimateHistoryLog
+  customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -2679,6 +2680,129 @@ export class DbStorage implements IStorage {
     }
     
     return { total: all.length, byRole, byStatus };
+  }
+
+  // Supervisor Activity
+  async getSupervisorActivity(filters?: {
+    supervisorId?: string;
+    actionType?: string;
+    propertyId?: string;
+    technicianId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<SupervisorActivity[]> {
+    const conditions = [];
+    
+    if (filters?.supervisorId) {
+      conditions.push(eq(supervisorActivity.supervisorId, filters.supervisorId));
+    }
+    if (filters?.actionType && filters.actionType !== 'all') {
+      conditions.push(eq(supervisorActivity.actionType, filters.actionType));
+    }
+    if (filters?.propertyId) {
+      conditions.push(eq(supervisorActivity.propertyId, filters.propertyId));
+    }
+    if (filters?.technicianId) {
+      conditions.push(eq(supervisorActivity.technicianId, filters.technicianId));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(supervisorActivity.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(supervisorActivity.createdAt, filters.endDate));
+    }
+
+    let query = db.select().from(supervisorActivity);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    query = query.orderBy(desc(supervisorActivity.createdAt)) as any;
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset) as any;
+    }
+    
+    return query;
+  }
+
+  async getSupervisorMetrics(supervisorId: string, startDate?: Date, endDate?: Date): Promise<{
+    checkedOut: number;
+    assignmentsCreated: number;
+    notCompletedResolved: number;
+    needAssistanceResolved: number;
+    dismissed: number;
+  }> {
+    const conditions = [eq(supervisorActivity.supervisorId, supervisorId)];
+    
+    if (startDate) {
+      conditions.push(gte(supervisorActivity.createdAt, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(supervisorActivity.createdAt, endDate));
+    }
+
+    const activities = await db.select().from(supervisorActivity)
+      .where(and(...conditions));
+
+    const metrics = {
+      checkedOut: 0,
+      assignmentsCreated: 0,
+      notCompletedResolved: 0,
+      needAssistanceResolved: 0,
+      dismissed: 0,
+    };
+
+    for (const activity of activities) {
+      switch (activity.actionType) {
+        case 'checked_out':
+          metrics.checkedOut++;
+          break;
+        case 'assignment_created':
+          metrics.assignmentsCreated++;
+          break;
+        case 'resolved_not_completed':
+          metrics.notCompletedResolved++;
+          break;
+        case 'resolved_need_assistance':
+          metrics.needAssistanceResolved++;
+          break;
+        case 'dismissed':
+          metrics.dismissed++;
+          break;
+      }
+    }
+
+    return metrics;
+  }
+
+  async createSupervisorActivity(activity: InsertSupervisorActivity): Promise<SupervisorActivity> {
+    const result = await db.insert(supervisorActivity).values(activity as any).returning();
+    return result[0];
+  }
+
+  async getSupervisorActivityByType(supervisorId: string, actionType: string, startDate?: Date, endDate?: Date): Promise<SupervisorActivity[]> {
+    const conditions = [
+      eq(supervisorActivity.supervisorId, supervisorId),
+      eq(supervisorActivity.actionType, actionType)
+    ];
+    
+    if (startDate) {
+      conditions.push(gte(supervisorActivity.createdAt, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(supervisorActivity.createdAt, endDate));
+    }
+
+    return db.select().from(supervisorActivity)
+      .where(and(...conditions))
+      .orderBy(desc(supervisorActivity.createdAt));
   }
 }
 

@@ -1551,3 +1551,27 @@ export const insertEmergencySchema = createInsertSchema(emergencies).omit({
 
 export type InsertEmergency = z.infer<typeof insertEmergencySchema>;
 export type Emergency = typeof emergencies.$inferSelect;
+
+// Supervisor Activity (for tracking supervisor actions and performance metrics)
+export const supervisorActivity = pgTable("supervisor_activity", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supervisorId: varchar("supervisor_id").notNull(), // FK to technicians with role='supervisor'
+  actionType: text("action_type").notNull(), // checked_out, assignment_created, resolved_not_completed, resolved_need_assistance, dismissed
+  propertyId: varchar("property_id"), // FK to properties (optional)
+  propertyName: text("property_name"),
+  propertyAddress: text("property_address"),
+  technicianId: varchar("technician_id"), // FK to technicians (optional - tech involved)
+  technicianName: text("technician_name"),
+  notes: text("notes"),
+  photos: text("photos").array(),
+  status: text("status").default("completed"), // completed, pending, dismissed
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSupervisorActivitySchema = createInsertSchema(supervisorActivity).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSupervisorActivity = z.infer<typeof insertSupervisorActivitySchema>;
+export type SupervisorActivity = typeof supervisorActivity.$inferSelect;

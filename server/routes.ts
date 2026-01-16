@@ -21,6 +21,7 @@ import { registerDashboardRoutes } from "./routes/dashboard";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { registerEmergencyRoutes } from "./routes/emergencies";
 import { registerEstimateHistoryRoutes } from "./routes/estimateHistory";
+import { registerSupervisorActivityRoutes } from "./routes/supervisorActivity";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -51,4 +52,5 @@ function setupRoutes(app: any) {
   registerObjectStorageRoutes(app);
   registerEmergencyRoutes(app);
   registerEstimateHistoryRoutes(app);
+  registerSupervisorActivityRoutes(app);
 }

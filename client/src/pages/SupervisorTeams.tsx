@@ -17,14 +17,29 @@ import { format } from "date-fns";
 import {
   Users, User, ChevronDown, ChevronRight, Phone, Mail, Plus, 
   UserMinus, UserPlus, Loader2, Search, ArrowRight, AlertTriangle,
-  ClipboardList, MessageSquare, MapPin, Clock, CheckCircle2, Filter, X, CalendarIcon
+  ClipboardList, MessageSquare, MapPin, Clock, CheckCircle2, Filter, X, CalendarIcon,
+  BarChart3, Download, Activity, FileCheck2, HandHelping, XCircle, ShoppingCart
 } from "lucide-react";
-import type { Technician, TechOpsEntry } from "@shared/schema";
+import type { Technician, TechOpsEntry, SupervisorActivity } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface SupervisorWithTeam extends Technician {
   teamMembers: Technician[];
+}
+
+interface SupervisorMetrics {
+  checkedOut: number;
+  assignmentsCreated: number;
+  notCompletedResolved: number;
+  needAssistanceResolved: number;
+  dismissed: number;
+}
+
+interface SupervisorProfile {
+  metrics: SupervisorMetrics;
+  activity: SupervisorActivity[];
 }
 
 export default function SupervisorTeams() {
@@ -41,6 +56,11 @@ export default function SupervisorTeams() {
   const [supervisorFilter, setSupervisorFilter] = useState<string>("");
   const [technicianFilter, setTechnicianFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [selectedProfileSupervisor, setSelectedProfileSupervisor] = useState<Technician | null>(null);
+  const [profileActivityFilter, setProfileActivityFilter] = useState<string>("all");
+  const [profileDateRange, setProfileDateRange] = useState<DateRange | undefined>();
 
   const hasActiveFilters = propertyFilter || supervisorFilter || technicianFilter || dateRange?.from;
 
@@ -103,6 +123,22 @@ export default function SupervisorTeams() {
       const data = await response.json();
       return Array.isArray(data) ? data : (data.entries || []);
     },
+  });
+
+  const { data: supervisorProfile, isLoading: profileLoading } = useQuery<SupervisorProfile>({
+    queryKey: ["supervisor-profile", selectedProfileSupervisor?.id, profileActivityFilter, profileDateRange?.from?.toISOString(), profileDateRange?.to?.toISOString()],
+    queryFn: async () => {
+      if (!selectedProfileSupervisor) throw new Error("No supervisor selected");
+      const params = new URLSearchParams();
+      if (profileActivityFilter && profileActivityFilter !== 'all') params.set("actionType", profileActivityFilter);
+      if (profileDateRange?.from) params.set("startDate", format(profileDateRange.from, "yyyy-MM-dd"));
+      if (profileDateRange?.to) params.set("endDate", format(profileDateRange.to, "yyyy-MM-dd"));
+      
+      const response = await fetch(`/api/supervisors/${selectedProfileSupervisor.id}/profile?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch supervisor profile");
+      return response.json();
+    },
+    enabled: !!selectedProfileSupervisor && showProfileDialog,
   });
 
   const supervisors = allTechnicians.filter(t => t.role === "supervisor" && t.active);
@@ -226,6 +262,63 @@ export default function SupervisorTeams() {
     }
   };
 
+  const openSupervisorProfile = (supervisor: Technician) => {
+    setSelectedProfileSupervisor(supervisor);
+    setProfileActivityFilter("all");
+    setProfileDateRange(undefined);
+    setShowProfileDialog(true);
+  };
+
+  const formatActionType = (type: string): string => {
+    switch (type) {
+      case 'checked_out': return 'Account Checked Out';
+      case 'assignment_created': return 'Assignment Created';
+      case 'resolved_not_completed': return 'Not Completed Resolved';
+      case 'resolved_need_assistance': return 'Need Assistance Resolved';
+      case 'dismissed': return 'Dismissed';
+      default: return type;
+    }
+  };
+
+  const getActionIcon = (type: string) => {
+    switch (type) {
+      case 'checked_out': return <ShoppingCart className="w-4 h-4" />;
+      case 'assignment_created': return <ClipboardList className="w-4 h-4" />;
+      case 'resolved_not_completed': return <FileCheck2 className="w-4 h-4" />;
+      case 'resolved_need_assistance': return <HandHelping className="w-4 h-4" />;
+      case 'dismissed': return <XCircle className="w-4 h-4" />;
+      default: return <Activity className="w-4 h-4" />;
+    }
+  };
+
+  const getActionColor = (type: string) => {
+    switch (type) {
+      case 'checked_out': return 'bg-purple-100 text-purple-700';
+      case 'assignment_created': return 'bg-blue-100 text-blue-700';
+      case 'resolved_not_completed': return 'bg-green-100 text-green-700';
+      case 'resolved_need_assistance': return 'bg-amber-100 text-amber-700';
+      case 'dismissed': return 'bg-red-100 text-red-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
+  const handleExportActivity = () => {
+    if (!selectedProfileSupervisor) return;
+    const params = new URLSearchParams();
+    if (profileActivityFilter && profileActivityFilter !== 'all') params.set("actionType", profileActivityFilter);
+    if (profileDateRange?.from) params.set("startDate", format(profileDateRange.from, "yyyy-MM-dd"));
+    if (profileDateRange?.to) params.set("endDate", format(profileDateRange.to, "yyyy-MM-dd"));
+    
+    window.open(`/api/supervisors/${selectedProfileSupervisor.id}/activity/export?${params}`, '_blank');
+  };
+
+  const totalProfileActions = supervisorProfile?.metrics ? 
+    supervisorProfile.metrics.checkedOut + 
+    supervisorProfile.metrics.assignmentsCreated + 
+    supervisorProfile.metrics.notCompletedResolved + 
+    supervisorProfile.metrics.needAssistanceResolved + 
+    supervisorProfile.metrics.dismissed : 0;
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -279,43 +372,57 @@ export default function SupervisorTeams() {
                             className="border border-slate-200 rounded-lg overflow-hidden"
                             data-testid={`supervisor-card-${supervisor.id}`}
                           >
-                            <button
-                              onClick={() => toggleExpand(supervisor.id)}
-                              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-[#0078D4] to-[#3B82F6] text-white hover:from-[#1E40AF] hover:to-[#2563EB] transition-colors"
+                            <div
+                              className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-[#0078D4] to-[#3B82F6] text-white"
                               data-testid={`supervisor-header-${supervisor.id}`}
                             >
-                              <Avatar className="h-10 w-10 border-2 border-white/30">
-                                <AvatarImage src={supervisor.photoUrl || undefined} />
-                                <AvatarFallback className="bg-white/20 text-white">
-                                  {getInitials(supervisor.firstName, supervisor.lastName)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 text-left">
-                                <div className="font-semibold">
-                                  {supervisor.firstName} {supervisor.lastName}
+                              <button
+                                onClick={() => toggleExpand(supervisor.id)}
+                                className="flex items-center gap-4 flex-1 hover:opacity-90 transition-opacity"
+                              >
+                                <Avatar className="h-10 w-10 border-2 border-white/30">
+                                  <AvatarImage src={supervisor.photoUrl || undefined} />
+                                  <AvatarFallback className="bg-white/20 text-white">
+                                    {getInitials(supervisor.firstName, supervisor.lastName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 text-left">
+                                  <div className="font-semibold">
+                                    {supervisor.firstName} {supervisor.lastName}
+                                  </div>
+                                  <div className="text-white/70 text-sm flex items-center gap-3">
+                                    {supervisor.phone && (
+                                      <span className="flex items-center gap-1">
+                                        <Phone className="w-3 h-3" /> {supervisor.phone}
+                                      </span>
+                                    )}
+                                    {supervisor.email && (
+                                      <span className="flex items-center gap-1">
+                                        <Mail className="w-3 h-3" /> {supervisor.email}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                                <div className="text-[#0078D4]1A text-sm flex items-center gap-3">
-                                  {supervisor.phone && (
-                                    <span className="flex items-center gap-1">
-                                      <Phone className="w-3 h-3" /> {supervisor.phone}
-                                    </span>
-                                  )}
-                                  {supervisor.email && (
-                                    <span className="flex items-center gap-1">
-                                      <Mail className="w-3 h-3" /> {supervisor.email}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <Badge className="bg-white/20 text-white border-white/30">
-                                {supervisor.teamMembers.length} Technicians
-                              </Badge>
-                              {isExpanded ? (
-                                <ChevronDown className="w-5 h-5" />
-                              ) : (
-                                <ChevronRight className="w-5 h-5" />
-                              )}
-                            </button>
+                                <Badge className="bg-white/20 text-white border-white/30">
+                                  {supervisor.teamMembers.length} Technicians
+                                </Badge>
+                                {isExpanded ? (
+                                  <ChevronDown className="w-5 h-5" />
+                                ) : (
+                                  <ChevronRight className="w-5 h-5" />
+                                )}
+                              </button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-white hover:bg-white/20"
+                                onClick={() => openSupervisorProfile(supervisor)}
+                                data-testid={`button-view-profile-${supervisor.id}`}
+                              >
+                                <BarChart3 className="w-4 h-4 mr-1" />
+                                Profile
+                              </Button>
+                            </div>
 
                             {isExpanded && (
                               <div className="bg-white divide-y divide-slate-100">
@@ -886,6 +993,223 @@ export default function SupervisorTeams() {
                 <ArrowRight className="w-4 h-4 mr-1" />
               )}
               Reassign
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="flex items-center gap-3">
+              {selectedProfileSupervisor && (
+                <>
+                  <Avatar className="h-12 w-12 border-2 border-[#0078D4]/20">
+                    <AvatarImage src={selectedProfileSupervisor.photoUrl || undefined} />
+                    <AvatarFallback className="bg-[#0078D4]/10 text-[#0078D4]">
+                      {getInitials(selectedProfileSupervisor.firstName, selectedProfileSupervisor.lastName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="text-xl font-bold text-slate-800">
+                      {selectedProfileSupervisor.firstName} {selectedProfileSupervisor.lastName}
+                    </div>
+                    <div className="text-sm text-slate-500 flex items-center gap-3">
+                      <Badge className="bg-[#0078D4]/10 text-[#0078D4]">Supervisor</Badge>
+                      {selectedProfileSupervisor.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3" /> {selectedProfileSupervisor.email}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-6">
+            {profileLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <Card className="border-purple-200 bg-purple-50/50">
+                    <CardContent className="pt-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-2">
+                        <ShoppingCart className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-purple-700" data-testid="metric-checked-out">
+                        {supervisorProfile?.metrics.checkedOut || 0}
+                      </div>
+                      <div className="text-xs text-purple-600">Accounts Checked Out</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-blue-200 bg-blue-50/50">
+                    <CardContent className="pt-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-2">
+                        <ClipboardList className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-blue-700" data-testid="metric-assignments">
+                        {supervisorProfile?.metrics.assignmentsCreated || 0}
+                      </div>
+                      <div className="text-xs text-blue-600">Assignments Created</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-green-200 bg-green-50/50">
+                    <CardContent className="pt-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+                        <FileCheck2 className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-green-700" data-testid="metric-not-completed">
+                        {supervisorProfile?.metrics.notCompletedResolved || 0}
+                      </div>
+                      <div className="text-xs text-green-600">Not Completed Resolved</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-amber-200 bg-amber-50/50">
+                    <CardContent className="pt-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-2">
+                        <HandHelping className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-amber-700" data-testid="metric-need-assistance">
+                        {supervisorProfile?.metrics.needAssistanceResolved || 0}
+                      </div>
+                      <div className="text-xs text-amber-600">Need Assistance Resolved</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-red-200 bg-red-50/50">
+                    <CardContent className="pt-4 text-center">
+                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-2">
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-red-700" data-testid="metric-dismissed">
+                        {supervisorProfile?.metrics.dismissed || 0}
+                      </div>
+                      <div className="text-xs text-red-600">Dismissed</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-[#0078D4]" />
+                        Activity Log
+                        <Badge variant="outline" className="ml-2">
+                          {supervisorProfile?.activity.length || 0} entries
+                        </Badge>
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Select value={profileActivityFilter} onValueChange={setProfileActivityFilter}>
+                          <SelectTrigger className="w-[180px]" data-testid="select-activity-filter">
+                            <SelectValue placeholder="Filter by action" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Actions</SelectItem>
+                            <SelectItem value="checked_out">Checked Out</SelectItem>
+                            <SelectItem value="assignment_created">Assignments</SelectItem>
+                            <SelectItem value="resolved_not_completed">Not Completed</SelectItem>
+                            <SelectItem value="resolved_need_assistance">Need Assistance</SelectItem>
+                            <SelectItem value="dismissed">Dismissed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-1">
+                              <CalendarIcon className="w-4 h-4" />
+                              {profileDateRange?.from ? (
+                                profileDateRange.to ? (
+                                  <>
+                                    {format(profileDateRange.from, "MMM d")} - {format(profileDateRange.to, "MMM d")}
+                                  </>
+                                ) : (
+                                  format(profileDateRange.from, "MMM d, yyyy")
+                                )
+                              ) : (
+                                "Date Range"
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <Calendar
+                              mode="range"
+                              selected={profileDateRange}
+                              onSelect={setProfileDateRange}
+                              numberOfMonths={2}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExportActivity}
+                          data-testid="button-export-activity"
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Export
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {(!supervisorProfile?.activity || supervisorProfile.activity.length === 0) ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <Activity className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p>No activity found</p>
+                        <p className="text-sm mt-1">Activity will appear here as the supervisor takes actions</p>
+                      </div>
+                    ) : (
+                      <ScrollArea className="max-h-[300px]">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Action</TableHead>
+                              <TableHead>Property</TableHead>
+                              <TableHead>Technician</TableHead>
+                              <TableHead>Notes</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {supervisorProfile.activity.map((entry) => (
+                              <TableRow key={entry.id}>
+                                <TableCell className="text-sm text-slate-600">
+                                  {entry.createdAt ? format(new Date(entry.createdAt), "MMM d, h:mm a") : "—"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={cn("gap-1", getActionColor(entry.actionType))}>
+                                    {getActionIcon(entry.actionType)}
+                                    {formatActionType(entry.actionType)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {entry.propertyName || "—"}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {entry.technicianName || "—"}
+                                </TableCell>
+                                <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">
+                                  {entry.notes || "—"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </ScrollArea>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setShowProfileDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
