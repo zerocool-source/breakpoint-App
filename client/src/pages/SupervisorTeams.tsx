@@ -41,6 +41,7 @@ export default function SupervisorTeams() {
   const [supervisorFilter, setSupervisorFilter] = useState<string>("");
   const [technicianFilter, setTechnicianFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [messageSource, setMessageSource] = useState<"all" | "supervisors">("all");
 
   const hasActiveFilters = propertyFilter || supervisorFilter || technicianFilter || dateRange?.from;
 
@@ -204,8 +205,18 @@ export default function SupervisorTeams() {
   };
 
   const filteredConcerns = useMemo(() => filterEntries(supervisorConcerns), [supervisorConcerns, propertyFilter, supervisorFilter]);
-  const filteredMessages = useMemo(() => filterEntries(officeMessages), [officeMessages, propertyFilter, supervisorFilter]);
   const filteredActivity = useMemo(() => filterEntries(activityEntries), [activityEntries, propertyFilter, supervisorFilter]);
+
+  const filteredMessages = useMemo(() => {
+    let messages = filterEntries(officeMessages);
+    if (messageSource === "supervisors") {
+      messages = messages.filter(msg => {
+        const tech = allTechnicians.find(t => `${t.firstName} ${t.lastName}` === msg.technicianName);
+        return tech?.role === "supervisor";
+      });
+    }
+    return messages;
+  }, [officeMessages, propertyFilter, supervisorFilter, messageSource, allTechnicians]);
 
   const filteredAssignments = useMemo(() => {
     return supervisorsWithTeams.flatMap(supervisor => {
@@ -767,20 +778,54 @@ export default function SupervisorTeams() {
 
         <Card className="mt-6">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-indigo-500" />
-              Office Messages
-              <Badge className="ml-2 bg-indigo-100 text-indigo-700">
-                {filteredMessages.length} Messages
-              </Badge>
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-indigo-500" />
+                Office Messages
+                <Badge className="ml-2 bg-indigo-100 text-indigo-700">
+                  {filteredMessages.length} Messages
+                </Badge>
+              </CardTitle>
+              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                <Button
+                  variant={messageSource === "all" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setMessageSource("all")}
+                  className={cn(
+                    "h-7 text-xs",
+                    messageSource === "all" ? "bg-white shadow-sm" : "hover:bg-white/50"
+                  )}
+                  data-testid="button-all-messages"
+                >
+                  <Users className="w-3 h-3 mr-1" />
+                  All
+                </Button>
+                <Button
+                  variant={messageSource === "supervisors" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setMessageSource("supervisors")}
+                  className={cn(
+                    "h-7 text-xs",
+                    messageSource === "supervisors" ? "bg-indigo-500 text-white shadow-sm" : "hover:bg-white/50"
+                  )}
+                  data-testid="button-supervisor-messages"
+                >
+                  <User className="w-3 h-3 mr-1" />
+                  Supervisors Only
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {filteredMessages.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
                 <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>No messages from field</p>
-                <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Direct messages from supervisors to office will appear here"}</p>
+                <p>{messageSource === "supervisors" ? "No supervisor messages" : "No messages from field"}</p>
+                <p className="text-sm mt-1">
+                  {hasActiveFilters || messageSource === "supervisors" 
+                    ? "Try adjusting your filters" 
+                    : "Direct messages from supervisors to office will appear here"}
+                </p>
               </div>
             ) : (
               <ScrollArea className="max-h-[400px]">
@@ -798,6 +843,14 @@ export default function SupervisorTeams() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium text-slate-700">{message.technicianName}</span>
+                            {(() => {
+                              const tech = allTechnicians.find(t => `${t.firstName} ${t.lastName}` === message.technicianName);
+                              return tech?.role === "supervisor" ? (
+                                <Badge className="bg-indigo-100 text-indigo-700 text-xs">
+                                  Supervisor
+                                </Badge>
+                              ) : null;
+                            })()}
                             {message.status === "reviewed" && (
                               <Badge className="bg-green-100 text-green-700 text-xs">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
