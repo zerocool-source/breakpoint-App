@@ -363,15 +363,23 @@ export default function Estimates() {
   const metrics = metricsData;
   const windyDayPending = windyDayPendingData?.count || 0;
 
-  const normalizeSourceType = (sourceType: string | null): string => {
-    if (!sourceType || sourceType === "manual") return "office_staff";
-    if (sourceType === "service_repair") return "service_tech";
-    return sourceType;
+  const inferSourceType = (estimate: Estimate): string => {
+    if (estimate.sourceType) {
+      const st = estimate.sourceType.toLowerCase();
+      if (st === "repair_tech" || st === "field") return "repair_tech";
+      if (st === "service_tech" || st === "service_repair") return "service_tech";
+      if (st === "emergency" || st === "sos") return "emergency";
+      if (st === "office_staff" || st === "manual" || st === "office") return "office_staff";
+    }
+    if (estimate.sourceEmergencyId) return "emergency";
+    if (estimate.sourceRepairJobId || (estimate.serviceRepairCount && estimate.serviceRepairCount > 0)) return "service_tech";
+    if (estimate.createdByTechId && estimate.createdByTechName) return "repair_tech";
+    return "office_staff";
   };
 
-  const getSourceLabel = (sourceType: string | null): string => {
-    const normalized = normalizeSourceType(sourceType);
-    switch (normalized) {
+  const getSourceLabel = (estimate: Estimate): string => {
+    const sourceType = inferSourceType(estimate);
+    switch (sourceType) {
       case "repair_tech": return "Field Estimate";
       case "service_tech": return "SR Estimate";
       case "office_staff": return "Office Estimate";
@@ -380,14 +388,14 @@ export default function Estimates() {
     }
   };
 
-  const getSourceBadgeColor = (sourceType: string | null): string => {
-    const normalized = normalizeSourceType(sourceType);
-    switch (normalized) {
-      case "repair_tech": return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
-      case "service_tech": return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
-      case "office_staff": return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
-      case "emergency": return "bg-[#FF6A00] text-white border-[#FF6A00]";
-      default: return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
+  const getSourceBadgeColor = (estimate: Estimate): string => {
+    const sourceType = inferSourceType(estimate);
+    switch (sourceType) {
+      case "repair_tech": return "bg-[#1E3A8A] text-white";
+      case "service_tech": return "bg-[#1E3A8A] text-white";
+      case "office_staff": return "bg-[#1E3A8A] text-white";
+      case "emergency": return "bg-[#FF6A00] text-white";
+      default: return "bg-[#1E3A8A] text-white";
     }
   };
 
@@ -523,9 +531,9 @@ export default function Estimates() {
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
   const sourceMetrics = useMemo(() => {
-    const repairTech = estimates.filter((e: Estimate) => normalizeSourceType(e.sourceType) === "repair_tech");
-    const serviceTech = estimates.filter((e: Estimate) => normalizeSourceType(e.sourceType) === "service_tech");
-    const officeStaff = estimates.filter((e: Estimate) => normalizeSourceType(e.sourceType) === "office_staff");
+    const repairTech = estimates.filter((e: Estimate) => inferSourceType(e) === "repair_tech");
+    const serviceTech = estimates.filter((e: Estimate) => inferSourceType(e) === "service_tech");
+    const officeStaff = estimates.filter((e: Estimate) => inferSourceType(e) === "office_staff");
     
     return {
       repairTech: {
@@ -575,9 +583,9 @@ export default function Estimates() {
       result = result.filter((e: Estimate) => e.customerName === customerFilter);
     }
 
-    // Apply source filter (normalize legacy values)
+    // Apply source filter (use inferSourceType for intelligent detection)
     if (sourceFilter !== "all") {
-      result = result.filter((e: Estimate) => normalizeSourceType(e.sourceType) === sourceFilter);
+      result = result.filter((e: Estimate) => inferSourceType(e) === sourceFilter);
     }
 
     // Apply date range filter
@@ -1384,16 +1392,14 @@ export default function Estimates() {
 
   const getItemCountLabel = (estimate: Estimate) => {
     const count = estimate.items?.length || 0;
-    const normalized = normalizeSourceType(estimate.sourceType);
-    if (normalized === "service_tech") {
+    if (inferSourceType(estimate) === "service_tech") {
       return `${count}-SR`;
     }
     return `${count} items`;
   };
 
   const getEstimateTitle = (estimate: Estimate) => {
-    const normalized = normalizeSourceType(estimate.sourceType);
-    if (normalized === "service_tech") {
+    if (inferSourceType(estimate) === "service_tech") {
       return estimate.title.startsWith("SR.") ? estimate.title : `SR. ${estimate.title}`;
     }
     return estimate.title;
@@ -1870,7 +1876,7 @@ export default function Estimates() {
                               {estimate.estimateNumber && (
                                 <span className="text-[13px] text-[#6B7280]">#{estimate.estimateNumber}</span>
                               )}
-                              {estimate.items && estimate.items.length > 0 && normalizeSourceType(estimate.sourceType) === "service_tech" && (
+                              {estimate.items && estimate.items.length > 0 && inferSourceType(estimate) === "service_tech" && (
                                 <span className="text-[13px] text-[#6B7280]">- {estimate.items.length} items</span>
                               )}
                             </div>
@@ -1888,8 +1894,8 @@ export default function Estimates() {
                               )}
                             </div>
                             <div className="mt-2">
-                              <Badge className={`${getSourceBadgeColor(estimate.sourceType)} text-[11px] px-3 py-1 rounded`}>
-                                {getSourceLabel(estimate.sourceType)}
+                              <Badge className={`${getSourceBadgeColor(estimate)} text-[11px] px-3 py-1 rounded`}>
+                                {getSourceLabel(estimate)}
                               </Badge>
                             </div>
                           </div>
