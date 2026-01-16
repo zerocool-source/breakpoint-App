@@ -877,6 +877,7 @@ export default function Estimates() {
     setShowVerbalApprovalDialog(true);
   };
 
+
   const handleVerbalApproval = async () => {
     if (!selectedEstimate || !verbalApproverName.trim() || !officeStaffName.trim()) return;
     
@@ -1966,19 +1967,30 @@ export default function Estimates() {
                                   <span>Sent to {estimate.approvalSentTo}</span>
                                 </div>
                               )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSendForApproval(estimate);
-                                }}
-                                className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                                data-testid={`button-resend-approval-${estimate.id}`}
-                              >
-                                <Send className="w-3 h-3 mr-1" />
-                                Resend
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                                    data-testid={`button-resend-approval-${estimate.id}`}
+                                  >
+                                    <Send className="w-3 h-3 mr-1" />
+                                    Resend
+                                    <ChevronDown className="w-3 h-3 ml-1" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem onClick={() => handleSendForApproval(estimate)}>
+                                    <Mail className="w-4 h-4 mr-2" />
+                                    Resend Approval Email
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => openVerbalApprovalDialog(estimate)}>
+                                    <Phone className="w-4 h-4 mr-2" />
+                                    Record Verbal Approval
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </>
                           )}
                           {estimate.status === "approved" && (

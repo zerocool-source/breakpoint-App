@@ -1391,9 +1391,9 @@ export function registerEstimateRoutes(app: any) {
         return res.status(404).json({ error: "Estimate not found" });
       }
       
-      // Only allow verbal approval for draft estimates
-      if (existingEstimate.status !== "draft") {
-        return res.status(400).json({ error: "Verbal approval can only be recorded for draft estimates" });
+      // Only allow verbal approval for draft or pending_approval estimates
+      if (existingEstimate.status !== "draft" && existingEstimate.status !== "pending_approval") {
+        return res.status(400).json({ error: "Verbal approval can only be recorded for draft or pending approval estimates" });
       }
       
       // Build method display string
