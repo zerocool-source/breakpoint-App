@@ -293,11 +293,11 @@ export default function SupervisorTeams() {
 
   const getActionColor = (type: string) => {
     switch (type) {
-      case 'checked_out': return 'bg-purple-100 text-purple-700';
-      case 'assignment_created': return 'bg-blue-100 text-blue-700';
-      case 'resolved_not_completed': return 'bg-green-100 text-green-700';
-      case 'resolved_need_assistance': return 'bg-amber-100 text-amber-700';
-      case 'dismissed': return 'bg-red-100 text-red-700';
+      case 'checked_out': return 'bg-[#0078D4]/10 text-[#0078D4]';
+      case 'assignment_created': return 'bg-[#0078D4]/10 text-[#0078D4]';
+      case 'resolved_not_completed': return 'bg-[#FF8000]/10 text-[#D35400]';
+      case 'resolved_need_assistance': return 'bg-[#17BEBB]/10 text-[#0D9488]';
+      case 'dismissed': return 'bg-[#EF4444]/10 text-[#EF4444]';
       default: return 'bg-slate-100 text-slate-700';
     }
   };
@@ -1036,59 +1036,59 @@ export default function SupervisorTeams() {
             ) : (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                  <Card className="border-purple-200 bg-purple-50/50">
+                  <Card className="border-[#0078D4]/20 bg-[#0078D4]/10">
                     <CardContent className="pt-4 text-center">
-                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-2">
-                        <ShoppingCart className="w-5 h-5 text-purple-600" />
+                      <div className="w-10 h-10 rounded-full bg-[#0078D4]/20 flex items-center justify-center mx-auto mb-2">
+                        <ShoppingCart className="w-5 h-5 text-[#0078D4]" />
                       </div>
-                      <div className="text-2xl font-bold text-purple-700" data-testid="metric-checked-out">
+                      <div className="text-2xl font-bold text-[#0078D4]" data-testid="metric-checked-out">
                         {supervisorProfile?.metrics.checkedOut || 0}
                       </div>
-                      <div className="text-xs text-purple-600">Accounts Checked Out</div>
+                      <div className="text-xs text-[#0078D4]">Accounts Checked Out</div>
                     </CardContent>
                   </Card>
-                  <Card className="border-blue-200 bg-blue-50/50">
+                  <Card className="border-[#0078D4]/20 bg-[#0078D4]/10">
                     <CardContent className="pt-4 text-center">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-2">
-                        <ClipboardList className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 rounded-full bg-[#0078D4]/20 flex items-center justify-center mx-auto mb-2">
+                        <ClipboardList className="w-5 h-5 text-[#0078D4]" />
                       </div>
-                      <div className="text-2xl font-bold text-blue-700" data-testid="metric-assignments">
+                      <div className="text-2xl font-bold text-[#0078D4]" data-testid="metric-assignments">
                         {supervisorProfile?.metrics.assignmentsCreated || 0}
                       </div>
-                      <div className="text-xs text-blue-600">Assignments Created</div>
+                      <div className="text-xs text-[#0078D4]">Assignments Created</div>
                     </CardContent>
                   </Card>
-                  <Card className="border-green-200 bg-green-50/50">
+                  <Card className="border-[#FF8000]/20 bg-[#FF8000]/10">
                     <CardContent className="pt-4 text-center">
-                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-                        <FileCheck2 className="w-5 h-5 text-green-600" />
+                      <div className="w-10 h-10 rounded-full bg-[#FF8000]/20 flex items-center justify-center mx-auto mb-2">
+                        <FileCheck2 className="w-5 h-5 text-[#D35400]" />
                       </div>
-                      <div className="text-2xl font-bold text-green-700" data-testid="metric-not-completed">
+                      <div className="text-2xl font-bold text-[#D35400]" data-testid="metric-not-completed">
                         {supervisorProfile?.metrics.notCompletedResolved || 0}
                       </div>
-                      <div className="text-xs text-green-600">Not Completed Resolved</div>
+                      <div className="text-xs text-[#D35400]">Not Completed Resolved</div>
                     </CardContent>
                   </Card>
-                  <Card className="border-amber-200 bg-amber-50/50">
+                  <Card className="border-[#17BEBB]/20 bg-[#17BEBB]/10">
                     <CardContent className="pt-4 text-center">
-                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-2">
-                        <HandHelping className="w-5 h-5 text-amber-600" />
+                      <div className="w-10 h-10 rounded-full bg-[#17BEBB]/20 flex items-center justify-center mx-auto mb-2">
+                        <HandHelping className="w-5 h-5 text-[#0D9488]" />
                       </div>
-                      <div className="text-2xl font-bold text-amber-700" data-testid="metric-need-assistance">
+                      <div className="text-2xl font-bold text-[#0D9488]" data-testid="metric-need-assistance">
                         {supervisorProfile?.metrics.needAssistanceResolved || 0}
                       </div>
-                      <div className="text-xs text-amber-600">Need Assistance Resolved</div>
+                      <div className="text-xs text-[#0D9488]">Need Assistance Resolved</div>
                     </CardContent>
                   </Card>
-                  <Card className="border-red-200 bg-red-50/50">
+                  <Card className="border-[#EF4444]/20 bg-[#EF4444]/10">
                     <CardContent className="pt-4 text-center">
-                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-2">
-                        <XCircle className="w-5 h-5 text-red-600" />
+                      <div className="w-10 h-10 rounded-full bg-[#EF4444]/20 flex items-center justify-center mx-auto mb-2">
+                        <XCircle className="w-5 h-5 text-[#EF4444]" />
                       </div>
-                      <div className="text-2xl font-bold text-red-700" data-testid="metric-dismissed">
+                      <div className="text-2xl font-bold text-[#EF4444]" data-testid="metric-dismissed">
                         {supervisorProfile?.metrics.dismissed || 0}
                       </div>
-                      <div className="text-xs text-red-600">Dismissed</div>
+                      <div className="text-xs text-[#EF4444]">Dismissed</div>
                     </CardContent>
                   </Card>
                 </div>
