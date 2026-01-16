@@ -745,6 +745,11 @@ export const estimates = pgTable("estimates", {
   sourceEmergencyId: text("source_emergency_id"), // Link to original emergency if converted from emergency
   serviceRepairCount: integer("service_repair_count"), // Count of service repairs bundled into this estimate
   
+  // Conversion tracking (who converted from emergency/service repair to estimate)
+  convertedByUserId: text("converted_by_user_id"),
+  convertedByUserName: text("converted_by_user_name"),
+  convertedAt: timestamp("converted_at"),
+  
   // Estimate details
   title: text("title").notNull(),
   description: text("description"),
