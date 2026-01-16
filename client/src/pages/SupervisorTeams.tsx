@@ -9,12 +9,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import {
   Users, User, ChevronDown, ChevronRight, Phone, Mail, Plus, 
-  UserMinus, UserPlus, Loader2, Search, ArrowRight
+  UserMinus, UserPlus, Loader2, Search, ArrowRight, AlertTriangle,
+  ClipboardList, MessageSquare, MapPin, Clock, CheckCircle2
 } from "lucide-react";
-import type { Technician } from "@shared/schema";
+import type { Technician, TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 interface SupervisorWithTeam extends Technician {
@@ -38,6 +41,36 @@ export default function SupervisorTeams() {
       if (!response.ok) throw new Error("Failed to fetch technicians");
       const data = await response.json();
       return data.technicians || [];
+    },
+  });
+
+  const { data: supervisorConcerns = [] } = useQuery<TechOpsEntry[]>({
+    queryKey: ["tech-ops-supervisor-concerns"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops?entryType=supervisor_concerns");
+      if (!response.ok) throw new Error("Failed to fetch supervisor concerns");
+      const data = await response.json();
+      return data.entries || [];
+    },
+  });
+
+  const { data: officeMessages = [] } = useQuery<TechOpsEntry[]>({
+    queryKey: ["tech-ops-report-issue"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops?entryType=report_issue");
+      if (!response.ok) throw new Error("Failed to fetch office messages");
+      const data = await response.json();
+      return data.entries || [];
+    },
+  });
+
+  const { data: activityEntries = [] } = useQuery<TechOpsEntry[]>({
+    queryKey: ["tech-ops-activity"],
+    queryFn: async () => {
+      const response = await fetch("/api/tech-ops?status=reviewed");
+      if (!response.ok) throw new Error("Failed to fetch activity");
+      const data = await response.json();
+      return data.entries || [];
     },
   });
 
@@ -117,6 +150,20 @@ export default function SupervisorTeams() {
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return "—";
+    return format(new Date(date), "MMM d, yyyy h:mm a");
+  };
+
+  const getPriorityColor = (priority: string | null) => {
+    switch (priority) {
+      case "high": return "bg-red-100 text-red-700 border-red-200";
+      case "normal": return "bg-blue-100 text-blue-700 border-blue-200";
+      case "low": return "bg-slate-100 text-slate-600 border-slate-200";
+      default: return "bg-slate-100 text-slate-600 border-slate-200";
+    }
   };
 
   return (
@@ -382,6 +429,251 @@ export default function SupervisorTeams() {
             </Card>
           </div>
         </div>
+
+        <Tabs defaultValue="concerns" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="concerns" className="gap-2" data-testid="tab-concerns">
+              <AlertTriangle className="w-4 h-4" />
+              Supervisor Concerns
+              {supervisorConcerns.length > 0 && (
+                <Badge className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0">{supervisorConcerns.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-2" data-testid="tab-activity">
+              <ClipboardList className="w-4 h-4" />
+              Activity Log
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
+              <MessageSquare className="w-4 h-4" />
+              Office Messages
+              {officeMessages.length > 0 && (
+                <Badge className="ml-1 bg-indigo-500 text-white text-xs px-1.5 py-0">{officeMessages.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="concerns">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  Supervisor Concerns
+                  <Badge className="ml-2 bg-red-100 text-red-700">
+                    {supervisorConcerns.length} Issues
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {supervisorConcerns.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No supervisor concerns reported</p>
+                    <p className="text-sm mt-1">Concerns from supervisors will appear here</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-[400px]">
+                    <div className="space-y-3">
+                      {supervisorConcerns.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="p-4 border border-slate-200 rounded-lg hover:border-red-200 transition-colors"
+                          data-testid={`concern-${entry.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-medium text-slate-700">{entry.technicianName}</span>
+                                <Badge className={cn("text-xs", getPriorityColor(entry.priority))}>
+                                  {entry.priority || "normal"}
+                                </Badge>
+                                {entry.status === "reviewed" && (
+                                  <Badge className="bg-green-100 text-green-700 text-xs">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    Reviewed
+                                  </Badge>
+                                )}
+                              </div>
+                              {entry.propertyName && (
+                                <div className="flex items-center gap-1 text-sm text-slate-500 mb-2">
+                                  <MapPin className="w-3 h-3" />
+                                  {entry.propertyName}
+                                </div>
+                              )}
+                              <p className="text-sm text-slate-600">{entry.notes}</p>
+                              <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(entry.createdAt)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2" data-testid="text-activity-title">
+                  <ClipboardList className="w-5 h-5 text-[#1E3A8A]" />
+                  Activity Log
+                  <Badge className="ml-2 bg-slate-100 text-slate-700" data-testid="badge-activity-count">
+                    {activityEntries.length + supervisorsWithTeams.flatMap(s => s.teamMembers).length} Items
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="max-h-[500px]">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-slate-500 flex items-center gap-2" data-testid="text-reviewed-heading">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Recently Reviewed Entries
+                    </h4>
+                    {activityEntries.slice(0, 10).map((entry) => (
+                      <div
+                        key={`reviewed-${entry.id}`}
+                        className="flex items-start gap-4 p-3 bg-green-50 rounded-lg border border-green-200"
+                        data-testid={`activity-reviewed-${entry.id}`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-700">
+                            <span className="font-medium">{entry.technicianName}</span>
+                            <span className="text-slate-500"> submitted </span>
+                            <span className="font-medium">{entry.entryType?.replace(/_/g, ' ')}</span>
+                          </p>
+                          {entry.propertyName && (
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              {entry.propertyName}
+                            </p>
+                          )}
+                          <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatDate(entry.updatedAt || entry.createdAt)}
+                          </p>
+                        </div>
+                        <Badge className="bg-green-100 text-green-700 text-xs">Reviewed</Badge>
+                      </div>
+                    ))}
+                    {activityEntries.length === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-sm" data-testid="text-no-reviewed">
+                        No reviewed entries yet
+                      </div>
+                    )}
+
+                    <h4 className="text-sm font-medium text-slate-500 flex items-center gap-2 mt-6 pt-4 border-t" data-testid="text-assignments-heading">
+                      <Users className="w-4 h-4" />
+                      Current Team Assignments
+                    </h4>
+                    {supervisorsWithTeams.flatMap(supervisor => 
+                      supervisor.teamMembers.map(tech => ({
+                        type: "assignment",
+                        supervisorName: `${supervisor.firstName} ${supervisor.lastName}`,
+                        technicianName: `${tech.firstName} ${tech.lastName}`,
+                        technicianId: tech.id,
+                        supervisorId: supervisor.id,
+                      }))
+                    ).slice(0, 20).map((activity, idx) => (
+                      <div
+                        key={`activity-${idx}`}
+                        className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200"
+                        data-testid={`activity-assignment-${idx}`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-[#1E3A8A]/10 flex items-center justify-center">
+                          <UserPlus className="w-4 h-4 text-[#1E3A8A]" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-700">
+                            <span className="font-medium">{activity.technicianName}</span>
+                            <span className="text-slate-500"> is assigned to </span>
+                            <span className="font-medium">{activity.supervisorName}</span>
+                          </p>
+                          <p className="text-xs text-slate-400">Team Assignment</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">Active</Badge>
+                      </div>
+                    ))}
+                    {supervisorsWithTeams.flatMap(s => s.teamMembers).length === 0 && (
+                      <div className="text-center py-6 text-slate-400 text-sm" data-testid="text-no-assignments">
+                        No team assignments yet
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="messages">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-indigo-500" />
+                  Office Messages
+                  <Badge className="ml-2 bg-indigo-100 text-indigo-700">
+                    {officeMessages.length} Messages
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {officeMessages.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No messages from field</p>
+                    <p className="text-sm mt-1">Direct messages from supervisors to office will appear here</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="max-h-[400px]">
+                    <div className="space-y-3">
+                      {officeMessages.map((message) => (
+                        <div
+                          key={message.id}
+                          className="p-4 border border-slate-200 rounded-lg hover:border-indigo-200 transition-colors"
+                          data-testid={`message-${message.id}`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                              <User className="w-5 h-5 text-indigo-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-slate-700">{message.technicianName}</span>
+                                {message.status === "reviewed" && (
+                                  <Badge className="bg-green-100 text-green-700 text-xs">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    Reviewed
+                                  </Badge>
+                                )}
+                              </div>
+                              {message.propertyName && (
+                                <div className="flex items-center gap-1 text-sm text-slate-500 mb-2">
+                                  <MapPin className="w-3 h-3" />
+                                  {message.propertyName}
+                                </div>
+                              )}
+                              <p className="text-sm text-slate-600">{message.notes}</p>
+                              <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(message.createdAt)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
