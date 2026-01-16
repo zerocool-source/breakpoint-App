@@ -139,6 +139,9 @@ export function registerEmergencyRoutes(app: Express) {
         return res.status(400).json({ error: "Emergency already invoiced directly - cannot also create estimate" });
       }
 
+      // Get converter info from request body
+      const { convertedByUserId, convertedByUserName } = req.body || {};
+
       const estimateNumber = `EM-${Date.now().toString(36).toUpperCase()}`;
       const amountInCents = emergency.totalAmount || 0;
       
@@ -153,6 +156,9 @@ export function registerEmergencyRoutes(app: Express) {
         sourceEmergencyId: emergency.id,
         createdByTechId: emergency.submittedById || undefined,
         createdByTechName: emergency.submittedByName || undefined,
+        convertedByUserId: convertedByUserId || undefined,
+        convertedByUserName: convertedByUserName || undefined,
+        convertedAt: new Date(),
         photos: emergency.photos || [],
         items: [{
           lineNumber: 1,

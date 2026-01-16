@@ -107,7 +107,7 @@ export function registerServiceRepairRoutes(app: any) {
 
   app.post("/api/service-repairs/batch-to-estimate", async (req: Request, res: Response) => {
     try {
-      const { ids, propertyId, propertyName, notes } = req.body;
+      const { ids, propertyId, propertyName, notes, convertedByUserId, convertedByUserName } = req.body;
       
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ error: "ids must be a non-empty array" });
@@ -136,6 +136,9 @@ export function registerServiceRepairRoutes(app: any) {
         woRequired: false,
         sourceType: 'service_tech',
         sourceRepairJobId: ids.length === 1 ? ids[0] : ids.join(','),
+        convertedByUserId: convertedByUserId || undefined,
+        convertedByUserName: convertedByUserName || undefined,
+        convertedAt: new Date(),
       });
       
       await storage.updateServiceRepairJobsStatus(ids, 'estimated', estimate.id);

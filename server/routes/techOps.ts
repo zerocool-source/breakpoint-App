@@ -465,7 +465,7 @@ export function registerTechOpsRoutes(app: Express) {
 
   app.post("/api/tech-ops/:id/convert-to-estimate", async (req: Request, res: Response) => {
     try {
-      const { urgent } = req.body;
+      const { urgent, convertedByUserId, convertedByUserName } = req.body;
       const entry = await storage.getTechOpsEntry(req.params.id);
       if (!entry) {
         return res.status(404).json({ error: "Entry not found" });
@@ -485,6 +485,9 @@ export function registerTechOpsRoutes(app: Express) {
         items: [],
         subtotal: 0,
         totalAmount: 0,
+        convertedByUserId: convertedByUserId || undefined,
+        convertedByUserName: convertedByUserName || undefined,
+        convertedAt: new Date(),
       });
 
       await storage.updateTechOpsEntry(req.params.id, { status: "completed" });
