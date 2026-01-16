@@ -395,11 +395,11 @@ export default function Estimates() {
   const getSourceBadgeColor = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
-      case "repair_tech": return "bg-[#0078D4]/20 text-[#0078D4]";
-      case "service_tech": return "bg-[#0078D4]/20 text-[#0078D4]";
-      case "office_staff": return "bg-[#0078D4]/20 text-[#0078D4]";
+      case "repair_tech": return "bg-[#17BEBB33] text-[#17BEBB]";
+      case "service_tech": return "bg-[#17BEBB33] text-[#17BEBB]";
+      case "office_staff": return "bg-[#17BEBB33] text-[#17BEBB]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
-      default: return "bg-[#0078D4]/20 text-[#0078D4]";
+      default: return "bg-[#17BEBB33] text-[#17BEBB]";
     }
   };
 
