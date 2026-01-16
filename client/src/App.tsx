@@ -40,6 +40,7 @@ import EstimateApproval from "@/pages/EstimateApproval";
 import EstimateHistory from "@/pages/EstimateHistory";
 import Emergencies from "@/pages/Emergencies";
 import SupervisorTeams from "@/pages/SupervisorTeams";
+import ChatHubs from "@/pages/ChatHubs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -77,6 +78,7 @@ function Router() {
       <Route path="/intelligence" component={Intelligence} />
       <Route path="/automations" component={Automations} />
       <Route path="/chat" component={Chat} />
+      <Route path="/supervisor-messages" component={ChatHubs} />
       <Route path="/settings" component={Settings} />
       <Route path="/approve/:token" component={EstimateApproval} />
       <Route component={NotFound} />
