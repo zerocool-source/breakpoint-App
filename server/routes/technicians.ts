@@ -141,6 +141,17 @@ export function registerTechnicianRoutes(app: any) {
     try {
       const { id } = req.params;
       const updates = req.body;
+      
+      if (updates.supervisorId !== undefined && updates.supervisorId !== null) {
+        const supervisor = await storage.getTechnician(updates.supervisorId);
+        if (!supervisor) {
+          return res.status(400).json({ error: "Supervisor not found" });
+        }
+        if (supervisor.role !== "supervisor") {
+          return res.status(400).json({ error: "Target technician is not a supervisor" });
+        }
+      }
+      
       const technician = await storage.updateTechnician(id, updates);
       if (!technician) {
         return res.status(404).json({ error: "Technician not found" });
