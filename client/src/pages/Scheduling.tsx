@@ -679,7 +679,7 @@ export default function Scheduling() {
               <Popover open={showUnscheduledPanel} onOpenChange={setShowUnscheduledPanel}>
                 <PopoverTrigger asChild>
                   <button 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]/20 border border-[#FF8000]/40 rounded-md text-[#FF8000] hover:bg-[#FF8000]/30 text-xs font-medium transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]/20 border border-[#FF8000]/40 rounded-md text-[#D35400] hover:bg-[#FF8000]/30 text-xs font-medium transition-colors"
                     data-testid="btn-unscheduled"
                   >
                     <div className="w-2 h-2 bg-[#FF8000] rounded-full animate-pulse" />
@@ -700,7 +700,7 @@ export default function Scheduling() {
                     </div>
                     <button 
                       onClick={() => setShowUnscheduledPanel(false)}
-                      className="text-[#FF8000] hover:text-amber-800 p-1"
+                      className="text-[#D35400] hover:text-amber-800 p-1"
                     >
                       <X className="h-4 w-4" />
                     </button>

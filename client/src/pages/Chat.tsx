@@ -157,7 +157,7 @@ export default function Chat() {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-[#17BEBB] to-[#17BEBB] bg-clip-text text-transparent" style={{ fontFamily: "Orbitron, sans-serif" }}>
             ACE AI ASSISTANT
           </h1>
-          <p className="text-[#17BEBB]/70" style={{ fontFamily: "Rajdhani, sans-serif" }}>
+          <p className="text-[#0D9488]/70" style={{ fontFamily: "Rajdhani, sans-serif" }}>
             Your local pool chemistry and compliance expert
           </p>
         </div>
@@ -165,7 +165,7 @@ export default function Chat() {
         {/* Chat Container */}
         <Card className="border-[#17BEBB]/30 bg-black/40 backdrop-blur-md shadow-lg shadow-#17BEBB/10">
           <CardHeader className="border-b border-[#17BEBB]/20 flex flex-row items-center justify-between">
-            <CardTitle className="text-[#17BEBB] flex items-center gap-2" style={{ fontFamily: "Orbitron, sans-serif" }}>
+            <CardTitle className="text-[#0D9488] flex items-center gap-2" style={{ fontFamily: "Orbitron, sans-serif" }}>
               <MessageSquare className="w-5 h-5" />
               CHAT INTERFACE
             </CardTitle>
@@ -185,15 +185,15 @@ export default function Chat() {
             <div className="h-[500px] overflow-y-auto p-6 space-y-4" data-testid="chat-messages-container">
               {isLoading ? (
                 <div className="flex justify-center items-center h-full">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#17BEBB]" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#0D9488]" />
                 </div>
               ) : history.length === 0 ? (
                 <div className="flex flex-col justify-center items-center h-full text-center">
-                  <MessageSquare className="w-16 h-16 text-[#17BEBB]/30 mb-4" />
-                  <p className="text-[#17BEBB]/50 text-lg" style={{ fontFamily: "Rajdhani, sans-serif" }}>
+                  <MessageSquare className="w-16 h-16 text-[#0D9488]/30 mb-4" />
+                  <p className="text-[#0D9488]/50 text-lg" style={{ fontFamily: "Rajdhani, sans-serif" }}>
                     Start a conversation with Ace
                   </p>
-                  <p className="text-[#17BEBB]/30 text-sm mt-2">
+                  <p className="text-[#0D9488]/30 text-sm mt-2">
                     Ask about pool chemistry, Title 22, QC, or PoolBrain
                   </p>
                 </div>
@@ -208,7 +208,7 @@ export default function Chat() {
                       className={`max-w-[80%] rounded-lg p-4 ${
                         msg.role === "user"
                           ? "bg-gradient-to-br from-[#17BEBB]/20 to-[#17BEBB]/20 border border-[#17BEBB]/30 text-white"
-                          : "bg-gradient-to-br from-[#17BEBB]/10 to-[#17BEBB]/10 border border-[#17BEBB]/30 text-[#17BEBB]1A"
+                          : "bg-gradient-to-br from-[#17BEBB]/10 to-[#17BEBB]/10 border border-[#17BEBB]/30 text-[#0D9488]1A"
                       }`}
                     >
                       <div className="text-xs opacity-60 mb-1" style={{ fontFamily: "Rajdhani, sans-serif" }}>
@@ -231,8 +231,8 @@ export default function Chat() {
                       ACE
                     </div>
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#17BEBB]" />
-                      <span className="text-[#17BEBB]/70">Thinking...</span>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#0D9488]" />
+                      <span className="text-[#0D9488]/70">Thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export default function Chat() {
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Ace about pool chemistry, Title 22, QC, or PoolBrain..."
-                  className="flex-1 min-h-[60px] max-h-[200px] bg-black/50 border-[#17BEBB]/30 focus:border-[#17BEBB] text-white placeholder:text-[#17BEBB]/30 resize-none"
+                  className="flex-1 min-h-[60px] max-h-[200px] bg-black/50 border-[#17BEBB]/30 focus:border-[#17BEBB] text-white placeholder:text-[#0D9488]/30 resize-none"
                   style={{ fontFamily: "Rajdhani, sans-serif" }}
                   disabled={isSubmitting}
                   data-testid="input-chat-message"
@@ -266,7 +266,7 @@ export default function Chat() {
                   )}
                 </Button>
               </form>
-              <p className="text-xs text-[#17BEBB]/40 mt-2" style={{ fontFamily: "Rajdhani, sans-serif" }}>
+              <p className="text-xs text-[#0D9488]/40 mt-2" style={{ fontFamily: "Rajdhani, sans-serif" }}>
                 Press Enter to send, Shift+Enter for new line
               </p>
             </div>
@@ -275,7 +275,7 @@ export default function Chat() {
 
         {/* Connection Status */}
         <div className="mt-4 text-center">
-          <p className="text-xs text-[#17BEBB]/50" style={{ fontFamily: "Rajdhani, sans-serif" }}>
+          <p className="text-xs text-[#0D9488]/50" style={{ fontFamily: "Rajdhani, sans-serif" }}>
             Connected to local Ace model via ace-breakpoint-app
           </p>
         </div>

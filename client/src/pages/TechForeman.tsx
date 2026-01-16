@@ -19,7 +19,7 @@ import type { Technician, TechOpsEntry, ServiceRepairJob } from "@shared/schema"
 import { cn } from "@/lib/utils";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#FF8000]" },
+  pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#D35400]" },
   in_progress: { label: "In Progress", color: "bg-[#0078D4]1A text-[#0078D4]" },
   completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#22D69A]" },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-500" },
@@ -108,7 +108,7 @@ export default function TechForeman() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-[#FF8000]1A flex items-center justify-center">
-              <HardHat className="w-6 h-6 text-[#FF8000]" />
+              <HardHat className="w-6 h-6 text-[#D35400]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">Repair Foreman Dashboard</h1>
@@ -186,7 +186,7 @@ export default function TechForeman() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-[#FF8000]1A flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
+                  <AlertTriangle className="w-5 h-5 text-[#D35400]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{urgentRequests.length}</p>
@@ -199,7 +199,7 @@ export default function TechForeman() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-[#17BEBB]1A flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#17BEBB]" />
+                  <Users className="w-5 h-5 text-[#0D9488]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{repairTechs.length}</p>
@@ -214,7 +214,7 @@ export default function TechForeman() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-[#FF8000]" />
+                <Wrench className="w-5 h-5 text-[#D35400]" />
                 Repair Team
               </CardTitle>
             </CardHeader>
@@ -236,7 +236,7 @@ export default function TechForeman() {
                       return (
                         <div key={tech.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                           <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-[#FF8000]1A text-[#FF8000]">
+                            <AvatarFallback className="bg-[#FF8000]1A text-[#D35400]">
                               {getInitials(tech.firstName, tech.lastName)}
                             </AvatarFallback>
                           </Avatar>
@@ -275,8 +275,8 @@ export default function TechForeman() {
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
-                    <p className="text-xs text-[#FF8000] font-medium">Pending</p>
-                    <p className="text-xl font-bold text-[#FF8000]">
+                    <p className="text-xs text-[#D35400] font-medium">Pending</p>
+                    <p className="text-xl font-bold text-[#D35400]">
                       {repairJobs.filter(j => j.status === "pending").length}
                     </p>
                   </div>
@@ -295,7 +295,7 @@ export default function TechForeman() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
+              <AlertTriangle className="w-5 h-5 text-[#D35400]" />
               Pending Repair Requests
             </CardTitle>
           </CardHeader>
@@ -324,7 +324,7 @@ export default function TechForeman() {
                       <div className="flex items-center gap-2 mb-2">
                         <Badge className={
                           request.priority === "urgent" ? "bg-red-100 text-red-700" :
-                          request.priority === "high" ? "bg-[#FF8000]1A text-[#FF8000]" :
+                          request.priority === "high" ? "bg-[#FF8000]1A text-[#D35400]" :
                           "bg-[#0078D4]1A text-[#0078D4]"
                         }>
                           {request.priority}
@@ -359,7 +359,7 @@ export default function TechForeman() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <HardHat className="w-5 h-5 text-[#FF8000]" />
+                <HardHat className="w-5 h-5 text-[#D35400]" />
                 Foremen Overview
               </CardTitle>
             </CardHeader>
@@ -371,7 +371,7 @@ export default function TechForeman() {
                     <div key={foreman.id} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                       <div className="flex items-center gap-3 mb-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-[#FF8000]1A text-[#FF8000]">
+                          <AvatarFallback className="bg-[#FF8000]1A text-[#D35400]">
                             {getInitials(foreman.firstName, foreman.lastName)}
                           </AvatarFallback>
                         </Avatar>

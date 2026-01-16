@@ -1932,7 +1932,7 @@ function CustomerDetailPanel({
                                 <p className="text-xs text-slate-500">{visit.technicianName || "Unassigned"}</p>
                               </div>
                             ) : (
-                              <span className="text-xs text-[#FF8000] bg-[#FF8000]1A px-2 py-1 rounded">Not assigned to route</span>
+                              <span className="text-xs text-[#D35400] bg-[#FF8000]1A px-2 py-1 rounded">Not assigned to route</span>
                             )}
                           </div>
                         );
@@ -2252,7 +2252,7 @@ function CustomerDetailPanel({
                                 variant="outline" 
                                 className={cn(
                                   "text-xs capitalize",
-                                  contact.contactType === "repairs" && "border-[#FF8000] text-[#FF8000] bg-[#FF8000]1A",
+                                  contact.contactType === "repairs" && "border-[#FF8000] text-[#D35400] bg-[#FF8000]1A",
                                   contact.contactType === "chemicals" && "border-[#60A5FA] text-[#60A5FA] bg-[#0078D4]1A",
                                   contact.contactType === "primary" && "border-[#0078D4] text-[#0078D4] bg-[#0078D4]1A"
                                 )}

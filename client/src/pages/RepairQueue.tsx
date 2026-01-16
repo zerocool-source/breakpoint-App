@@ -26,12 +26,12 @@ import {
 import type { ServiceRepairJob, Technician } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33", icon: Clock, label: "Pending" },
+  pending: { color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33", icon: Clock, label: "Pending" },
   assigned: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: User, label: "Assigned" },
-  in_progress: { color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Wrench, label: "In Progress" },
+  in_progress: { color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: Wrench, label: "In Progress" },
   completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
-  estimated: { color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: DollarSign, label: "Estimated" },
+  estimated: { color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: DollarSign, label: "Estimated" },
   batched: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: Target, label: "Batched" },
 };
 
@@ -384,7 +384,7 @@ export default function RepairQueue() {
               <p className="text-xs text-slate-500">{totalActive} active jobs</p>
             </div>
             {totalActive > 0 && (
-              <Badge className="bg-[#FF8000]/10 text-[#FF8000] border-[#FF8000]/20">
+              <Badge className="bg-[#FF8000]/10 text-[#D35400] border-[#FF8000]/20">
                 {totalActive}
               </Badge>
             )}
@@ -392,12 +392,12 @@ export default function RepairQueue() {
 
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center p-2 bg-[#FF8000]1A rounded-lg">
-              <div className="text-lg font-bold text-[#FF8000]">{techData.pending}</div>
-              <div className="text-xs text-[#FF8000]">Pending</div>
+              <div className="text-lg font-bold text-[#D35400]">{techData.pending}</div>
+              <div className="text-xs text-[#D35400]">Pending</div>
             </div>
             <div className="text-center p-2 bg-purple-50 rounded-lg">
-              <div className="text-lg font-bold text-[#17BEBB]">{techData.inProgress}</div>
-              <div className="text-xs text-[#17BEBB]">In Progress</div>
+              <div className="text-lg font-bold text-[#0D9488]">{techData.inProgress}</div>
+              <div className="text-xs text-[#0D9488]">In Progress</div>
             </div>
             <div className="text-center p-2 bg-[#22D69A]1A rounded-lg">
               <div className="text-lg font-bold text-[#22D69A]">{techData.completed}</div>
@@ -427,7 +427,7 @@ export default function RepairQueue() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-[#FF8000]/10 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-[#FF8000]" />
+              <Wrench className="w-6 h-6 text-[#D35400]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-repairqueue">Repair Queue</h1>
@@ -436,12 +436,12 @@ export default function RepairQueue() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="badge-pending-count">
-              <Clock className="w-4 h-4 text-[#FF8000]" />
-              <span className="text-sm font-medium text-[#FF8000]">{pendingRepairs.length} Pending</span>
+              <Clock className="w-4 h-4 text-[#D35400]" />
+              <span className="text-sm font-medium text-[#D35400]">{pendingRepairs.length} Pending</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-[#17BEBB]33" data-testid="badge-inprogress-count">
-              <Wrench className="w-4 h-4 text-[#17BEBB]" />
-              <span className="text-sm font-medium text-[#17BEBB]">{inProgressRepairs.length} In Progress</span>
+              <Wrench className="w-4 h-4 text-[#0D9488]" />
+              <span className="text-sm font-medium text-[#0D9488]">{inProgressRepairs.length} In Progress</span>
             </div>
           </div>
         </div>
@@ -506,7 +506,7 @@ export default function RepairQueue() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-[#FF8000]" />
+                <TrendingUp className="w-4 h-4 text-[#D35400]" />
                 <span className="text-sm text-slate-600">Avg per Tech</span>
               </div>
               <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.avgPerTech}</div>

@@ -198,8 +198,8 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   needs_scheduling: { label: "Needs Scheduling", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: CalendarIcon },
   scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#0078D4] border-[#93C5FD]", icon: CalendarIcon },
   completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
-  ready_to_invoice: { label: "Ready to Invoice", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Receipt },
-  invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Receipt },
+  ready_to_invoice: { label: "Ready to Invoice", color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: Receipt },
+  invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: Receipt },
   archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
 
@@ -395,11 +395,11 @@ export default function Estimates() {
   const getSourceBadgeColor = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
-      case "repair_tech": return "bg-[#17BEBB33] text-[#17BEBB]";
-      case "service_tech": return "bg-[#17BEBB33] text-[#17BEBB]";
-      case "office_staff": return "bg-[#17BEBB33] text-[#17BEBB]";
+      case "repair_tech": return "bg-[#17BEBB33] text-[#0D9488]";
+      case "service_tech": return "bg-[#17BEBB33] text-[#0D9488]";
+      case "office_staff": return "bg-[#17BEBB33] text-[#0D9488]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
-      default: return "bg-[#17BEBB33] text-[#17BEBB]";
+      default: return "bg-[#17BEBB33] text-[#0D9488]";
     }
   };
 
@@ -1548,7 +1548,7 @@ export default function Estimates() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-[#17BEBB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.serviceTech.count}</p>
+                <p className="text-2xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.serviceTech.count}</p>
                 <p className="text-sm text-[#6B7280] mt-1">Service Tech Estimates</p>
               </div>
               <div className="text-right">
@@ -1600,7 +1600,7 @@ export default function Estimates() {
                 <p className="text-xs text-[#6B7280] mt-1">Ready to Invoice</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-[#17BEBB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
+                <p className="text-xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
                 <p className="text-xs text-[#6B7280] mt-1">Invoiced Value</p>
               </div>
               <div className="text-center">
@@ -1613,8 +1613,8 @@ export default function Estimates() {
               </div>
               <a href="/tech-ops/windy-day-cleanup" className="text-center hover:bg-[#17BEBB1A] rounded-lg p-2 -m-2 transition-colors cursor-pointer" data-testid="metric-windy-cleanup">
                 <div className="flex items-center justify-center gap-1">
-                  <Wind className="w-4 h-4 text-[#17BEBB]" />
-                  <p className="text-xl font-bold text-[#17BEBB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{windyDayPending}</p>
+                  <Wind className="w-4 h-4 text-[#0D9488]" />
+                  <p className="text-xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{windyDayPending}</p>
                 </div>
                 <p className="text-xs text-[#6B7280] mt-1">Windy Cleanup</p>
               </a>
@@ -1640,7 +1640,7 @@ export default function Estimates() {
                     <span className="text-sm text-[#1E293B]">Service Tech</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-semibold text-[#17BEBB]">{sourceMetrics.serviceTech.count}</span>
+                    <span className="text-sm font-semibold text-[#0D9488]">{sourceMetrics.serviceTech.count}</span>
                     <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
@@ -1906,7 +1906,7 @@ export default function Estimates() {
                               </button>
                               {estimate.convertedByUserName ? (
                                 <span className="text-[13px] font-medium text-[#374151] bg-[#FF8000]1A px-2.5 py-1 rounded-md border border-[#FF8000]33" data-testid={`text-converted-by-${estimate.id}`}>
-                                  Converted by: <span className="font-semibold text-[#FF8000]">{estimate.convertedByUserName}</span>
+                                  Converted by: <span className="font-semibold text-[#D35400]">{estimate.convertedByUserName}</span>
                                 </span>
                               ) : (estimate.createdByTechName || estimate.officeMemberName) ? (
                                 <span className="text-[13px] font-medium text-[#374151] bg-gray-100 px-2.5 py-1 rounded-md" data-testid={`text-created-by-${estimate.id}`}>
@@ -1960,12 +1960,12 @@ export default function Estimates() {
                           )}
                           {estimate.status === "pending_approval" && (
                             <>
-                              <Badge className="bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33 rounded-full">
+                              <Badge className="bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33 rounded-full">
                                 <Clock className="w-3 h-3 mr-1" />
                                 Pending Approval
                               </Badge>
                               {estimate.approvalSentTo && (
-                                <div className="flex items-center gap-1 text-xs text-[#FF8000] bg-[#FF8000]1A px-2 py-1 rounded-full">
+                                <div className="flex items-center gap-1 text-xs text-[#D35400] bg-[#FF8000]1A px-2 py-1 rounded-full">
                                   <Mail className="w-3 h-3" />
                                   <span>Sent to {estimate.approvalSentTo}</span>
                                 </div>
@@ -1975,7 +1975,7 @@ export default function Estimates() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="text-[#FF8000] border-[#FF8000] hover:bg-[#FF8000]1A"
+                                    className="text-[#D35400] border-[#FF8000] hover:bg-[#FF8000]1A"
                                     data-testid={`button-resend-approval-${estimate.id}`}
                                   >
                                     <Send className="w-3 h-3 mr-1" />
@@ -2159,7 +2159,7 @@ export default function Estimates() {
                           )}
                           {estimate.status === "ready_to_invoice" && (
                             <>
-                              <Badge className="bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33">
+                              <Badge className="bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Ready to Invoice
                               </Badge>
@@ -2359,7 +2359,7 @@ export default function Estimates() {
 
                     <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
                       <div className="flex items-center gap-2 mb-3">
-                        <ClipboardList className="w-4 h-4 text-[#FF8000]" />
+                        <ClipboardList className="w-4 h-4 text-[#D35400]" />
                         <Label className="text-sm font-medium text-orange-800">Work Order Tracking</Label>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -3069,7 +3069,7 @@ export default function Estimates() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-[#FF8000]" />
+                <Mail className="w-5 h-5 text-[#D35400]" />
                 Send for Approval
               </DialogTitle>
               <DialogDescription>
@@ -3575,7 +3575,7 @@ export default function Estimates() {
 
                     <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#17BEBB">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <User className="w-3 h-3 text-[#17BEBB]" />
+                        <User className="w-3 h-3 text-[#0D9488]" />
                         <span className="text-xs text-gray-500">Customer / HOA</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.customerName || "N/A"}</p>
@@ -3586,7 +3586,7 @@ export default function Estimates() {
 
                     <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#FF8000">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <CalendarIcon className="w-3 h-3 text-[#FF8000]" />
+                        <CalendarIcon className="w-3 h-3 text-[#D35400]" />
                         <span className="text-xs text-gray-500">Estimate Date</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{formatDate(selectedEstimate.estimateDate)}</p>
@@ -3610,7 +3610,7 @@ export default function Estimates() {
                   <div className="grid grid-cols-4 gap-4">
                     <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#FF8000">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Wrench className="w-3 h-3 text-[#FF8000]" />
+                        <Wrench className="w-3 h-3 text-[#D35400]" />
                         <span className="text-xs text-gray-500">Repair Tech</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.repairTechName || "Not Assigned"}</p>
@@ -3644,7 +3644,7 @@ export default function Estimates() {
                           {statusConfig[selectedEstimate.status]?.label}
                         </Badge>
                         {selectedEstimate.woRequired && (
-                          <Badge className="bg-[#FF8000]/10 text-[#FF8000] border-[#FF8000] text-xs">
+                          <Badge className="bg-[#FF8000]/10 text-[#D35400] border-[#FF8000] text-xs">
                             WO Required
                           </Badge>
                         )}
@@ -4005,7 +4005,7 @@ export default function Estimates() {
               </div>
 
               <div className="bg-[#FF8000]1A border border-[#FF8000]33 rounded-lg p-3">
-                <p className="text-sm text-[#FF8000] flex items-center gap-2">
+                <p className="text-sm text-[#D35400] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   This will mark all selected estimates as invoiced
                 </p>

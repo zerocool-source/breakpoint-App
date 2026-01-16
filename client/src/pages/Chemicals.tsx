@@ -160,7 +160,7 @@ export default function Chemicals() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#0D9488]" data-testid="btn-back">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>

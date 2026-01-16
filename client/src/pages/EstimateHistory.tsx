@@ -158,9 +158,9 @@ export default function EstimateHistory() {
   const getActionIcon = (actionType: string) => {
     switch (actionType) {
       case "created": return <FileText className="h-4 w-4 text-[#0078D4]" />;
-      case "sent_for_approval": return <Send className="h-4 w-4 text-[#FF8000]" />;
+      case "sent_for_approval": return <Send className="h-4 w-4 text-[#D35400]" />;
       case "approved": return <CheckCircle2 className="h-4 w-4 text-[#22D69A]" />;
-      case "verbal_approval": return <Phone className="h-4 w-4 text-[#17BEBB]" />;
+      case "verbal_approval": return <Phone className="h-4 w-4 text-[#0D9488]" />;
       case "rejected": return <XCircle className="h-4 w-4 text-red-500" />;
       case "archived": return <Archive className="h-4 w-4 text-gray-500" />;
       case "deleted": return <Trash2 className="h-4 w-4 text-red-600" />;
@@ -172,14 +172,14 @@ export default function EstimateHistory() {
   const getActionBadge = (actionType: string) => {
     const variants: Record<string, string> = {
       created: "bg-[#0078D4]1A text-[#0078D4]",
-      sent_for_approval: "bg-[#FF8000]1A text-[#FF8000]",
+      sent_for_approval: "bg-[#FF8000]1A text-[#D35400]",
       approved: "bg-[#22D69A]1A text-[#22D69A]",
-      verbal_approval: "bg-[#17BEBB]1A text-[#17BEBB]",
+      verbal_approval: "bg-[#17BEBB]1A text-[#0D9488]",
       rejected: "bg-red-100 text-red-700",
       archived: "bg-gray-100 text-gray-700",
       deleted: "bg-red-100 text-red-800",
       restored: "bg-[#0078D4]1A text-[#0078D4]",
-      scheduled: "bg-[#17BEBB]1A text-[#17BEBB]",
+      scheduled: "bg-[#17BEBB]1A text-[#0D9488]",
       completed: "bg-[#22D69A]1A text-[#22D69A]",
       invoiced: "bg-[#0078D4]1A text-[#0078D4]",
     };
@@ -239,7 +239,7 @@ export default function EstimateHistory() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-[#17BEBB]" />
+                <Phone className="h-5 w-5 text-[#0D9488]" />
                 <div>
                   <p className="text-2xl font-bold">{metrics?.verbalApprovals || 0}</p>
                   <p className="text-xs text-gray-500">Verbal Approvals</p>

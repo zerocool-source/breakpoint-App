@@ -191,7 +191,7 @@ export function AICommand() {
         {/* Link to Full Chat */}
         <Link href="/chat">
           <button 
-            className="mt-2 flex items-center gap-2 px-3 py-1 rounded font-ui text-xs transition-all duration-300 text-[#17BEBB]/70 hover:text-[#17BEBB] hover:bg-[#17BEBB]/10"
+            className="mt-2 flex items-center gap-2 px-3 py-1 rounded font-ui text-xs transition-all duration-300 text-[#0D9488]/70 hover:text-[#0D9488] hover:bg-[#17BEBB]/10"
             data-testid="button-open-chat"
           >
             <MessageSquare className="w-3 h-3" />

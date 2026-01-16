@@ -518,7 +518,7 @@ export default function Jobs() {
         <div className="flex items-center justify-between">
           <div>
             <Link href="/">
-              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
+              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#0D9488]" data-testid="btn-back">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Dashboard
               </Button>
@@ -736,7 +736,7 @@ export default function Jobs() {
               <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#FF8000]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#FF8000]/30 flex items-center justify-center border border-[#FF8000]/50">
-                    <Clock className="w-5 h-5 text-[#FF8000]" />
+                    <Clock className="w-5 h-5 text-[#D35400]" />
                   </div>
                   <div>
                     <p className="text-xl font-bold font-ui text-white" data-testid="in-progress-count">{jobStatusData.inProgressCount}</p>
@@ -950,14 +950,14 @@ export default function Jobs() {
                           <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-[#FF8000]/50 shadow-lg">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
-                                <Trophy className="w-8 h-8 text-[#FF8000]" />
+                                <Trophy className="w-8 h-8 text-[#D35400]" />
                                 <div>
-                                  <p className="text-xs text-[#FF8000] uppercase tracking-wider font-semibold">Top Earner</p>
+                                  <p className="text-xs text-[#D35400] uppercase tracking-wider font-semibold">Top Earner</p>
                                   <p className="text-xl font-ui font-bold text-white">{topEarner.name}</p>
                                 </div>
                               </div>
                               <div className="flex gap-4 text-sm">
-                                <span className="text-[#FF8000] font-semibold">{formatPrice(topEarner.totalValue)}</span>
+                                <span className="text-[#D35400] font-semibold">{formatPrice(topEarner.totalValue)}</span>
                                 <span className="text-slate-300">{topEarner.jobCount} jobs</span>
                               </div>
                             </CardContent>
@@ -1101,14 +1101,14 @@ export default function Jobs() {
                       <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-[#FF8000]/50 shadow-lg">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <Trophy className="w-8 h-8 text-[#FF8000]" />
+                            <Trophy className="w-8 h-8 text-[#D35400]" />
                             <div>
-                              <p className="text-xs text-[#FF8000] uppercase tracking-wider font-semibold">Top Earner</p>
+                              <p className="text-xs text-[#D35400] uppercase tracking-wider font-semibold">Top Earner</p>
                               <p className="text-xl font-ui font-bold text-white">{repairTechData.topEarner.name}</p>
                             </div>
                           </div>
                           <div className="flex gap-4 text-sm">
-                            <span className="text-[#FF8000] font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
+                            <span className="text-[#D35400] font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
                             <span className="text-slate-300">{repairTechData.topEarner.jobs.length} jobs</span>
                           </div>
                         </CardContent>

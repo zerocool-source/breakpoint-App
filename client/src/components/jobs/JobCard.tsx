@@ -10,10 +10,10 @@ import { Job, ArchiveContext, formatPrice } from "./JobTypes";
 export function PriceDisplay({ price, productName, testId }: { price: number; productName?: string; testId?: string }) {
   if (!price || price === 0) {
     return (
-      <span className="text-[#FF8000] font-ui text-sm" data-testid={testId}>
+      <span className="text-[#D35400] font-ui text-sm" data-testid={testId}>
         <span className="animate-pulse font-semibold">⚠ Need Estimate</span>
         {productName && (
-          <span className="block text-xs text-[#FF8000]/80 mt-0.5">
+          <span className="block text-xs text-[#D35400]/80 mt-0.5">
             → Look up: {productName}
           </span>
         )}
@@ -61,7 +61,7 @@ export function ExpandableJobCard({ job }: { job: Job }) {
                   ) : isPastDue ? (
                     <AlertTriangle className="w-4 h-4 text-red-400" />
                   ) : (
-                    <Clock className="w-4 h-4 text-[#FF8000]" />
+                    <Clock className="w-4 h-4 text-[#D35400]" />
                   )}
                 </div>
                 <div className="text-left">
@@ -85,7 +85,7 @@ export function ExpandableJobCard({ job }: { job: Job }) {
                   </Badge>
                 )}
                 <Badge variant="outline" className={
-                  job.isCompleted ? "border-[#0078D4]/50 text-[#0078D4]" : isPastDue ? "border-red-500/50 text-red-400" : "border-[#FF8000]/50 text-[#FF8000]"
+                  job.isCompleted ? "border-[#0078D4]/50 text-[#0078D4]" : isPastDue ? "border-red-500/50 text-red-400" : "border-[#FF8000]/50 text-[#D35400]"
                 }>
                   {job.status}
                 </Badge>
@@ -160,14 +160,14 @@ export function ExpandableJobCard({ job }: { job: Job }) {
             
             {(job.officeNotes || job.instructions) && (
               <div className="mt-3 p-3 bg-[#FF8000]/20 border border-[#FF8000]/30 rounded-lg">
-                <p className="text-xs text-[#FF8000] uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-xs text-[#D35400] uppercase tracking-wider mb-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Office Notes
                 </p>
                 {job.officeNotes && <p className="text-sm text-white">{job.officeNotes}</p>}
                 {job.instructions && (
                   <p className="text-sm text-slate-300 mt-1">
-                    <span className="text-[#FF8000]">Instructions:</span> {job.instructions}
+                    <span className="text-[#D35400]">Instructions:</span> {job.instructions}
                   </p>
                 )}
               </div>
@@ -244,7 +244,7 @@ export function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
           {job.isCompleted ? (
             <CheckCircle2 className="w-4 h-4 text-[#0078D4]" />
           ) : (
-            <Clock className="w-4 h-4 text-[#FF8000]" />
+            <Clock className="w-4 h-4 text-[#D35400]" />
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -267,7 +267,7 @@ export function JobRow({ job, onClick }: { job: Job; onClick?: () => void }) {
       </div>
       <div className="flex items-center gap-4 shrink-0">
         <Badge variant="outline" className={
-          job.isCompleted ? "border-[#0078D4]/50 text-[#0078D4]" : "border-[#FF8000]/50 text-[#FF8000]"
+          job.isCompleted ? "border-[#0078D4]/50 text-[#0078D4]" : "border-[#FF8000]/50 text-[#D35400]"
         }>
           {job.isCompleted ? "Complete" : "Pending"}
         </Badge>

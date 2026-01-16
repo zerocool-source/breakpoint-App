@@ -32,7 +32,7 @@ interface ParsedPayload {
 
 const entryTypeConfig: Record<string, { label: string; color: string; icon: any }> = {
   service: { label: "Service Visit", color: "bg-[#0078D4]1A text-[#0078D4]", icon: ClipboardCheck },
-  repair: { label: "Repair", color: "bg-[#FF8000]1A text-[#FF8000]", icon: FileText },
+  repair: { label: "Repair", color: "bg-[#FF8000]1A text-[#D35400]", icon: FileText },
   reading: { label: "Reading", color: "bg-[#22D69A]1A text-[#22D69A]", icon: Droplets },
   note: { label: "Note", color: "bg-slate-100 text-slate-600", icon: FileText },
 };
@@ -235,7 +235,7 @@ export default function Visits() {
                                 </Badge>
                               )}
                               {payload.poolName && (
-                                <Badge variant="outline" className="text-[#17BEBB] border-[#17BEBB]">
+                                <Badge variant="outline" className="text-[#0D9488] border-[#17BEBB]">
                                   {payload.poolName}
                                 </Badge>
                               )}
@@ -258,8 +258,8 @@ export default function Visits() {
 
                             {payload.quickAction && (
                               <div className="mb-2 p-2 bg-[#FF8000]1A rounded border border-[#FF8000]33">
-                                <span className="text-sm font-medium text-[#FF8000]">Quick Action: </span>
-                                <span className="text-sm text-[#FF8000]">{payload.quickAction}</span>
+                                <span className="text-sm font-medium text-[#D35400]">Quick Action: </span>
+                                <span className="text-sm text-[#D35400]">{payload.quickAction}</span>
                               </div>
                             )}
 

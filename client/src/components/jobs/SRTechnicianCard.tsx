@@ -48,7 +48,7 @@ export function SRAccountSubfolder({ accountName, jobs }: { accountName: string;
               {jobs.length} jobs
             </Badge>
             {hasNotes && (
-              <Badge className="bg-[#FF8000]/30 text-[#FF8000] border-[#FF8000]/50 text-xs">
+              <Badge className="bg-[#FF8000]/30 text-[#D35400] border-[#FF8000]/50 text-xs">
                 <AlertCircle className="w-3 h-3 mr-1" />
                 Notes
               </Badge>
@@ -70,7 +70,7 @@ export function SRAccountSubfolder({ accountName, jobs }: { accountName: string;
           <div className="p-3 pt-0 space-y-2 border-t border-slate-600/50">
             {hasNotes && (
               <div className="mb-3 p-3 bg-[#FF8000]/20 border border-[#FF8000]/30 rounded-lg">
-                <p className="text-xs text-[#FF8000] uppercase tracking-wider mb-1 flex items-center gap-1">
+                <p className="text-xs text-[#D35400] uppercase tracking-wider mb-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Office Notes
                 </p>
@@ -79,7 +79,7 @@ export function SRAccountSubfolder({ accountName, jobs }: { accountName: string;
                 )}
                 {instructions && (
                   <p className="text-sm text-slate-300 mt-1">
-                    <span className="text-[#FF8000]">Instructions:</span> {instructions}
+                    <span className="text-[#D35400]">Instructions:</span> {instructions}
                   </p>
                 )}
               </div>

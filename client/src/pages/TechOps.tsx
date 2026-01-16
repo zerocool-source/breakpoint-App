@@ -34,7 +34,7 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
   service_repairs: { 
     label: "Service Repairs", 
     icon: Wrench, 
-    color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33",
+    color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
     description: "Sub-$500 service repairs submitted by technicians"
   },
   chemical_order: { 
@@ -52,13 +52,13 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
   windy_day_cleanup: { 
     label: "Windy Day Clean Up", 
     icon: Wind, 
-    color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33",
+    color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33",
     description: "Schedule additional cleanup due to windy conditions"
   },
   report_issue: { 
     label: "Report Issue", 
     icon: AlertTriangle, 
-    color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33",
+    color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33",
     description: "Report any issue or concern at a property"
   },
   supervisor_concerns: { 
@@ -70,7 +70,7 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
 };
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33", icon: Clock, label: "Pending" },
+  pending: { color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33", icon: Clock, label: "Pending" },
   reviewed: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: CheckCircle, label: "Reviewed" },
   completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle, label: "Cancelled" },
@@ -79,8 +79,8 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
 
 const priorityConfig: Record<string, { bg: string; text: string; label: string }> = {
   low: { bg: "bg-[#22D69A]1A", text: "text-[#22D69A]", label: "Low" },
-  normal: { bg: "bg-[#FF8000]1A", text: "text-[#FF8000]", label: "Medium" },
-  high: { bg: "bg-[#FF8000]1A", text: "text-[#FF8000]", label: "High" },
+  normal: { bg: "bg-[#FF8000]1A", text: "text-[#D35400]", label: "Medium" },
+  high: { bg: "bg-[#FF8000]1A", text: "text-[#D35400]", label: "High" },
   urgent: { bg: "bg-red-100", text: "text-red-700", label: "Urgent" },
 };
 
@@ -643,7 +643,7 @@ export default function TechOps() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        className="text-[#FF8000] hover:text-[#FF8000] hover:bg-[#FF8000]1A border-[#FF8000]33"
+                                        className="text-[#D35400] hover:text-[#D35400] hover:bg-[#FF8000]1A border-[#FF8000]33"
                                         onClick={() => noChargeMutation.mutate(entry.id)}
                                         disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
                                         data-testid={`button-no-charge-${entry.id}`}
@@ -841,7 +841,7 @@ export default function TechOps() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-[#FF8000] hover:text-[#FF8000] hover:bg-[#FF8000]1A border-[#FF8000]33"
+                                  className="text-[#D35400] hover:text-[#D35400] hover:bg-[#FF8000]1A border-[#FF8000]33"
                                   onClick={() => noChargeMutation.mutate(entry.id)}
                                   disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
                                   data-testid={`button-no-charge-${entry.id}`}

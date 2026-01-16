@@ -493,7 +493,7 @@ export default function Operations() {
                                       className={
                                         alert.type === "SystemIssue" 
                                           ? "bg-red-100 text-red-700 border-red-300" 
-                                          : "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]"
+                                          : "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]"
                                       }
                                     >
                                       <Wrench className="h-3 w-3 mr-1" />

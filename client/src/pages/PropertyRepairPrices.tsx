@@ -153,7 +153,7 @@ function MonthlySpendChart({ monthlyTotals }: { monthlyTotals: Record<string, nu
     <Card className="bg-card/50 border-[#17BEBB]/30">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-ui flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-[#17BEBB]" />
+          <BarChart3 className="w-5 h-5 text-[#0D9488]" />
           Monthly Repair Spending (Last 12 Months)
         </CardTitle>
       </CardHeader>
@@ -294,7 +294,7 @@ export default function PropertyRepairPrices() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-[#17BEBB]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#0D9488]" />
           <p className="text-muted-foreground font-ui">Loading property repair data...</p>
         </div>
       </div>
@@ -321,12 +321,12 @@ export default function PropertyRepairPrices() {
       <div className="flex items-center justify-between">
         <div>
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#0D9488]" data-testid="btn-back">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
           </Link>
-          <h1 className="text-3xl font-display font-bold text-[#17BEBB]" data-testid="page-title">
+          <h1 className="text-3xl font-display font-bold text-[#0D9488]" data-testid="page-title">
             Property Repair Prices
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -346,7 +346,7 @@ export default function PropertyRepairPrices() {
           <Button
             variant="outline"
             onClick={() => exportPropertyRepairsPDF(sortedProperties, summary!)}
-            className="gap-2 text-[#17BEBB] border-[#17BEBB]/30 hover:bg-[#17BEBB]/10"
+            className="gap-2 text-[#0D9488] border-[#17BEBB]/30 hover:bg-[#17BEBB]/10"
             data-testid="btn-export-pdf"
           >
             <FileDown className="w-4 h-4" />
@@ -362,11 +362,11 @@ export default function PropertyRepairPrices() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-[#17BEBB]/20">
-                    <Building2 className="w-5 h-5 text-[#17BEBB]" />
+                    <Building2 className="w-5 h-5 text-[#0D9488]" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Properties</p>
-                    <p className="text-2xl font-display font-bold text-[#17BEBB]" data-testid="stat-total-properties">
+                    <p className="text-2xl font-display font-bold text-[#0D9488]" data-testid="stat-total-properties">
                       {summary.totalProperties}
                     </p>
                   </div>
@@ -527,11 +527,11 @@ export default function PropertyRepairPrices() {
                   <CardHeader className="cursor-pointer py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#17BEBB]/20 text-[#17BEBB] font-display font-bold text-sm">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#17BEBB]/20 text-[#0D9488] font-display font-bold text-sm">
                           {index + 1}
                         </div>
                         {expandedProperties.has(property.propertyId) ? (
-                          <ChevronDown className="w-5 h-5 text-[#17BEBB]" />
+                          <ChevronDown className="w-5 h-5 text-[#0D9488]" />
                         ) : (
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         )}
@@ -599,7 +599,7 @@ export default function PropertyRepairPrices() {
                       <PropertySpendChart property={property} />
                       
                       <div className="space-y-2 mt-4">
-                        <h4 className="text-sm font-ui font-semibold text-[#17BEBB]">Repair History</h4>
+                        <h4 className="text-sm font-ui font-semibold text-[#0D9488]">Repair History</h4>
                         <div className="grid gap-2">
                           {property.repairs.slice(0, 10).map((repair, rIndex) => (
                             <div 

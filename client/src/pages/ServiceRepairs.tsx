@@ -51,7 +51,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]" },
   selected: { label: "Selected", color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33" },
   estimated: { label: "Estimated", color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33" },
-  invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33" },
+  invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33" },
 };
 
 function formatCurrency(cents: number | null | undefined): string {
@@ -574,7 +574,7 @@ export default function ServiceRepairs() {
         {/* Service Repair Cards - Grouped by Property */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#FF8000]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#D35400]" />
           </div>
         ) : filteredAndSortedRepairs.length === 0 ? (
           <div className="text-center py-12 text-[#64748B]">
@@ -696,7 +696,7 @@ export default function ServiceRepairs() {
                                 {/* Notes */}
                                 {repair.notes && (
                                   <div className="text-slate-600 text-sm bg-[#FF8000]1A p-2 rounded border border-[#FF8000]1A">
-                                    <p className="font-medium text-[#FF8000] mb-1">Notes</p>
+                                    <p className="font-medium text-[#D35400] mb-1">Notes</p>
                                     <p>{repair.notes}</p>
                                   </div>
                                 )}
@@ -815,7 +815,7 @@ export default function ServiceRepairs() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-[#FF8000]" />
+              <Wrench className="w-5 h-5 text-[#D35400]" />
               Add Service Repair Job
             </DialogTitle>
           </DialogHeader>

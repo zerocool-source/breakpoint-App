@@ -285,7 +285,7 @@ export default function Equipment() {
     const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysUntil < 0) return { status: "overdue", daysOver: Math.abs(daysUntil), daysUntil, color: "bg-red-100 text-red-700" };
-    if (daysUntil <= 30) return { status: "due_soon", daysUntil, color: "bg-[#FF8000]1A text-[#FF8000]" };
+    if (daysUntil <= 30) return { status: "due_soon", daysUntil, color: "bg-[#FF8000]1A text-[#D35400]" };
     return { status: "current", daysUntil, color: "bg-[#22D69A]1A text-[#22D69A]" };
   };
 
@@ -400,9 +400,9 @@ export default function Equipment() {
 
   const getEquipmentTypeIcon = (type: string) => {
     const t = type.toLowerCase();
-    if (t.includes("heater")) return <Flame className="h-4 w-4 text-[#FF8000]" />;
+    if (t.includes("heater")) return <Flame className="h-4 w-4 text-[#D35400]" />;
     if (t.includes("filter")) return <Filter className="h-4 w-4 text-[#0078D4]" />;
-    if (t.includes("pump")) return <Droplets className="h-4 w-4 text-[#17BEBB]" />;
+    if (t.includes("pump")) return <Droplets className="h-4 w-4 text-[#0D9488]" />;
     return <Wrench className="h-4 w-4 text-slate-500" />;
   };
 
@@ -420,8 +420,8 @@ export default function Equipment() {
           </Card>
           <Card className="bg-gradient-to-br from-[#FF8000]1A to-[#FF8000]1A border-[#FF8000]33">
             <CardContent className="p-4">
-              <p className="text-sm text-[#FF8000] font-medium">Due Soon</p>
-              <p className="text-3xl font-bold text-[#FF8000]" data-testid="stat-due-soon">
+              <p className="text-sm text-[#D35400] font-medium">Due Soon</p>
+              <p className="text-3xl font-bold text-[#D35400]" data-testid="stat-due-soon">
                 {dashboardStats.dueSoon}
               </p>
             </CardContent>

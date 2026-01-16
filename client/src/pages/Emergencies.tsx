@@ -30,13 +30,13 @@ import { useToast } from "@/hooks/use-toast";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
   service_technician: { label: "Service Tech", color: "bg-[#0078D4]1A text-[#0078D4]" },
-  repair_technician: { label: "Repair Tech", color: "bg-[#17BEBB]1A text-[#17BEBB]" },
+  repair_technician: { label: "Repair Tech", color: "bg-[#17BEBB]1A text-[#0D9488]" },
   supervisor: { label: "Supervisor", color: "bg-[#22D69A]1A text-[#22D69A]" },
-  repair_foreman: { label: "Repair Foreman", color: "bg-[#FF8000]1A text-[#FF8000]" },
+  repair_foreman: { label: "Repair Foreman", color: "bg-[#FF8000]1A text-[#D35400]" },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending_review: { label: "Pending Review", color: "bg-[#FF8000]1A text-[#FF8000]", icon: Clock },
+  pending_review: { label: "Pending Review", color: "bg-[#FF8000]1A text-[#D35400]", icon: Clock },
   in_progress: { label: "In Progress", color: "bg-[#0078D4]1A text-[#0078D4]", icon: PlayCircle },
   resolved: { label: "Resolved", color: "bg-[#22D69A]1A text-[#22D69A]", icon: CheckCircle },
 };
@@ -44,7 +44,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 const priorityConfig: Record<string, { label: string; color: string }> = {
   low: { label: "Low", color: "border-slate-300 text-slate-600" },
   normal: { label: "Normal", color: "border-slate-300 text-slate-600" },
-  high: { label: "High", color: "border-orange-300 text-[#FF8000] bg-[#FF8000]1A" },
+  high: { label: "High", color: "border-orange-300 text-[#D35400] bg-[#FF8000]1A" },
   critical: { label: "Critical", color: "border-red-400 text-red-700 bg-red-50" },
 };
 
@@ -317,8 +317,8 @@ export default function Emergencies() {
                 <div className="text-sm text-slate-500">Total Emergencies</div>
               </div>
               <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-pending">
-                <div className="text-2xl font-bold text-[#FF8000]">{summary?.byStatus?.pending_review || 0}</div>
-                <div className="text-sm text-[#FF8000]">Pending Review</div>
+                <div className="text-2xl font-bold text-[#D35400]">{summary?.byStatus?.pending_review || 0}</div>
+                <div className="text-sm text-[#D35400]">Pending Review</div>
               </div>
               <div className="p-4 bg-[#0078D4]1A rounded-lg border border-[#0078D4]33" data-testid="metric-in-progress">
                 <div className="text-2xl font-bold text-[#0078D4]">{summary?.byStatus?.in_progress || 0}</div>
@@ -347,7 +347,7 @@ export default function Emergencies() {
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-lg font-bold text-[#1E293B]">{prop.count}</span>
                         {prop.pending > 0 && (
-                          <Badge className="bg-[#FF8000]1A text-[#FF8000] text-[10px] px-1.5">
+                          <Badge className="bg-[#FF8000]1A text-[#D35400] text-[10px] px-1.5">
                             {prop.pending} open
                           </Badge>
                         )}
@@ -491,7 +491,7 @@ export default function Emergencies() {
                 {selectedEmergency.convertedToEstimateId && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Converted To</span>
-                    <Badge className="bg-[#17BEBB]1A text-[#17BEBB]">Estimate Created</Badge>
+                    <Badge className="bg-[#17BEBB]1A text-[#0D9488]">Estimate Created</Badge>
                   </div>
                 )}
                 {selectedEmergency.convertedToInvoiceId && (

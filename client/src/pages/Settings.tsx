@@ -85,7 +85,7 @@ export default function Settings() {
     <AppLayout>
       <div className="mb-8">
         <Link href="/">
-          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
+          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#0D9488]" data-testid="btn-back">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Button>

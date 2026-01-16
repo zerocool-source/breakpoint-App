@@ -68,7 +68,7 @@ function getMaintenanceStatus(days: number | null, serviceType: string): { statu
   };
   const threshold = thresholds[serviceType] || 365;
   if (days > threshold * 1.2) return { status: "Overdue", color: "bg-red-100 text-red-700" };
-  if (days > threshold * 0.9) return { status: "Due Soon", color: "bg-[#FF8000]1A text-[#FF8000]" };
+  if (days > threshold * 0.9) return { status: "Due Soon", color: "bg-[#FF8000]1A text-[#D35400]" };
   return { status: "Current", color: "bg-[#22D69A]1A text-[#22D69A]" };
 }
 
@@ -307,8 +307,8 @@ export default function Fleet() {
   const getPriorityBadge = (priority: string) => {
     const styles: Record<string, string> = {
       Critical: "bg-red-100 text-red-700",
-      High: "bg-[#FF8000]1A text-[#FF8000]",
-      Medium: "bg-[#FF8000]1A text-[#FF8000]",
+      High: "bg-[#FF8000]1A text-[#D35400]",
+      Medium: "bg-[#FF8000]1A text-[#D35400]",
       Low: "bg-gray-100 text-gray-700",
     };
     return styles[priority] || styles.Low;
@@ -317,8 +317,8 @@ export default function Fleet() {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       New: "bg-[#0078D4]1A text-[#0078D4]",
-      Acknowledged: "bg-[#FF8000]1A text-[#FF8000]",
-      "In Progress": "bg-[#17BEBB]1A text-[#17BEBB]",
+      Acknowledged: "bg-[#FF8000]1A text-[#D35400]",
+      "In Progress": "bg-[#17BEBB]1A text-[#0D9488]",
       Resolved: "bg-[#22D69A]1A text-[#22D69A]",
     };
     return styles[status] || styles.New;
@@ -446,7 +446,7 @@ export default function Fleet() {
                 </div>
                 <div className="h-12 w-px bg-gray-200" />
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-[#FF8000]">{maintenanceStats.dueSoon}</p>
+                  <p className="text-4xl font-bold text-[#D35400]">{maintenanceStats.dueSoon}</p>
                   <p className="text-sm text-gray-500">Due This Week</p>
                 </div>
               </div>
@@ -590,17 +590,17 @@ export default function Fleet() {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-[#FF8000]1A rounded-lg">
                   <div className="flex items-center gap-3">
-                    <ClipboardCheck className="h-5 w-5 text-[#FF8000]" />
+                    <ClipboardCheck className="h-5 w-5 text-[#D35400]" />
                     <span className="text-gray-700">Needs Inspection</span>
                   </div>
-                  <span className="text-2xl font-bold text-[#FF8000]">{maintenanceStats.dueSoon}</span>
+                  <span className="text-2xl font-bold text-[#D35400]">{maintenanceStats.dueSoon}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-[#FF8000]1A rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Wrench className="h-5 w-5 text-[#FF8000]" />
+                    <Wrench className="h-5 w-5 text-[#D35400]" />
                     <span className="text-gray-700">Out for Repair</span>
                   </div>
-                  <span className="text-2xl font-bold text-[#FF8000]">{stats.inShop}</span>
+                  <span className="text-2xl font-bold text-[#D35400]">{stats.inShop}</span>
                 </div>
               </div>
             </CardContent>
@@ -659,9 +659,9 @@ export default function Fleet() {
                           }
                           return Math.max(0, Math.min(100, score));
                         })();
-                        const healthColor = healthScore >= 80 ? "text-[#22D69A]" : healthScore >= 60 ? "text-[#FF8000]" : "text-red-600";
+                        const healthColor = healthScore >= 80 ? "text-[#22D69A]" : healthScore >= 60 ? "text-[#D35400]" : "text-red-600";
                         const statusBadgeColor = truckStatus === "Active" ? "bg-[#22D69A]1A text-[#22D69A]" :
-                                                 truckStatus === "In Shop" ? "bg-[#FF8000]1A text-[#FF8000]" : "bg-gray-100 text-gray-700";
+                                                 truckStatus === "In Shop" ? "bg-[#FF8000]1A text-[#D35400]" : "bg-gray-100 text-gray-700";
 
                         return (
                           <tr 

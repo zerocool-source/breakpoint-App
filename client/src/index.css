@@ -96,11 +96,11 @@
   }
   
   .badge-accent {
-    @apply bg-[#17BEBB]/20 text-[#17BEBB];
+    @apply bg-[#17BEBB]/20 text-[#0D9488];
   }
   
   .badge-secondary {
-    @apply bg-[#FF8000]/20 text-[#FF8000];
+    @apply bg-[#FF8000]/20 text-[#D35400];
   }
   
   .badge-success {
@@ -108,7 +108,7 @@
   }
   
   .badge-warning {
-    @apply bg-[#FF8000]/20 text-[#FF8000];
+    @apply bg-[#FF8000]/20 text-[#D35400];
   }
   
   .badge-danger {
@@ -120,7 +120,7 @@
   }
   
   .badge-pending {
-    @apply bg-[#FF8000]/20 text-[#FF8000];
+    @apply bg-[#FF8000]/20 text-[#D35400];
   }
   
   .badge-completed {
@@ -132,7 +132,7 @@
   }
   
   .badge-teal {
-    @apply bg-[#17BEBB]/20 text-[#17BEBB];
+    @apply bg-[#17BEBB]/20 text-[#0D9488];
   }
   
   .badge-in-progress {

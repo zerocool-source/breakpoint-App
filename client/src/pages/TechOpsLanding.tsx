@@ -33,7 +33,7 @@ const techOpsOptions = [
     label: "Service Repairs", 
     href: "/service-repairs",
     icon: Wrench, 
-    color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33",
+    color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
     description: "Sub-$500 service technician repair jobs"
   },
   { 
@@ -60,7 +60,7 @@ const techOpsOptions = [
     label: "Windy Day Clean Up", 
     href: "/tech-ops/windy-day-cleanup",
     icon: Wind, 
-    color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33",
+    color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
     description: "Request extra cleaning after windy conditions"
   },
   { 
@@ -69,7 +69,7 @@ const techOpsOptions = [
     label: "Report Issues", 
     href: "/tech-ops/report-issue",
     icon: AlertTriangle, 
-    color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33",
+    color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33",
     description: "Report any issue or concern at a property"
   },
 ];
@@ -87,15 +87,15 @@ const managementOptions = [
 
 const entryTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
   repairs_needed: { label: "Repairs Needed", color: "bg-red-100 text-red-700", icon: Wrench },
-  service_repairs: { label: "Service Repairs", color: "bg-[#17BEBB]1A text-[#17BEBB]", icon: Wrench },
+  service_repairs: { label: "Service Repairs", color: "bg-[#17BEBB]1A text-[#0D9488]", icon: Wrench },
   chemical_order: { label: "Chemical Orders", color: "bg-[#0078D4]1A text-[#0078D4]", icon: Droplets },
   chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-[#22D69A]1A text-[#22D69A]", icon: Droplets },
-  windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-[#17BEBB]1A text-[#17BEBB]", icon: Wind },
-  report_issue: { label: "Report Issues", color: "bg-[#FF8000]1A text-[#FF8000]", icon: AlertTriangle },
+  windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-[#17BEBB]1A text-[#0D9488]", icon: Wind },
+  report_issue: { label: "Report Issues", color: "bg-[#FF8000]1A text-[#D35400]", icon: AlertTriangle },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#FF8000]", icon: Clock },
+  pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#D35400]", icon: Clock },
   reviewed: { label: "Reviewed", color: "bg-[#0078D4]1A text-[#0078D4]", icon: FileText },
   completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#22D69A]", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-600", icon: XCircle },
@@ -364,8 +364,8 @@ export default function TechOpsLanding() {
                 <div className="text-sm text-slate-500">Total Submissions</div>
               </div>
               <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-pending">
-                <div className="text-2xl font-bold text-[#FF8000]">{summary?.byStatus?.pending || 0}</div>
-                <div className="text-sm text-[#FF8000]">Pending</div>
+                <div className="text-2xl font-bold text-[#D35400]">{summary?.byStatus?.pending || 0}</div>
+                <div className="text-sm text-[#D35400]">Pending</div>
               </div>
               <div className="p-4 bg-[#22D69A]1A rounded-lg border border-[#22D69A]33" data-testid="metric-completed">
                 <div className="text-2xl font-bold text-[#22D69A]">{summary?.byStatus?.completed || 0}</div>
@@ -380,8 +380,8 @@ export default function TechOpsLanding() {
                 <div className="text-sm text-[#0078D4]">Chemical Requests</div>
               </div>
               <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-issues">
-                <div className="text-2xl font-bold text-[#FF8000]">{summary?.byType?.report_issue || 0}</div>
-                <div className="text-sm text-[#FF8000]">Reported Issues</div>
+                <div className="text-2xl font-bold text-[#D35400]">{summary?.byType?.report_issue || 0}</div>
+                <div className="text-sm text-[#D35400]">Reported Issues</div>
               </div>
             </div>
 
@@ -424,7 +424,7 @@ export default function TechOpsLanding() {
                                 {entry.priority && entry.priority !== "normal" && (
                                   <Badge variant="outline" className={cn(
                                     entry.priority === "urgent" ? "border-red-300 text-red-700" :
-                                    entry.priority === "high" ? "border-orange-300 text-[#FF8000]" :
+                                    entry.priority === "high" ? "border-orange-300 text-[#D35400]" :
                                     "border-slate-300 text-slate-600"
                                   )}>
                                     {entry.priority}

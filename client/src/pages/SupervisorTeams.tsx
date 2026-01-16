@@ -396,9 +396,9 @@ export default function SupervisorTeams() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="w-5 h-5 text-[#FF8000]" />
+                  <User className="w-5 h-5 text-[#D35400]" />
                   Unassigned Technicians
-                  <Badge className="ml-2 bg-[#FF8000]1A text-[#FF8000]">
+                  <Badge className="ml-2 bg-[#FF8000]1A text-[#D35400]">
                     {unassignedTechnicians.length}
                   </Badge>
                 </CardTitle>
@@ -434,7 +434,7 @@ export default function SupervisorTeams() {
                         >
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={tech.photoUrl || undefined} />
-                            <AvatarFallback className="bg-[#FF8000]1A text-[#FF8000] text-xs">
+                            <AvatarFallback className="bg-[#FF8000]1A text-[#D35400] text-xs">
                               {getInitials(tech.firstName, tech.lastName)}
                             </AvatarFallback>
                           </Avatar>
@@ -479,7 +479,7 @@ export default function SupervisorTeams() {
                         {allTechnicians.filter(t => t.role === "service" && t.active).length}
                       </span>
                     </div>
-                    <div className="flex justify-between text-[#FF8000]">
+                    <div className="flex justify-between text-[#D35400]">
                       <span>Unassigned:</span>
                       <span className="font-semibold">{unassignedTechnicians.length}</span>
                     </div>
@@ -768,7 +768,7 @@ export default function SupervisorTeams() {
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={selectedTechnician.photoUrl || undefined} />
-                    <AvatarFallback className="bg-[#FF8000]1A text-[#FF8000]">
+                    <AvatarFallback className="bg-[#FF8000]1A text-[#D35400]">
                       {getInitials(selectedTechnician.firstName, selectedTechnician.lastName)}
                     </AvatarFallback>
                   </Avatar>

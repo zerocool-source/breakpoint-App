@@ -196,7 +196,7 @@ export default function TruckInventory() {
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-[#17BEBB]1A rounded-lg">
-                  <Filter className="h-5 w-5 text-[#17BEBB]" />
+                  <Filter className="h-5 w-5 text-[#0D9488]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{TRUCK_INVENTORY_CATEGORIES.length}</p>

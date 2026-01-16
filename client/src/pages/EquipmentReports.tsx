@@ -99,9 +99,9 @@ export default function EquipmentReports() {
   const getEquipmentBadge = (type: string) => {
     switch (type) {
       case "Tear Down":
-        return <Badge className="bg-[#17BEBB]1A text-[#17BEBB] hover:bg-[#17BEBB]1A">{type}</Badge>;
+        return <Badge className="bg-[#17BEBB]1A text-[#0D9488] hover:bg-[#17BEBB]1A">{type}</Badge>;
       case "De-Soot":
-        return <Badge className="bg-[#FF8000]1A text-[#FF8000] hover:bg-[#FF8000]1A"><Flame className="w-3 h-3 mr-1" />{type}</Badge>;
+        return <Badge className="bg-[#FF8000]1A text-[#D35400] hover:bg-[#FF8000]1A"><Flame className="w-3 h-3 mr-1" />{type}</Badge>;
       case "Heater":
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><Flame className="w-3 h-3 mr-1" />{type}</Badge>;
       default:
@@ -167,7 +167,7 @@ export default function EquipmentReports() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Tear Downs</p>
-                    <p className="text-2xl font-bold text-[#17BEBB]">{tearDownCount}</p>
+                    <p className="text-2xl font-bold text-[#0D9488]">{tearDownCount}</p>
                   </div>
                   <Wrench className="w-8 h-8 text-purple-400" />
                 </div>
@@ -179,7 +179,7 @@ export default function EquipmentReports() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">De-Soots</p>
-                    <p className="text-2xl font-bold text-[#FF8000]">{deSootCount}</p>
+                    <p className="text-2xl font-bold text-[#D35400]">{deSootCount}</p>
                   </div>
                   <Flame className="w-8 h-8 text-orange-400" />
                 </div>
@@ -201,9 +201,9 @@ export default function EquipmentReports() {
 
           {hasPartialData && (
             <Alert className="mb-6 border-[#FF8000]33 bg-[#FF8000]1A">
-              <AlertTriangle className="h-4 w-4 text-[#FF8000]" />
+              <AlertTriangle className="h-4 w-4 text-[#D35400]" />
               <AlertTitle className="text-amber-800">Partial Data Warning</AlertTitle>
-              <AlertDescription className="text-[#FF8000]">
+              <AlertDescription className="text-[#D35400]">
                 Some job details could not be fetched from Pool Brain. The report may be incomplete.
               </AlertDescription>
             </Alert>

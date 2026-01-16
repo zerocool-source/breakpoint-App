@@ -516,7 +516,7 @@ export default function PropertyProfiles() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-[#FF8000]" /> Financial
+                          <DollarSign className="w-4 h-4 text-[#D35400]" /> Financial
                         </h3>
                         <div className="text-sm space-y-1">
                           <p><span className="text-slate-500">Monthly Rate:</span> {formatCurrency(selectedProperty.monthlyRate)}</p>
@@ -612,7 +612,7 @@ export default function PropertyProfiles() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Receipt className="w-5 h-5 text-[#FF8000]" />
+                        <Receipt className="w-5 h-5 text-[#D35400]" />
                         Billing Contacts
                       </CardTitle>
                       <Button
@@ -844,7 +844,7 @@ export default function PropertyProfiles() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#FF8000]" />
+              <Receipt className="w-5 h-5 text-[#D35400]" />
               Add Billing Contact
             </DialogTitle>
           </DialogHeader>

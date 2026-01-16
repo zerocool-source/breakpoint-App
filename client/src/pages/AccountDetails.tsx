@@ -22,7 +22,7 @@ const MESSAGE_TYPES = [
   { value: "issue", label: "Issue", icon: AlertTriangle, color: "bg-red-500/20 text-red-300 border-red-400/50" },
   { value: "repair", label: "Repair Needed", icon: Wrench, color: "bg-[#FF8000]/20 text-orange-300 border-orange-400/50" },
   { value: "chemical", label: "Chemical/Safety", icon: Droplets, color: "bg-[#17BEBB]/20 text-purple-300 border-purple-400/50" },
-  { value: "task", label: "Task Created", icon: CheckCircle2, color: "bg-[#17BEBB]/20 text-[#17BEBB] border-[#17BEBB]/50" },
+  { value: "task", label: "Task Created", icon: CheckCircle2, color: "bg-[#17BEBB]/20 text-[#0D9488] border-[#17BEBB]/50" },
   { value: "photo", label: "Photo", icon: Camera, color: "bg-[#EF4444]/20 text-pink-300 border-[#EF4444]/50" },
 ];
 
@@ -154,7 +154,7 @@ function ThreadPanel({ threadId, accountName }: { threadId: string; accountName:
 
       {pinnedMessages.length > 0 && (
         <div className="mb-4 p-3 bg-[#FF8000]/20 border border-[#FF8000]/30 rounded-lg">
-          <div className="flex items-center gap-2 text-[#FF8000] text-sm font-medium mb-2">
+          <div className="flex items-center gap-2 text-[#D35400] text-sm font-medium mb-2">
             <Pin className="w-4 h-4" />
             Pinned Messages
           </div>
@@ -280,7 +280,7 @@ function MessageCard({
           variant="ghost"
           size="sm"
           onClick={() => onPin({ id: message.id, pinned: !message.pinned })}
-          className={message.pinned ? "text-[#FF8000]" : "text-slate-500 hover:text-[#FF8000]"}
+          className={message.pinned ? "text-[#D35400]" : "text-slate-500 hover:text-[#D35400]"}
           data-testid={`btn-pin-${message.id}`}
         >
           <Pin className="w-4 h-4" />
@@ -315,7 +315,7 @@ function WorkOrdersTab({ accountId }: { accountId: string }) {
                   <p className="text-sm text-slate-400">{job.technicianName || "Unassigned"}</p>
                 </div>
                 <div className="text-right">
-                  <Badge className={job.isCompleted ? "bg-[#22D69A]/20 text-green-300" : "bg-[#FF8000]/20 text-[#FF8000]"}>
+                  <Badge className={job.isCompleted ? "bg-[#22D69A]/20 text-green-300" : "bg-[#FF8000]/20 text-[#D35400]"}>
                     {job.isCompleted ? "Complete" : job.status || "Pending"}
                   </Badge>
                   <p className="text-sm text-[#0078D4] mt-1">${(job.price || 0).toLocaleString()}</p>

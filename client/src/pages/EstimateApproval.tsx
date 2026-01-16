@@ -161,7 +161,7 @@ export default function EstimateApproval() {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
-          <AlertTriangle className="w-12 h-12 text-[#FF8000] mx-auto mb-3" />
+          <AlertTriangle className="w-12 h-12 text-[#D35400] mx-auto mb-3" />
           <h2 className="text-xl font-semibold text-slate-800 mb-2">Invalid Link</h2>
           <p className="text-slate-600 text-sm">This approval link appears to be invalid. Please check the link in your email.</p>
         </div>
@@ -196,7 +196,7 @@ export default function EstimateApproval() {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
-          <AlertTriangle className="w-12 h-12 text-[#FF8000] mx-auto mb-3" />
+          <AlertTriangle className="w-12 h-12 text-[#D35400] mx-auto mb-3" />
           <h2 className="text-xl font-semibold text-slate-800 mb-2">Estimate Not Found</h2>
           <p className="text-slate-600 text-sm">This estimate could not be found or the approval link may have expired.</p>
         </div>

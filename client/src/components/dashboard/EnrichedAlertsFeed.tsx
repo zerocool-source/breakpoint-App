@@ -136,7 +136,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
     if (upper === "URGENT") return "bg-destructive/15 text-destructive border-destructive/30";
     if (upper.includes("CRITICAL")) return "bg-destructive/15 text-destructive border-destructive/30";
     if (upper.includes("HIGH")) return "bg-secondary/15 text-secondary border-secondary/30";
-    if (upper.includes("MEDIUM")) return "bg-[#FF8000]/15 text-[#FF8000] border-[#FF8000]/30";
+    if (upper.includes("MEDIUM")) return "bg-[#FF8000]/15 text-[#D35400] border-[#FF8000]/30";
     return "bg-primary/15 text-primary border-primary/30";
   };
 

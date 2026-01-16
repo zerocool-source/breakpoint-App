@@ -262,7 +262,7 @@ export default function Payroll() {
         <div className="flex items-center justify-between">
           <div>
             <Link href="/">
-              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
+              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#0D9488]" data-testid="btn-back">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Dashboard
               </Button>
@@ -326,7 +326,7 @@ export default function Payroll() {
           <Card className="bg-card/50 border-[#17BEBB]/30">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-[#17BEBB]/20 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-[#17BEBB]" />
+                <Clock className="w-6 h-6 text-[#0D9488]" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground" data-testid="total-value">{formatPrice(totalJobValue)}</p>
