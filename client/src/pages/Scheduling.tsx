@@ -651,7 +651,7 @@ export default function Scheduling() {
               <Button
                 size="sm"
                 onClick={() => setShowCreateRouteDialog(true)}
-                className="bg-[#0078D4] hover:bg-[#0078D4] text-white text-xs font-medium h-8"
+                className="bg-[#FF8000] hover:bg-[#E67300] text-white text-xs font-medium h-8"
                 data-testid="btn-new-route"
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
@@ -1345,7 +1345,7 @@ export default function Scheduling() {
                 <Button
                   onClick={() => createRouteMutation.mutate({ ...newRoute, customerIds: selectedCustomerIds })}
                   disabled={!newRoute.name}
-                  className="bg-[#0078D4] hover:bg-[#0078D4]"
+                  className="bg-[#FF8000] hover:bg-[#E67300] text-white"
                 >
                   Create Route
                 </Button>
@@ -1400,7 +1400,7 @@ export default function Scheduling() {
                     id: selectedRoute.id,
                     updates: { name: newRoute.name, color: newRoute.color, technicianName: newRoute.technicianName }
                   })}
-                  className="bg-[#0078D4] hover:bg-[#0078D4]"
+                  className="bg-[#FF8000] hover:bg-[#E67300] text-white"
                 >
                   Save Changes
                 </Button>
@@ -1455,7 +1455,7 @@ export default function Scheduling() {
                 <Button
                   onClick={() => selectedRoute && createStopMutation.mutate({ routeId: selectedRoute.id, stop: newStop })}
                   disabled={!newStop.poolName}
-                  className="bg-[#0078D4] hover:bg-[#0078D4]"
+                  className="bg-[#FF8000] hover:bg-[#E67300] text-white"
                 >
                   Add Stop
                 </Button>
