@@ -44,6 +44,7 @@ import {
   type CustomerTag, type InsertCustomerTag,
   type CustomerTagAssignment, type InsertCustomerTagAssignment,
   type Emergency, type InsertEmergency,
+  type EstimateHistoryLog, type InsertEstimateHistoryLog,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -52,7 +53,7 @@ import {
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
-  customerTags, customerTagAssignments, emergencies
+  customerTags, customerTagAssignments, emergencies, estimateHistoryLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -227,6 +228,15 @@ export interface IStorage {
   updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined>;
   deleteEstimate(id: string): Promise<void>;
+  softDeleteEstimate(id: string, deletedByUserId: string, deletedByUserName: string, reason: string): Promise<Estimate | undefined>;
+  archiveEstimate(id: string, archivedByUserId: string, archivedByUserName: string, reason: string): Promise<Estimate | undefined>;
+  restoreEstimate(id: string): Promise<Estimate | undefined>;
+  
+  // Estimate History Log
+  getEstimateHistoryLogs(filters?: { estimateId?: string; actionType?: string; propertyId?: string; performedByUserName?: string; approvalMethod?: string; startDate?: Date; endDate?: Date }): Promise<EstimateHistoryLog[]>;
+  getEstimateHistory(estimateId: string): Promise<EstimateHistoryLog[]>;
+  createEstimateHistoryLog(log: InsertEstimateHistoryLog): Promise<EstimateHistoryLog>;
+  getEstimateHistoryMetrics(): Promise<{ total: number; emailApprovals: number; verbalApprovals: number; archived: number; deleted: number }>;
 
   // Property Billing Contacts
   getPropertyBillingContacts(propertyId: string): Promise<PropertyBillingContact[]>;
@@ -1338,6 +1348,107 @@ export class DbStorage implements IStorage {
 
   async deleteEstimate(id: string): Promise<void> {
     await db.delete(estimates).where(eq(estimates.id, id));
+  }
+
+  async softDeleteEstimate(id: string, deletedByUserId: string, deletedByUserName: string, reason: string): Promise<Estimate | undefined> {
+    const [updated] = await db.update(estimates)
+      .set({
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedByUserId,
+        deletedByUserName,
+        deletedReason: reason,
+      })
+      .where(eq(estimates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async archiveEstimate(id: string, archivedByUserId: string, archivedByUserName: string, reason: string): Promise<Estimate | undefined> {
+    const [updated] = await db.update(estimates)
+      .set({
+        status: "archived",
+        archivedAt: new Date(),
+        archivedByUserId,
+        archivedByUserName,
+        archivedReason: reason,
+      })
+      .where(eq(estimates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async restoreEstimate(id: string): Promise<Estimate | undefined> {
+    const [updated] = await db.update(estimates)
+      .set({
+        isDeleted: false,
+        deletedAt: null,
+        deletedByUserId: null,
+        deletedByUserName: null,
+        deletedReason: null,
+        status: "draft",
+        archivedAt: null,
+        archivedByUserId: null,
+        archivedByUserName: null,
+        archivedReason: null,
+      })
+      .where(eq(estimates.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Estimate History Log
+  async getEstimateHistoryLogs(filters?: { 
+    estimateId?: string; 
+    actionType?: string; 
+    propertyId?: string; 
+    performedByUserName?: string; 
+    approvalMethod?: string;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<EstimateHistoryLog[]> {
+    const conditions = [];
+    if (filters?.estimateId) conditions.push(eq(estimateHistoryLog.estimateId, filters.estimateId));
+    if (filters?.actionType) conditions.push(eq(estimateHistoryLog.actionType, filters.actionType));
+    if (filters?.propertyId) conditions.push(eq(estimateHistoryLog.propertyId, filters.propertyId));
+    if (filters?.performedByUserName) conditions.push(ilike(estimateHistoryLog.performedByUserName, `%${filters.performedByUserName}%`));
+    if (filters?.approvalMethod) conditions.push(eq(estimateHistoryLog.approvalMethod, filters.approvalMethod));
+    if (filters?.startDate) conditions.push(gte(estimateHistoryLog.performedAt, filters.startDate));
+    if (filters?.endDate) conditions.push(lte(estimateHistoryLog.performedAt, filters.endDate));
+
+    if (conditions.length > 0) {
+      return db.select().from(estimateHistoryLog)
+        .where(and(...conditions))
+        .orderBy(desc(estimateHistoryLog.performedAt));
+    }
+    return db.select().from(estimateHistoryLog).orderBy(desc(estimateHistoryLog.performedAt));
+  }
+
+  async getEstimateHistory(estimateId: string): Promise<EstimateHistoryLog[]> {
+    return db.select().from(estimateHistoryLog)
+      .where(eq(estimateHistoryLog.estimateId, estimateId))
+      .orderBy(desc(estimateHistoryLog.performedAt));
+  }
+
+  async createEstimateHistoryLog(log: InsertEstimateHistoryLog): Promise<EstimateHistoryLog> {
+    const [created] = await db.insert(estimateHistoryLog).values(log).returning();
+    return created;
+  }
+
+  async getEstimateHistoryMetrics(): Promise<{ total: number; emailApprovals: number; verbalApprovals: number; archived: number; deleted: number }> {
+    const allLogs = await db.select().from(estimateHistoryLog);
+    const emailApprovals = allLogs.filter(l => l.actionType === "approved" && l.approvalMethod === "email").length;
+    const verbalApprovals = allLogs.filter(l => l.actionType === "verbal_approval" || (l.actionType === "approved" && l.approvalMethod === "verbal")).length;
+    const archived = allLogs.filter(l => l.actionType === "archived").length;
+    const deleted = allLogs.filter(l => l.actionType === "deleted").length;
+    
+    return {
+      total: allLogs.length,
+      emailApprovals,
+      verbalApprovals,
+      archived,
+      deleted,
+    };
   }
 
   // Property Billing Contacts
