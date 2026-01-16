@@ -598,7 +598,7 @@ export default function SupervisorTeams() {
         </Card>
 
         <Tabs defaultValue="concerns" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="concerns" className="gap-2" data-testid="tab-concerns">
               <AlertTriangle className="w-4 h-4" />
               Supervisor Concerns
@@ -609,13 +609,6 @@ export default function SupervisorTeams() {
             <TabsTrigger value="activity" className="gap-2" data-testid="tab-activity">
               <ClipboardList className="w-4 h-4" />
               Activity Log
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
-              <MessageSquare className="w-4 h-4" />
-              Office Messages
-              {filteredMessages.length > 0 && (
-                <Badge className="ml-1 bg-indigo-500 text-white text-xs px-1.5 py-0">{filteredMessages.length}</Badge>
-              )}
             </TabsTrigger>
           </TabsList>
 
@@ -770,69 +763,68 @@ export default function SupervisorTeams() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="messages">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-indigo-500" />
-                  Office Messages
-                  <Badge className="ml-2 bg-indigo-100 text-indigo-700">
-                    {filteredMessages.length} Messages
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {filteredMessages.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No messages from field</p>
-                    <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Direct messages from supervisors to office will appear here"}</p>
-                  </div>
-                ) : (
-                  <ScrollArea className="max-h-[400px]">
-                    <div className="space-y-3">
-                      {filteredMessages.map((message) => (
-                        <div
-                          key={message.id}
-                          className="p-4 border border-slate-200 rounded-lg hover:border-indigo-200 transition-colors"
-                          data-testid={`message-${message.id}`}
-                        >
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                              <User className="w-5 h-5 text-indigo-600" />
+        </Tabs>
+
+        <Card className="mt-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-indigo-500" />
+              Office Messages
+              <Badge className="ml-2 bg-indigo-100 text-indigo-700">
+                {filteredMessages.length} Messages
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredMessages.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>No messages from field</p>
+                <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Direct messages from supervisors to office will appear here"}</p>
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[400px]">
+                <div className="space-y-3">
+                  {filteredMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className="p-4 border border-slate-200 rounded-lg hover:border-indigo-200 transition-colors"
+                      data-testid={`message-${message.id}`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <User className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-slate-700">{message.technicianName}</span>
+                            {message.status === "reviewed" && (
+                              <Badge className="bg-green-100 text-green-700 text-xs">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Reviewed
+                              </Badge>
+                            )}
+                          </div>
+                          {message.propertyName && (
+                            <div className="flex items-center gap-1 text-sm text-slate-500 mb-2">
+                              <MapPin className="w-3 h-3" />
+                              {message.propertyName}
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-slate-700">{message.technicianName}</span>
-                                {message.status === "reviewed" && (
-                                  <Badge className="bg-green-100 text-green-700 text-xs">
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                    Reviewed
-                                  </Badge>
-                                )}
-                              </div>
-                              {message.propertyName && (
-                                <div className="flex items-center gap-1 text-sm text-slate-500 mb-2">
-                                  <MapPin className="w-3 h-3" />
-                                  {message.propertyName}
-                                </div>
-                              )}
-                              <p className="text-sm text-slate-600">{message.notes}</p>
-                              <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
-                                <Clock className="w-3 h-3" />
-                                {formatDate(message.createdAt)}
-                              </div>
-                            </div>
+                          )}
+                          <p className="text-sm text-slate-600">{message.notes}</p>
+                          <div className="flex items-center gap-1 mt-2 text-xs text-slate-400">
+                            <Clock className="w-3 h-3" />
+                            {formatDate(message.createdAt)}
                           </div>
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
