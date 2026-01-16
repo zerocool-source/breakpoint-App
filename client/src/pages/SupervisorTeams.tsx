@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,15 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import {
   Users, User, ChevronDown, ChevronRight, Phone, Mail, Plus, 
   UserMinus, UserPlus, Loader2, Search, ArrowRight, AlertTriangle,
-  ClipboardList, MessageSquare, MapPin, Clock, CheckCircle2
+  ClipboardList, MessageSquare, MapPin, Clock, CheckCircle2, Filter, X, CalendarIcon
 } from "lucide-react";
 import type { Technician, TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import type { DateRange } from "react-day-picker";
 
 interface SupervisorWithTeam extends Technician {
   teamMembers: Technician[];
@@ -34,6 +37,20 @@ export default function SupervisorTeams() {
   const [selectedTechnician, setSelectedTechnician] = useState<Technician | null>(null);
   const [targetSupervisorId, setTargetSupervisorId] = useState<string>("");
 
+  const [propertyFilter, setPropertyFilter] = useState<string>("");
+  const [supervisorFilter, setSupervisorFilter] = useState<string>("");
+  const [technicianFilter, setTechnicianFilter] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const hasActiveFilters = propertyFilter || supervisorFilter || technicianFilter || dateRange?.from;
+
+  const clearAllFilters = () => {
+    setPropertyFilter("");
+    setSupervisorFilter("");
+    setTechnicianFilter("");
+    setDateRange(undefined);
+  };
+
   const { data: allTechnicians = [], isLoading } = useQuery<Technician[]>({
     queryKey: ["technicians-stored"],
     queryFn: async () => {
@@ -44,10 +61,33 @@ export default function SupervisorTeams() {
     },
   });
 
-  const { data: supervisorConcerns = [] } = useQuery<TechOpsEntry[]>({
-    queryKey: ["tech-ops-supervisor-concerns"],
+  const { data: properties = [] } = useQuery<{ propertyName: string }[]>({
+    queryKey: ["tech-ops-properties"],
     queryFn: async () => {
-      const response = await fetch("/api/tech-ops?entryType=supervisor_concerns");
+      const response = await fetch("/api/tech-ops");
+      if (!response.ok) throw new Error("Failed to fetch entries");
+      const data = await response.json();
+      const entries = Array.isArray(data) ? data : (data.entries || []);
+      const uniqueProperties = Array.from(new Set(entries.map((e: TechOpsEntry) => e.propertyName).filter(Boolean)));
+      return uniqueProperties.map(name => ({ propertyName: name as string }));
+    },
+  });
+
+  const buildQueryParams = (entryType?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (entryType) params.set("entryType", entryType);
+    if (status) params.set("status", status);
+    if (technicianFilter) params.set("technicianName", technicianFilter);
+    if (dateRange?.from) params.set("startDate", format(dateRange.from, "yyyy-MM-dd"));
+    if (dateRange?.to) params.set("endDate", format(dateRange.to, "yyyy-MM-dd"));
+    return params.toString();
+  };
+
+  const { data: supervisorConcerns = [] } = useQuery<TechOpsEntry[]>({
+    queryKey: ["tech-ops-supervisor-concerns", technicianFilter, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    queryFn: async () => {
+      const params = buildQueryParams("supervisor_concerns");
+      const response = await fetch(`/api/tech-ops?${params}`);
       if (!response.ok) throw new Error("Failed to fetch supervisor concerns");
       const data = await response.json();
       return Array.isArray(data) ? data : (data.entries || []);
@@ -55,9 +95,10 @@ export default function SupervisorTeams() {
   });
 
   const { data: officeMessages = [] } = useQuery<TechOpsEntry[]>({
-    queryKey: ["tech-ops-report-issue"],
+    queryKey: ["tech-ops-report-issue", technicianFilter, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async () => {
-      const response = await fetch("/api/tech-ops?entryType=report_issue");
+      const params = buildQueryParams("report_issue");
+      const response = await fetch(`/api/tech-ops?${params}`);
       if (!response.ok) throw new Error("Failed to fetch office messages");
       const data = await response.json();
       return Array.isArray(data) ? data : (data.entries || []);
@@ -65,9 +106,10 @@ export default function SupervisorTeams() {
   });
 
   const { data: activityEntries = [] } = useQuery<TechOpsEntry[]>({
-    queryKey: ["tech-ops-activity"],
+    queryKey: ["tech-ops-activity", technicianFilter, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     queryFn: async () => {
-      const response = await fetch("/api/tech-ops?status=reviewed");
+      const params = buildQueryParams(undefined, "reviewed");
+      const response = await fetch(`/api/tech-ops?${params}`);
       if (!response.ok) throw new Error("Failed to fetch activity");
       const data = await response.json();
       return Array.isArray(data) ? data : (data.entries || []);
@@ -147,6 +189,36 @@ export default function SupervisorTeams() {
     const fullName = `${t.firstName} ${t.lastName}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
+
+  const serviceTechnicians = allTechnicians.filter(t => t.role === "service" && t.active);
+
+  const filterEntries = (entries: TechOpsEntry[]) => {
+    return entries.filter(entry => {
+      if (propertyFilter && entry.propertyName !== propertyFilter) return false;
+      if (supervisorFilter) {
+        const tech = allTechnicians.find(t => `${t.firstName} ${t.lastName}` === entry.technicianName);
+        if (!tech || tech.supervisorId !== supervisorFilter) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredConcerns = useMemo(() => filterEntries(supervisorConcerns), [supervisorConcerns, propertyFilter, supervisorFilter]);
+  const filteredMessages = useMemo(() => filterEntries(officeMessages), [officeMessages, propertyFilter, supervisorFilter]);
+  const filteredActivity = useMemo(() => filterEntries(activityEntries), [activityEntries, propertyFilter, supervisorFilter]);
+
+  const filteredAssignments = useMemo(() => {
+    return supervisorsWithTeams.flatMap(supervisor => {
+      if (supervisorFilter && supervisor.id !== supervisorFilter) return [];
+      return supervisor.teamMembers.map(tech => ({
+        type: "assignment" as const,
+        supervisorName: `${supervisor.firstName} ${supervisor.lastName}`,
+        technicianName: `${tech.firstName} ${tech.lastName}`,
+        technicianId: tech.id,
+        supervisorId: supervisor.id,
+      }));
+    });
+  }, [supervisorsWithTeams, supervisorFilter]);
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
@@ -430,13 +502,108 @@ export default function SupervisorTeams() {
           </div>
         </div>
 
+        <Card className="mb-6">
+          <CardContent className="pt-4 pb-3">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="w-4 h-4 text-slate-500" />
+              <span className="text-sm font-medium text-slate-600">Filter Results</span>
+              {hasActiveFilters && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearAllFilters}
+                  className="ml-auto text-xs h-7"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Select value={propertyFilter || "_all"} onValueChange={(v) => setPropertyFilter(v === "_all" ? "" : v)}>
+                <SelectTrigger className="h-9" data-testid="select-property-filter">
+                  <SelectValue placeholder="All Properties" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Properties</SelectItem>
+                  {properties.map((p) => (
+                    <SelectItem key={p.propertyName} value={p.propertyName}>
+                      {p.propertyName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={supervisorFilter || "_all"} onValueChange={(v) => setSupervisorFilter(v === "_all" ? "" : v)}>
+                <SelectTrigger className="h-9" data-testid="select-supervisor-filter">
+                  <SelectValue placeholder="All Supervisors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Supervisors</SelectItem>
+                  {supervisors.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.firstName} {s.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={technicianFilter || "_all"} onValueChange={(v) => setTechnicianFilter(v === "_all" ? "" : v)}>
+                <SelectTrigger className="h-9" data-testid="select-technician-filter">
+                  <SelectValue placeholder="All Technicians" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Technicians</SelectItem>
+                  {serviceTechnicians.map((t) => (
+                    <SelectItem key={t.id} value={`${t.firstName} ${t.lastName}`}>
+                      {t.firstName} {t.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="h-9 justify-start text-left font-normal"
+                    data-testid="button-date-filter"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <span className="text-xs">
+                          {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d")}
+                        </span>
+                      ) : (
+                        <span className="text-xs">{format(dateRange.from, "MMM d, yyyy")}</span>
+                      )
+                    ) : (
+                      <span className="text-muted-foreground">Date Range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="concerns" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="concerns" className="gap-2" data-testid="tab-concerns">
               <AlertTriangle className="w-4 h-4" />
               Supervisor Concerns
-              {supervisorConcerns.length > 0 && (
-                <Badge className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0">{supervisorConcerns.length}</Badge>
+              {filteredConcerns.length > 0 && (
+                <Badge className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0">{filteredConcerns.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="activity" className="gap-2" data-testid="tab-activity">
@@ -446,8 +613,8 @@ export default function SupervisorTeams() {
             <TabsTrigger value="messages" className="gap-2" data-testid="tab-messages">
               <MessageSquare className="w-4 h-4" />
               Office Messages
-              {officeMessages.length > 0 && (
-                <Badge className="ml-1 bg-indigo-500 text-white text-xs px-1.5 py-0">{officeMessages.length}</Badge>
+              {filteredMessages.length > 0 && (
+                <Badge className="ml-1 bg-indigo-500 text-white text-xs px-1.5 py-0">{filteredMessages.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -459,21 +626,21 @@ export default function SupervisorTeams() {
                   <AlertTriangle className="w-5 h-5 text-red-500" />
                   Supervisor Concerns
                   <Badge className="ml-2 bg-red-100 text-red-700">
-                    {supervisorConcerns.length} Issues
+                    {filteredConcerns.length} Issues
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {supervisorConcerns.length === 0 ? (
+                {filteredConcerns.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
                     <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p>No supervisor concerns reported</p>
-                    <p className="text-sm mt-1">Concerns from supervisors will appear here</p>
+                    <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Concerns from supervisors will appear here"}</p>
                   </div>
                 ) : (
                   <ScrollArea className="max-h-[400px]">
                     <div className="space-y-3">
-                      {supervisorConcerns.map((entry) => (
+                      {filteredConcerns.map((entry) => (
                         <div
                           key={entry.id}
                           className="p-4 border border-slate-200 rounded-lg hover:border-red-200 transition-colors"
@@ -522,7 +689,7 @@ export default function SupervisorTeams() {
                   <ClipboardList className="w-5 h-5 text-[#1E3A8A]" />
                   Activity Log
                   <Badge className="ml-2 bg-slate-100 text-slate-700" data-testid="badge-activity-count">
-                    {activityEntries.length + supervisorsWithTeams.flatMap(s => s.teamMembers).length} Items
+                    {filteredActivity.length + filteredAssignments.length} Items
                   </Badge>
                 </CardTitle>
               </CardHeader>
@@ -533,7 +700,7 @@ export default function SupervisorTeams() {
                       <CheckCircle2 className="w-4 h-4" />
                       Recently Reviewed Entries
                     </h4>
-                    {activityEntries.slice(0, 10).map((entry) => (
+                    {filteredActivity.slice(0, 10).map((entry) => (
                       <div
                         key={`reviewed-${entry.id}`}
                         className="flex items-start gap-4 p-3 bg-green-50 rounded-lg border border-green-200"
@@ -562,9 +729,9 @@ export default function SupervisorTeams() {
                         <Badge className="bg-green-100 text-green-700 text-xs">Reviewed</Badge>
                       </div>
                     ))}
-                    {activityEntries.length === 0 && (
+                    {filteredActivity.length === 0 && (
                       <div className="text-center py-6 text-slate-400 text-sm" data-testid="text-no-reviewed">
-                        No reviewed entries yet
+                        {hasActiveFilters ? "No entries match your filters" : "No reviewed entries yet"}
                       </div>
                     )}
 
@@ -572,15 +739,7 @@ export default function SupervisorTeams() {
                       <Users className="w-4 h-4" />
                       Current Team Assignments
                     </h4>
-                    {supervisorsWithTeams.flatMap(supervisor => 
-                      supervisor.teamMembers.map(tech => ({
-                        type: "assignment",
-                        supervisorName: `${supervisor.firstName} ${supervisor.lastName}`,
-                        technicianName: `${tech.firstName} ${tech.lastName}`,
-                        technicianId: tech.id,
-                        supervisorId: supervisor.id,
-                      }))
-                    ).slice(0, 20).map((activity, idx) => (
+                    {filteredAssignments.slice(0, 20).map((activity, idx) => (
                       <div
                         key={`activity-${idx}`}
                         className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200"
@@ -600,9 +759,9 @@ export default function SupervisorTeams() {
                         <Badge variant="outline" className="text-xs">Active</Badge>
                       </div>
                     ))}
-                    {supervisorsWithTeams.flatMap(s => s.teamMembers).length === 0 && (
+                    {filteredAssignments.length === 0 && (
                       <div className="text-center py-6 text-slate-400 text-sm" data-testid="text-no-assignments">
-                        No team assignments yet
+                        {hasActiveFilters ? "No assignments match your filters" : "No team assignments yet"}
                       </div>
                     )}
                   </div>
@@ -618,21 +777,21 @@ export default function SupervisorTeams() {
                   <MessageSquare className="w-5 h-5 text-indigo-500" />
                   Office Messages
                   <Badge className="ml-2 bg-indigo-100 text-indigo-700">
-                    {officeMessages.length} Messages
+                    {filteredMessages.length} Messages
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {officeMessages.length === 0 ? (
+                {filteredMessages.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
                     <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p>No messages from field</p>
-                    <p className="text-sm mt-1">Direct messages from supervisors to office will appear here</p>
+                    <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Direct messages from supervisors to office will appear here"}</p>
                   </div>
                 ) : (
                   <ScrollArea className="max-h-[400px]">
                     <div className="space-y-3">
-                      {officeMessages.map((message) => (
+                      {filteredMessages.map((message) => (
                         <div
                           key={message.id}
                           className="p-4 border border-slate-200 rounded-lg hover:border-indigo-200 transition-colors"
