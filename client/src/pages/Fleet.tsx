@@ -68,8 +68,8 @@ function getMaintenanceStatus(days: number | null, serviceType: string): { statu
   };
   const threshold = thresholds[serviceType] || 365;
   if (days > threshold * 1.2) return { status: "Overdue", color: "bg-red-100 text-red-700" };
-  if (days > threshold * 0.9) return { status: "Due Soon", color: "bg-yellow-100 text-yellow-700" };
-  return { status: "Current", color: "bg-green-100 text-green-700" };
+  if (days > threshold * 0.9) return { status: "Due Soon", color: "bg-[#FF8000]1A text-[#FF8000]" };
+  return { status: "Current", color: "bg-[#22D69A]1A text-[#22D69A]" };
 }
 
 interface TruckWithMaintenance extends FleetTruck {
@@ -307,8 +307,8 @@ export default function Fleet() {
   const getPriorityBadge = (priority: string) => {
     const styles: Record<string, string> = {
       Critical: "bg-red-100 text-red-700",
-      High: "bg-orange-100 text-orange-700",
-      Medium: "bg-yellow-100 text-yellow-700",
+      High: "bg-[#FF8000]1A text-[#FF8000]",
+      Medium: "bg-[#FF8000]1A text-[#FF8000]",
       Low: "bg-gray-100 text-gray-700",
     };
     return styles[priority] || styles.Low;
@@ -316,10 +316,10 @@ export default function Fleet() {
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      New: "bg-blue-100 text-blue-700",
-      Acknowledged: "bg-yellow-100 text-yellow-700",
-      "In Progress": "bg-purple-100 text-purple-700",
-      Resolved: "bg-green-100 text-green-700",
+      New: "bg-[#2374AB]1A text-[#2374AB]",
+      Acknowledged: "bg-[#FF8000]1A text-[#FF8000]",
+      "In Progress": "bg-[#17BEBB]1A text-[#17BEBB]",
+      Resolved: "bg-[#22D69A]1A text-[#22D69A]",
     };
     return styles[status] || styles.New;
   };
@@ -410,21 +410,21 @@ export default function Fleet() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <div className="w-2 h-2 rounded-full bg-[#2374AB]" />
                     <span className="text-gray-600">Open</span>
                   </div>
                   <span className="text-2xl font-bold">8</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                    <div className="w-2 h-2 rounded-full bg-[#FF8000]" />
                     <span className="text-gray-600">In Progress</span>
                   </div>
                   <span className="text-2xl font-bold">3</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div className="w-2 h-2 rounded-full bg-[#22D69A]" />
                     <span className="text-gray-600">Completed Today</span>
                   </div>
                   <span className="text-2xl font-bold">5</span>
@@ -446,7 +446,7 @@ export default function Fleet() {
                 </div>
                 <div className="h-12 w-px bg-gray-200" />
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-yellow-500">{maintenanceStats.dueSoon}</p>
+                  <p className="text-4xl font-bold text-[#FF8000]">{maintenanceStats.dueSoon}</p>
                   <p className="text-sm text-gray-500">Due This Week</p>
                 </div>
               </div>
@@ -461,7 +461,7 @@ export default function Fleet() {
             <CardContent>
               <div className="flex items-center justify-around">
                 <div className="text-center">
-                  <p className="text-4xl font-bold text-blue-600">12</p>
+                  <p className="text-4xl font-bold text-[#2374AB]">12</p>
                   <p className="text-sm text-gray-500">Open</p>
                 </div>
                 <div className="h-12 w-px bg-gray-200" />
@@ -486,20 +486,20 @@ export default function Fleet() {
                 <div className="space-y-3">
                   {MOCK_ACTIVITY.map((activity) => (
                     <div key={activity.id} className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
+                      <div className="w-8 h-8 rounded-full bg-[#2374AB]1A flex items-center justify-center text-xs font-semibold text-[#2374AB]">
                         {activity.user}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm">
                           <span className="font-medium">{activity.name}</span>
                           <span className="text-gray-500"> {activity.action} </span>
-                          <span className="text-blue-600 font-medium">{activity.vehicle}</span>
+                          <span className="text-[#2374AB] font-medium">{activity.vehicle}</span>
                         </p>
                         <p className="text-xs text-gray-500 truncate">
                           {activity.comment.includes("@") ? (
                             <>
                               {activity.comment.split("@")[0]}
-                              <span className="bg-yellow-100 text-yellow-800 px-1 rounded">@{activity.comment.split("@")[1].split(" ")[0]}</span>
+                              <span className="bg-[#FF8000]1A text-yellow-800 px-1 rounded">@{activity.comment.split("@")[1].split(" ")[0]}</span>
                               {" " + activity.comment.split("@")[1].split(" ").slice(1).join(" ")}
                             </>
                           ) : activity.comment}
@@ -522,7 +522,7 @@ export default function Fleet() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Tech Reported Issues</CardTitle>
-                  <Badge className="bg-blue-100 text-blue-700">NEW</Badge>
+                  <Badge className="bg-[#2374AB]1A text-[#2374AB]">NEW</Badge>
                   <span className="text-sm text-gray-500">({filteredIssues.length})</span>
                 </div>
                 <Select value={issueFilter} onValueChange={setIssueFilter}>
@@ -555,7 +555,7 @@ export default function Fleet() {
                       <tr key={issue.id} className="border-b hover:bg-gray-50 cursor-pointer">
                         <td className="py-2 text-gray-600">{issue.date}</td>
                         <td className="py-2">{issue.tech}</td>
-                        <td className="py-2 text-blue-600 font-medium">{issue.vehicle}</td>
+                        <td className="py-2 text-[#2374AB] font-medium">{issue.vehicle}</td>
                         <td className="py-2">{issue.type}</td>
                         <td className="py-2">
                           <Badge className={getPriorityBadge(issue.priority)}>{issue.priority}</Badge>
@@ -569,7 +569,7 @@ export default function Fleet() {
                 </table>
               </div>
               <div className="mt-3 text-center">
-                <Button variant="link" className="text-blue-600 text-sm">View All Issues</Button>
+                <Button variant="link" className="text-[#2374AB] text-sm">View All Issues</Button>
               </div>
             </CardContent>
           </Card>
@@ -581,26 +581,26 @@ export default function Fleet() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-[#22D69A]1A rounded-lg">
                   <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-[#22D69A]" />
                     <span className="text-gray-700">In-Service</span>
                   </div>
-                  <span className="text-2xl font-bold text-green-600">{stats.active}</span>
+                  <span className="text-2xl font-bold text-[#22D69A]">{stats.active}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-[#FF8000]1A rounded-lg">
                   <div className="flex items-center gap-3">
-                    <ClipboardCheck className="h-5 w-5 text-yellow-600" />
+                    <ClipboardCheck className="h-5 w-5 text-[#FF8000]" />
                     <span className="text-gray-700">Needs Inspection</span>
                   </div>
-                  <span className="text-2xl font-bold text-yellow-600">{maintenanceStats.dueSoon}</span>
+                  <span className="text-2xl font-bold text-[#FF8000]">{maintenanceStats.dueSoon}</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-[#FF8000]1A rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Wrench className="h-5 w-5 text-orange-600" />
+                    <Wrench className="h-5 w-5 text-[#FF8000]" />
                     <span className="text-gray-700">Out for Repair</span>
                   </div>
-                  <span className="text-2xl font-bold text-orange-600">{stats.inShop}</span>
+                  <span className="text-2xl font-bold text-[#FF8000]">{stats.inShop}</span>
                 </div>
               </div>
             </CardContent>
@@ -621,7 +621,7 @@ export default function Fleet() {
           <CardContent>
             {trucksLoading ? (
               <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2374AB]" />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -659,9 +659,9 @@ export default function Fleet() {
                           }
                           return Math.max(0, Math.min(100, score));
                         })();
-                        const healthColor = healthScore >= 80 ? "text-green-600" : healthScore >= 60 ? "text-yellow-600" : "text-red-600";
-                        const statusBadgeColor = truckStatus === "Active" ? "bg-green-100 text-green-700" :
-                                                 truckStatus === "In Shop" ? "bg-yellow-100 text-yellow-700" : "bg-gray-100 text-gray-700";
+                        const healthColor = healthScore >= 80 ? "text-[#22D69A]" : healthScore >= 60 ? "text-[#FF8000]" : "text-red-600";
+                        const statusBadgeColor = truckStatus === "Active" ? "bg-[#22D69A]1A text-[#22D69A]" :
+                                                 truckStatus === "In Shop" ? "bg-[#FF8000]1A text-[#FF8000]" : "bg-gray-100 text-gray-700";
 
                         return (
                           <tr 
@@ -672,7 +672,7 @@ export default function Fleet() {
                           >
                             <td className="py-3">
                               <div className="flex items-center gap-2">
-                                <Truck className="h-4 w-4 text-blue-600" />
+                                <Truck className="h-4 w-4 text-[#2374AB]" />
                                 <span className="font-bold">#{truck.truckNumber}</span>
                               </div>
                             </td>
@@ -731,7 +731,7 @@ export default function Fleet() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 text-blue-600" />
+                <Package className="h-5 w-5 text-[#2374AB]" />
                 <CardTitle className="text-lg font-semibold">Truck Inventory</CardTitle>
                 {lowStockItems.length > 0 && (
                   <Badge className="bg-red-100 text-red-700">
@@ -765,7 +765,7 @@ export default function Fleet() {
                     <div key={truck.id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-blue-600" />
+                          <Truck className="h-4 w-4 text-[#2374AB]" />
                           <span className="font-bold">Truck #{truck.truckNumber}</span>
                           <Badge variant="outline" className="text-xs">
                             {inventory.length} items
@@ -848,7 +848,7 @@ export default function Fleet() {
                             </div>
                           ))}
                           {inventory.length > 8 && (
-                            <div className="p-2 flex items-center justify-center text-sm text-blue-600">
+                            <div className="p-2 flex items-center justify-center text-sm text-[#2374AB]">
                               +{inventory.length - 8} more items
                             </div>
                           )}
@@ -868,7 +868,7 @@ export default function Fleet() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5 text-blue-600" />
+              <Truck className="h-5 w-5 text-[#2374AB]" />
               Truck #{selectedTruck?.truckNumber} Details
             </DialogTitle>
             <DialogDescription>View and manage maintenance records for this vehicle.</DialogDescription>
@@ -1021,7 +1021,7 @@ export default function Fleet() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
+              <Package className="h-5 w-5 text-[#2374AB]" />
               Add Inventory Item
             </DialogTitle>
             <DialogDescription>Add a new item to truck inventory.</DialogDescription>

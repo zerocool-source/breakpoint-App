@@ -161,7 +161,7 @@ export default function EstimateApproval() {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
-          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <AlertTriangle className="w-12 h-12 text-[#FF8000] mx-auto mb-3" />
           <h2 className="text-xl font-semibold text-slate-800 mb-2">Invalid Link</h2>
           <p className="text-slate-600 text-sm">This approval link appears to be invalid. Please check the link in your email.</p>
         </div>
@@ -196,7 +196,7 @@ export default function EstimateApproval() {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="text-center max-w-sm bg-white rounded-xl shadow-lg p-6">
-          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+          <AlertTriangle className="w-12 h-12 text-[#FF8000] mx-auto mb-3" />
           <h2 className="text-xl font-semibold text-slate-800 mb-2">Estimate Not Found</h2>
           <p className="text-slate-600 text-sm">This estimate could not be found or the approval link may have expired.</p>
         </div>
@@ -387,7 +387,7 @@ export default function EstimateApproval() {
               backgroundColor: "#dcfce7", display: "flex", alignItems: "center", 
               justifyContent: "center", margin: "0 auto 16px" 
             }}>
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+              <CheckCircle2 className="w-10 h-10 text-[#22D69A]" />
             </div>
             <h3 style={{ color: "#166534", margin: "0 0 10px 0", fontSize: "24px", fontWeight: "bold" }}>
               Estimate Approved!
@@ -443,7 +443,7 @@ export default function EstimateApproval() {
               backgroundColor: "#dcfce7", display: "flex", alignItems: "center", 
               justifyContent: "center", margin: "0 auto 16px" 
             }}>
-              <CheckCircle2 className="w-10 h-10 text-green-600" />
+              <CheckCircle2 className="w-10 h-10 text-[#22D69A]" />
             </div>
             <h3 style={{ color: "#166534", margin: "0 0 10px 0", fontSize: "24px", fontWeight: "bold" }}>
               Already Approved
@@ -531,10 +531,10 @@ export default function EstimateApproval() {
             ) : selectedAction === "approve" ? (
               <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300" data-testid="form-approve">
                 <div className="flex items-center gap-2 justify-center mb-4">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 rounded-full bg-[#22D69A]1A flex items-center justify-center">
+                    <CheckCircle2 className="w-5 h-5 text-[#22D69A]" />
                   </div>
-                  <span className="text-green-700 font-semibold text-lg">Approving Estimate</span>
+                  <span className="text-[#22D69A] font-semibold text-lg">Approving Estimate</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

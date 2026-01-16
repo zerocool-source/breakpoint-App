@@ -31,9 +31,9 @@ interface ParsedPayload {
 }
 
 const entryTypeConfig: Record<string, { label: string; color: string; icon: any }> = {
-  service: { label: "Service Visit", color: "bg-blue-100 text-blue-700", icon: ClipboardCheck },
-  repair: { label: "Repair", color: "bg-orange-100 text-orange-700", icon: FileText },
-  reading: { label: "Reading", color: "bg-green-100 text-green-700", icon: Droplets },
+  service: { label: "Service Visit", color: "bg-[#2374AB]1A text-[#2374AB]", icon: ClipboardCheck },
+  repair: { label: "Repair", color: "bg-[#FF8000]1A text-[#FF8000]", icon: FileText },
+  reading: { label: "Reading", color: "bg-[#22D69A]1A text-[#22D69A]", icon: Droplets },
   note: { label: "Note", color: "bg-slate-100 text-slate-600", icon: FileText },
 };
 
@@ -197,7 +197,7 @@ export default function Visits() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
               </div>
             ) : visits.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -229,13 +229,13 @@ export default function Visits() {
                             <div className="flex items-center gap-2 flex-wrap mb-2">
                               <Badge className={typeConfig.color}>{typeConfig.label}</Badge>
                               {payload.bodyOfWater && (
-                                <Badge variant="outline" className="text-blue-600 border-blue-300">
+                                <Badge variant="outline" className="text-[#2374AB] border-blue-300">
                                   <Droplets className="w-3 h-3 mr-1" />
                                   {payload.bodyOfWater}
                                 </Badge>
                               )}
                               {payload.poolName && (
-                                <Badge variant="outline" className="text-cyan-600 border-cyan-300">
+                                <Badge variant="outline" className="text-[#17BEBB] border-[#17BEBB]">
                                   {payload.poolName}
                                 </Badge>
                               )}
@@ -257,9 +257,9 @@ export default function Visits() {
                             </div>
 
                             {payload.quickAction && (
-                              <div className="mb-2 p-2 bg-amber-50 rounded border border-amber-200">
-                                <span className="text-sm font-medium text-amber-700">Quick Action: </span>
-                                <span className="text-sm text-amber-600">{payload.quickAction}</span>
+                              <div className="mb-2 p-2 bg-[#FF8000]1A rounded border border-[#FF8000]33">
+                                <span className="text-sm font-medium text-[#FF8000]">Quick Action: </span>
+                                <span className="text-sm text-[#FF8000]">{payload.quickAction}</span>
                               </div>
                             )}
 
@@ -277,7 +277,7 @@ export default function Visits() {
                                       variant="outline"
                                       className={cn(
                                         "text-xs",
-                                        item.checked ? "bg-green-50 text-green-700 border-green-300" : "bg-slate-50 text-slate-500 border-slate-300"
+                                        item.checked ? "bg-[#22D69A]1A text-[#22D69A] border-green-300" : "bg-slate-50 text-slate-500 border-slate-300"
                                       )}
                                     >
                                       {item.checked ? <CheckCircle className="w-3 h-3 mr-1" /> : null}
@@ -390,7 +390,7 @@ export default function Visits() {
                 onClick={() => setCurrentImageIndex(idx)}
                 className={cn(
                   "w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 transition-colors",
-                  idx === currentImageIndex ? "border-blue-500" : "border-slate-200 hover:border-slate-400"
+                  idx === currentImageIndex ? "border-[#2374AB]" : "border-slate-200 hover:border-slate-400"
                 )}
               >
                 <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />

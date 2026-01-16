@@ -262,7 +262,7 @@ export default function Payroll() {
         <div className="flex items-center justify-between">
           <div>
             <Link href="/">
-              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Dashboard
               </Button>
@@ -290,9 +290,9 @@ export default function Payroll() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="bg-card/50 border-green-500/30">
+          <Card className="bg-card/50 border-[#22D69A]/30">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#22D69A]/20 flex items-center justify-center">
                 <DollarSign className="w-6 h-6 text-green-400" />
               </div>
               <div>
@@ -301,9 +301,9 @@ export default function Payroll() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card/50 border-blue-500/30">
+          <Card className="bg-card/50 border-[#2374AB]/30">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#2374AB]/20 flex items-center justify-center">
                 <Briefcase className="w-6 h-6 text-blue-400" />
               </div>
               <div>
@@ -312,9 +312,9 @@ export default function Payroll() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card/50 border-purple-500/30">
+          <Card className="bg-card/50 border-[#17BEBB]/30">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#17BEBB]/20 flex items-center justify-center">
                 <Users className="w-6 h-6 text-purple-400" />
               </div>
               <div>
@@ -323,10 +323,10 @@ export default function Payroll() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-card/50 border-cyan-500/30">
+          <Card className="bg-card/50 border-[#17BEBB]/30">
             <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                <Clock className="w-6 h-6 text-cyan-400" />
+              <div className="w-12 h-12 rounded-full bg-[#17BEBB]/20 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-[#17BEBB]" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground" data-testid="total-value">{formatPrice(totalJobValue)}</p>
@@ -376,10 +376,10 @@ export default function Payroll() {
                         relative p-2 min-h-[60px] rounded-lg text-sm transition-all
                         ${!isSameMonth(day, currentMonth) ? "text-muted-foreground/40" : "text-foreground"}
                         ${isToday(day) ? "ring-2 ring-primary" : ""}
-                        ${isPayday ? "bg-green-500/20 border border-green-500/50" : ""}
-                        ${isPeriodStart ? "bg-blue-500/10 border-l-2 border-l-blue-500" : ""}
+                        ${isPayday ? "bg-[#22D69A]/20 border border-[#22D69A]/50" : ""}
+                        ${isPeriodStart ? "bg-[#2374AB]/10 border-l-2 border-l-#2374AB" : ""}
                         ${isInCurrentPeriod && !isPayday && !isPeriodStart ? "bg-primary/5" : ""}
-                        ${selectedPeriod && dbPeriod?.id === selectedPeriod.id ? "ring-2 ring-cyan-500" : ""}
+                        ${selectedPeriod && dbPeriod?.id === selectedPeriod.id ? "ring-2 ring-#17BEBB" : ""}
                         hover:bg-white/5
                       `}
                       data-testid={`calendar-day-${format(day, "yyyy-MM-dd")}`}
@@ -403,11 +403,11 @@ export default function Payroll() {
               </div>
               <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-green-500/20 border border-green-500/50" />
+                  <div className="w-3 h-3 rounded bg-[#22D69A]/20 border border-[#22D69A]/50" />
                   <span>Payday (Friday)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-blue-500/10 border-l-2 border-l-blue-500" />
+                  <div className="w-3 h-3 rounded bg-[#2374AB]/10 border-l-2 border-l-#2374AB" />
                   <span>Period Start</span>
                 </div>
                 <div className="flex items-center gap-2">

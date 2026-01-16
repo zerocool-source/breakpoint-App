@@ -285,8 +285,8 @@ export default function Equipment() {
     const daysUntil = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysUntil < 0) return { status: "overdue", daysOver: Math.abs(daysUntil), daysUntil, color: "bg-red-100 text-red-700" };
-    if (daysUntil <= 30) return { status: "due_soon", daysUntil, color: "bg-amber-100 text-amber-700" };
-    return { status: "current", daysUntil, color: "bg-green-100 text-green-700" };
+    if (daysUntil <= 30) return { status: "due_soon", daysUntil, color: "bg-[#FF8000]1A text-[#FF8000]" };
+    return { status: "current", daysUntil, color: "bg-[#22D69A]1A text-[#22D69A]" };
   };
 
   const getEquipmentBrands = () => {
@@ -400,9 +400,9 @@ export default function Equipment() {
 
   const getEquipmentTypeIcon = (type: string) => {
     const t = type.toLowerCase();
-    if (t.includes("heater")) return <Flame className="h-4 w-4 text-orange-500" />;
-    if (t.includes("filter")) return <Filter className="h-4 w-4 text-blue-500" />;
-    if (t.includes("pump")) return <Droplets className="h-4 w-4 text-cyan-500" />;
+    if (t.includes("heater")) return <Flame className="h-4 w-4 text-[#FF8000]" />;
+    if (t.includes("filter")) return <Filter className="h-4 w-4 text-[#2374AB]" />;
+    if (t.includes("pump")) return <Droplets className="h-4 w-4 text-[#17BEBB]" />;
     return <Wrench className="h-4 w-4 text-slate-500" />;
   };
 
@@ -418,10 +418,10 @@ export default function Equipment() {
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <Card className="bg-gradient-to-br from-[#FF8000]1A to-[#FF8000]1A border-[#FF8000]33">
             <CardContent className="p-4">
-              <p className="text-sm text-amber-600 font-medium">Due Soon</p>
-              <p className="text-3xl font-bold text-amber-700" data-testid="stat-due-soon">
+              <p className="text-sm text-[#FF8000] font-medium">Due Soon</p>
+              <p className="text-3xl font-bold text-[#FF8000]" data-testid="stat-due-soon">
                 {dashboardStats.dueSoon}
               </p>
             </CardContent>
@@ -434,10 +434,10 @@ export default function Equipment() {
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <Card className="bg-gradient-to-br from-[#2374AB]1A to-[#2374AB]1A border-[#2374AB]33">
             <CardContent className="p-4">
-              <p className="text-sm text-blue-600 font-medium">Properties</p>
-              <p className="text-3xl font-bold text-blue-700" data-testid="stat-properties">
+              <p className="text-sm text-[#2374AB] font-medium">Properties</p>
+              <p className="text-3xl font-bold text-[#2374AB]" data-testid="stat-properties">
                 {dashboardStats.properties}
               </p>
             </CardContent>
@@ -488,7 +488,7 @@ export default function Equipment() {
               variant={statusFilter === "due_soon" ? "default" : "ghost"}
               size="sm"
               onClick={() => setStatusFilter("due_soon")}
-              className={statusFilter === "due_soon" ? "bg-amber-600" : ""}
+              className={statusFilter === "due_soon" ? "bg-[#FF8000]" : ""}
               data-testid="filter-due-soon"
             >
               Due Soon
@@ -511,7 +511,7 @@ export default function Equipment() {
             <ScrollArea className="h-[calc(100vh-400px)]">
               {customersLoading ? (
                 <div className="flex items-center justify-center py-20">
-                  <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                  <RefreshCw className="h-8 w-8 animate-spin text-[#2374AB]" />
                   <span className="ml-3 text-slate-500">Loading properties...</span>
                 </div>
               ) : filteredCustomers.length === 0 ? (
@@ -533,8 +533,8 @@ export default function Equipment() {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Building className="h-5 w-5 text-blue-600" />
+                            <div className="w-10 h-10 bg-[#2374AB]1A rounded-lg flex items-center justify-center">
+                              <Building className="h-5 w-5 text-[#2374AB]" />
                             </div>
                             <div>
                               <p className="font-medium text-slate-800">{customer.name}</p>
@@ -613,7 +613,7 @@ export default function Equipment() {
                       </>
                     )}
                     {selectedProperty.region && (
-                      <Badge variant="secondary" className="bg-blue-600 text-white text-xs">
+                      <Badge variant="secondary" className="bg-[#2374AB] text-white text-xs">
                         {selectedProperty.region}
                       </Badge>
                     )}
@@ -642,7 +642,7 @@ export default function Equipment() {
 
                   <TabsContent value="equipment" className="mt-0 p-4">
                     <Button
-                      className="w-full mb-4 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
+                      className="w-full mb-4 bg-[#2374AB]1A text-[#2374AB] hover:bg-[#2374AB]1A border border-[#2374AB]33"
                       variant="outline"
                       onClick={() => setAddEquipmentOpen(true)}
                       data-testid="button-add-equipment"
@@ -676,7 +676,7 @@ export default function Equipment() {
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-2 mb-1">
-                                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600">
+                                          <Badge variant="outline" className="text-xs bg-[#2374AB]1A text-[#2374AB]">
                                             <Droplets className="h-3 w-3 mr-1" />
                                             {schedule.waterType}
                                           </Badge>
@@ -699,10 +699,10 @@ export default function Equipment() {
                                           </p>
                                         )}
                                         <div className="flex gap-2 mt-2">
-                                          <Button variant="link" size="sm" className="h-6 px-0 text-blue-600">
+                                          <Button variant="link" size="sm" className="h-6 px-0 text-[#2374AB]">
                                             Edit
                                           </Button>
-                                          <Button variant="link" size="sm" className="h-6 px-0 text-blue-600">
+                                          <Button variant="link" size="sm" className="h-6 px-0 text-[#2374AB]">
                                             Service
                                           </Button>
                                           <Button variant="link" size="sm" className="h-6 px-0 text-red-600">
@@ -714,7 +714,7 @@ export default function Equipment() {
                                     <Badge className={
                                       statusInfo.status === "overdue" ? "bg-red-100 text-red-700" : 
                                       statusInfo.status === "no_pm" ? "bg-slate-100 text-slate-600" :
-                                      "bg-green-100 text-green-700"
+                                      "bg-[#22D69A]1A text-[#22D69A]"
                                     }>
                                       {statusInfo.status === "overdue" ? "OVERDUE" : 
                                        statusInfo.status === "no_pm" ? "NO PM" : "OK"}
@@ -752,7 +752,7 @@ export default function Equipment() {
 
                         {getPropertyRepairs(selectedProperty.id).length === 0 ? (
                           <div className="text-center py-10 text-slate-400">
-                            <CheckCircle2 className="h-10 w-10 mx-auto mb-2 opacity-50 text-green-500" />
+                            <CheckCircle2 className="h-10 w-10 mx-auto mb-2 opacity-50 text-[#22D69A]" />
                             <p>No repairs needed</p>
                             <p className="text-sm">All equipment is in good condition</p>
                           </div>
@@ -767,7 +767,7 @@ export default function Equipment() {
                                       {repair.type || "Issue"}
                                     </Badge>
                                     {repair.pictures && repair.pictures.length > 0 && (
-                                      <Button variant="link" size="sm" className="h-6 px-0 text-blue-600 gap-1">
+                                      <Button variant="link" size="sm" className="h-6 px-0 text-[#2374AB] gap-1">
                                         <Camera className="h-3 w-3" />
                                         View Pictures
                                       </Button>
@@ -797,7 +797,7 @@ export default function Equipment() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+                                    className="flex-1 bg-[#2374AB]1A text-[#2374AB] hover:bg-[#2374AB]1A border-[#2374AB]33"
                                     data-testid={`button-convert-estimate-${repair.alertId}`}
                                   >
                                     <FileCheck className="h-4 w-4 mr-1" />
@@ -805,7 +805,7 @@ export default function Equipment() {
                                   </Button>
                                   <Button 
                                     size="sm" 
-                                    className="flex-1 bg-green-600 hover:bg-green-700"
+                                    className="flex-1 bg-[#22D69A] hover:bg-[#22D69A]"
                                     data-testid={`button-convert-job-${repair.alertId}`}
                                   >
                                     <Calendar className="h-4 w-4 mr-1" />
@@ -941,14 +941,14 @@ export default function Equipment() {
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5 text-blue-600" />
+                <Plus className="h-5 w-5 text-[#2374AB]" />
                 Add New Equipment
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {selectedProperty && (
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-600">Adding equipment to:</p>
+                <div className="bg-[#2374AB]1A p-3 rounded-lg border border-[#2374AB]33">
+                  <p className="text-sm text-[#2374AB]">Adding equipment to:</p>
                   <p className="font-semibold text-blue-800">{selectedProperty.name}</p>
                 </div>
               )}
@@ -1080,12 +1080,12 @@ export default function Equipment() {
               </div>
 
               {serviceTypes.length > 0 && newEquipment.category && (
-                <div className="bg-green-50 p-3 rounded-lg border border-green-200 text-sm">
-                  <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
+                <div className="bg-[#22D69A]1A p-3 rounded-lg border border-[#22D69A]33 text-sm">
+                  <div className="flex items-center gap-2 text-[#22D69A] font-medium mb-1">
                     <CheckCircle2 className="h-4 w-4" />
                     PM Schedule will be created
                   </div>
-                  <p className="text-green-600 text-xs">
+                  <p className="text-[#22D69A] text-xs">
                     A preventative maintenance schedule will be automatically created for this {newEquipment.category.toLowerCase()}.
                   </p>
                 </div>

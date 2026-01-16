@@ -123,16 +123,16 @@ export function AICommand() {
 
   return (
     <Card className="glass-card border-primary/20 bg-black/40 overflow-hidden relative group h-full flex flex-col">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-600/5 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-[#17BEBB]/5 pointer-events-none" />
       
       <CardContent className="p-4 flex flex-col items-center justify-center flex-1 relative z-10">
         {/* Animated Brain/Core */}
         <div className="relative w-20 h-20 mb-3">
           <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-[spin_10s_linear_infinite]" />
-          <div className="absolute inset-2 rounded-full border border-purple-500/30 animate-[spin_15s_linear_infinite_reverse]" />
+          <div className="absolute inset-2 rounded-full border border-[#17BEBB]/30 animate-[spin_15s_linear_infinite_reverse]" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className={cn(
-              "w-12 h-12 rounded-full bg-gradient-to-br from-primary to-purple-600 blur-md transition-all duration-500 flex items-center justify-center",
+              "w-12 h-12 rounded-full bg-gradient-to-br from-primary to-[#17BEBB] blur-md transition-all duration-500 flex items-center justify-center",
               isListening ? "scale-110 shadow-[0_0_50px_cyan]" : "scale-100 shadow-[0_0_20px_cyan]"
             )}>
               <Sparkles className="w-6 h-6 text-white animate-pulse" />
@@ -191,7 +191,7 @@ export function AICommand() {
         {/* Link to Full Chat */}
         <Link href="/chat">
           <button 
-            className="mt-2 flex items-center gap-2 px-3 py-1 rounded font-ui text-xs transition-all duration-300 text-cyan-400/70 hover:text-cyan-400 hover:bg-cyan-500/10"
+            className="mt-2 flex items-center gap-2 px-3 py-1 rounded font-ui text-xs transition-all duration-300 text-[#17BEBB]/70 hover:text-[#17BEBB] hover:bg-[#17BEBB]/10"
             data-testid="button-open-chat"
           >
             <MessageSquare className="w-3 h-3" />

@@ -49,9 +49,9 @@ interface ServiceRepairJob {
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]" },
-  selected: { label: "Selected", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  estimated: { label: "Estimated", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  selected: { label: "Selected", color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33" },
+  estimated: { label: "Estimated", color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33" },
+  invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33" },
 };
 
 function formatCurrency(cents: number | null | undefined): string {
@@ -409,13 +409,13 @@ export default function ServiceRepairs() {
             <h1 className="text-2xl font-bold text-[#1E293B]">Service Repairs</h1>
             <p className="text-[#64748B]">
               Manage Code Canvas service repair submissions
-              <span className="ml-2 font-medium text-[#0078D4]">
+              <span className="ml-2 font-medium text-[#2374AB]">
                 ({filteredAndSortedRepairs.length} of {serviceRepairs.length} repairs)
               </span>
             </p>
           </div>
           <Button 
-            className="bg-[#F97316] hover:bg-[#EA580C]"
+            className="bg-[#FF8000] hover:bg-[#EA580C]"
             onClick={() => setShowAddDialog(true)}
             data-testid="button-add-job"
           >
@@ -525,7 +525,7 @@ export default function ServiceRepairs() {
               key={key}
               variant={statusFilter === key ? "default" : "ghost"}
               size="sm"
-              className={statusFilter === key ? "bg-[#0078D4]" : ""}
+              className={statusFilter === key ? "bg-[#2374AB]" : ""}
               onClick={() => setStatusFilter(key)}
               data-testid={`tab-${key}`}
             >
@@ -539,7 +539,7 @@ export default function ServiceRepairs() {
 
         {/* Batch Actions Bar */}
         {selectedRepairs.size > 0 && pendingInSelection.length > 0 && (
-          <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center gap-4 p-3 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33">
             <Checkbox
               checked={selectedRepairs.size === filteredAndSortedRepairs.filter(r => r.status === 'pending').length}
               onCheckedChange={(checked) => checked ? selectAllRepairs() : clearRepairSelection()}
@@ -553,7 +553,7 @@ export default function ServiceRepairs() {
             </span>
             <Button 
               size="sm" 
-              className="bg-[#0078D4] hover:bg-[#1E40AF] ml-auto"
+              className="bg-[#2374AB] hover:bg-[#1E40AF] ml-auto"
               onClick={() => batchToEstimateMutation.mutate(pendingInSelection)}
               disabled={batchToEstimateMutation.isPending}
               data-testid="button-batch-to-estimate"
@@ -574,7 +574,7 @@ export default function ServiceRepairs() {
         {/* Service Repair Cards - Grouped by Property */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#F97316]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#FF8000]" />
           </div>
         ) : filteredAndSortedRepairs.length === 0 ? (
           <div className="text-center py-12 text-[#64748B]">
@@ -598,7 +598,7 @@ export default function ServiceRepairs() {
                   <CardHeader className="pb-3 bg-slate-50 border-b">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-[#F97316] flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-[#FF8000] flex items-center justify-center">
                           <Building2 className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -613,7 +613,7 @@ export default function ServiceRepairs() {
                           )}
                         </div>
                       </div>
-                      <Badge className="bg-[#0078D4] text-white">
+                      <Badge className="bg-[#2374AB] text-white">
                         {propertyGroup.repairs.length} {propertyGroup.repairs.length === 1 ? 'Repair' : 'Repairs'}
                       </Badge>
                     </div>
@@ -629,8 +629,8 @@ export default function ServiceRepairs() {
                             key={repair.id} 
                             className={`border-l-4 rounded-lg p-4 transition-all ${
                               selectedRepairs.has(repair.id) 
-                                ? "border-l-[#0078D4] bg-blue-50/50" 
-                                : "border-l-[#F97316] bg-slate-50 hover:bg-slate-100"
+                                ? "border-l-[#2374AB] bg-[#2374AB]1A/50" 
+                                : "border-l-[#FF8000] bg-slate-50 hover:bg-slate-100"
                             }`}
                             data-testid={`card-repair-${repair.id}`}
                           >
@@ -652,7 +652,7 @@ export default function ServiceRepairs() {
                                 <div className="flex items-start justify-between">
                                   <div className="flex items-center gap-3">
                                     <Badge 
-                                      className="text-lg font-bold px-3 py-1 bg-[#0078D4] text-white"
+                                      className="text-lg font-bold px-3 py-1 bg-[#2374AB] text-white"
                                       data-testid={`badge-sr-${repair.jobNumber}`}
                                     >
                                       {repair.jobNumber}
@@ -695,8 +695,8 @@ export default function ServiceRepairs() {
                                 
                                 {/* Notes */}
                                 {repair.notes && (
-                                  <div className="text-slate-600 text-sm bg-amber-50 p-2 rounded border border-amber-100">
-                                    <p className="font-medium text-amber-700 mb-1">Notes</p>
+                                  <div className="text-slate-600 text-sm bg-[#FF8000]1A p-2 rounded border border-[#FF8000]1A">
+                                    <p className="font-medium text-[#FF8000] mb-1">Notes</p>
                                     <p>{repair.notes}</p>
                                   </div>
                                 )}
@@ -712,7 +712,7 @@ export default function ServiceRepairs() {
                                       {photos.map((photo, idx) => (
                                         <div
                                           key={idx}
-                                          className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#F97316] transition-all"
+                                          className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:ring-2 hover:ring-[#FF8000] transition-all"
                                           onClick={() => openLightbox(photos, idx)}
                                           data-testid={`photo-${repair.id}-${idx}`}
                                         >
@@ -737,7 +737,7 @@ export default function ServiceRepairs() {
                                     <span className="text-slate-500">Parts:</span>
                                     <span className="ml-1 font-medium">{formatCurrency(repair.partsAmount)}</span>
                                   </div>
-                                  <div className="text-sm font-bold text-[#0078D4] ml-auto">
+                                  <div className="text-sm font-bold text-[#2374AB] ml-auto">
                                     Total: {formatCurrency(repair.totalAmount)}
                                   </div>
                                 </div>
@@ -815,7 +815,7 @@ export default function ServiceRepairs() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-[#F97316]" />
+              <Wrench className="w-5 h-5 text-[#FF8000]" />
               Add Service Repair Job
             </DialogTitle>
           </DialogHeader>
@@ -903,7 +903,7 @@ export default function ServiceRepairs() {
               Cancel
             </Button>
             <Button 
-              className="bg-[#F97316] hover:bg-[#EA580C]"
+              className="bg-[#FF8000] hover:bg-[#EA580C]"
               onClick={handleAddJob}
               disabled={!jobForm.propertyName || !jobForm.description || createJobMutation.isPending}
               data-testid="button-save-job"

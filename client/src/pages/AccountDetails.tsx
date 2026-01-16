@@ -17,13 +17,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const MESSAGE_TYPES = [
-  { value: "update", label: "Update", icon: MessageCircle, color: "bg-sky-500/20 text-sky-300 border-sky-400/50" },
-  { value: "assist", label: "Assist", icon: HelpCircle, color: "bg-green-500/20 text-green-300 border-green-400/50" },
+  { value: "update", label: "Update", icon: MessageCircle, color: "bg-[#2374AB]/20 text-[#2374AB] border-[#2374AB]/50" },
+  { value: "assist", label: "Assist", icon: HelpCircle, color: "bg-[#22D69A]/20 text-green-300 border-green-400/50" },
   { value: "issue", label: "Issue", icon: AlertTriangle, color: "bg-red-500/20 text-red-300 border-red-400/50" },
-  { value: "repair", label: "Repair Needed", icon: Wrench, color: "bg-orange-500/20 text-orange-300 border-orange-400/50" },
-  { value: "chemical", label: "Chemical/Safety", icon: Droplets, color: "bg-purple-500/20 text-purple-300 border-purple-400/50" },
-  { value: "task", label: "Task Created", icon: CheckCircle2, color: "bg-cyan-500/20 text-cyan-300 border-cyan-400/50" },
-  { value: "photo", label: "Photo", icon: Camera, color: "bg-pink-500/20 text-pink-300 border-pink-400/50" },
+  { value: "repair", label: "Repair Needed", icon: Wrench, color: "bg-[#FF8000]/20 text-orange-300 border-orange-400/50" },
+  { value: "chemical", label: "Chemical/Safety", icon: Droplets, color: "bg-[#17BEBB]/20 text-purple-300 border-purple-400/50" },
+  { value: "task", label: "Task Created", icon: CheckCircle2, color: "bg-[#17BEBB]/20 text-[#17BEBB] border-[#17BEBB]/50" },
+  { value: "photo", label: "Photo", icon: Camera, color: "bg-[#EF4444]/20 text-pink-300 border-[#EF4444]/50" },
 ];
 
 const ROLES = [
@@ -153,8 +153,8 @@ function ThreadPanel({ threadId, accountName }: { threadId: string; accountName:
       </div>
 
       {pinnedMessages.length > 0 && (
-        <div className="mb-4 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
-          <div className="flex items-center gap-2 text-amber-300 text-sm font-medium mb-2">
+        <div className="mb-4 p-3 bg-[#FF8000]/20 border border-[#FF8000]/30 rounded-lg">
+          <div className="flex items-center gap-2 text-[#FF8000] text-sm font-medium mb-2">
             <Pin className="w-4 h-4" />
             Pinned Messages
           </div>
@@ -203,7 +203,7 @@ function ThreadPanel({ threadId, accountName }: { threadId: string; accountName:
                 variant={taggedRoles.includes(role.value) ? "default" : "outline"}
                 size="sm"
                 onClick={() => toggleRole(role.value)}
-                className={taggedRoles.includes(role.value) ? "bg-sky-500 text-white" : "border-slate-600 text-slate-400"}
+                className={taggedRoles.includes(role.value) ? "bg-[#2374AB] text-white" : "border-slate-600 text-slate-400"}
                 data-testid={`btn-tag-${role.value}`}
               >
                 {role.label}
@@ -228,7 +228,7 @@ function ThreadPanel({ threadId, accountName }: { threadId: string; accountName:
           <Button 
             onClick={handleSend} 
             disabled={!newMessage.trim() || createMessage.isPending}
-            className="bg-sky-500 hover:bg-sky-400 text-white px-6"
+            className="bg-[#2374AB] hover:bg-[#2374AB] text-white px-6"
             data-testid="btn-send-message"
           >
             <Send className="w-4 h-4" />
@@ -252,7 +252,7 @@ function MessageCard({
   const Icon = typeInfo.icon;
 
   return (
-    <div className={`p-3 rounded-lg bg-slate-800/50 border border-slate-700 ${message.pinned ? 'border-amber-500/50' : ''}`}>
+    <div className={`p-3 rounded-lg bg-slate-800/50 border border-slate-700 ${message.pinned ? 'border-[#FF8000]/50' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
@@ -267,7 +267,7 @@ function MessageCard({
             {message.taggedRoles && message.taggedRoles.length > 0 && (
               <div className="flex gap-1">
                 {message.taggedRoles.map(role => (
-                  <Badge key={role} variant="outline" className="text-xs border-sky-500/50 text-sky-300">
+                  <Badge key={role} variant="outline" className="text-xs border-[#2374AB]/50 text-[#2374AB]">
                     @{role}
                   </Badge>
                 ))}
@@ -280,7 +280,7 @@ function MessageCard({
           variant="ghost"
           size="sm"
           onClick={() => onPin({ id: message.id, pinned: !message.pinned })}
-          className={message.pinned ? "text-amber-400" : "text-slate-500 hover:text-amber-400"}
+          className={message.pinned ? "text-[#FF8000]" : "text-slate-500 hover:text-[#FF8000]"}
           data-testid={`btn-pin-${message.id}`}
         >
           <Pin className="w-4 h-4" />
@@ -315,10 +315,10 @@ function WorkOrdersTab({ accountId }: { accountId: string }) {
                   <p className="text-sm text-slate-400">{job.technicianName || "Unassigned"}</p>
                 </div>
                 <div className="text-right">
-                  <Badge className={job.isCompleted ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}>
+                  <Badge className={job.isCompleted ? "bg-[#22D69A]/20 text-green-300" : "bg-[#FF8000]/20 text-[#FF8000]"}>
                     {job.isCompleted ? "Complete" : job.status || "Pending"}
                   </Badge>
-                  <p className="text-sm text-sky-400 mt-1">${(job.price || 0).toLocaleString()}</p>
+                  <p className="text-sm text-[#2374AB] mt-1">${(job.price || 0).toLocaleString()}</p>
                 </div>
               </div>
             </CardContent>
@@ -445,8 +445,8 @@ export default function AccountDetails() {
         <Card className="flex-1 bg-slate-900/50 border-slate-700 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-sky-500/20 flex items-center justify-center">
-                <Building className="w-6 h-6 text-sky-400" />
+              <div className="w-12 h-12 rounded-full bg-[#2374AB]/20 flex items-center justify-center">
+                <Building className="w-6 h-6 text-[#2374AB]" />
               </div>
               <div>
                 <CardTitle className="text-xl text-white">{accountName}</CardTitle>
@@ -457,19 +457,19 @@ export default function AccountDetails() {
           <CardContent className="flex-1 pt-4">
             <Tabs defaultValue="thread" className="h-full flex flex-col">
               <TabsList className="bg-slate-800/50 border border-slate-700 mb-4">
-                <TabsTrigger value="thread" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white" data-testid="tab-thread">
+                <TabsTrigger value="thread" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-thread">
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Thread
                 </TabsTrigger>
-                <TabsTrigger value="workorders" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white" data-testid="tab-workorders">
+                <TabsTrigger value="workorders" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-workorders">
                   <ClipboardList className="w-4 h-4 mr-2" />
                   Work Orders
                 </TabsTrigger>
-                <TabsTrigger value="photos" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white" data-testid="tab-photos">
+                <TabsTrigger value="photos" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-photos">
                   <Camera className="w-4 h-4 mr-2" />
                   Photos
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white" data-testid="tab-notes">
+                <TabsTrigger value="notes" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white" data-testid="tab-notes">
                   <FileText className="w-4 h-4 mr-2" />
                   Notes
                 </TabsTrigger>

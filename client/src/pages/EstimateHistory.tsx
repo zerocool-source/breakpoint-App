@@ -157,31 +157,31 @@ export default function EstimateHistory() {
 
   const getActionIcon = (actionType: string) => {
     switch (actionType) {
-      case "created": return <FileText className="h-4 w-4 text-blue-500" />;
-      case "sent_for_approval": return <Send className="h-4 w-4 text-orange-500" />;
-      case "approved": return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case "verbal_approval": return <Phone className="h-4 w-4 text-purple-500" />;
+      case "created": return <FileText className="h-4 w-4 text-[#2374AB]" />;
+      case "sent_for_approval": return <Send className="h-4 w-4 text-[#FF8000]" />;
+      case "approved": return <CheckCircle2 className="h-4 w-4 text-[#22D69A]" />;
+      case "verbal_approval": return <Phone className="h-4 w-4 text-[#17BEBB]" />;
       case "rejected": return <XCircle className="h-4 w-4 text-red-500" />;
       case "archived": return <Archive className="h-4 w-4 text-gray-500" />;
       case "deleted": return <Trash2 className="h-4 w-4 text-red-600" />;
-      case "restored": return <RotateCcw className="h-4 w-4 text-blue-600" />;
+      case "restored": return <RotateCcw className="h-4 w-4 text-[#2374AB]" />;
       default: return <Clock className="h-4 w-4 text-gray-400" />;
     }
   };
 
   const getActionBadge = (actionType: string) => {
     const variants: Record<string, string> = {
-      created: "bg-blue-100 text-blue-700",
-      sent_for_approval: "bg-orange-100 text-orange-700",
-      approved: "bg-green-100 text-green-700",
-      verbal_approval: "bg-purple-100 text-purple-700",
+      created: "bg-[#2374AB]1A text-[#2374AB]",
+      sent_for_approval: "bg-[#FF8000]1A text-[#FF8000]",
+      approved: "bg-[#22D69A]1A text-[#22D69A]",
+      verbal_approval: "bg-[#17BEBB]1A text-[#17BEBB]",
       rejected: "bg-red-100 text-red-700",
       archived: "bg-gray-100 text-gray-700",
       deleted: "bg-red-100 text-red-800",
-      restored: "bg-blue-100 text-blue-700",
-      scheduled: "bg-teal-100 text-teal-700",
-      completed: "bg-emerald-100 text-emerald-700",
-      invoiced: "bg-indigo-100 text-indigo-700",
+      restored: "bg-[#2374AB]1A text-[#2374AB]",
+      scheduled: "bg-[#17BEBB]1A text-[#17BEBB]",
+      completed: "bg-[#22D69A]1A text-[#22D69A]",
+      invoiced: "bg-[#2374AB]1A text-[#2374AB]",
     };
     
     return (
@@ -201,7 +201,7 @@ export default function EstimateHistory() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <History className="h-7 w-7 text-blue-600" />
+            <History className="h-7 w-7 text-[#2374AB]" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Estimate History Log</h1>
               <p className="text-sm text-gray-500">Complete audit trail of all estimate actions</p>
@@ -217,7 +217,7 @@ export default function EstimateHistory() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-500" />
+                <FileText className="h-5 w-5 text-[#2374AB]" />
                 <div>
                   <p className="text-2xl font-bold">{metrics?.total || 0}</p>
                   <p className="text-xs text-gray-500">Total Actions</p>
@@ -228,7 +228,7 @@ export default function EstimateHistory() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-green-500" />
+                <Mail className="h-5 w-5 text-[#22D69A]" />
                 <div>
                   <p className="text-2xl font-bold">{metrics?.emailApprovals || 0}</p>
                   <p className="text-xs text-gray-500">Email Approvals</p>
@@ -239,7 +239,7 @@ export default function EstimateHistory() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Phone className="h-5 w-5 text-purple-500" />
+                <Phone className="h-5 w-5 text-[#17BEBB]" />
                 <div>
                   <p className="text-2xl font-bold">{metrics?.verbalApprovals || 0}</p>
                   <p className="text-xs text-gray-500">Verbal Approvals</p>
@@ -405,7 +405,7 @@ export default function EstimateHistory() {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#2374AB]" />
               </div>
             ) : filteredLogs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -451,7 +451,7 @@ export default function EstimateHistory() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="font-medium text-blue-600">
+                          <span className="font-medium text-[#2374AB]">
                             {log.estimateNumber || log.estimateId.slice(0, 8)}
                           </span>
                         </TableCell>

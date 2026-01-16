@@ -148,9 +148,9 @@ export default function Chemicals() {
     const upper = severity.toUpperCase();
     if (upper === "URGENT") return "bg-red-500/20 text-red-400 border-red-500/50";
     if (upper.includes("CRITICAL")) return "bg-destructive/20 text-destructive border-destructive/50";
-    if (upper.includes("HIGH")) return "bg-orange-500/20 text-orange-400 border-orange-500/50";
-    if (upper.includes("MEDIUM")) return "bg-yellow-500/20 text-yellow-400 border-yellow-500/50";
-    return "bg-blue-500/20 text-blue-400 border-blue-500/50";
+    if (upper.includes("HIGH")) return "bg-[#FF8000]/20 text-orange-400 border-[#FF8000]/50";
+    if (upper.includes("MEDIUM")) return "bg-[#FF8000]/20 text-yellow-400 border-[#FF8000]/50";
+    return "bg-[#2374AB]/20 text-blue-400 border-[#2374AB]/50";
   };
 
   const urgentCount = incompleteChemicals.filter(a => a.severity.toUpperCase() === "URGENT").length;
@@ -160,7 +160,7 @@ export default function Chemicals() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
@@ -210,7 +210,7 @@ export default function Chemicals() {
         </Card>
         <Card className="glass-card border-white/5">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-[#FF8000]/10 flex items-center justify-center">
               <Clock className="w-6 h-6 text-yellow-400" />
             </div>
             <div>
@@ -223,7 +223,7 @@ export default function Chemicals() {
         </Card>
         <Card className="glass-card border-white/5">
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-[#22D69A]/10 flex items-center justify-center">
               <CheckCircle2 className="w-6 h-6 text-green-400" />
             </div>
             <div>
@@ -295,7 +295,7 @@ export default function Chemicals() {
                     className={cn(
                       "group relative p-4 rounded-lg border transition-all",
                       isCompleted
-                        ? "bg-green-500/5 border-green-500/20 opacity-60"
+                        ? "bg-[#22D69A]/5 border-[#22D69A]/20 opacity-60"
                         : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-primary/30"
                     )}
                     data-testid={`chemical-card-${alert.alertId}`}
@@ -315,7 +315,7 @@ export default function Chemicals() {
                           className={cn(
                             "h-6 w-6 border-2",
                             isCompleted 
-                              ? "border-green-500 bg-green-500 data-[state=checked]:bg-green-500" 
+                              ? "border-[#22D69A] bg-[#22D69A] data-[state=checked]:bg-[#22D69A]" 
                               : "border-primary/50 data-[state=checked]:bg-primary"
                           )}
                           data-testid={`checkbox-${alert.alertId}`}
@@ -333,7 +333,7 @@ export default function Chemicals() {
                             {alert.severity}
                           </Badge>
                           {isCompleted && (
-                            <Badge className="bg-green-500/20 text-green-400 border-green-500/50 text-xs">
+                            <Badge className="bg-[#22D69A]/20 text-green-400 border-[#22D69A]/50 text-xs">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
                               Reviewed
                             </Badge>
@@ -353,7 +353,7 @@ export default function Chemicals() {
                     {/* Chemical Description */}
                     <div className={cn(
                       "rounded-lg p-3 mb-3 border ml-10",
-                      isCompleted ? "bg-green-500/5 border-green-500/10" : "bg-primary/5 border-primary/20"
+                      isCompleted ? "bg-[#22D69A]/5 border-[#22D69A]/10" : "bg-primary/5 border-primary/20"
                     )}>
                       <p className={cn("text-sm", isCompleted ? "text-gray-400" : "text-gray-200")} data-testid={`text-message-${alert.alertId}`}>
                         {alert.message}
@@ -371,7 +371,7 @@ export default function Chemicals() {
                           </div>
                         )}
                         {alert.notes && (
-                          <div className="text-xs text-yellow-400/80 bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20">
+                          <div className="text-xs text-yellow-400/80 bg-[#FF8000]/10 px-2 py-1 rounded border border-[#FF8000]/20">
                             {alert.notes}
                           </div>
                         )}

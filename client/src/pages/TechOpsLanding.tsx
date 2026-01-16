@@ -33,7 +33,7 @@ const techOpsOptions = [
     label: "Service Repairs", 
     href: "/service-repairs",
     icon: Wrench, 
-    color: "bg-purple-100 text-purple-700 border-purple-200",
+    color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33",
     description: "Sub-$500 service technician repair jobs"
   },
   { 
@@ -42,7 +42,7 @@ const techOpsOptions = [
     label: "Chemical Orders", 
     href: "/tech-ops/chemical-order",
     icon: Droplets, 
-    color: "bg-blue-100 text-blue-700 border-blue-200",
+    color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33",
     description: "Request chemicals to be ordered for a property"
   },
   { 
@@ -51,7 +51,7 @@ const techOpsOptions = [
     label: "Chemicals Dropped-Off", 
     href: "/tech-ops/chemicals-dropoff",
     icon: Droplets, 
-    color: "bg-green-100 text-green-700 border-green-200",
+    color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33",
     description: "Log chemicals delivered or dropped off at a property"
   },
   { 
@@ -60,7 +60,7 @@ const techOpsOptions = [
     label: "Windy Day Clean Up", 
     href: "/tech-ops/windy-day-cleanup",
     icon: Wind, 
-    color: "bg-cyan-100 text-cyan-700 border-cyan-200",
+    color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33",
     description: "Request extra cleaning after windy conditions"
   },
   { 
@@ -69,7 +69,7 @@ const techOpsOptions = [
     label: "Report Issues", 
     href: "/tech-ops/report-issue",
     icon: AlertTriangle, 
-    color: "bg-orange-100 text-orange-700 border-orange-200",
+    color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33",
     description: "Report any issue or concern at a property"
   },
 ];
@@ -87,17 +87,17 @@ const managementOptions = [
 
 const entryTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
   repairs_needed: { label: "Repairs Needed", color: "bg-red-100 text-red-700", icon: Wrench },
-  service_repairs: { label: "Service Repairs", color: "bg-purple-100 text-purple-700", icon: Wrench },
-  chemical_order: { label: "Chemical Orders", color: "bg-blue-100 text-blue-700", icon: Droplets },
-  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-green-100 text-green-700", icon: Droplets },
-  windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-cyan-100 text-cyan-700", icon: Wind },
-  report_issue: { label: "Report Issues", color: "bg-orange-100 text-orange-700", icon: AlertTriangle },
+  service_repairs: { label: "Service Repairs", color: "bg-[#17BEBB]1A text-[#17BEBB]", icon: Wrench },
+  chemical_order: { label: "Chemical Orders", color: "bg-[#2374AB]1A text-[#2374AB]", icon: Droplets },
+  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-[#22D69A]1A text-[#22D69A]", icon: Droplets },
+  windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-[#17BEBB]1A text-[#17BEBB]", icon: Wind },
+  report_issue: { label: "Report Issues", color: "bg-[#FF8000]1A text-[#FF8000]", icon: AlertTriangle },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Pending", color: "bg-amber-100 text-amber-700", icon: Clock },
-  reviewed: { label: "Reviewed", color: "bg-blue-100 text-blue-700", icon: FileText },
-  completed: { label: "Completed", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#FF8000]", icon: Clock },
+  reviewed: { label: "Reviewed", color: "bg-[#2374AB]1A text-[#2374AB]", icon: FileText },
+  completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#22D69A]", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-600", icon: XCircle },
   archived: { label: "Archived", color: "bg-slate-100 text-slate-500", icon: Archive },
 };
@@ -213,8 +213,8 @@ export default function TechOpsLanding() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#0078D4]/10 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-[#0078D4]" />
+            <div className="w-12 h-12 rounded-lg bg-[#2374AB]/10 flex items-center justify-center">
+              <Wrench className="w-6 h-6 text-[#2374AB]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-techops">Tech Ops</h1>
@@ -243,15 +243,15 @@ export default function TechOpsLanding() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
+                      <span className="font-medium text-[#1E293B] group-hover:text-[#2374AB] text-sm transition-colors flex-1">
                         {option.label}
                       </span>
                       {count > 0 && (
-                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#F97316] text-white min-w-[24px] text-center">
+                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#FF8000] text-white min-w-[24px] text-center">
                           {count}
                         </span>
                       )}
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#2374AB] transition-colors" />
                     </div>
                   </CardContent>
                 </Card>
@@ -272,10 +272,10 @@ export default function TechOpsLanding() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
+                      <span className="font-medium text-[#1E293B] group-hover:text-[#2374AB] text-sm transition-colors flex-1">
                         {option.label}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#2374AB] transition-colors" />
                     </div>
                   </CardContent>
                 </Card>
@@ -288,7 +288,7 @@ export default function TechOpsLanding() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#0078D4]" />
+                <Filter className="w-5 h-5 text-[#2374AB]" />
                 Dashboard & Filters
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
@@ -360,34 +360,34 @@ export default function TechOpsLanding() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
               <div className="p-4 bg-slate-50 rounded-lg border border-slate-200" data-testid="metric-total">
-                <div className="text-2xl font-bold text-[#0078D4]">{summary?.total || 0}</div>
+                <div className="text-2xl font-bold text-[#2374AB]">{summary?.total || 0}</div>
                 <div className="text-sm text-slate-500">Total Submissions</div>
               </div>
-              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200" data-testid="metric-pending">
-                <div className="text-2xl font-bold text-amber-700">{summary?.byStatus?.pending || 0}</div>
-                <div className="text-sm text-amber-600">Pending</div>
+              <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-pending">
+                <div className="text-2xl font-bold text-[#FF8000]">{summary?.byStatus?.pending || 0}</div>
+                <div className="text-sm text-[#FF8000]">Pending</div>
               </div>
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200" data-testid="metric-completed">
-                <div className="text-2xl font-bold text-green-700">{summary?.byStatus?.completed || 0}</div>
-                <div className="text-sm text-green-600">Completed</div>
+              <div className="p-4 bg-[#22D69A]1A rounded-lg border border-[#22D69A]33" data-testid="metric-completed">
+                <div className="text-2xl font-bold text-[#22D69A]">{summary?.byStatus?.completed || 0}</div>
+                <div className="text-sm text-[#22D69A]">Completed</div>
               </div>
               <div className="p-4 bg-red-50 rounded-lg border border-red-200" data-testid="metric-repairs">
                 <div className="text-2xl font-bold text-red-700">{summary?.byType?.repairs_needed || 0}</div>
                 <div className="text-sm text-red-600">Repairs Needed</div>
               </div>
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200" data-testid="metric-chemicals">
-                <div className="text-2xl font-bold text-blue-700">{(summary?.byType?.chemical_order || 0) + (summary?.byType?.chemicals_dropoff || 0)}</div>
-                <div className="text-sm text-blue-600">Chemical Requests</div>
+              <div className="p-4 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33" data-testid="metric-chemicals">
+                <div className="text-2xl font-bold text-[#2374AB]">{(summary?.byType?.chemical_order || 0) + (summary?.byType?.chemicals_dropoff || 0)}</div>
+                <div className="text-sm text-[#2374AB]">Chemical Requests</div>
               </div>
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200" data-testid="metric-issues">
-                <div className="text-2xl font-bold text-orange-700">{summary?.byType?.report_issue || 0}</div>
-                <div className="text-sm text-orange-600">Reported Issues</div>
+              <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-issues">
+                <div className="text-2xl font-bold text-[#FF8000]">{summary?.byType?.report_issue || 0}</div>
+                <div className="text-sm text-[#FF8000]">Reported Issues</div>
               </div>
             </div>
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -424,7 +424,7 @@ export default function TechOpsLanding() {
                                 {entry.priority && entry.priority !== "normal" && (
                                   <Badge variant="outline" className={cn(
                                     entry.priority === "urgent" ? "border-red-300 text-red-700" :
-                                    entry.priority === "high" ? "border-orange-300 text-orange-700" :
+                                    entry.priority === "high" ? "border-orange-300 text-[#FF8000]" :
                                     "border-slate-300 text-slate-600"
                                   )}>
                                     {entry.priority}

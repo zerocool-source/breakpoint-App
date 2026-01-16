@@ -99,9 +99,9 @@ export default function EquipmentReports() {
   const getEquipmentBadge = (type: string) => {
     switch (type) {
       case "Tear Down":
-        return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">{type}</Badge>;
+        return <Badge className="bg-[#17BEBB]1A text-[#17BEBB] hover:bg-[#17BEBB]1A">{type}</Badge>;
       case "De-Soot":
-        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100"><Flame className="w-3 h-3 mr-1" />{type}</Badge>;
+        return <Badge className="bg-[#FF8000]1A text-[#FF8000] hover:bg-[#FF8000]1A"><Flame className="w-3 h-3 mr-1" />{type}</Badge>;
       case "Heater":
         return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><Flame className="w-3 h-3 mr-1" />{type}</Badge>;
       default:
@@ -124,7 +124,7 @@ export default function EquipmentReports() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-[#0078D4]">Equipment Reports</h1>
+              <h1 className="text-3xl font-bold text-[#2374AB]">Equipment Reports</h1>
               <p className="text-slate-600 mt-1">
                 Jobs mentioning tear downs, de-soots, and heaters from Pool Brain
               </p>
@@ -132,7 +132,7 @@ export default function EquipmentReports() {
             <Button 
               onClick={handleExport}
               disabled={isExporting || isLoading}
-              className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+              className="bg-[#2374AB] hover:bg-[#2374AB]/90"
               data-testid="button-export-excel"
             >
               {isExporting ? (
@@ -155,7 +155,7 @@ export default function EquipmentReports() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Total Jobs</p>
-                    <p className="text-2xl font-bold text-[#0078D4]">{equipmentJobs.length}</p>
+                    <p className="text-2xl font-bold text-[#2374AB]">{equipmentJobs.length}</p>
                   </div>
                   <FileSpreadsheet className="w-8 h-8 text-[#60A5FA]" />
                 </div>
@@ -167,7 +167,7 @@ export default function EquipmentReports() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Tear Downs</p>
-                    <p className="text-2xl font-bold text-purple-600">{tearDownCount}</p>
+                    <p className="text-2xl font-bold text-[#17BEBB]">{tearDownCount}</p>
                   </div>
                   <Wrench className="w-8 h-8 text-purple-400" />
                 </div>
@@ -179,7 +179,7 @@ export default function EquipmentReports() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">De-Soots</p>
-                    <p className="text-2xl font-bold text-orange-600">{deSootCount}</p>
+                    <p className="text-2xl font-bold text-[#FF8000]">{deSootCount}</p>
                   </div>
                   <Flame className="w-8 h-8 text-orange-400" />
                 </div>
@@ -200,10 +200,10 @@ export default function EquipmentReports() {
           </div>
 
           {hasPartialData && (
-            <Alert className="mb-6 border-amber-200 bg-amber-50">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <Alert className="mb-6 border-[#FF8000]33 bg-[#FF8000]1A">
+              <AlertTriangle className="h-4 w-4 text-[#FF8000]" />
               <AlertTitle className="text-amber-800">Partial Data Warning</AlertTitle>
-              <AlertDescription className="text-amber-700">
+              <AlertDescription className="text-[#FF8000]">
                 Some job details could not be fetched from Pool Brain. The report may be incomplete.
               </AlertDescription>
             </Alert>
@@ -212,7 +212,7 @@ export default function EquipmentReports() {
           <Card className="bg-white shadow-sm border-[#E2E8F0] mb-6">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#0078D4]" />
+                <Filter className="w-5 h-5 text-[#2374AB]" />
                 Date Range Filter
               </CardTitle>
             </CardHeader>
@@ -243,7 +243,7 @@ export default function EquipmentReports() {
                 <Button 
                   onClick={() => refetch()} 
                   variant="outline"
-                  className="border-[#0078D4] text-[#0078D4] hover:bg-[#EFF6FF]"
+                  className="border-[#2374AB] text-[#2374AB] hover:bg-[#EFF6FF]"
                   data-testid="button-apply-filter"
                 >
                   Apply Filter
@@ -281,7 +281,7 @@ export default function EquipmentReports() {
                 </Alert>
               ) : isLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
                   <span className="ml-3 text-slate-600">Loading equipment jobs from Pool Brain...</span>
                 </div>
               ) : equipmentJobs.length === 0 ? (
@@ -295,12 +295,12 @@ export default function EquipmentReports() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-[#F8FAFC]">
-                        <TableHead className="font-semibold text-[#0078D4]">Date</TableHead>
-                        <TableHead className="font-semibold text-[#0078D4]">Property</TableHead>
-                        <TableHead className="font-semibold text-[#0078D4]">Customer</TableHead>
-                        <TableHead className="font-semibold text-[#0078D4]">Technician</TableHead>
-                        <TableHead className="font-semibold text-[#0078D4]">Type</TableHead>
-                        <TableHead className="font-semibold text-[#0078D4]">Job Title</TableHead>
+                        <TableHead className="font-semibold text-[#2374AB]">Date</TableHead>
+                        <TableHead className="font-semibold text-[#2374AB]">Property</TableHead>
+                        <TableHead className="font-semibold text-[#2374AB]">Customer</TableHead>
+                        <TableHead className="font-semibold text-[#2374AB]">Technician</TableHead>
+                        <TableHead className="font-semibold text-[#2374AB]">Type</TableHead>
+                        <TableHead className="font-semibold text-[#2374AB]">Job Title</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

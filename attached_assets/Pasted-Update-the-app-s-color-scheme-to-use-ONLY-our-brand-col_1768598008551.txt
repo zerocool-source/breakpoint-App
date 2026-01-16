@@ -1,0 +1,215 @@
+Update the app's color scheme to use ONLY our brand colors consistently. Currently there are colors that don't match our palette (purples, random blues, yellows, pinks). Replace all of them with our primary brand colors at various opacities.
+
+Primary Brand Colors:
+
+Color Name Hex Usage Vivid Tangerine (Orange) #FF8000 Primary accent, CTAs, attention items, warnings, pending states Rich Cerulean (Blue) #2374AB Primary buttons, links, active states, in-progress, scheduled Tropical Teal #17BEBB Secondary accent, info, charts, data visualizations, icons Emerald (Green) #22D69A Success, approved, completed, resolved, positive metrics Red #EF4444 Critical, urgent, declined, rejected, errors White #FFFFFF Cards, panels, backgrounds Light Gray #F8FAFC Page backgrounds, subtle dividers, disabled states Medium Gray #6B7280 Secondary text, timestamps, borders Dark Gray #1F2937 Primary text
+
+Opacity Variations to Use:
+
+Color 100% 20% Opacity 10% Opacity Usage Orange #FF8000 Solid buttons, badges #FF800033 - Badge backgrounds, card highlights #FF80001A - Subtle row highlights Pending, warnings, attention Blue #2374AB Solid buttons, links #2374AB33 - Badge backgrounds, selected states #2374AB1A - Subtle highlights In progress, scheduled, active Teal #17BEBB Icons, accents #17BEBB33 - Info badge backgrounds #17BEBB1A - Subtle backgrounds Info, secondary data Green #22D69A Solid badges, icons #22D69A33 - Success badge backgrounds #22D69A1A - Success row highlights Completed, approved, resolved Red #EF4444 Solid badges, icons #EF444433 - Critical badge backgrounds #EF44441A - Urgent row highlights Critical, rejected, errors
+
+Specific Fixes Needed:
+
+
+
+
+
+Stat Cards (KPI Tiles) - Replace any purple, pink, or off-brand colors:
+
+
+
+
+
+"Total Jobs" card → Rich Cerulean (#2374AB) with 10% opacity background
+
+
+
+"Pending" card → Vivid Tangerine (#FF8000) with 10% opacity background
+
+
+
+"In Progress" card → Tropical Teal (#17BEBB) with 10% opacity background
+
+
+
+"Completed" card → Emerald (#22D69A) with 10% opacity background
+
+
+
+Numbers should be the solid color, labels in medium gray
+
+
+
+Badges/Tags - Use 20% opacity backgrounds with solid text:
+
+
+
+
+
+"Pending" badge → Orange background (#FF800033), orange text (#FF8000)
+
+
+
+"Pending Review" badge → Orange background, orange text
+
+
+
+"In Progress" badge → Blue background (#2374AB33), blue text (#2374AB)
+
+
+
+"Completed" badge → Green background (#22D69A33), green text (#22D69A)
+
+
+
+"Resolved" badge → Green background, green text
+
+
+
+"Critical" badge → Red solid (#EF4444), white text
+
+
+
+"High" badge → Orange solid (#FF8000), white text
+
+
+
+"Normal" badge → Teal background (#17BEBB33), teal text (#17BEBB)
+
+
+
+"Service Tech", "Repair Tech", "Supervisor", "Repair Foreman" role badges → Teal background, teal text
+
+
+
+Avatar Circles - Use Rich Cerulean (#2374AB) or Tropical Teal (#17BEBB) backgrounds with white initials, not purple or random colors
+
+
+
+Progress Bars - Use Emerald (#22D69A) for completion, not random blues
+
+
+
+Card Left Borders/Accents:
+
+
+
+
+
+Pending items → Orange left border
+
+
+
+In progress → Blue left border
+
+
+
+Completed → Green left border
+
+
+
+Critical/Urgent → Red left border
+
+
+
+"X days waiting" text - Use Red (#EF4444) for urgency
+
+
+
+Icons - Match context:
+
+
+
+
+
+Wrench/repair icons → Tropical Teal or Orange
+
+
+
+Calendar icons → Rich Cerulean
+
+
+
+Alert/warning icons → Orange or Red
+
+
+
+Checkmark icons → Emerald Green
+
+
+
+Info icons → Tropical Teal
+
+
+
+Buttons:
+
+
+
+
+
+Primary action → Rich Cerulean solid (#2374AB), white text
+
+
+
+Secondary action → White background, Rich Cerulean border and text
+
+
+
+Urgent/CTA → Vivid Tangerine solid (#FF8000), white text
+
+
+
+Danger → Red solid (#EF4444), white text
+
+
+
+Links and "View All" → Rich Cerulean (#2374AB), hover to Vivid Tangerine (#FF8000)
+
+
+
+Tab Navigation:
+
+
+
+
+
+Active tab → Rich Cerulean text with Rich Cerulean underline or background
+
+
+
+Inactive tabs → Medium Gray text
+
+
+
+Filter Dropdowns - Border in Medium Gray, focus state in Rich Cerulean
+
+
+
+Charts/Data Visualizations - Use only: Cerulean Blue, Tropical Teal, Vivid Tangerine, Emerald Green
+
+Remove These Colors Entirely:
+
+
+
+
+
+Any purples
+
+
+
+Any pinks
+
+
+
+Any yellows that aren't our orange
+
+
+
+Any blues that aren't #2374AB or #17BEBB
+
+
+
+Any greens that aren't #22D69A
+
+Apply these changes across ALL pages: Overview, Tech Ops, Repair Queue, Repair Foreman Dashboard, Emergencies, Estimates, Jobs, Technicians, Scheduling, Reports, Chats Hub, Fleet, Vendors, Automations, and Settings.

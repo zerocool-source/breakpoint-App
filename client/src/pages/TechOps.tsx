@@ -34,53 +34,53 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
   service_repairs: { 
     label: "Service Repairs", 
     icon: Wrench, 
-    color: "bg-purple-100 text-purple-700 border-purple-200",
+    color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33",
     description: "Sub-$500 service repairs submitted by technicians"
   },
   chemical_order: { 
     label: "Chemical Order", 
     icon: Droplets, 
-    color: "bg-blue-100 text-blue-700 border-blue-200",
+    color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33",
     description: "Request chemicals to be ordered for a property"
   },
   chemicals_dropoff: { 
     label: "Chemicals Drop-Off", 
     icon: Droplets, 
-    color: "bg-green-100 text-green-700 border-green-200",
+    color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33",
     description: "Log chemicals delivered or dropped off at a property"
   },
   windy_day_cleanup: { 
     label: "Windy Day Clean Up", 
     icon: Wind, 
-    color: "bg-amber-100 text-amber-700 border-amber-200",
+    color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33",
     description: "Schedule additional cleanup due to windy conditions"
   },
   report_issue: { 
     label: "Report Issue", 
     icon: AlertTriangle, 
-    color: "bg-orange-100 text-orange-700 border-orange-200",
+    color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33",
     description: "Report any issue or concern at a property"
   },
   supervisor_concerns: { 
     label: "Supervisor Concerns", 
     icon: User, 
-    color: "bg-indigo-100 text-indigo-700 border-indigo-200",
+    color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33",
     description: "Concerns or issues escalated to supervisors"
   },
 };
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock, label: "Pending" },
-  reviewed: { color: "bg-blue-100 text-blue-700 border-blue-200", icon: CheckCircle, label: "Reviewed" },
-  completed: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle, label: "Completed" },
+  pending: { color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33", icon: Clock, label: "Pending" },
+  reviewed: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", icon: CheckCircle, label: "Reviewed" },
+  completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle, label: "Cancelled" },
   archived: { color: "bg-slate-100 text-slate-500 border-slate-200", icon: XCircle, label: "Archived" },
 };
 
 const priorityConfig: Record<string, { bg: string; text: string; label: string }> = {
-  low: { bg: "bg-green-100", text: "text-green-700", label: "Low" },
-  normal: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Medium" },
-  high: { bg: "bg-orange-100", text: "text-orange-700", label: "High" },
+  low: { bg: "bg-[#22D69A]1A", text: "text-[#22D69A]", label: "Low" },
+  normal: { bg: "bg-[#FF8000]1A", text: "text-[#FF8000]", label: "Medium" },
+  high: { bg: "bg-[#FF8000]1A", text: "text-[#FF8000]", label: "High" },
   urgent: { bg: "bg-red-100", text: "text-red-700", label: "Urgent" },
 };
 
@@ -420,7 +420,7 @@ export default function TechOps() {
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">{config.label}</h1>
                 {entryType === "windy_day_cleanup" && pendingCount.count > 0 && (
-                  <Badge className="bg-amber-500 text-white border-amber-600 px-2.5 py-0.5 text-sm font-semibold" data-testid="badge-pending-count">
+                  <Badge className="bg-[#FF8000] text-white border-[#FF8000] px-2.5 py-0.5 text-sm font-semibold" data-testid="badge-pending-count">
                     {pendingCount.count} Pending
                   </Badge>
                 )}
@@ -429,7 +429,7 @@ export default function TechOps() {
             </div>
           </div>
           <Button
-            className="bg-[#0078D4] hover:bg-[#1E40AF]"
+            className="bg-[#2374AB] hover:bg-[#1E40AF]"
             onClick={() => setShowAddDialog(true)}
             data-testid="button-add-entry"
           >
@@ -510,7 +510,7 @@ export default function TechOps() {
             <CardTitle className="text-lg flex items-center gap-2">
               {entryType === "windy_day_cleanup" ? (
                 <>
-                  <Building className="w-5 h-5 text-[#0078D4]" />
+                  <Building className="w-5 h-5 text-[#2374AB]" />
                   Entries by Property
                 </>
               ) : (
@@ -521,7 +521,7 @@ export default function TechOps() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -536,7 +536,7 @@ export default function TechOps() {
                   {entriesByProperty.map(([propertyKey, group]) => (
                     <div key={propertyKey} className="border border-slate-200 rounded-lg overflow-hidden" data-testid={`property-group-${propertyKey}`}>
                       {/* Property Header */}
-                      <div className="bg-gradient-to-r from-[#0078D4] to-[#3B82F6] text-white p-4">
+                      <div className="bg-gradient-to-r from-[#2374AB] to-[#3B82F6] text-white p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
                             <Building className="w-5 h-5" />
@@ -544,7 +544,7 @@ export default function TechOps() {
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg">{group.propertyName}</h3>
                             {group.propertyAddress && (
-                              <p className="text-blue-100 text-sm">{group.propertyAddress}</p>
+                              <p className="text-[#2374AB]1A text-sm">{group.propertyAddress}</p>
                             )}
                           </div>
                           <Badge className="bg-white/20 text-white border-white/30">
@@ -589,7 +589,7 @@ export default function TechOps() {
 
                                   {/* Description/Notes */}
                                   {(entry.description || entry.notes) && (
-                                    <div className="bg-cyan-50 border border-cyan-100 rounded-md p-3">
+                                    <div className="bg-[#17BEBB1A] border border-[#17BEBB]1A rounded-md p-3">
                                       {entry.description && (
                                         <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.description}</p>
                                       )}
@@ -606,7 +606,7 @@ export default function TechOps() {
                                         <button
                                           key={idx}
                                           onClick={() => openLightbox(photos, idx)}
-                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#0078D4] transition-colors"
+                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#2374AB] transition-colors"
                                         >
                                           <img
                                             src={photo}
@@ -643,7 +643,7 @@ export default function TechOps() {
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                                        className="text-[#FF8000] hover:text-[#FF8000] hover:bg-[#FF8000]1A border-[#FF8000]33"
                                         onClick={() => noChargeMutation.mutate(entry.id)}
                                         disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
                                         data-testid={`button-no-charge-${entry.id}`}
@@ -724,7 +724,7 @@ export default function TechOps() {
                             {/* Property Info */}
                             <div className="bg-slate-50 rounded-md p-3 space-y-1">
                               <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-[#0078D4]" />
+                                <MapPin className="w-4 h-4 text-[#2374AB]" />
                                 <span className="font-semibold text-[#1E293B]">{entry.propertyName || "No property"}</span>
                               </div>
                               {(entry as any).propertyAddress && (
@@ -741,8 +741,8 @@ export default function TechOps() {
 
                             {/* Description/Notes */}
                             {(entry.description || entry.notes) && (
-                              <div className="bg-blue-50 border border-blue-100 rounded-md p-3">
-                                <h4 className="text-xs font-semibold text-blue-700 uppercase mb-1">Description / Notes</h4>
+                              <div className="bg-[#2374AB]1A border border-[#2374AB]1A rounded-md p-3">
+                                <h4 className="text-xs font-semibold text-[#2374AB] uppercase mb-1">Description / Notes</h4>
                                 {entry.description && (
                                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.description}</p>
                                 )}
@@ -777,7 +777,7 @@ export default function TechOps() {
                                     <button
                                       key={idx}
                                       onClick={() => openLightbox(photos, idx)}
-                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#0078D4] transition-colors"
+                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#2374AB] transition-colors"
                                       data-testid={`photo-thumb-${entry.id}-${idx}`}
                                     >
                                       <img
@@ -804,7 +804,7 @@ export default function TechOps() {
                               <>
                                 <Button
                                   size="sm"
-                                  className="bg-[#0078D4] hover:bg-[#1E40AF] text-white"
+                                  className="bg-[#2374AB] hover:bg-[#1E40AF] text-white"
                                   onClick={() => handleOpenConvertDialog(entry)}
                                   data-testid={`button-convert-${entry.id}`}
                                 >
@@ -841,7 +841,7 @@ export default function TechOps() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                                  className="text-[#FF8000] hover:text-[#FF8000] hover:bg-[#FF8000]1A border-[#FF8000]33"
                                   onClick={() => noChargeMutation.mutate(entry.id)}
                                   disabled={createInvoiceMutation.isPending || noChargeMutation.isPending || archiveMutation.isPending}
                                   data-testid={`button-no-charge-${entry.id}`}
@@ -874,7 +874,7 @@ export default function TechOps() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="text-[#22D69A] hover:text-[#22D69A] hover:bg-[#22D69A]1A"
                                 onClick={() => reviewMutation.mutate(entry.id)}
                                 data-testid={`button-review-${entry.id}`}
                               >
@@ -1009,7 +1009,7 @@ export default function TechOps() {
               Cancel
             </Button>
             <Button
-              className="bg-[#0078D4] hover:bg-[#1E40AF]"
+              className="bg-[#2374AB] hover:bg-[#1E40AF]"
               onClick={handleSubmit}
               disabled={!form.technicianName || !form.propertyId || createMutation.isPending}
               data-testid="button-submit-entry"
@@ -1029,7 +1029,7 @@ export default function TechOps() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <FileUp className="w-5 h-5 text-blue-600" />
+              <FileUp className="w-5 h-5 text-[#2374AB]" />
               Convert to Estimate
             </DialogTitle>
           </DialogHeader>
@@ -1043,13 +1043,13 @@ export default function TechOps() {
                 </p>
               </div>
             )}
-            <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="flex items-center gap-3 p-3 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
               <input
                 type="checkbox"
                 id="mark-urgent"
                 checked={markUrgent}
                 onChange={(e) => setMarkUrgent(e.target.checked)}
-                className="w-5 h-5 rounded border-amber-400 text-red-500 focus:ring-red-500"
+                className="w-5 h-5 rounded border-[#FF8000] text-red-500 focus:ring-red-500"
                 data-testid="checkbox-urgent"
               />
               <label htmlFor="mark-urgent" className="flex items-center gap-2 cursor-pointer">
@@ -1074,7 +1074,7 @@ export default function TechOps() {
               Cancel
             </Button>
             <Button
-              className="bg-[#0078D4] hover:bg-[#1E40AF]"
+              className="bg-[#2374AB] hover:bg-[#1E40AF]"
               onClick={handleConvertToEstimate}
               disabled={convertToEstimateMutation.isPending}
               data-testid="button-confirm-convert"

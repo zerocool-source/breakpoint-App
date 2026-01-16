@@ -150,10 +150,10 @@ function MonthlySpendChart({ monthlyTotals }: { monthlyTotals: Record<string, nu
   if (chartData.length === 0) return null;
 
   return (
-    <Card className="bg-card/50 border-cyan-500/30">
+    <Card className="bg-card/50 border-[#17BEBB]/30">
       <CardHeader className="pb-2">
         <CardTitle className="text-lg font-ui flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-cyan-400" />
+          <BarChart3 className="w-5 h-5 text-[#17BEBB]" />
           Monthly Repair Spending (Last 12 Months)
         </CardTitle>
       </CardHeader>
@@ -294,7 +294,7 @@ export default function PropertyRepairPrices() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#17BEBB]" />
           <p className="text-muted-foreground font-ui">Loading property repair data...</p>
         </div>
       </div>
@@ -321,12 +321,12 @@ export default function PropertyRepairPrices() {
       <div className="flex items-center justify-between">
         <div>
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
           </Link>
-          <h1 className="text-3xl font-display font-bold text-cyan-400" data-testid="page-title">
+          <h1 className="text-3xl font-display font-bold text-[#17BEBB]" data-testid="page-title">
             Property Repair Prices
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -337,7 +337,7 @@ export default function PropertyRepairPrices() {
           <Button
             variant="outline"
             onClick={() => exportPropertyRepairsExcel(sortedProperties, summary!)}
-            className="gap-2 text-green-400 border-green-500/30 hover:bg-green-500/10"
+            className="gap-2 text-green-400 border-[#22D69A]/30 hover:bg-[#22D69A]/10"
             data-testid="btn-export-excel"
           >
             <FileDown className="w-4 h-4" />
@@ -346,7 +346,7 @@ export default function PropertyRepairPrices() {
           <Button
             variant="outline"
             onClick={() => exportPropertyRepairsPDF(sortedProperties, summary!)}
-            className="gap-2 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10"
+            className="gap-2 text-[#17BEBB] border-[#17BEBB]/30 hover:bg-[#17BEBB]/10"
             data-testid="btn-export-pdf"
           >
             <FileDown className="w-4 h-4" />
@@ -358,15 +358,15 @@ export default function PropertyRepairPrices() {
       {summary && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card className="bg-card/50 border-cyan-500/30">
+            <Card className="bg-card/50 border-[#17BEBB]/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-cyan-500/20">
-                    <Building2 className="w-5 h-5 text-cyan-400" />
+                  <div className="p-2 rounded-lg bg-[#17BEBB]/20">
+                    <Building2 className="w-5 h-5 text-[#17BEBB]" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Properties</p>
-                    <p className="text-2xl font-display font-bold text-cyan-400" data-testid="stat-total-properties">
+                    <p className="text-2xl font-display font-bold text-[#17BEBB]" data-testid="stat-total-properties">
                       {summary.totalProperties}
                     </p>
                   </div>
@@ -374,10 +374,10 @@ export default function PropertyRepairPrices() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-purple-500/30">
+            <Card className="bg-card/50 border-[#17BEBB]/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/20">
+                  <div className="p-2 rounded-lg bg-[#17BEBB]/20">
                     <Wrench className="w-5 h-5 text-purple-400" />
                   </div>
                   <div>
@@ -390,10 +390,10 @@ export default function PropertyRepairPrices() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-green-500/30">
+            <Card className="bg-card/50 border-[#22D69A]/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-500/20">
+                  <div className="p-2 rounded-lg bg-[#22D69A]/20">
                     <DollarSign className="w-5 h-5 text-green-400" />
                   </div>
                   <div>
@@ -406,10 +406,10 @@ export default function PropertyRepairPrices() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50 border-orange-500/30">
+            <Card className="bg-card/50 border-[#FF8000]/30">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-500/20">
+                  <div className="p-2 rounded-lg bg-[#FF8000]/20">
                     <TrendingUp className="w-5 h-5 text-orange-400" />
                   </div>
                   <div>
@@ -423,10 +423,10 @@ export default function PropertyRepairPrices() {
             </Card>
 
             {summary.topSpender && (
-              <Card className="bg-card/50 border-yellow-500/30">
+              <Card className="bg-card/50 border-[#FF8000]/30">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-yellow-500/20">
+                    <div className="p-2 rounded-lg bg-[#FF8000]/20">
                       <BarChart3 className="w-5 h-5 text-yellow-400" />
                     </div>
                     <div>
@@ -522,16 +522,16 @@ export default function PropertyRepairPrices() {
               open={expandedProperties.has(property.propertyId)}
               onOpenChange={() => toggleProperty(property.propertyId)}
             >
-              <Card className="bg-card/50 border-border/50 hover:border-cyan-500/30 transition-colors">
+              <Card className="bg-card/50 border-border/50 hover:border-[#17BEBB]/30 transition-colors">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 font-display font-bold text-sm">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#17BEBB]/20 text-[#17BEBB] font-display font-bold text-sm">
                           {index + 1}
                         </div>
                         {expandedProperties.has(property.propertyId) ? (
-                          <ChevronDown className="w-5 h-5 text-cyan-400" />
+                          <ChevronDown className="w-5 h-5 text-[#17BEBB]" />
                         ) : (
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         )}
@@ -539,7 +539,7 @@ export default function PropertyRepairPrices() {
                           <CardTitle className="text-lg font-ui text-foreground flex items-center gap-2" data-testid={`property-name-${property.propertyId}`}>
                             {property.propertyName}
                             {property.poolNames.length > 0 && (
-                              <Badge variant="outline" className="text-xs text-blue-400 border-blue-500/30">
+                              <Badge variant="outline" className="text-xs text-blue-400 border-[#2374AB]/30">
                                 {property.poolNames.length} {property.poolNames.length === 1 ? 'pool' : 'pools'}
                               </Badge>
                             )}
@@ -564,13 +564,13 @@ export default function PropertyRepairPrices() {
                         <div className="flex items-center gap-2">
                           <Badge 
                             variant="outline" 
-                            className={`${property.completedRepairs > 0 ? 'text-green-400 border-green-500/30' : 'text-muted-foreground'}`}
+                            className={`${property.completedRepairs > 0 ? 'text-green-400 border-[#22D69A]/30' : 'text-muted-foreground'}`}
                           >
                             <CheckCircle2 className="w-3 h-3 mr-1" />
                             {property.completedRepairs}
                           </Badge>
                           {property.pendingRepairs > 0 && (
-                            <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">
+                            <Badge variant="outline" className="text-yellow-400 border-[#FF8000]/30">
                               <Clock className="w-3 h-3 mr-1" />
                               {property.pendingRepairs}
                             </Badge>
@@ -599,7 +599,7 @@ export default function PropertyRepairPrices() {
                       <PropertySpendChart property={property} />
                       
                       <div className="space-y-2 mt-4">
-                        <h4 className="text-sm font-ui font-semibold text-cyan-400">Repair History</h4>
+                        <h4 className="text-sm font-ui font-semibold text-[#17BEBB]">Repair History</h4>
                         <div className="grid gap-2">
                           {property.repairs.slice(0, 10).map((repair, rIndex) => (
                             <div 

@@ -85,7 +85,7 @@ export default function Settings() {
     <AppLayout>
       <div className="mb-8">
         <Link href="/">
-          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
             <ArrowLeft className="w-4 h-4" />
             Back to Dashboard
           </Button>
@@ -139,7 +139,7 @@ export default function Settings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <Alert className="bg-blue-500/10 border-blue-500/30">
+            <Alert className="bg-[#2374AB]/10 border-[#2374AB]/30">
               <AlertCircle className="h-4 w-4 text-blue-400" />
               <AlertDescription className="text-blue-300 text-sm">
                 <strong>Pro Tip:</strong> For better security, add <code className="bg-black/30 px-1 rounded">POOLBRAIN_ACCESS_KEY</code> and <code className="bg-black/30 px-1 rounded">POOLBRAIN_COMPANY_ID</code> to your Replit Secrets instead. They'll override these settings.
@@ -208,7 +208,7 @@ export default function Settings() {
                         <p className="font-bold text-sm">{ep.name}</p>
                         <p className="text-xs text-muted-foreground font-mono">{ep.url}</p>
                     </div>
-                    <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10">
+                    <Badge variant="outline" className="border-[#22D69A]/30 text-green-400 bg-[#22D69A]/10">
                         {ep.status}
                     </Badge>
                 </div>

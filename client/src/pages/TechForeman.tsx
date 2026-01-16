@@ -19,9 +19,9 @@ import type { Technician, TechOpsEntry, ServiceRepairJob } from "@shared/schema"
 import { cn } from "@/lib/utils";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  pending: { label: "Pending", color: "bg-amber-100 text-amber-700" },
-  in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700" },
-  completed: { label: "Completed", color: "bg-green-100 text-green-700" },
+  pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#FF8000]" },
+  in_progress: { label: "In Progress", color: "bg-[#2374AB]1A text-[#2374AB]" },
+  completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#22D69A]" },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-500" },
 };
 
@@ -107,8 +107,8 @@ export default function TechForeman() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
-              <HardHat className="w-6 h-6 text-orange-700" />
+            <div className="w-12 h-12 rounded-lg bg-[#FF8000]1A flex items-center justify-center">
+              <HardHat className="w-6 h-6 text-[#FF8000]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">Repair Foreman Dashboard</h1>
@@ -159,8 +159,8 @@ export default function TechForeman() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#2374AB]1A flex items-center justify-center">
+                  <ClipboardList className="w-5 h-5 text-[#2374AB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{activeJobs.length}</p>
@@ -172,8 +172,8 @@ export default function TechForeman() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#22D69A]1A flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-[#22D69A]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{completedJobs.length}</p>
@@ -185,8 +185,8 @@ export default function TechForeman() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#FF8000]1A flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{urgentRequests.length}</p>
@@ -198,8 +198,8 @@ export default function TechForeman() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#17BEBB]1A flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#17BEBB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{repairTechs.length}</p>
@@ -214,7 +214,7 @@ export default function TechForeman() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-orange-500" />
+                <Wrench className="w-5 h-5 text-[#FF8000]" />
                 Repair Team
               </CardTitle>
             </CardHeader>
@@ -236,7 +236,7 @@ export default function TechForeman() {
                       return (
                         <div key={tech.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                           <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-orange-100 text-orange-700">
+                            <AvatarFallback className="bg-[#FF8000]1A text-[#FF8000]">
                               {getInitials(tech.firstName, tech.lastName)}
                             </AvatarFallback>
                           </Avatar>
@@ -244,7 +244,7 @@ export default function TechForeman() {
                             <p className="font-medium">{tech.firstName} {tech.lastName}</p>
                             <p className="text-xs text-slate-500">{tech.email || tech.phone || "No contact"}</p>
                           </div>
-                          <Badge variant="outline" className={techJobs.length > 0 ? "bg-blue-50 text-blue-700" : ""}>
+                          <Badge variant="outline" className={techJobs.length > 0 ? "bg-[#2374AB]1A text-[#2374AB]" : ""}>
                             {techJobs.length} active {techJobs.length === 1 ? 'job' : 'jobs'}
                           </Badge>
                         </div>
@@ -259,7 +259,7 @@ export default function TechForeman() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <ClipboardList className="w-5 h-5 text-blue-500" />
+                <ClipboardList className="w-5 h-5 text-[#2374AB]" />
                 Job Overview
               </CardTitle>
             </CardHeader>
@@ -274,14 +274,14 @@ export default function TechForeman() {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <p className="text-xs text-amber-700 font-medium">Pending</p>
-                    <p className="text-xl font-bold text-amber-900">
+                  <div className="p-3 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
+                    <p className="text-xs text-[#FF8000] font-medium">Pending</p>
+                    <p className="text-xl font-bold text-[#FF8000]">
                       {repairJobs.filter(j => j.status === "pending").length}
                     </p>
                   </div>
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-xs text-blue-700 font-medium">In Progress</p>
+                  <div className="p-3 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33">
+                    <p className="text-xs text-[#2374AB] font-medium">In Progress</p>
                     <p className="text-xl font-bold text-blue-900">
                       {repairJobs.filter(j => j.status === "in_progress").length}
                     </p>
@@ -295,7 +295,7 @@ export default function TechForeman() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
               Pending Repair Requests
             </CardTitle>
           </CardHeader>
@@ -317,15 +317,15 @@ export default function TechForeman() {
                         request.priority === "urgent" 
                           ? "bg-red-50 border-red-200" 
                           : request.priority === "high" 
-                            ? "bg-amber-50 border-amber-200"
+                            ? "bg-[#FF8000]1A border-[#FF8000]33"
                             : "bg-slate-50 border-slate-200"
                       )}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <Badge className={
                           request.priority === "urgent" ? "bg-red-100 text-red-700" :
-                          request.priority === "high" ? "bg-orange-100 text-orange-700" :
-                          "bg-blue-100 text-blue-700"
+                          request.priority === "high" ? "bg-[#FF8000]1A text-[#FF8000]" :
+                          "bg-[#2374AB]1A text-[#2374AB]"
                         }>
                           {request.priority}
                         </Badge>
@@ -359,7 +359,7 @@ export default function TechForeman() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <HardHat className="w-5 h-5 text-orange-500" />
+                <HardHat className="w-5 h-5 text-[#FF8000]" />
                 Foremen Overview
               </CardTitle>
             </CardHeader>
@@ -371,13 +371,13 @@ export default function TechForeman() {
                     <div key={foreman.id} className="p-4 bg-slate-50 rounded-lg border border-slate-200">
                       <div className="flex items-center gap-3 mb-3">
                         <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-orange-100 text-orange-700">
+                          <AvatarFallback className="bg-[#FF8000]1A text-[#FF8000]">
                             {getInitials(foreman.firstName, foreman.lastName)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">{foreman.firstName} {foreman.lastName}</p>
-                          <Badge className="bg-green-100 text-green-700">Foreman</Badge>
+                          <Badge className="bg-[#22D69A]1A text-[#22D69A]">Foreman</Badge>
                         </div>
                       </div>
                       <div className="text-sm text-slate-600">

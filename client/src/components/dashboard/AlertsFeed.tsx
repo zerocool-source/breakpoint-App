@@ -40,9 +40,9 @@ export function AlertsFeed({ className }: AlertsFeedProps) {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case "Critical": return "bg-destructive/20 text-destructive border-destructive/50";
-      case "High": return "bg-orange-500/20 text-orange-400 border-orange-500/50";
-      case "Medium": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/50";
-      case "Low": return "bg-blue-500/20 text-blue-400 border-blue-500/50";
+      case "High": return "bg-[#FF8000]/20 text-orange-400 border-[#FF8000]/50";
+      case "Medium": return "bg-[#FF8000]/20 text-yellow-400 border-[#FF8000]/50";
+      case "Low": return "bg-[#2374AB]/20 text-blue-400 border-[#2374AB]/50";
       default: return "bg-white/10 text-white border-white/20";
     }
   };
@@ -104,7 +104,7 @@ export function AlertsFeed({ className }: AlertsFeedProps) {
                     <Clock className="w-3 h-3" /> {alert.type}
                     </span>
                     {alert.status === "Resolved" && (
-                        <span className="flex items-center gap-1 bg-green-500/10 text-green-400 px-2 py-1 rounded">
+                        <span className="flex items-center gap-1 bg-[#22D69A]/10 text-green-400 px-2 py-1 rounded">
                             <CheckCircle2 className="w-3 h-3" /> Resolved
                         </span>
                     )}

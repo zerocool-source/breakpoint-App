@@ -12,32 +12,32 @@ export function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; m
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-      <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 hover:border-sky-300/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`repair-tech-${tech.name}`}>
+      <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#2374AB]/40 hover:border-[#2374AB]/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`repair-tech-${tech.name}`}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-2 cursor-pointer hover:bg-slate-800/50 transition-colors rounded-t-lg">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? (
-                  <ChevronDown className="w-5 h-5 text-sky-400" />
+                  <ChevronDown className="w-5 h-5 text-[#2374AB]" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-sky-300" />
+                  <ChevronRight className="w-5 h-5 text-[#2374AB]" />
                 )}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/40 to-sky-600/30 flex items-center justify-center border border-sky-400/50 shadow-md">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2374AB]/40 to-sky-600/30 flex items-center justify-center border border-[#2374AB]/50 shadow-md">
                   <HardHat className="w-5 h-5 text-white" />
                 </div>
                 <div className="text-left">
                   <p className="font-ui text-lg font-bold text-white">{tech.name}</p>
-                  <p className="text-xs text-sky-300/80">
+                  <p className="text-xs text-[#2374AB]/80">
                     {tech.completedCount}/{tech.jobs.length} completed
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  <Badge className="bg-sky-500/30 text-sky-200 border-sky-400/50 text-xs shadow-sm">
+                  <Badge className="bg-[#2374AB]/30 text-sky-200 border-[#2374AB]/50 text-xs shadow-sm">
                     10%: {formatPrice(tech.commission10)}
                   </Badge>
-                  <Badge className="bg-sky-600/30 text-sky-100 border-sky-300/50 text-xs shadow-sm">
+                  <Badge className="bg-sky-600/30 text-[#2374AB1A] border-[#2374AB]/50 text-xs shadow-sm">
                     15%: {formatPrice(tech.commission15)}
                   </Badge>
                 </div>
@@ -50,7 +50,7 @@ export function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; m
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-400 uppercase tracking-wider">Monthly Quota Progress</span>
                 <span className="text-sm font-ui">
-                  <span className={tech.quotaPercent >= 100 ? "text-sky-400 font-bold" : "text-slate-200"}>
+                  <span className={tech.quotaPercent >= 100 ? "text-[#2374AB] font-bold" : "text-slate-200"}>
                     {formatPrice(tech.monthlyValue)}
                   </span>
                   <span className="text-slate-500"> / {formatPrice(monthlyQuota)}</span>
@@ -61,7 +61,7 @@ export function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; m
                 className="h-2 bg-slate-600"
               />
               <div className="flex justify-between mt-1">
-                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-sky-400' : 'text-slate-300'}`}>
+                <span className={`text-xs font-semibold ${tech.quotaPercent >= 100 ? 'text-[#2374AB]' : 'text-slate-300'}`}>
                   {tech.quotaPercent}%
                 </span>
                 <span className="text-xs text-slate-400">
@@ -72,7 +72,7 @@ export function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; m
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 border-t border-sky-400/20">
+          <CardContent className="pt-0 border-t border-[#2374AB]/20">
             <div className="mt-3 pt-3">
               <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Daily Activity (1-{tech.daysInMonth})</p>
               <div className="flex flex-wrap gap-1 mb-4">
@@ -85,9 +85,9 @@ export function RepairTechCard({ tech, monthlyQuota }: { tech: RepairTechData; m
                       key={day}
                       className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-colors ${
                         hasActivity 
-                          ? intensity > 0.7 ? 'bg-sky-500 text-white' 
-                          : intensity > 0.3 ? 'bg-sky-500/60 text-white' 
-                          : 'bg-sky-500/30 text-sky-300'
+                          ? intensity > 0.7 ? 'bg-[#2374AB] text-white' 
+                          : intensity > 0.3 ? 'bg-[#2374AB]/60 text-white' 
+                          : 'bg-[#2374AB]/30 text-[#2374AB]'
                           : 'bg-slate-700 text-slate-500'
                       }`}
                       title={hasActivity ? `Day ${day}: ${formatPrice(value)}` : `Day ${day}: No activity`}

@@ -153,8 +153,8 @@ export default function TruckInventory() {
           <Card className="bg-white shadow-sm">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Package className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-[#2374AB]1A rounded-lg">
+                  <Package className="h-5 w-5 text-[#2374AB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{inventoryItems.length}</p>
@@ -167,8 +167,8 @@ export default function TruckInventory() {
           <Card className="bg-white shadow-sm">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Truck className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-[#22D69A]1A rounded-lg">
+                  <Truck className="h-5 w-5 text-[#22D69A]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{trucks.length}</p>
@@ -195,8 +195,8 @@ export default function TruckInventory() {
           <Card className="bg-white shadow-sm">
             <CardContent className="pt-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Filter className="h-5 w-5 text-purple-600" />
+                <div className="p-2 bg-[#17BEBB]1A rounded-lg">
+                  <Filter className="h-5 w-5 text-[#17BEBB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{TRUCK_INVENTORY_CATEGORIES.length}</p>
@@ -269,8 +269,8 @@ export default function TruckInventory() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Truck className="h-5 w-5 text-blue-600" />
+                      <div className="p-2 bg-[#2374AB]1A rounded-lg">
+                        <Truck className="h-5 w-5 text-[#2374AB]" />
                       </div>
                       <div>
                         <CardTitle className="text-lg">Truck #{truck.truckNumber}</CardTitle>
@@ -383,7 +383,7 @@ export default function TruckInventory() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
+              <Package className="h-5 w-5 text-[#2374AB]" />
               Add Inventory Item
             </DialogTitle>
             <DialogDescription>Add a new item to truck inventory.</DialogDescription>

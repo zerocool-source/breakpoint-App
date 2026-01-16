@@ -154,15 +154,15 @@ export default function Dashboard() {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       draft: "bg-gray-100 text-gray-700",
-      pending_approval: "bg-amber-100 text-amber-700",
-      approved: "bg-emerald-100 text-emerald-700",
-      scheduled: "bg-blue-100 text-blue-700",
-      completed: "bg-sky-100 text-sky-700",
-      ready_to_invoice: "bg-purple-100 text-purple-700",
-      invoiced: "bg-green-100 text-green-700",
-      pending: "bg-amber-100 text-amber-700",
-      open: "bg-blue-100 text-blue-700",
-      in_progress: "bg-sky-100 text-sky-700",
+      pending_approval: "bg-[#FF8000]1A text-[#FF8000]",
+      approved: "bg-[#22D69A]1A text-[#22D69A]",
+      scheduled: "bg-[#2374AB]1A text-[#2374AB]",
+      completed: "bg-[#2374AB1A] text-sky-700",
+      ready_to_invoice: "bg-[#17BEBB]1A text-[#17BEBB]",
+      invoiced: "bg-[#22D69A]1A text-[#22D69A]",
+      pending: "bg-[#FF8000]1A text-[#FF8000]",
+      open: "bg-[#2374AB]1A text-[#2374AB]",
+      in_progress: "bg-[#2374AB1A] text-sky-700",
     };
     return colors[status] || "bg-gray-100 text-gray-700";
   };
@@ -171,7 +171,7 @@ export default function Dashboard() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
         </div>
       </AppLayout>
     );
@@ -188,7 +188,7 @@ export default function Dashboard() {
           <Button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
-            className="gap-2 bg-[#0078D4] hover:bg-[#0078D4]/90"
+            className="gap-2 bg-[#2374AB] hover:bg-[#2374AB]/90"
             data-testid="button-sync-poolbrain"
           >
             <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
@@ -198,7 +198,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-4 gap-4">
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#F97316]/50 transition-all border-l-4 border-l-[#F97316]"
+            className="cursor-pointer hover:shadow-md hover:border-[#FF8000]/50 transition-all border-l-4 border-l-[#FF8000]"
             onClick={() => navigate("/estimates")}
             data-testid="card-pending-approvals"
           >
@@ -207,17 +207,17 @@ export default function Dashboard() {
                 <div>
                   <p className="text-xs text-[#64748B] uppercase tracking-wide">Pending Approvals</p>
                   <p className="text-3xl font-bold text-[#1E293B]">{summary?.pendingApprovals || 0}</p>
-                  <p className="text-sm text-[#F97316]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                  <p className="text-sm text-[#FF8000]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                 </div>
-                <div className="p-3 rounded-full bg-[#F97316]/10">
-                  <Clock className="w-6 h-6 text-[#F97316]" />
+                <div className="p-3 rounded-full bg-[#FF8000]/10">
+                  <Clock className="w-6 h-6 text-[#FF8000]" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#0078D4]/50 transition-all border-l-4 border-l-[#0078D4]"
+            className="cursor-pointer hover:shadow-md hover:border-[#2374AB]/50 transition-all border-l-4 border-l-[#2374AB]"
             onClick={() => navigate("/estimates")}
             data-testid="card-needs-scheduling"
           >
@@ -226,17 +226,17 @@ export default function Dashboard() {
                 <div>
                   <p className="text-xs text-[#64748B] uppercase tracking-wide">Needs Scheduling</p>
                   <p className="text-3xl font-bold text-[#1E293B]">{summary?.needsScheduling || 0}</p>
-                  <p className="text-sm text-[#0078D4]">Approved jobs awaiting</p>
+                  <p className="text-sm text-[#2374AB]">Approved jobs awaiting</p>
                 </div>
-                <div className="p-3 rounded-full bg-[#0078D4]/10">
-                  <Calendar className="w-6 h-6 text-[#0078D4]" />
+                <div className="p-3 rounded-full bg-[#2374AB]/10">
+                  <Calendar className="w-6 h-6 text-[#2374AB]" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-purple-500/50 transition-all border-l-4 border-l-purple-500"
+            className="cursor-pointer hover:shadow-md hover:border-[#17BEBB]/50 transition-all border-l-4 border-l-#17BEBB"
             onClick={() => navigate("/estimates")}
             data-testid="card-ready-to-invoice"
           >
@@ -245,10 +245,10 @@ export default function Dashboard() {
                 <div>
                   <p className="text-xs text-[#64748B] uppercase tracking-wide">Ready to Invoice</p>
                   <p className="text-3xl font-bold text-[#1E293B]">{summary?.needsInvoicing || 0}</p>
-                  <p className="text-sm text-purple-600">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                  <p className="text-sm text-[#17BEBB]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                 </div>
-                <div className="p-3 rounded-full bg-purple-100">
-                  <Receipt className="w-6 h-6 text-purple-600" />
+                <div className="p-3 rounded-full bg-[#17BEBB]1A">
+                  <Receipt className="w-6 h-6 text-[#17BEBB]" />
                 </div>
               </div>
             </CardContent>
@@ -303,7 +303,7 @@ export default function Dashboard() {
                         <Badge className="bg-red-600 text-white text-[10px] shrink-0">Critical</Badge>
                       )}
                       {emergency.priority === "high" && (
-                        <Badge className="bg-orange-100 text-orange-700 text-[10px] shrink-0">High</Badge>
+                        <Badge className="bg-[#FF8000]1A text-[#FF8000] text-[10px] shrink-0">High</Badge>
                       )}
                     </div>
                     <p className="text-xs text-[#64748B] line-clamp-2 mb-2">{emergency.description}</p>
@@ -333,7 +333,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#0078D4]" />
+                    <FileText className="w-5 h-5 text-[#2374AB]" />
                     Estimate Pipeline
                   </CardTitle>
                   <CardDescription>Job estimates by status</CardDescription>
@@ -352,33 +352,33 @@ export default function Dashboard() {
                   </div>
                   <Badge variant="secondary">{metrics?.estimates.draft || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50 hover:bg-amber-100 cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[#FF8000]1A hover:bg-[#FF8000]1A cursor-pointer" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#FF8000]"></div>
                     <span className="text-sm text-[#1E293B]">Pending Approval</span>
                   </div>
-                  <Badge className="bg-amber-100 text-amber-700">{metrics?.estimates.pendingApproval || 0}</Badge>
+                  <Badge className="bg-[#FF8000]1A text-[#FF8000]">{metrics?.estimates.pendingApproval || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[#22D69A]1A hover:bg-[#22D69A]1A cursor-pointer" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#22D69A]"></div>
                     <span className="text-sm text-[#1E293B]">Approved</span>
                   </div>
-                  <Badge className="bg-emerald-100 text-emerald-700">{metrics?.estimates.approved || 0}</Badge>
+                  <Badge className="bg-[#22D69A]1A text-[#22D69A]">{metrics?.estimates.approved || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[#2374AB]1A hover:bg-[#2374AB]1A cursor-pointer" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#2374AB]"></div>
                     <span className="text-sm text-[#1E293B]">Scheduled</span>
                   </div>
-                  <Badge className="bg-blue-100 text-blue-700">{metrics?.estimates.scheduled || 0}</Badge>
+                  <Badge className="bg-[#2374AB]1A text-[#2374AB]">{metrics?.estimates.scheduled || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 hover:bg-purple-100 cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 hover:bg-[#17BEBB]1A cursor-pointer" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#17BEBB]"></div>
                     <span className="text-sm text-[#1E293B]">Ready to Invoice</span>
                   </div>
-                  <Badge className="bg-purple-100 text-purple-700">{metrics?.estimates.readyToInvoice || 0}</Badge>
+                  <Badge className="bg-[#17BEBB]1A text-[#17BEBB]">{metrics?.estimates.readyToInvoice || 0}</Badge>
                 </div>
               </div>
             </CardContent>
@@ -389,7 +389,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <TrendingUp className="w-5 h-5 text-[#22D69A]" />
                     Financial Summary
                   </CardTitle>
                   <CardDescription>Values across pipeline stages</CardDescription>
@@ -398,24 +398,24 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-[#0078D4]/5 to-[#60A5FA]/5 border border-[#0078D4]/20">
+                <div className="p-4 rounded-lg bg-gradient-to-r from-[#2374AB]/5 to-[#60A5FA]/5 border border-[#2374AB]/20">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-[#64748B]">Total Pipeline Value</span>
-                    <span className="text-2xl font-bold text-[#0078D4]">{formatCurrency(metrics?.values.total || 0)}</span>
+                    <span className="text-2xl font-bold text-[#2374AB]">{formatCurrency(metrics?.values.total || 0)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-lg bg-amber-50 text-center">
+                  <div className="p-3 rounded-lg bg-[#FF8000]1A text-center">
                     <p className="text-xs text-[#64748B]">Pending Approval</p>
-                    <p className="text-lg font-semibold text-amber-700">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                    <p className="text-lg font-semibold text-[#FF8000]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-blue-50 text-center">
+                  <div className="p-3 rounded-lg bg-[#2374AB]1A text-center">
                     <p className="text-xs text-[#64748B]">Scheduled</p>
-                    <p className="text-lg font-semibold text-blue-700">{formatCurrency(metrics?.values.scheduled || 0)}</p>
+                    <p className="text-lg font-semibold text-[#2374AB]">{formatCurrency(metrics?.values.scheduled || 0)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-purple-50 text-center">
                     <p className="text-xs text-[#64748B]">Ready to Invoice</p>
-                    <p className="text-lg font-semibold text-purple-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                    <p className="text-lg font-semibold text-[#17BEBB]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                   </div>
                 </div>
               </div>
@@ -448,11 +448,11 @@ export default function Dashboard() {
                         data-testid={`activity-item-${item.id}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#0078D4]/10" : "bg-[#F97316]/10"}`}>
+                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#2374AB]/10" : "bg-[#FF8000]/10"}`}>
                             {item.type === "estimate" ? (
-                              <FileText className="w-4 h-4 text-[#0078D4]" />
+                              <FileText className="w-4 h-4 text-[#2374AB]" />
                             ) : (
-                              <Wrench className="w-4 h-4 text-[#F97316]" />
+                              <Wrench className="w-4 h-4 text-[#FF8000]" />
                             )}
                           </div>
                           <div>
@@ -482,7 +482,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-[#F97316]" />
+                <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
                 Urgent Items
               </CardTitle>
               <CardDescription>Requires immediate attention</CardDescription>
@@ -491,7 +491,7 @@ export default function Dashboard() {
               <ScrollArea className="h-[300px]">
                 {urgentItems.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-[#64748B]">
-                    <CheckCircle2 className="w-12 h-12 mb-2 text-green-500" />
+                    <CheckCircle2 className="w-12 h-12 mb-2 text-[#22D69A]" />
                     <p>All caught up!</p>
                   </div>
                 ) : (
@@ -499,7 +499,7 @@ export default function Dashboard() {
                     {urgentItems.map((item, index) => (
                       <div 
                         key={`${item.type}-${item.id}-${index}`}
-                        className="p-3 rounded-lg border border-[#E2E8F0] hover:border-[#F97316]/50 transition-all cursor-pointer"
+                        className="p-3 rounded-lg border border-[#E2E8F0] hover:border-[#FF8000]/50 transition-all cursor-pointer"
                         onClick={() => {
                           if (item.type === "ready_to_invoice" || item.type === "needs_scheduling") {
                             navigate("/estimates");
@@ -509,17 +509,17 @@ export default function Dashboard() {
                       >
                         <div className="flex items-start gap-3">
                           <div className={`p-1.5 rounded-full ${
-                            item.severity === "warning" ? "bg-amber-100" : 
-                            item.severity === "info" ? "bg-purple-100" : "bg-red-100"
+                            item.severity === "warning" ? "bg-[#FF8000]1A" : 
+                            item.severity === "info" ? "bg-[#17BEBB]1A" : "bg-red-100"
                           }`}>
                             {item.type === "alert" ? (
                               <Bell className={`w-3 h-3 ${
-                                item.severity === "warning" ? "text-amber-600" : "text-red-600"
+                                item.severity === "warning" ? "text-[#FF8000]" : "text-red-600"
                               }`} />
                             ) : item.type === "ready_to_invoice" ? (
-                              <Receipt className="w-3 h-3 text-purple-600" />
+                              <Receipt className="w-3 h-3 text-[#17BEBB]" />
                             ) : (
-                              <Calendar className="w-3 h-3 text-amber-600" />
+                              <Calendar className="w-3 h-3 text-[#FF8000]" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -540,8 +540,8 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/tech-ops")} data-testid="card-tech-ops">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#0078D4]/10">
-                  <Users className="w-5 h-5 text-[#0078D4]" />
+                <div className="p-2 rounded-lg bg-[#2374AB]/10">
+                  <Users className="w-5 h-5 text-[#2374AB]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#1E293B]">Tech Ops</p>
@@ -554,8 +554,8 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/service-repairs")} data-testid="card-repair-queue">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#F97316]/10">
-                  <Wrench className="w-5 h-5 text-[#F97316]" />
+                <div className="p-2 rounded-lg bg-[#FF8000]/10">
+                  <Wrench className="w-5 h-5 text-[#FF8000]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#1E293B]">Repair Queue</p>
@@ -568,8 +568,8 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/estimates")} data-testid="card-estimates">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-100">
-                  <FileText className="w-5 h-5 text-emerald-600" />
+                <div className="p-2 rounded-lg bg-[#22D69A]1A">
+                  <FileText className="w-5 h-5 text-[#22D69A]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#1E293B]">Estimates</p>

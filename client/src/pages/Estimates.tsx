@@ -193,13 +193,13 @@ interface EstimateFormData {
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   draft: { label: "Draft", color: "bg-slate-100 text-slate-700 border-slate-200", icon: FileText },
   pending_approval: { label: "Pending Approval", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: Clock },
-  approved: { label: "Approved", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  approved: { label: "Approved", color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle2 },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
   needs_scheduling: { label: "Needs Scheduling", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: CalendarIcon },
-  scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#0078D4] border-[#93C5FD]", icon: CalendarIcon },
+  scheduled: { label: "Scheduled", color: "bg-[#DBEAFE] text-[#2374AB] border-[#93C5FD]", icon: CalendarIcon },
   completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
-  ready_to_invoice: { label: "Ready to Invoice", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Receipt },
-  invoiced: { label: "Invoiced", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Receipt },
+  ready_to_invoice: { label: "Ready to Invoice", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Receipt },
+  invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Receipt },
   archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
 
@@ -395,11 +395,11 @@ export default function Estimates() {
   const getSourceBadgeColor = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
-      case "repair_tech": return "bg-[#0078D4]/20 text-[#0078D4]";
-      case "service_tech": return "bg-[#0078D4]/20 text-[#0078D4]";
-      case "office_staff": return "bg-[#0078D4]/20 text-[#0078D4]";
+      case "repair_tech": return "bg-[#2374AB]/20 text-[#2374AB]";
+      case "service_tech": return "bg-[#2374AB]/20 text-[#2374AB]";
+      case "office_staff": return "bg-[#2374AB]/20 text-[#2374AB]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
-      default: return "bg-[#0078D4]/20 text-[#0078D4]";
+      default: return "bg-[#2374AB]/20 text-[#2374AB]";
     }
   };
 
@@ -1487,7 +1487,7 @@ export default function Estimates() {
     rejected: "border-b-red-500",
     scheduled: "border-b-[#0077C5]",
     completed: "border-b-[#0077C5]",
-    invoiced: "border-b-purple-500",
+    invoiced: "border-b-#17BEBB",
     archived: "border-b-gray-400",
   };
 
@@ -1526,13 +1526,13 @@ export default function Estimates() {
         {/* Estimate Source Metrics */}
         <div className="grid grid-cols-3 gap-4">
           <div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-blue-500 p-4 cursor-pointer hover:shadow-md transition-all"
+            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-#2374AB p-4 cursor-pointer hover:shadow-md transition-all"
             onClick={() => setSourceFilter("repair_tech")}
             data-testid="metric-repair-tech"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-blue-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.repairTech.count}</p>
+                <p className="text-2xl font-bold text-[#2374AB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.repairTech.count}</p>
                 <p className="text-sm text-[#6B7280] mt-1">Repair Tech Estimates</p>
               </div>
               <div className="text-right">
@@ -1542,13 +1542,13 @@ export default function Estimates() {
             </div>
           </div>
           <div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-purple-500 p-4 cursor-pointer hover:shadow-md transition-all"
+            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-#17BEBB p-4 cursor-pointer hover:shadow-md transition-all"
             onClick={() => setSourceFilter("service_tech")}
             data-testid="metric-service-tech"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-purple-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.serviceTech.count}</p>
+                <p className="text-2xl font-bold text-[#17BEBB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.serviceTech.count}</p>
                 <p className="text-sm text-[#6B7280] mt-1">Service Tech Estimates</p>
               </div>
               <div className="text-right">
@@ -1600,7 +1600,7 @@ export default function Estimates() {
                 <p className="text-xs text-[#6B7280] mt-1">Ready to Invoice</p>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-purple-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
+                <p className="text-xl font-bold text-[#17BEBB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
                 <p className="text-xs text-[#6B7280] mt-1">Invoiced Value</p>
               </div>
               <div className="text-center">
@@ -1611,10 +1611,10 @@ export default function Estimates() {
                 <p className="text-xl font-bold text-[#0077C5]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgCompletionTime}h</p>
                 <p className="text-xs text-[#6B7280] mt-1">Avg Completion</p>
               </div>
-              <a href="/tech-ops/windy-day-cleanup" className="text-center hover:bg-cyan-50 rounded-lg p-2 -m-2 transition-colors cursor-pointer" data-testid="metric-windy-cleanup">
+              <a href="/tech-ops/windy-day-cleanup" className="text-center hover:bg-[#17BEBB1A] rounded-lg p-2 -m-2 transition-colors cursor-pointer" data-testid="metric-windy-cleanup">
                 <div className="flex items-center justify-center gap-1">
-                  <Wind className="w-4 h-4 text-cyan-500" />
-                  <p className="text-xl font-bold text-cyan-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{windyDayPending}</p>
+                  <Wind className="w-4 h-4 text-[#17BEBB]" />
+                  <p className="text-xl font-bold text-[#17BEBB]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{windyDayPending}</p>
                 </div>
                 <p className="text-xs text-[#6B7280] mt-1">Windy Cleanup</p>
               </a>
@@ -1624,23 +1624,23 @@ export default function Estimates() {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <h4 className="text-sm font-medium text-[#6B7280] mb-3">By Source</h4>
               <div className="grid grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex items-center justify-between p-2 bg-[#2374AB]1A rounded-lg border border-[#2374AB]1A">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <div className="w-2 h-2 rounded-full bg-[#2374AB]" />
                     <span className="text-sm text-[#1E293B]">Repair Tech</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-semibold text-blue-600">{sourceMetrics.repairTech.count}</span>
+                    <span className="text-sm font-semibold text-[#2374AB]">{sourceMetrics.repairTech.count}</span>
                     <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg border border-purple-100">
+                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg border border-[#17BEBB]1A">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <div className="w-2 h-2 rounded-full bg-[#17BEBB]" />
                     <span className="text-sm text-[#1E293B]">Service Tech</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-semibold text-purple-600">{sourceMetrics.serviceTech.count}</span>
+                    <span className="text-sm font-semibold text-[#17BEBB]">{sourceMetrics.serviceTech.count}</span>
                     <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
@@ -1778,7 +1778,7 @@ export default function Estimates() {
 
           {/* Bulk Invoice Selection Header - shows when Under $500 filter is active */}
           {isUnder500FilterActive && selectableUnder500Estimates.length > 0 && (
-            <div className="px-5 py-3 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
+            <div className="px-5 py-3 bg-[#2374AB]1A border-b border-[#2374AB]33 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -1787,10 +1787,10 @@ export default function Estimates() {
                       if (checked) selectAllUnder500();
                       else deselectAllUnder500();
                     }}
-                    className="border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    className="border-blue-400 data-[state=checked]:bg-[#2374AB] data-[state=checked]:border-[#2374AB]"
                     data-testid="checkbox-select-all-under500"
                   />
-                  <span className="text-sm text-blue-700 font-medium">
+                  <span className="text-sm text-[#2374AB] font-medium">
                     {selectedSRIds.size === 0 
                       ? `Select all (${selectableUnder500Estimates.length} estimates)`
                       : `${selectedSRIds.size} selected`}
@@ -1801,7 +1801,7 @@ export default function Estimates() {
                     variant="ghost"
                     size="sm"
                     onClick={deselectAllUnder500}
-                    className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                    className="text-[#2374AB] hover:text-blue-800 hover:bg-[#2374AB]1A"
                     data-testid="button-deselect-all"
                   >
                     Clear selection
@@ -1846,7 +1846,7 @@ export default function Estimates() {
                     return (
                       <div
                         key={estimate.id}
-                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-blue-500 bg-blue-50/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
+                        className={`flex items-center justify-between px-5 py-4 bg-white hover:bg-[#f9fafb] hover:shadow-md transition-all cursor-pointer border-l-4 ${isSelected ? "border-l-#2374AB bg-[#2374AB]1A/30" : "border-l-transparent"} hover:border-l-[#0077C5]`}
                         onClick={() => {
                           setSelectedEstimate(estimate);
                           setShowDetailDialog(true);
@@ -1863,7 +1863,7 @@ export default function Estimates() {
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={() => toggleUnder500Selection(estimate.id)}
-                                className="border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                className="border-blue-400 data-[state=checked]:bg-[#2374AB] data-[state=checked]:border-[#2374AB]"
                                 data-testid={`checkbox-under500-${estimate.id}`}
                               />
                             </div>
@@ -1905,8 +1905,8 @@ export default function Estimates() {
                                 {getSourceLabel(estimate)}
                               </button>
                               {estimate.convertedByUserName ? (
-                                <span className="text-[13px] font-medium text-[#374151] bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200" data-testid={`text-converted-by-${estimate.id}`}>
-                                  Converted by: <span className="font-semibold text-amber-700">{estimate.convertedByUserName}</span>
+                                <span className="text-[13px] font-medium text-[#374151] bg-[#FF8000]1A px-2.5 py-1 rounded-md border border-[#FF8000]33" data-testid={`text-converted-by-${estimate.id}`}>
+                                  Converted by: <span className="font-semibold text-[#FF8000]">{estimate.convertedByUserName}</span>
                                 </span>
                               ) : (estimate.createdByTechName || estimate.officeMemberName) ? (
                                 <span className="text-[13px] font-medium text-[#374151] bg-gray-100 px-2.5 py-1 rounded-md" data-testid={`text-created-by-${estimate.id}`}>
@@ -1960,12 +1960,12 @@ export default function Estimates() {
                           )}
                           {estimate.status === "pending_approval" && (
                             <>
-                              <Badge className="bg-amber-50 text-amber-700 border-amber-200 rounded-full">
+                              <Badge className="bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33 rounded-full">
                                 <Clock className="w-3 h-3 mr-1" />
                                 Pending Approval
                               </Badge>
                               {estimate.approvalSentTo && (
-                                <div className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                                <div className="flex items-center gap-1 text-xs text-[#FF8000] bg-[#FF8000]1A px-2 py-1 rounded-full">
                                   <Mail className="w-3 h-3" />
                                   <span>Sent to {estimate.approvalSentTo}</span>
                                 </div>
@@ -1975,7 +1975,7 @@ export default function Estimates() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                                    className="text-[#FF8000] border-[#FF8000] hover:bg-[#FF8000]1A"
                                     data-testid={`button-resend-approval-${estimate.id}`}
                                   >
                                     <Send className="w-3 h-3 mr-1" />
@@ -2003,14 +2003,14 @@ export default function Estimates() {
                                 Approved
                               </Badge>
                               {estimate.customerApproverName && (
-                                <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                                <div className="flex items-center gap-1 text-xs text-[#22D69A] bg-[#22D69A]1A px-2 py-1 rounded-full">
                                   <User className="w-3 h-3" />
                                   <span>
                                     {estimate.customerApproverName}
                                     {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
                                   </span>
                                   {estimate.approvedAt && (
-                                    <span className="text-green-500">
+                                    <span className="text-[#22D69A]">
                                       • {new Date(estimate.approvedAt).toLocaleDateString()}
                                     </span>
                                   )}
@@ -2037,14 +2037,14 @@ export default function Estimates() {
                                 Needs Scheduling
                               </Badge>
                               {estimate.customerApproverName && (
-                                <div className="flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                                <div className="flex items-center gap-1 text-xs text-[#22D69A] bg-[#22D69A]1A px-2 py-1 rounded-full">
                                   <User className="w-3 h-3" />
                                   <span>
                                     {estimate.customerApproverName}
                                     {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
                                   </span>
                                   {estimate.approvedAt && (
-                                    <span className="text-green-500">
+                                    <span className="text-[#22D69A]">
                                       • {new Date(estimate.approvedAt).toLocaleDateString()}
                                     </span>
                                   )}
@@ -2149,7 +2149,7 @@ export default function Estimates() {
                                   e.stopPropagation();
                                   handleReadyToInvoice(estimate);
                                 }}
-                                className="bg-purple-600 hover:bg-purple-700"
+                                className="bg-[#17BEBB] hover:bg-[#17BEBB]"
                                 data-testid={`button-ready-invoice-${estimate.id}`}
                               >
                                 <Receipt className="w-3 h-3 mr-1" />
@@ -2159,7 +2159,7 @@ export default function Estimates() {
                           )}
                           {estimate.status === "ready_to_invoice" && (
                             <>
-                              <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                              <Badge className="bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33">
                                 <CheckCircle2 className="w-3 h-3 mr-1" />
                                 Ready to Invoice
                               </Badge>
@@ -2169,7 +2169,7 @@ export default function Estimates() {
                                   e.stopPropagation();
                                   handleInvoice(estimate);
                                 }}
-                                className="bg-purple-600 hover:bg-purple-700"
+                                className="bg-[#17BEBB] hover:bg-[#17BEBB]"
                                 data-testid={`button-invoice-${estimate.id}`}
                               >
                                 <Receipt className="w-3 h-3 mr-1" />
@@ -2250,7 +2250,7 @@ export default function Estimates() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-slate-500">Amount</p>
-                  <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  <p className="text-3xl font-bold text-[#2374AB]">{formatCurrency(calculateTotals.totalAmount)}</p>
                 </div>
               </div>
             </DialogHeader>
@@ -2357,9 +2357,9 @@ export default function Estimates() {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
                       <div className="flex items-center gap-2 mb-3">
-                        <ClipboardList className="w-4 h-4 text-orange-600" />
+                        <ClipboardList className="w-4 h-4 text-[#FF8000]" />
                         <Label className="text-sm font-medium text-orange-800">Work Order Tracking</Label>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -2463,7 +2463,7 @@ export default function Estimates() {
                           <Button
                             size="sm"
                             onClick={addLineItem}
-                            className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+                            className="bg-[#2374AB] hover:bg-[#2374AB]/90"
                             data-testid="button-add-line"
                           >
                             <Plus className="w-3 h-3 mr-1" />
@@ -2798,7 +2798,7 @@ export default function Estimates() {
 
                         <div className="flex justify-between text-lg font-bold border-t pt-3 border-slate-300">
                           <span>Estimate total</span>
-                          <span className="text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</span>
+                          <span className="text-[#2374AB]">{formatCurrency(calculateTotals.totalAmount)}</span>
                         </div>
 
                         <div className="space-y-1 border-t pt-3">
@@ -2855,7 +2855,7 @@ export default function Estimates() {
               <Button
                 onClick={handleSaveEstimate}
                 disabled={!formData.propertyName}
-                className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+                className="bg-[#2374AB] hover:bg-[#2374AB]/90"
                 data-testid="button-save-estimate"
               >
                 {isEditing ? "Save Changes" : "Save Estimate"}
@@ -2887,7 +2887,7 @@ export default function Estimates() {
                 <div className="p-4 bg-slate-50 rounded-lg">
                   <h4 className="font-semibold">{selectedEstimate.title}</h4>
                   <p className="text-sm text-slate-600">{selectedEstimate.propertyName}</p>
-                  <p className="text-lg font-bold text-[#0078D4] mt-2">
+                  <p className="text-lg font-bold text-[#2374AB] mt-2">
                     {formatCurrency(selectedEstimate.totalAmount)}
                   </p>
                 </div>
@@ -2977,8 +2977,8 @@ export default function Estimates() {
                                 key={tech.id}
                                 className={`p-3 rounded-lg border cursor-pointer transition-all ${
                                   selectedTechId === tech.id 
-                                    ? "border-[#0078D4] bg-[#0078D4]/5 ring-2 ring-[#0078D4]" 
-                                    : "border-[#E2E8F0] hover:border-[#0078D4] hover:shadow-sm"
+                                    ? "border-[#2374AB] bg-[#2374AB]/5 ring-2 ring-[#2374AB]" 
+                                    : "border-[#E2E8F0] hover:border-[#2374AB] hover:shadow-sm"
                                 }`}
                                 onClick={() => {
                                   setSelectedTechId(tech.id);
@@ -2988,8 +2988,8 @@ export default function Estimates() {
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-[#0078D4]/10 flex items-center justify-center">
-                                      <User className="w-4 h-4 text-[#0078D4]" />
+                                    <div className="w-8 h-8 rounded-full bg-[#2374AB]/10 flex items-center justify-center">
+                                      <User className="w-4 h-4 text-[#2374AB]" />
                                     </div>
                                     <div>
                                       <p className="font-medium text-[#1E293B] text-sm">{tech.name}</p>
@@ -2997,7 +2997,7 @@ export default function Estimates() {
                                     </div>
                                   </div>
                                   {selectedTechId === tech.id && (
-                                    <CheckCircle2 className="w-5 h-5 text-[#0078D4]" />
+                                    <CheckCircle2 className="w-5 h-5 text-[#2374AB]" />
                                   )}
                                 </div>
                               </div>
@@ -3025,7 +3025,7 @@ export default function Estimates() {
                 <Button
                   onClick={handleApproval}
                   disabled={isCreatingInvoice}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-[#22D69A] hover:bg-[#22D69A]"
                   data-testid="button-confirm-approval"
                 >
                   {isCreatingInvoice ? (
@@ -3053,7 +3053,7 @@ export default function Estimates() {
                   <Button
                     onClick={handleScheduleFromApproval}
                     disabled={!selectedTechId}
-                    className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+                    className="bg-[#2374AB] hover:bg-[#2374AB]/90"
                     data-testid="button-schedule-now"
                   >
                     <CalendarIcon className="w-4 h-4 mr-2" />
@@ -3069,7 +3069,7 @@ export default function Estimates() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-[#F97316]" />
+                <Mail className="w-5 h-5 text-[#FF8000]" />
                 Send for Approval
               </DialogTitle>
               <DialogDescription>
@@ -3084,7 +3084,7 @@ export default function Estimates() {
                       <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                       <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
                     </div>
-                    <p className="text-lg font-bold text-[#0078D4]">
+                    <p className="text-lg font-bold text-[#2374AB]">
                       {formatCurrency(selectedEstimate.totalAmount)}
                     </p>
                   </div>
@@ -3162,7 +3162,7 @@ export default function Estimates() {
               <Button
                 onClick={handleSendApprovalEmail}
                 disabled={!selectedApprovalEmail || !approvalSubject.trim()}
-                className="bg-[#F97316] hover:bg-[#F97316]/90"
+                className="bg-[#FF8000] hover:bg-[#FF8000]/90"
                 data-testid="button-send-approval-email"
               >
                 <Send className="w-4 h-4 mr-2" />
@@ -3192,13 +3192,13 @@ export default function Estimates() {
                       <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                       <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
                     </div>
-                    <p className="text-lg font-bold text-[#0078D4]">
+                    <p className="text-lg font-bold text-[#2374AB]">
                       {formatCurrency(selectedEstimate.totalAmount)}
                     </p>
                   </div>
                 </div>
 
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="p-3 bg-[#FF8000]1A border border-[#FF8000]33 rounded-lg">
                   <p className="text-sm text-amber-800 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     This bypasses email approval. Use only for confirmed verbal approvals.
@@ -3207,7 +3207,7 @@ export default function Estimates() {
                 
                 {/* Property Section */}
                 <div className="space-y-3">
-                  <span className="inline-block px-3 py-1 bg-[#F97316] text-white text-sm font-medium rounded-md">
+                  <span className="inline-block px-3 py-1 bg-[#FF8000] text-white text-sm font-medium rounded-md">
                     Property
                   </span>
                   
@@ -3240,7 +3240,7 @@ export default function Estimates() {
                 
                 {/* Office Staff Section */}
                 <div className="space-y-3">
-                  <span className="inline-block px-3 py-1 bg-[#F97316] text-white text-sm font-medium rounded-md">
+                  <span className="inline-block px-3 py-1 bg-[#FF8000] text-white text-sm font-medium rounded-md">
                     Office Staff
                   </span>
                   
@@ -3315,7 +3315,7 @@ export default function Estimates() {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-[#0078D4]" />
+                <Receipt className="w-5 h-5 text-[#2374AB]" />
                 Create Invoice
               </DialogTitle>
               <DialogDescription>
@@ -3328,7 +3328,7 @@ export default function Estimates() {
                   <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                   <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <p className="text-lg font-bold text-[#0078D4]">
+                    <p className="text-lg font-bold text-[#2374AB]">
                       {formatCurrency(selectedEstimate.totalAmount)}
                     </p>
                     {selectedEstimate.workType && (
@@ -3340,8 +3340,8 @@ export default function Estimates() {
                 </div>
                 
                 {autoSelectedByWorkType && selectedEstimate.workType && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-700 flex items-center gap-2">
+                  <div className="p-3 bg-[#22D69A]1A border border-[#22D69A]33 rounded-lg">
+                    <p className="text-sm text-[#22D69A] flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4" />
                       Auto-selected {selectedEstimate.workType} billing contact
                     </p>
@@ -3401,7 +3401,7 @@ export default function Estimates() {
               <Button
                 onClick={handleCreateInvoice}
                 disabled={!selectedInvoiceEmail || isCreatingInvoice}
-                className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+                className="bg-[#2374AB] hover:bg-[#2374AB]/90"
                 data-testid="button-create-invoice"
               >
                 {isCreatingInvoice ? (
@@ -3424,7 +3424,7 @@ export default function Estimates() {
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-[#0078D4]" />
+                <CalendarIcon className="w-5 h-5 text-[#2374AB]" />
                 Schedule Job to Repair Technician
               </DialogTitle>
               <DialogDescription>
@@ -3436,7 +3436,7 @@ export default function Estimates() {
                 <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
                   <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
                   <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
-                  <p className="text-lg font-bold text-[#0078D4] mt-2">
+                  <p className="text-lg font-bold text-[#2374AB] mt-2">
                     {formatCurrency(selectedEstimate.totalAmount)}
                   </p>
                 </div>
@@ -3473,14 +3473,14 @@ export default function Estimates() {
                         {repairTechs.map((tech: any) => (
                           <div
                             key={tech.id}
-                            className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-[#0078D4] hover:shadow-md cursor-pointer transition-all"
+                            className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-[#2374AB] hover:shadow-md cursor-pointer transition-all"
                             onClick={() => handleScheduleToTech(tech)}
                             data-testid={`tech-card-${tech.id}`}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[#0078D4]/10 flex items-center justify-center">
-                                  <User className="w-5 h-5 text-[#0078D4]" />
+                                <div className="w-10 h-10 rounded-full bg-[#2374AB]/10 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-[#2374AB]" />
                                 </div>
                                 <div>
                                   <p className="font-medium text-[#1E293B]">{tech.name}</p>
@@ -3488,7 +3488,7 @@ export default function Estimates() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <Badge variant="outline" className={tech.assignedJobs > 3 ? "border-red-300 text-red-600" : "border-green-300 text-green-600"}>
+                                <Badge variant="outline" className={tech.assignedJobs > 3 ? "border-red-300 text-red-600" : "border-green-300 text-[#22D69A]"}>
                                   {tech.assignedJobs || 0} jobs scheduled
                                 </Badge>
                               </div>
@@ -3545,7 +3545,7 @@ export default function Estimates() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Total Amount</p>
-                      <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                      <p className="text-3xl font-bold text-[#2374AB]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                     </div>
                   </div>
                 </div>
@@ -3562,9 +3562,9 @@ export default function Estimates() {
 
                 <div className="space-y-3">
                   <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-blue-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#2374AB">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Building2 className="w-3 h-3 text-blue-500" />
+                        <Building2 className="w-3 h-3 text-[#2374AB]" />
                         <span className="text-xs text-gray-500">Property / Location</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.propertyName}</p>
@@ -3573,9 +3573,9 @@ export default function Estimates() {
                       )}
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-purple-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#17BEBB">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <User className="w-3 h-3 text-purple-500" />
+                        <User className="w-3 h-3 text-[#17BEBB]" />
                         <span className="text-xs text-gray-500">Customer / HOA</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.customerName || "N/A"}</p>
@@ -3584,9 +3584,9 @@ export default function Estimates() {
                       )}
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-amber-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#FF8000">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <CalendarIcon className="w-3 h-3 text-amber-500" />
+                        <CalendarIcon className="w-3 h-3 text-[#FF8000]" />
                         <span className="text-xs text-gray-500">Estimate Date</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{formatDate(selectedEstimate.estimateDate)}</p>
@@ -3608,9 +3608,9 @@ export default function Estimates() {
                   </div>
 
                   <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-orange-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#FF8000">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <Wrench className="w-3 h-3 text-orange-500" />
+                        <Wrench className="w-3 h-3 text-[#FF8000]" />
                         <span className="text-xs text-gray-500">Repair Tech</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.repairTechName || "Not Assigned"}</p>
@@ -3624,9 +3624,9 @@ export default function Estimates() {
                       <p className="text-sm font-medium text-gray-900">{selectedEstimate.serviceTechName || "Not Assigned"}</p>
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-rose-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-[#EF4444]">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <AlertCircle className="w-3 h-3 text-rose-500" />
+                        <AlertCircle className="w-3 h-3 text-[#EF4444]" />
                         <span className="text-xs text-gray-500">Reported Date</span>
                       </div>
                       <p className="text-sm font-medium text-gray-900">
@@ -3634,9 +3634,9 @@ export default function Estimates() {
                       </p>
                     </div>
 
-                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-green-500">
+                    <div className="bg-white border border-gray-100 rounded-md p-3 border-l-2 border-l-#22D69A">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                        <CheckCircle2 className="w-3 h-3 text-[#22D69A]" />
                         <span className="text-xs text-gray-500">Status</span>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -3644,7 +3644,7 @@ export default function Estimates() {
                           {statusConfig[selectedEstimate.status]?.label}
                         </Badge>
                         {selectedEstimate.woRequired && (
-                          <Badge className="bg-[#F97316]/10 text-[#F97316] border-[#F97316] text-xs">
+                          <Badge className="bg-[#FF8000]/10 text-[#FF8000] border-[#FF8000] text-xs">
                             WO Required
                           </Badge>
                         )}
@@ -3690,7 +3690,7 @@ export default function Estimates() {
                             <TableCell className="text-right">{formatCurrency(item.rate * 100)}</TableCell>
                             <TableCell className="text-right font-medium">{formatCurrency(item.amount)}</TableCell>
                             <TableCell className="text-center">
-                              {item.taxable && <CheckCircle2 className="w-4 h-4 text-green-600 mx-auto" />}
+                              {item.taxable && <CheckCircle2 className="w-4 h-4 text-[#22D69A] mx-auto" />}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -3722,14 +3722,14 @@ export default function Estimates() {
                       )}
                       <div className="text-right pl-6 border-l border-slate-300">
                         <p className="text-sm text-slate-500">Total Amount</p>
-                        <p className="text-2xl font-bold text-[#0078D4]">{formatCurrency(selectedEstimate.totalAmount)}</p>
+                        <p className="text-2xl font-bold text-[#2374AB]">{formatCurrency(selectedEstimate.totalAmount)}</p>
                       </div>
                     </div>
                     {(selectedEstimate.depositAmount || 0) > 0 && (
                       <div className="flex justify-end mt-2 pt-2 border-t border-slate-200">
                         <div className="text-right">
                           <p className="text-sm text-slate-500">Deposit Requested</p>
-                          <p className="font-medium text-green-600">{formatCurrency(selectedEstimate.depositAmount)}</p>
+                          <p className="font-medium text-[#22D69A]">{formatCurrency(selectedEstimate.depositAmount)}</p>
                         </div>
                       </div>
                     )}
@@ -3738,8 +3738,8 @@ export default function Estimates() {
 
                 {/* Customer Response Details Section - shows when estimate is approved or rejected */}
                 {(selectedEstimate.status === "approved" || selectedEstimate.status === "needs_scheduling" || selectedEstimate.status === "scheduled" || selectedEstimate.status === "completed" || selectedEstimate.status === "rejected") && (
-                  <div className={`border rounded-lg overflow-hidden ${selectedEstimate.status === "rejected" ? "border-red-200" : "border-green-200"}`}>
-                    <div className={`px-4 py-3 border-b ${selectedEstimate.status === "rejected" ? "bg-red-50" : "bg-green-50"}`}>
+                  <div className={`border rounded-lg overflow-hidden ${selectedEstimate.status === "rejected" ? "border-red-200" : "border-[#22D69A]33"}`}>
+                    <div className={`px-4 py-3 border-b ${selectedEstimate.status === "rejected" ? "bg-red-50" : "bg-[#22D69A]1A"}`}>
                       <h4 className={`font-semibold flex items-center gap-2 ${selectedEstimate.status === "rejected" ? "text-red-800" : "text-green-800"}`}>
                         {selectedEstimate.status === "rejected" ? (
                           <XCircle className="w-4 h-4" />
@@ -3753,7 +3753,7 @@ export default function Estimates() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-xs text-slate-500 uppercase tracking-wide">Response</p>
-                          <p className={`font-semibold ${selectedEstimate.status === "rejected" ? "text-red-600" : "text-green-600"}`}>
+                          <p className={`font-semibold ${selectedEstimate.status === "rejected" ? "text-red-600" : "text-[#22D69A]"}`}>
                             {selectedEstimate.status === "rejected" ? "Declined" : "Approved"}
                           </p>
                         </div>
@@ -3842,8 +3842,8 @@ export default function Estimates() {
                 </div>
 
                 {selectedEstimate.customerNote && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                  <div className="p-4 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33">
+                    <p className="text-sm font-semibold text-[#2374AB] flex items-center gap-2">
                       <FileText className="w-4 h-4" />
                       Note to Customer
                     </p>
@@ -3983,11 +3983,11 @@ export default function Estimates() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-[#2374AB]1A border border-[#2374AB]33 rounded-lg p-4">
                 <p className="text-sm font-medium text-[#0077C5] mb-2">Selected Estimates ({selectedSRIds.size})</p>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {getSelectedUnder500Estimates().map((est) => (
-                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-blue-100">
+                    <div key={est.id} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-[#2374AB]1A">
                       <div className="flex-1">
                         <p className="font-medium text-gray-800">{getEstimateTitle(est)}</p>
                         <p className="text-xs text-gray-500">{est.propertyName}</p>
@@ -3996,7 +3996,7 @@ export default function Estimates() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 pt-3 border-t border-blue-200 flex justify-between">
+                <div className="mt-3 pt-3 border-t border-[#2374AB]33 flex justify-between">
                   <span className="text-sm font-medium text-[#0077C5]">Total</span>
                   <span className="text-lg font-bold text-[#0077C5]">
                     {formatCurrency(getSelectedUnder500Estimates().reduce((sum, e) => sum + (e.totalAmount || 0), 0))}
@@ -4004,8 +4004,8 @@ export default function Estimates() {
                 </div>
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-sm text-amber-700 flex items-center gap-2">
+              <div className="bg-[#FF8000]1A border border-[#FF8000]33 rounded-lg p-3">
+                <p className="text-sm text-[#FF8000] flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   This will mark all selected estimates as invoiced
                 </p>

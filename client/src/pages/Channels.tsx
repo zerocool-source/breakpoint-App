@@ -268,10 +268,10 @@ export default function Channels() {
 
     return (
       <div 
-        className={`group flex gap-3 p-3 hover:bg-slate-800/30 rounded-lg transition-colors ${message.isPinned ? 'bg-yellow-900/20 border-l-2 border-yellow-500' : ''}`}
+        className={`group flex gap-3 p-3 hover:bg-slate-800/30 rounded-lg transition-colors ${message.isPinned ? 'bg-yellow-900/20 border-l-2 border-[#FF8000]' : ''}`}
         data-testid={`message-${message.id}`}
       >
-        <Avatar className="h-9 w-9 bg-gradient-to-br from-sky-500 to-blue-600">
+        <Avatar className="h-9 w-9 bg-gradient-to-br from-[#2374AB] to-[#2374AB]">
           <AvatarFallback className="text-xs font-bold text-white">
             {getInitials(message.authorName)}
           </AvatarFallback>
@@ -281,7 +281,7 @@ export default function Channels() {
             <span className="font-semibold text-white text-sm">{message.authorName}</span>
             <span className="text-xs text-slate-500">{formatMessageTime(message.createdAt)}</span>
             {message.isEdited && <span className="text-xs text-slate-500">(edited)</span>}
-            {message.isPinned && <Pin className="w-3 h-3 text-yellow-500" />}
+            {message.isPinned && <Pin className="w-3 h-3 text-[#FF8000]" />}
           </div>
           <p className="text-slate-300 text-sm whitespace-pre-wrap break-words">{message.content}</p>
           
@@ -303,7 +303,7 @@ export default function Channels() {
           {!isThreadReply && message.replyCount > 0 && (
             <button
               onClick={() => setShowThread(message.id)}
-              className="flex items-center gap-1 mt-2 text-xs text-sky-400 hover:text-sky-300 transition-colors"
+              className="flex items-center gap-1 mt-2 text-xs text-[#2374AB] hover:text-[#2374AB] transition-colors"
               data-testid={`button-view-replies-${message.id}`}
             >
               <MessageSquare className="w-3 h-3" />
@@ -347,7 +347,7 @@ export default function Channels() {
             )}
             <button 
               onClick={() => pinMessageMutation.mutate({ messageId: message.id, isPinned: !message.isPinned })}
-              className={`p-1 hover:bg-slate-700 rounded ${message.isPinned ? 'text-yellow-500' : 'text-slate-400 hover:text-white'}`}
+              className={`p-1 hover:bg-slate-700 rounded ${message.isPinned ? 'text-[#FF8000]' : 'text-slate-400 hover:text-white'}`}
             >
               <Pin className="w-4 h-4" />
             </button>
@@ -416,13 +416,13 @@ export default function Channels() {
                     }}
                     className={`w-full text-left p-3 rounded-lg transition-all ${
                       selectedChannel?.id === channel.id 
-                        ? 'bg-cyan-600/20 border border-cyan-500/50' 
+                        ? 'bg-[#17BEBB]/20 border border-[#17BEBB]/50' 
                         : 'hover:bg-slate-700/50'
                     }`}
                     data-testid={`channel-${channel.id}`}
                   >
                     <div className="flex items-start gap-2">
-                      <Hash className="w-4 h-4 mt-0.5 text-cyan-500 flex-shrink-0" />
+                      <Hash className="w-4 h-4 mt-0.5 text-[#17BEBB] flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-white text-sm truncate">{channel.customerName || channel.propertyName}</p>
                         {channel.address && (
@@ -448,7 +448,7 @@ export default function Channels() {
               <div className="p-4 border-b border-slate-700/50 bg-slate-900/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Hash className="w-5 h-5 text-cyan-500" />
+                    <Hash className="w-5 h-5 text-[#17BEBB]" />
                     <div>
                       <h3 className="font-bold text-white">{selectedChannel.customerName || selectedChannel.propertyName}</h3>
                       <p className="text-xs text-slate-400">

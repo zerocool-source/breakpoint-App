@@ -53,14 +53,14 @@ function getInitials(firstName: string, lastName: string): string {
 
 function getAvatarColor(name: string): string {
   const colors = [
-    "bg-blue-600",
-    "bg-green-600", 
-    "bg-purple-600",
-    "bg-orange-600",
+    "bg-[#2374AB]",
+    "bg-[#22D69A]", 
+    "bg-[#17BEBB]",
+    "bg-[#FF8000]",
     "bg-pink-600",
-    "bg-cyan-600",
-    "bg-indigo-600",
-    "bg-teal-600",
+    "bg-[#17BEBB]",
+    "bg-[#2374AB]",
+    "bg-[#17BEBB]",
   ];
   const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
@@ -101,7 +101,7 @@ function AddTechnicianModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[700px] p-0 gap-0">
-        <DialogHeader className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+        <DialogHeader className="bg-[#2374AB] text-white px-4 py-3 rounded-t-lg">
           <DialogTitle className="text-lg font-semibold">Add Repair Technician</DialogTitle>
         </DialogHeader>
         
@@ -111,7 +111,7 @@ function AddTechnicianModal({
               <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300">
                 <Image className="w-8 h-8 text-slate-400" />
               </div>
-              <button className="text-blue-600 text-sm font-medium hover:underline">
+              <button className="text-[#2374AB] text-sm font-medium hover:underline">
                 Add Photo
               </button>
             </div>
@@ -158,7 +158,7 @@ function AddTechnicianModal({
             <Button 
               onClick={handleSubmit}
               disabled={!firstName.trim() || !lastName.trim()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+              className="bg-[#2374AB] hover:bg-[#2374AB] text-white px-8"
               data-testid="button-add-tech-submit"
             >
               ADD TECH
@@ -229,7 +229,7 @@ function EditTechnicianModal({
     <>
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-[700px] p-0 gap-0">
-          <DialogHeader className="bg-blue-600 text-white px-4 py-3 rounded-t-lg">
+          <DialogHeader className="bg-[#2374AB] text-white px-4 py-3 rounded-t-lg">
             <DialogTitle className="text-lg font-semibold">Edit Repair Technician</DialogTitle>
           </DialogHeader>
           
@@ -242,7 +242,7 @@ function EditTechnicianModal({
                 )}>
                   {initials}
                 </div>
-                <button className="text-blue-600 text-sm font-medium hover:underline">
+                <button className="text-[#2374AB] text-sm font-medium hover:underline">
                   Change Photo
                 </button>
               </div>
@@ -298,7 +298,7 @@ function EditTechnicianModal({
               <Button 
                 onClick={handleSubmit}
                 disabled={!firstName.trim() || !lastName.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8"
+                className="bg-[#2374AB] hover:bg-[#2374AB] text-white px-8"
                 data-testid="button-save-tech"
               >
                 SAVE CHANGES
@@ -376,7 +376,7 @@ function ServiceLogSidebar({
   return (
     <Sheet open={!!technician} onOpenChange={() => onClose()}>
       <SheetContent className="w-[450px] sm:w-[500px] p-0">
-        <SheetHeader className="bg-blue-600 text-white px-6 py-4">
+        <SheetHeader className="bg-[#2374AB] text-white px-6 py-4">
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -388,7 +388,7 @@ function ServiceLogSidebar({
             </div>
             <div>
               <SheetTitle className="text-white text-lg">{fullName}</SheetTitle>
-              <p className="text-blue-100 text-sm">Service Log</p>
+              <p className="text-[#2374AB]1A text-sm">Service Log</p>
             </div>
           </div>
         </SheetHeader>
@@ -419,7 +419,7 @@ function ServiceLogSidebar({
                     data-testid={`entry-${entry.id}`}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#2374AB]1A text-blue-800 capitalize">
                         {entry.entryType}
                       </span>
                       <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -590,7 +590,7 @@ export default function RepairTechs() {
         <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" className="bg-blue-600 hover:bg-blue-700" data-testid="dropdown-filter-status">
+              <Button variant="default" className="bg-[#2374AB] hover:bg-[#2374AB]" data-testid="dropdown-filter-status">
                 Filter: {filterStatus === "all" ? "All" : filterStatus === "active" ? "Active" : "Inactive"}
                 <ChevronDown className="w-4 h-4 ml-2" />
               </Button>
@@ -614,7 +614,7 @@ export default function RepairTechs() {
           </div>
 
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 ml-auto" 
+            className="bg-[#2374AB] hover:bg-[#2374AB] ml-auto" 
             onClick={() => setShowAddModal(true)}
             data-testid="button-add-technician"
           >
@@ -678,7 +678,7 @@ export default function RepairTechs() {
                             {initials}
                           </div>
                           <span 
-                            className="font-medium text-blue-600 hover:underline cursor-pointer"
+                            className="font-medium text-[#2374AB] hover:underline cursor-pointer"
                             onClick={() => setViewingTech(tech)}
                             data-testid={`link-tech-name-${tech.id}`}
                           >
@@ -697,7 +697,7 @@ export default function RepairTechs() {
                           <Switch 
                             checked={tech.active} 
                             onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
-                            className="data-[state=checked]:bg-blue-600"
+                            className="data-[state=checked]:bg-[#2374AB]"
                             data-testid={`switch-status-${tech.id}`}
                           />
                         </div>
@@ -705,7 +705,7 @@ export default function RepairTechs() {
                       <td className="px-6 py-4 text-right">
                         <Button 
                           variant="link" 
-                          className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+                          className="text-[#2374AB] hover:text-blue-800 p-0 h-auto"
                           onClick={() => setEditingTech(tech)}
                           data-testid={`button-edit-${tech.id}`}
                         >
@@ -757,7 +757,7 @@ export default function RepairTechs() {
                     onClick={() => setCurrentPage(page)}
                     className={cn(
                       "h-8 w-8",
-                      currentPage === page && "bg-blue-600 hover:bg-blue-700"
+                      currentPage === page && "bg-[#2374AB] hover:bg-[#2374AB]"
                     )}
                     data-testid={`button-page-${page}`}
                   >

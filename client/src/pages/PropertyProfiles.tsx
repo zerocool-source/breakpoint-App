@@ -30,9 +30,9 @@ function formatDate(date: Date | string | null | undefined): string {
 }
 
 const statusConfig: Record<string, { color: string; label: string }> = {
-  active: { color: "bg-green-100 text-green-700 border-green-200", label: "Active" },
+  active: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", label: "Active" },
   inactive: { color: "bg-slate-100 text-slate-600 border-slate-200", label: "Inactive" },
-  lead: { color: "bg-blue-100 text-blue-700 border-blue-200", label: "Lead" },
+  lead: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", label: "Lead" },
 };
 
 const propertyTypeConfig: Record<string, string> = {
@@ -331,7 +331,7 @@ export default function PropertyProfiles() {
               <h2 className="font-semibold text-[#1E293B]">Properties</h2>
               <Button
                 size="sm"
-                className="bg-[#0078D4] hover:bg-[#1E40AF]"
+                className="bg-[#2374AB] hover:bg-[#1E40AF]"
                 onClick={() => {
                   setPropertyForm(emptyPropertyForm);
                   setShowAddDialog(true);
@@ -356,7 +356,7 @@ export default function PropertyProfiles() {
           <ScrollArea className="flex-1">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-6 h-6 animate-spin text-[#2374AB]" />
               </div>
             ) : filteredProperties.length === 0 ? (
               <div className="p-4 text-center text-slate-500">
@@ -372,7 +372,7 @@ export default function PropertyProfiles() {
                       key={property.id}
                       className={`p-3 rounded-lg cursor-pointer transition-all ${
                         selectedPropertyId === property.id
-                          ? "bg-[#0078D4]/10 border border-[#0078D4]/30"
+                          ? "bg-[#2374AB]/10 border border-[#2374AB]/30"
                           : "hover:bg-slate-50"
                       }`}
                       onClick={() => {
@@ -416,7 +416,7 @@ export default function PropertyProfiles() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="flex items-center gap-2">
-                  <Edit2 className="w-5 h-5 text-[#0078D4]" />
+                  <Edit2 className="w-5 h-5 text-[#2374AB]" />
                   Edit Property
                 </CardTitle>
                 <div className="flex gap-2">
@@ -424,7 +424,7 @@ export default function PropertyProfiles() {
                     <X className="w-4 h-4 mr-1" /> Cancel
                   </Button>
                   <Button
-                    className="bg-[#0078D4] hover:bg-[#1E40AF]"
+                    className="bg-[#2374AB] hover:bg-[#1E40AF]"
                     onClick={handleSaveEdit}
                     disabled={updateMutation.isPending}
                     data-testid="button-save-property"
@@ -449,8 +449,8 @@ export default function PropertyProfiles() {
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-lg bg-[#0078D4]/10 flex items-center justify-center">
-                        <Building2 className="w-7 h-7 text-[#0078D4]" />
+                      <div className="w-14 h-14 rounded-lg bg-[#2374AB]/10 flex items-center justify-center">
+                        <Building2 className="w-7 h-7 text-[#2374AB]" />
                       </div>
                       <div>
                         <h1 className="text-2xl font-bold text-[#1E293B]">{selectedProperty.name}</h1>
@@ -467,7 +467,7 @@ export default function PropertyProfiles() {
                             </Badge>
                           )}
                           {selectedProperty.zone && (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            <Badge variant="outline" className="bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33">
                               <Tag className="w-3 h-3 mr-1" />
                               {selectedProperty.zone}
                             </Badge>
@@ -516,7 +516,7 @@ export default function PropertyProfiles() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-[#F97316]" /> Financial
+                          <DollarSign className="w-4 h-4 text-[#FF8000]" /> Financial
                         </h3>
                         <div className="text-sm space-y-1">
                           <p><span className="text-slate-500">Monthly Rate:</span> {formatCurrency(selectedProperty.monthlyRate)}</p>
@@ -525,7 +525,7 @@ export default function PropertyProfiles() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-[#0078D4]" /> Service Dates
+                          <Calendar className="w-4 h-4 text-[#2374AB]" /> Service Dates
                         </h3>
                         <div className="text-sm space-y-1">
                           <p><span className="text-slate-500">Last Service:</span> {formatDate(selectedProperty.lastServiceDate)}</p>
@@ -546,12 +546,12 @@ export default function PropertyProfiles() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <User className="w-5 h-5 text-[#0078D4]" />
+                        <User className="w-5 h-5 text-[#2374AB]" />
                         Contacts
                       </CardTitle>
                       <Button
                         size="sm"
-                        className="bg-[#0078D4] hover:bg-[#1E40AF]"
+                        className="bg-[#2374AB] hover:bg-[#1E40AF]"
                         onClick={() => {
                           setContactForm(emptyContactForm);
                           setShowContactDialog(true);
@@ -572,7 +572,7 @@ export default function PropertyProfiles() {
                                 <div className="flex items-center gap-2">
                                   <p className="font-medium">{contact.name}</p>
                                   {contact.isPrimary && (
-                                    <Badge className="bg-blue-100 text-blue-700 text-xs">Primary</Badge>
+                                    <Badge className="bg-[#2374AB]1A text-[#2374AB] text-xs">Primary</Badge>
                                   )}
                                   {contact.role && (
                                     <Badge variant="outline" className="text-xs">{contact.role}</Badge>
@@ -612,12 +612,12 @@ export default function PropertyProfiles() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-3">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Receipt className="w-5 h-5 text-[#F97316]" />
+                        <Receipt className="w-5 h-5 text-[#FF8000]" />
                         Billing Contacts
                       </CardTitle>
                       <Button
                         size="sm"
-                        className="bg-[#F97316] hover:bg-[#EA580C]"
+                        className="bg-[#FF8000] hover:bg-[#EA580C]"
                         onClick={() => {
                           setBillingForm(emptyBillingForm);
                           setShowBillingDialog(true);
@@ -749,7 +749,7 @@ export default function PropertyProfiles() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#0078D4]" />
+              <Building2 className="w-5 h-5 text-[#2374AB]" />
               Add Property
             </DialogTitle>
           </DialogHeader>
@@ -759,7 +759,7 @@ export default function PropertyProfiles() {
               Cancel
             </Button>
             <Button
-              className="bg-[#0078D4] hover:bg-[#1E40AF]"
+              className="bg-[#2374AB] hover:bg-[#1E40AF]"
               onClick={handleCreate}
               disabled={!propertyForm.name || createMutation.isPending}
               data-testid="button-create-property"
@@ -780,7 +780,7 @@ export default function PropertyProfiles() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-[#0078D4]" />
+              <User className="w-5 h-5 text-[#2374AB]" />
               Add Contact
             </DialogTitle>
           </DialogHeader>
@@ -827,7 +827,7 @@ export default function PropertyProfiles() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowContactDialog(false)}>Cancel</Button>
             <Button
-              className="bg-[#0078D4] hover:bg-[#1E40AF]"
+              className="bg-[#2374AB] hover:bg-[#1E40AF]"
               onClick={() => createContactMutation.mutate(contactForm)}
               disabled={!contactForm.name || createContactMutation.isPending}
               data-testid="button-save-contact"
@@ -844,7 +844,7 @@ export default function PropertyProfiles() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-[#F97316]" />
+              <Receipt className="w-5 h-5 text-[#FF8000]" />
               Add Billing Contact
             </DialogTitle>
           </DialogHeader>
@@ -885,7 +885,7 @@ export default function PropertyProfiles() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBillingDialog(false)}>Cancel</Button>
             <Button
-              className="bg-[#F97316] hover:bg-[#EA580C]"
+              className="bg-[#FF8000] hover:bg-[#EA580C]"
               onClick={() => createBillingMutation.mutate(billingForm)}
               disabled={!billingForm.email || createBillingMutation.isPending}
               data-testid="button-save-billing"

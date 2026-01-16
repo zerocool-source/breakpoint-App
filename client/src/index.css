@@ -15,7 +15,7 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* Enterprise Dashboard Color Palette */
+  /* Brand Color Palette */
   --color-background: #FFFFFF;
   --color-foreground: #1E293B;
 
@@ -25,48 +25,48 @@
   --color-popover: #FFFFFF;
   --color-popover-foreground: #1E293B;
 
-  /* Primary: Royal Blue */
-  --color-primary: #0078D4;
+  /* Primary: Rich Cerulean (Blue) */
+  --color-primary: #2374AB;
   --color-primary-foreground: #FFFFFF;
 
-  /* Secondary: Orange */
-  --color-secondary: #F97316;
+  /* Secondary: Vivid Tangerine (Orange) */
+  --color-secondary: #FF8000;
   --color-secondary-foreground: #FFFFFF;
 
   /* Muted: Light Gray Surface */
   --color-muted: #F8FAFC;
   --color-muted-foreground: #64748B;
 
-  /* Accent: Orange for CTAs */
-  --color-accent: #F97316;
+  /* Accent: Tropical Teal */
+  --color-accent: #17BEBB;
   --color-accent-foreground: #FFFFFF;
 
   /* Status colors */
-  --color-success: #22C55E;
-  --color-warning: #FBBF24;
+  --color-success: #22D69A;
+  --color-warning: #FF8000;
   --color-destructive: #EF4444;
   --color-destructive-foreground: #FFFFFF;
 
   --color-border: #E2E8F0;
   --color-input: #F1F5F9;
-  --color-ring: #F97316;
+  --color-ring: #2374AB;
 
-  /* Chart colors */
-  --color-chart-1: #0078D4;
-  --color-chart-2: #F97316;
-  --color-chart-3: #22C55E;
-  --color-chart-4: #FBBF24;
+  /* Chart colors - Brand only */
+  --color-chart-1: #2374AB;
+  --color-chart-2: #FF8000;
+  --color-chart-3: #17BEBB;
+  --color-chart-4: #22D69A;
   --color-chart-5: #EF4444;
   
-  /* Sidebar - Royal Blue Background */
-  --color-sidebar: #0078D4;
+  /* Sidebar - Rich Cerulean Background */
+  --color-sidebar: #2374AB;
   --color-sidebar-foreground: #FFFFFF;
   --color-sidebar-primary: #FFFFFF;
-  --color-sidebar-primary-foreground: #0078D4;
+  --color-sidebar-primary-foreground: #2374AB;
   --color-sidebar-accent: rgba(255, 255, 255, 0.15);
   --color-sidebar-accent-foreground: #FFFFFF;
   --color-sidebar-border: rgba(255, 255, 255, 0.1);
-  --color-sidebar-ring: #F97316;
+  --color-sidebar-ring: #FF8000;
 }
 
 @layer base {
@@ -87,28 +87,28 @@
   }
   
   .clickup-card-interactive {
-    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200 hover:shadow-md hover:border-[#F97316]/30 cursor-pointer;
+    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200 hover:shadow-md hover:border-[#FF8000]/30 cursor-pointer;
   }
 
-  /* Status badge styles - 20% opacity backgrounds */
+  /* Status badge styles - Brand colors with 20% opacity backgrounds */
   .badge-primary {
-    @apply bg-[#0078D4]/20 text-[#0078D4];
+    @apply bg-[#2374AB]/20 text-[#2374AB];
   }
   
   .badge-accent {
-    @apply bg-[#F97316]/20 text-[#F97316];
+    @apply bg-[#17BEBB]/20 text-[#17BEBB];
   }
   
   .badge-secondary {
-    @apply bg-[#F97316]/20 text-[#F97316];
+    @apply bg-[#FF8000]/20 text-[#FF8000];
   }
   
   .badge-success {
-    @apply bg-[#22C55E]/20 text-[#22C55E];
+    @apply bg-[#22D69A]/20 text-[#22D69A];
   }
   
   .badge-warning {
-    @apply bg-[#FBBF24]/20 text-[#B45309];
+    @apply bg-[#FF8000]/20 text-[#FF8000];
   }
   
   .badge-danger {
@@ -116,19 +116,27 @@
   }
   
   .badge-scheduled {
-    @apply bg-[#0078D4]/20 text-[#0078D4];
+    @apply bg-[#2374AB]/20 text-[#2374AB];
   }
   
   .badge-pending {
-    @apply bg-[#F97316]/20 text-[#F97316];
+    @apply bg-[#FF8000]/20 text-[#FF8000];
   }
   
   .badge-completed {
-    @apply bg-[#22C55E]/20 text-[#22C55E];
+    @apply bg-[#22D69A]/20 text-[#22D69A];
   }
   
   .badge-critical {
     @apply bg-[#EF4444]/20 text-[#EF4444];
+  }
+  
+  .badge-teal {
+    @apply bg-[#17BEBB]/20 text-[#17BEBB];
+  }
+  
+  .badge-in-progress {
+    @apply bg-[#2374AB]/20 text-[#2374AB];
   }
 }
 

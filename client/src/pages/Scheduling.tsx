@@ -217,7 +217,7 @@ function DroppableRouteCard({ route, children, dayOfWeek }: { route: Route; chil
   return (
     <div
       ref={setNodeRef}
-      className={`transition-all ${isOver ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+      className={`transition-all ${isOver ? "ring-2 ring-#2374AB ring-offset-1" : ""}`}
     >
       {children}
     </div>
@@ -233,7 +233,7 @@ function DroppableUnscheduledArea({ dayOfWeek, children }: { dayOfWeek: number; 
   return (
     <div
       ref={setNodeRef}
-      className={`transition-all ${isOver ? "ring-2 ring-amber-400 bg-amber-50" : ""}`}
+      className={`transition-all ${isOver ? "ring-2 ring-[#FF8000] bg-[#FF8000]1A" : ""}`}
     >
       {children}
     </div>
@@ -637,7 +637,7 @@ export default function Scheduling() {
               </button>
 
               {filterCustomerName && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 rounded-md text-white text-xs">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2374AB] rounded-md text-white text-xs">
                   <span>Filtering: {filterCustomerName}</span>
                   <Link href="/scheduling">
                     <button className="hover:text-white/80">×</button>
@@ -651,7 +651,7 @@ export default function Scheduling() {
               <Button
                 size="sm"
                 onClick={() => setShowCreateRouteDialog(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium h-8"
+                className="bg-[#2374AB] hover:bg-[#2374AB] text-white text-xs font-medium h-8"
                 data-testid="btn-new-route"
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
@@ -679,10 +679,10 @@ export default function Scheduling() {
               <Popover open={showUnscheduledPanel} onOpenChange={setShowUnscheduledPanel}>
                 <PopoverTrigger asChild>
                   <button 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 border border-amber-500/40 rounded-md text-amber-400 hover:bg-amber-500/30 text-xs font-medium transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]/20 border border-[#FF8000]/40 rounded-md text-[#FF8000] hover:bg-[#FF8000]/30 text-xs font-medium transition-colors"
                     data-testid="btn-unscheduled"
                   >
-                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-[#FF8000] rounded-full animate-pulse" />
                     {totalUnscheduled} Route Stops
                   </button>
                 </PopoverTrigger>
@@ -692,15 +692,15 @@ export default function Scheduling() {
                   sideOffset={8}
                   disablePortal={true}
                 >
-                  <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
+                  <div className="p-3 bg-[#FF8000]1A border-b border-[#FF8000]33 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                      <div className="w-2 h-2 bg-[#FF8000] rounded-full animate-pulse" />
                       <h3 className="font-semibold text-amber-800 text-sm">Unscheduled Stops</h3>
-                      <span className="bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full">{totalUnscheduled}</span>
+                      <span className="bg-[#FF8000] text-white text-xs px-2 py-0.5 rounded-full">{totalUnscheduled}</span>
                     </div>
                     <button 
                       onClick={() => setShowUnscheduledPanel(false)}
-                      className="text-amber-600 hover:text-amber-800 p-1"
+                      className="text-[#FF8000] hover:text-amber-800 p-1"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -735,7 +735,7 @@ export default function Scheduling() {
                   onClick={() => setShowMapPanel(!showMapPanel)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                     showMapPanel 
-                      ? "bg-blue-500/20 border border-blue-500/40 text-blue-400" 
+                      ? "bg-[#2374AB]/20 border border-[#2374AB]/40 text-blue-400" 
                       : "text-white/70 hover:text-white"
                   }`}
                 >
@@ -821,7 +821,7 @@ export default function Scheduling() {
                           <span className="text-white font-medium text-sm">{dateStr}</span>
                           <span className="text-white/60 text-sm">{dayName}</span>
                           {isToday && (
-                            <span className="ml-auto text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-medium">
+                            <span className="ml-auto text-[10px] bg-[#2374AB] text-white px-1.5 py-0.5 rounded font-medium">
                               TODAY
                             </span>
                           )}
@@ -989,7 +989,7 @@ export default function Scheduling() {
                                     {hasActivity && (
                                       <div className="h-1 bg-slate-100">
                                         <div 
-                                          className="h-full bg-blue-500" 
+                                          className="h-full bg-[#2374AB]" 
                                           style={{ width: `${Math.min(100, stopCount * 10)}%` }}
                                         />
                                       </div>
@@ -1049,7 +1049,7 @@ export default function Scheduling() {
                                           <Button
                                             size="sm"
                                             variant="ghost"
-                                            className="w-full text-xs h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                            className="w-full text-xs h-8 text-[#2374AB] hover:text-[#2374AB] hover:bg-[#2374AB]1A"
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setSelectedRoute(route);
@@ -1268,7 +1268,7 @@ export default function Scheduling() {
                         variant={newRoute.dayOfWeek === day.value ? "default" : "outline"}
                         size="sm"
                         onClick={() => setNewRoute({ ...newRoute, dayOfWeek: day.value })}
-                        className={newRoute.dayOfWeek === day.value ? "bg-blue-600 hover:bg-blue-700" : ""}
+                        className={newRoute.dayOfWeek === day.value ? "bg-[#2374AB] hover:bg-[#2374AB]" : ""}
                       >
                         {day.short}
                       </Button>
@@ -1321,7 +1321,7 @@ export default function Scheduling() {
                         return (
                           <span 
                             key={id} 
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-[#2374AB]1A text-[#2374AB] text-xs rounded-full"
                           >
                             {customer?.name || "Unknown"}
                             <button
@@ -1345,7 +1345,7 @@ export default function Scheduling() {
                 <Button
                   onClick={() => createRouteMutation.mutate({ ...newRoute, customerIds: selectedCustomerIds })}
                   disabled={!newRoute.name}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#2374AB] hover:bg-[#2374AB]"
                 >
                   Create Route
                 </Button>
@@ -1400,7 +1400,7 @@ export default function Scheduling() {
                     id: selectedRoute.id,
                     updates: { name: newRoute.name, color: newRoute.color, technicianName: newRoute.technicianName }
                   })}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#2374AB] hover:bg-[#2374AB]"
                 >
                   Save Changes
                 </Button>
@@ -1455,7 +1455,7 @@ export default function Scheduling() {
                 <Button
                   onClick={() => selectedRoute && createStopMutation.mutate({ routeId: selectedRoute.id, stop: newStop })}
                   disabled={!newStop.poolName}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#2374AB] hover:bg-[#2374AB]"
                 >
                   Add Stop
                 </Button>
@@ -1468,7 +1468,7 @@ export default function Scheduling() {
             {activeDragItem && (
               <div className="flex items-center gap-2 text-xs py-2 px-3 rounded-md bg-white border-2 border-blue-400 shadow-lg cursor-grabbing">
                 <GripVertical className="h-3 w-3 text-blue-400 flex-shrink-0" />
-                <MapPin className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                <MapPin className="h-3 w-3 text-[#2374AB] flex-shrink-0" />
                 <span className="font-medium">{activeDragItem.customerName || activeDragItem.propertyName}</span>
               </div>
             )}

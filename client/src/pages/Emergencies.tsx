@@ -29,22 +29,22 @@ import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
-  service_technician: { label: "Service Tech", color: "bg-blue-100 text-blue-700" },
-  repair_technician: { label: "Repair Tech", color: "bg-purple-100 text-purple-700" },
-  supervisor: { label: "Supervisor", color: "bg-green-100 text-green-700" },
-  repair_foreman: { label: "Repair Foreman", color: "bg-orange-100 text-orange-700" },
+  service_technician: { label: "Service Tech", color: "bg-[#2374AB]1A text-[#2374AB]" },
+  repair_technician: { label: "Repair Tech", color: "bg-[#17BEBB]1A text-[#17BEBB]" },
+  supervisor: { label: "Supervisor", color: "bg-[#22D69A]1A text-[#22D69A]" },
+  repair_foreman: { label: "Repair Foreman", color: "bg-[#FF8000]1A text-[#FF8000]" },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending_review: { label: "Pending Review", color: "bg-amber-100 text-amber-700", icon: Clock },
-  in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700", icon: PlayCircle },
-  resolved: { label: "Resolved", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  pending_review: { label: "Pending Review", color: "bg-[#FF8000]1A text-[#FF8000]", icon: Clock },
+  in_progress: { label: "In Progress", color: "bg-[#2374AB]1A text-[#2374AB]", icon: PlayCircle },
+  resolved: { label: "Resolved", color: "bg-[#22D69A]1A text-[#22D69A]", icon: CheckCircle },
 };
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
   low: { label: "Low", color: "border-slate-300 text-slate-600" },
   normal: { label: "Normal", color: "border-slate-300 text-slate-600" },
-  high: { label: "High", color: "border-orange-300 text-orange-700 bg-orange-50" },
+  high: { label: "High", color: "border-orange-300 text-[#FF8000] bg-[#FF8000]1A" },
   critical: { label: "Critical", color: "border-red-400 text-red-700 bg-red-50" },
 };
 
@@ -245,7 +245,7 @@ export default function Emergencies() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#0078D4]" />
+                <Filter className="w-5 h-5 text-[#2374AB]" />
                 Filter Emergencies
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
@@ -313,20 +313,20 @@ export default function Emergencies() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-slate-50 rounded-lg border border-slate-200" data-testid="metric-total">
-                <div className="text-2xl font-bold text-[#0078D4]">{summary?.total || 0}</div>
+                <div className="text-2xl font-bold text-[#2374AB]">{summary?.total || 0}</div>
                 <div className="text-sm text-slate-500">Total Emergencies</div>
               </div>
-              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200" data-testid="metric-pending">
-                <div className="text-2xl font-bold text-amber-700">{summary?.byStatus?.pending_review || 0}</div>
-                <div className="text-sm text-amber-600">Pending Review</div>
+              <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="metric-pending">
+                <div className="text-2xl font-bold text-[#FF8000]">{summary?.byStatus?.pending_review || 0}</div>
+                <div className="text-sm text-[#FF8000]">Pending Review</div>
               </div>
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200" data-testid="metric-in-progress">
-                <div className="text-2xl font-bold text-blue-700">{summary?.byStatus?.in_progress || 0}</div>
-                <div className="text-sm text-blue-600">In Progress</div>
+              <div className="p-4 bg-[#2374AB]1A rounded-lg border border-[#2374AB]33" data-testid="metric-in-progress">
+                <div className="text-2xl font-bold text-[#2374AB]">{summary?.byStatus?.in_progress || 0}</div>
+                <div className="text-sm text-[#2374AB]">In Progress</div>
               </div>
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200" data-testid="metric-resolved">
-                <div className="text-2xl font-bold text-green-700">{summary?.byStatus?.resolved || 0}</div>
-                <div className="text-sm text-green-600">Resolved</div>
+              <div className="p-4 bg-[#22D69A]1A rounded-lg border border-[#22D69A]33" data-testid="metric-resolved">
+                <div className="text-2xl font-bold text-[#22D69A]">{summary?.byStatus?.resolved || 0}</div>
+                <div className="text-sm text-[#22D69A]">Resolved</div>
               </div>
             </div>
 
@@ -347,7 +347,7 @@ export default function Emergencies() {
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-lg font-bold text-[#1E293B]">{prop.count}</span>
                         {prop.pending > 0 && (
-                          <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5">
+                          <Badge className="bg-[#FF8000]1A text-[#FF8000] text-[10px] px-1.5">
                             {prop.pending} open
                           </Badge>
                         )}
@@ -356,7 +356,7 @@ export default function Emergencies() {
                         {prop.name}
                       </div>
                       {prop.totalAmount > 0 && (
-                        <div className="text-xs text-green-600 mt-1">
+                        <div className="text-xs text-[#22D69A] mt-1">
                           ${(prop.totalAmount / 100).toLocaleString()}
                         </div>
                       )}
@@ -368,7 +368,7 @@ export default function Emergencies() {
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
               </div>
             ) : emergencies.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -485,19 +485,19 @@ export default function Emergencies() {
                 {selectedEmergency.totalAmount !== null && selectedEmergency.totalAmount !== undefined && selectedEmergency.totalAmount > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Amount</span>
-                    <span className="text-sm font-medium text-green-700">${(selectedEmergency.totalAmount / 100).toFixed(2)}</span>
+                    <span className="text-sm font-medium text-[#22D69A]">${(selectedEmergency.totalAmount / 100).toFixed(2)}</span>
                   </div>
                 )}
                 {selectedEmergency.convertedToEstimateId && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Converted To</span>
-                    <Badge className="bg-purple-100 text-purple-700">Estimate Created</Badge>
+                    <Badge className="bg-[#17BEBB]1A text-[#17BEBB]">Estimate Created</Badge>
                   </div>
                 )}
                 {selectedEmergency.convertedToInvoiceId && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">Invoiced As</span>
-                    <Badge className="bg-blue-100 text-blue-700">{selectedEmergency.convertedToInvoiceId}</Badge>
+                    <Badge className="bg-[#2374AB]1A text-[#2374AB]">{selectedEmergency.convertedToInvoiceId}</Badge>
                   </div>
                 )}
               </div>
@@ -523,7 +523,7 @@ export default function Emergencies() {
               {selectedEmergency.resolutionNotes && (
                 <div>
                   <label className="text-sm font-medium text-slate-700 mb-2 block">Resolution Notes</label>
-                  <p className="text-sm text-slate-600 p-3 bg-green-50 rounded-lg border border-green-200">{selectedEmergency.resolutionNotes}</p>
+                  <p className="text-sm text-slate-600 p-3 bg-[#22D69A]1A rounded-lg border border-[#22D69A]33">{selectedEmergency.resolutionNotes}</p>
                 </div>
               )}
             </div>
@@ -583,7 +583,7 @@ export default function Emergencies() {
                       notes: resolutionNotes 
                     })}
                     disabled={updateStatusMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-[#22D69A] hover:bg-[#22D69A]"
                     data-testid="button-resolve"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -599,7 +599,7 @@ export default function Emergencies() {
                     notes: resolutionNotes 
                   })}
                   disabled={updateStatusMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-[#22D69A] hover:bg-[#22D69A]"
                   data-testid="button-resolve"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />

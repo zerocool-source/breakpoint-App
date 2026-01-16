@@ -18,10 +18,10 @@ import type { Technician, TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 const roleConfig: Record<string, { label: string; color: string }> = {
-  service: { label: "Service Tech", color: "bg-blue-100 text-blue-700" },
-  repair: { label: "Repair Tech", color: "bg-orange-100 text-orange-700" },
-  supervisor: { label: "Supervisor", color: "bg-purple-100 text-purple-700" },
-  foreman: { label: "Foreman", color: "bg-green-100 text-green-700" },
+  service: { label: "Service Tech", color: "bg-[#2374AB]1A text-[#2374AB]" },
+  repair: { label: "Repair Tech", color: "bg-[#FF8000]1A text-[#FF8000]" },
+  supervisor: { label: "Supervisor", color: "bg-[#17BEBB]1A text-[#17BEBB]" },
+  foreman: { label: "Foreman", color: "bg-[#22D69A]1A text-[#22D69A]" },
 };
 
 function getInitials(firstName: string, lastName: string): string {
@@ -98,8 +98,8 @@ export default function TechSupervisor() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-              <UserCheck className="w-6 h-6 text-purple-700" />
+            <div className="w-12 h-12 rounded-lg bg-[#17BEBB]1A flex items-center justify-center">
+              <UserCheck className="w-6 h-6 text-[#17BEBB]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading">Supervisor Dashboard</h1>
@@ -150,8 +150,8 @@ export default function TechSupervisor() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#17BEBB]1A flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-[#17BEBB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{supervisors.length}</p>
@@ -163,8 +163,8 @@ export default function TechSupervisor() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#2374AB]1A flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#2374AB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{technicians.filter(t => t.supervisorId && t.active).length}</p>
@@ -176,8 +176,8 @@ export default function TechSupervisor() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <div className="w-10 h-10 rounded-lg bg-[#FF8000]1A flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{issuesAndConcerns.length}</p>
@@ -190,7 +190,7 @@ export default function TechSupervisor() {
 
         {loadingTechs ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
           </div>
         ) : displayedSupervisors.length === 0 ? (
           <Card>
@@ -211,7 +211,7 @@ export default function TechSupervisor() {
                   <CardHeader className="pb-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-purple-100 text-purple-700">
+                        <AvatarFallback className="bg-[#17BEBB]1A text-[#17BEBB]">
                           {getInitials(supervisor.firstName, supervisor.lastName)}
                         </AvatarFallback>
                       </Avatar>
@@ -238,7 +238,7 @@ export default function TechSupervisor() {
                             {teamMembers.map(member => (
                               <div key={member.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                                  <AvatarFallback className="bg-[#2374AB]1A text-[#2374AB] text-xs">
                                     {getInitials(member.firstName, member.lastName)}
                                   </AvatarFallback>
                                 </Avatar>
@@ -293,7 +293,7 @@ export default function TechSupervisor() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <AlertTriangle className="w-5 h-5 text-[#FF8000]" />
                 Issues & Concerns
               </CardTitle>
             </CardHeader>
@@ -301,10 +301,10 @@ export default function TechSupervisor() {
               <ScrollArea className="max-h-[300px]">
                 <div className="space-y-3">
                   {issuesAndConcerns.map(issue => (
-                    <div key={issue.id} className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <div key={issue.id} className="p-3 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-slate-700">{issue.technicianName}</span>
-                        <Badge className={issue.priority === "urgent" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}>
+                        <Badge className={issue.priority === "urgent" ? "bg-red-100 text-red-700" : "bg-[#FF8000]1A text-[#FF8000]"}>
                           {issue.priority}
                         </Badge>
                         <Badge variant="outline">{issue.entryType.replace(/_/g, ' ')}</Badge>

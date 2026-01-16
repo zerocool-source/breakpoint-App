@@ -123,7 +123,7 @@ export default function Automations() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+            <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
               <ArrowLeft className="w-4 h-4" />
               Back to Dashboard
             </Button>
@@ -148,8 +148,8 @@ export default function Automations() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#0078D4]/20 flex items-center justify-center border border-[#0078D4]/30">
-                  <Mail className="w-5 h-5 text-[#0078D4]" />
+                <div className="w-10 h-10 rounded-lg bg-[#2374AB]/20 flex items-center justify-center border border-[#2374AB]/30">
+                  <Mail className="w-5 h-5 text-[#2374AB]" />
                 </div>
                 <div>
                   <h4 className="font-bold text-sm">Outlook 365</h4>
@@ -204,7 +204,7 @@ export default function Automations() {
                     IF: {workflow.trigger}
                   </div>
                   <ArrowRight className="w-4 h-4 opacity-50" />
-                  <div className="flex items-center gap-2 text-[#0078D4]">
+                  <div className="flex items-center gap-2 text-[#2374AB]">
                     <Mail className="w-4 h-4" />
                     THEN: {workflow.action}
                   </div>
@@ -241,7 +241,7 @@ export default function Automations() {
               {emailData && emailData.emails && emailData.emails.length > 0 && (
                 <Button 
                   onClick={handleSendAllToOutlook}
-                  className="bg-[#0078D4] text-white hover:bg-[#0078D4]/80 gap-2"
+                  className="bg-[#2374AB] text-white hover:bg-[#2374AB]/80 gap-2"
                   data-testid="button-send-all-outlook"
                 >
                   <Send className="w-4 h-4" />
@@ -255,7 +255,7 @@ export default function Automations() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between p-4 bg-primary/10 border border-primary/30 rounded-lg">
                   <div className="flex items-center gap-4">
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                    <Badge className="bg-[#22D69A]/20 text-green-400 border-[#22D69A]/50">
                       {emailData.orderCount} Properties Total
                     </Badge>
                     <span className="text-sm text-muted-foreground">
@@ -271,7 +271,7 @@ export default function Automations() {
                         <CardHeader className="pb-3 flex flex-row items-center justify-between">
                           <div>
                             <CardTitle className="text-base font-ui flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-[#0078D4]" />
+                              <Mail className="w-4 h-4 text-[#2374AB]" />
                               {emailPart.subject}
                             </CardTitle>
                             <CardDescription>
@@ -282,7 +282,7 @@ export default function Automations() {
                             <Button 
                               onClick={() => handleOpenInOutlook(emailPart)}
                               size="sm"
-                              className="bg-[#0078D4] text-white hover:bg-[#0078D4]/80 gap-2"
+                              className="bg-[#2374AB] text-white hover:bg-[#2374AB]/80 gap-2"
                               disabled={sendingPart === emailPart.partNumber}
                               data-testid={`button-outlook-part-${emailPart.partNumber}`}
                             >
@@ -359,7 +359,7 @@ export default function Automations() {
                   <p>Chief Operating Officer</p>
                   <p>Direct: 951-312-5060</p>
                   <p>Office: 951-653-3333 Press 6</p>
-                  <p className="text-blue-600">https://www.breakpointpools.com</p>
+                  <p className="text-[#2374AB]">https://www.breakpointpools.com</p>
                   
                   <p className="mt-6 text-center text-gray-500 text-[10px]">
                     Click "Generate from Alerts" to create email from live Pool Brain data

@@ -136,7 +136,7 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
     if (upper === "URGENT") return "bg-destructive/15 text-destructive border-destructive/30";
     if (upper.includes("CRITICAL")) return "bg-destructive/15 text-destructive border-destructive/30";
     if (upper.includes("HIGH")) return "bg-secondary/15 text-secondary border-secondary/30";
-    if (upper.includes("MEDIUM")) return "bg-amber-500/15 text-amber-600 border-amber-500/30";
+    if (upper.includes("MEDIUM")) return "bg-[#FF8000]/15 text-[#FF8000] border-[#FF8000]/30";
     return "bg-primary/15 text-primary border-primary/30";
   };
 
@@ -174,25 +174,25 @@ export function EnrichedAlertsFeed({ className }: EnrichedAlertsFeedProps) {
       <CardContent className="flex flex-col flex-1 pt-4 overflow-hidden">
         <Tabs value={selectedTab} onValueChange={(v) => { setSelectedTab(v); setShowAll(false); }} className="flex flex-col flex-1">
           <TabsList className="grid grid-cols-7 mb-4 bg-[#F1F5F9] border border-[#E2E8F0]">
-            <TabsTrigger value="all" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="all" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               All ({categoryCounts.all})
             </TabsTrigger>
-            <TabsTrigger value="algae" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="algae" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Algae ({categoryCounts.algae})
             </TabsTrigger>
-            <TabsTrigger value="repair" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="repair" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Repair ({categoryCounts.repair})
             </TabsTrigger>
-            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="chemicals-added" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Chem+ ({categoryCounts["chemicals-added"]})
             </TabsTrigger>
-            <TabsTrigger value="time" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="time" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Time ({categoryCounts.time})
             </TabsTrigger>
-            <TabsTrigger value="system" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="system" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               System ({categoryCounts.system})
             </TabsTrigger>
-            <TabsTrigger value="other" className="data-[state=active]:bg-[#0078D4] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
+            <TabsTrigger value="other" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white text-[#64748B] text-[10px] font-semibold">
               Other ({categoryCounts.other})
             </TabsTrigger>
           </TabsList>

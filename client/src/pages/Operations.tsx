@@ -197,7 +197,7 @@ export default function Operations() {
               <Button 
                 variant="link" 
                 size="sm" 
-                className="text-blue-600 gap-1 p-0 h-auto"
+                className="text-[#2374AB] gap-1 p-0 h-auto"
                 onClick={() => handleViewPhotos(alert.alertId)}
                 disabled={isLoadingPhotos}
                 data-testid={`button-view-photos-${alert.alertId}`}
@@ -209,7 +209,7 @@ export default function Operations() {
             <Button 
               variant="outline" 
               size="sm" 
-              className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
+              className="bg-[#2374AB] text-white hover:bg-[#2374AB] border-[#2374AB]"
               onClick={() => handleDismissRepair(alert.alertId)}
               disabled={dismissMutation.isPending}
               data-testid={`button-dismiss-${alert.alertId}`}
@@ -228,7 +228,7 @@ export default function Operations() {
           )}
 
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-blue-600 text-white rounded-lg p-3 relative">
+            <div className="bg-[#2374AB] text-white rounded-lg p-3 relative">
               <div className="flex items-center gap-2 mb-1">
                 <User className="h-4 w-4" />
                 <span className="text-xs font-medium">Contact Pool Tech</span>
@@ -241,11 +241,11 @@ export default function Operations() {
                 </p>
               )}
               <div className="absolute top-2 right-2">
-                <CheckCircle2 className="h-4 w-4 text-blue-200" />
+                <CheckCircle2 className="h-4 w-4 text-[#2374AB]33" />
               </div>
             </div>
 
-            <div className="bg-blue-600 text-white rounded-lg p-3 relative">
+            <div className="bg-[#2374AB] text-white rounded-lg p-3 relative">
               <div className="flex items-center gap-2 mb-1">
                 <Building2 className="h-4 w-4" />
                 <span className="text-xs font-medium">Contact Customer</span>
@@ -258,11 +258,11 @@ export default function Operations() {
                 </p>
               )}
               <div className="absolute top-2 right-2">
-                <CheckCircle2 className="h-4 w-4 text-blue-200" />
+                <CheckCircle2 className="h-4 w-4 text-[#2374AB]33" />
               </div>
             </div>
 
-            <div className="bg-blue-600 text-white rounded-lg p-3 relative">
+            <div className="bg-[#2374AB] text-white rounded-lg p-3 relative">
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="h-4 w-4" />
                 <span className="text-xs font-medium">Schedule Visit</span>
@@ -272,7 +272,7 @@ export default function Operations() {
                 {new Date(alert.createdAt).toLocaleDateString()}
               </p>
               <div className="absolute top-2 right-2">
-                <CheckCircle2 className="h-4 w-4 text-blue-200" />
+                <CheckCircle2 className="h-4 w-4 text-[#2374AB]33" />
               </div>
             </div>
           </div>
@@ -304,8 +304,8 @@ export default function Operations() {
           <Card className="bg-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-[#2374AB]1A rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-[#2374AB]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
@@ -346,8 +346,8 @@ export default function Operations() {
           <Card className="bg-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-[#22D69A]1A rounded-lg">
+                  <Building2 className="h-5 w-5 text-[#22D69A]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-slate-800">{stats.properties}</p>
@@ -370,7 +370,7 @@ export default function Operations() {
             </TabsTrigger>
             <TabsTrigger 
               value="all" 
-              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white gap-2"
+              className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white gap-2"
               data-testid="tab-all-alerts"
             >
               <AlertTriangle className="h-4 w-4" />
@@ -386,7 +386,7 @@ export default function Operations() {
               </div>
             ) : repairsNeededAlerts.length === 0 ? (
               <div className="text-center py-10 text-slate-400">
-                <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500" />
+                <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-[#22D69A]" />
                 <p className="text-lg font-medium">No repairs needed</p>
                 <p className="text-sm">All pools are in good condition</p>
               </div>
@@ -450,12 +450,12 @@ export default function Operations() {
 
             {isLoading ? (
               <div className="text-center py-10 text-slate-400">
-                <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4" />
+                <div className="animate-spin h-8 w-8 border-2 border-[#2374AB] border-t-transparent rounded-full mx-auto mb-4" />
                 <p>Loading operations data...</p>
               </div>
             ) : filteredAlerts.length === 0 ? (
               <div className="text-center py-10 text-slate-400">
-                <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-500" />
+                <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-[#22D69A]" />
                 <p className="text-lg font-medium">No alerts found</p>
                 <p className="text-sm">All systems are operating normally</p>
               </div>
@@ -467,13 +467,13 @@ export default function Operations() {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <Building2 className="h-5 w-5 text-blue-600" />
+                            <Building2 className="h-5 w-5 text-[#2374AB]" />
                             <CardTitle className="text-lg">{customerName}</CardTitle>
                             <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">
                               {propertyAlerts.length} {propertyAlerts.length === 1 ? "Alert" : "Alerts"}
                             </Badge>
                           </div>
-                          <Button variant="ghost" size="sm" className="text-blue-600">
+                          <Button variant="ghost" size="sm" className="text-[#2374AB]">
                             View Property <ChevronRight className="h-4 w-4 ml-1" />
                           </Button>
                         </div>
@@ -493,7 +493,7 @@ export default function Operations() {
                                       className={
                                         alert.type === "SystemIssue" 
                                           ? "bg-red-100 text-red-700 border-red-300" 
-                                          : "bg-amber-100 text-amber-700 border-amber-300"
+                                          : "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]"
                                       }
                                     >
                                       <Wrench className="h-3 w-3 mr-1" />
@@ -503,7 +503,7 @@ export default function Operations() {
                                     <Button 
                                       variant="link" 
                                       size="sm" 
-                                      className="h-5 px-0 text-blue-600 text-xs gap-1"
+                                      className="h-5 px-0 text-[#2374AB] text-xs gap-1"
                                       onClick={() => handleViewPhotos(alert.alertId)}
                                       disabled={loadingPhotosFor === alert.alertId}
                                     >
@@ -530,7 +530,7 @@ export default function Operations() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 text-xs"
+                                    className="bg-[#2374AB]1A text-[#2374AB] hover:bg-[#2374AB]1A border-[#2374AB]33 text-xs"
                                     data-testid={`button-convert-estimate-${alert.alertId}`}
                                   >
                                     <FileCheck className="h-3 w-3 mr-1" />
@@ -538,7 +538,7 @@ export default function Operations() {
                                   </Button>
                                   <Button 
                                     size="sm" 
-                                    className="bg-green-600 hover:bg-green-700 text-xs"
+                                    className="bg-[#22D69A] hover:bg-[#22D69A] text-xs"
                                     data-testid={`button-convert-job-${alert.alertId}`}
                                   >
                                     <Calendar className="h-3 w-3 mr-1" />

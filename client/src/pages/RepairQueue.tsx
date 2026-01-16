@@ -26,13 +26,13 @@ import {
 import type { ServiceRepairJob, Technician } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock, label: "Pending" },
-  assigned: { color: "bg-blue-100 text-blue-700 border-blue-200", icon: User, label: "Assigned" },
-  in_progress: { color: "bg-purple-100 text-purple-700 border-purple-200", icon: Wrench, label: "In Progress" },
-  completed: { color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle, label: "Completed" },
+  pending: { color: "bg-[#FF8000]1A text-[#FF8000] border-[#FF8000]33", icon: Clock, label: "Pending" },
+  assigned: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", icon: User, label: "Assigned" },
+  in_progress: { color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: Wrench, label: "In Progress" },
+  completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
-  estimated: { color: "bg-cyan-100 text-cyan-700 border-cyan-200", icon: DollarSign, label: "Estimated" },
-  batched: { color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: Target, label: "Batched" },
+  estimated: { color: "bg-[#17BEBB]1A text-[#17BEBB] border-[#17BEBB]33", icon: DollarSign, label: "Estimated" },
+  batched: { color: "bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33", icon: Target, label: "Batched" },
 };
 
 const defaultStatus = { color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock, label: "Unknown" };
@@ -255,7 +255,7 @@ export default function RepairQueue() {
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold text-[#0078D4]">
+            <span className="font-mono text-sm font-semibold text-[#2374AB]">
               {repair.jobNumber || "—"}
             </span>
             <Badge className={statusCfg.color}>
@@ -291,7 +291,7 @@ export default function RepairQueue() {
 
         {repair.estimateId && (
           <div className="flex items-center gap-2 mb-3">
-            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
+            <Badge className="bg-[#2374AB]1A text-[#2374AB] border-[#2374AB]33 text-xs">
               <FileText className="w-3 h-3 mr-1" />
               From Estimate
             </Badge>
@@ -303,7 +303,7 @@ export default function RepairQueue() {
             <Button
               size="sm"
               variant="outline"
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              className="text-[#2374AB] hover:text-[#2374AB] hover:bg-[#2374AB]1A"
               onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
               data-testid={`button-start-${repair.id}`}
             >
@@ -314,7 +314,7 @@ export default function RepairQueue() {
             <Button
               size="sm"
               variant="outline"
-              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              className="text-[#22D69A] hover:text-[#22D69A] hover:bg-[#22D69A]1A"
               onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "completed" })}
               data-testid={`button-complete-${repair.id}`}
             >
@@ -368,14 +368,14 @@ export default function RepairQueue() {
     return (
       <Card
         key={techData.tech}
-        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#0078D4] shadow-lg' : ''}`}
+        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#2374AB] shadow-lg' : ''}`}
         onClick={() => setSelectedTech(selectedTech === techData.tech ? null : techData.tech)}
         data-testid={`tech-card-${techData.tech.replace(/\s+/g, '-').toLowerCase()}`}
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
-              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#0078D4] text-white"}>
+              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#2374AB] text-white"}>
                 {getInitials(techData.tech)}
               </AvatarFallback>
             </Avatar>
@@ -384,24 +384,24 @@ export default function RepairQueue() {
               <p className="text-xs text-slate-500">{totalActive} active jobs</p>
             </div>
             {totalActive > 0 && (
-              <Badge className="bg-[#F97316]/10 text-[#F97316] border-[#F97316]/20">
+              <Badge className="bg-[#FF8000]/10 text-[#FF8000] border-[#FF8000]/20">
                 {totalActive}
               </Badge>
             )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="text-center p-2 bg-amber-50 rounded-lg">
-              <div className="text-lg font-bold text-amber-700">{techData.pending}</div>
-              <div className="text-xs text-amber-600">Pending</div>
+            <div className="text-center p-2 bg-[#FF8000]1A rounded-lg">
+              <div className="text-lg font-bold text-[#FF8000]">{techData.pending}</div>
+              <div className="text-xs text-[#FF8000]">Pending</div>
             </div>
             <div className="text-center p-2 bg-purple-50 rounded-lg">
-              <div className="text-lg font-bold text-purple-700">{techData.inProgress}</div>
-              <div className="text-xs text-purple-600">In Progress</div>
+              <div className="text-lg font-bold text-[#17BEBB]">{techData.inProgress}</div>
+              <div className="text-xs text-[#17BEBB]">In Progress</div>
             </div>
-            <div className="text-center p-2 bg-green-50 rounded-lg">
-              <div className="text-lg font-bold text-green-700">{techData.completed}</div>
-              <div className="text-xs text-green-600">Completed</div>
+            <div className="text-center p-2 bg-[#22D69A]1A rounded-lg">
+              <div className="text-lg font-bold text-[#22D69A]">{techData.completed}</div>
+              <div className="text-xs text-[#22D69A]">Completed</div>
             </div>
           </div>
 
@@ -412,7 +412,7 @@ export default function RepairQueue() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-slate-500">Completion</span>
-              <span className="font-medium text-green-600">{completionRate}%</span>
+              <span className="font-medium text-[#22D69A]">{completionRate}%</span>
             </div>
             <Progress value={completionRate} className="h-1.5" />
           </div>
@@ -426,8 +426,8 @@ export default function RepairQueue() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#F97316]/10 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-[#F97316]" />
+            <div className="w-12 h-12 rounded-lg bg-[#FF8000]/10 flex items-center justify-center">
+              <Wrench className="w-6 h-6 text-[#FF8000]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-repairqueue">Repair Queue</h1>
@@ -435,20 +435,20 @@ export default function RepairQueue() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200" data-testid="badge-pending-count">
-              <Clock className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-700">{pendingRepairs.length} Pending</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="badge-pending-count">
+              <Clock className="w-4 h-4 text-[#FF8000]" />
+              <span className="text-sm font-medium text-[#FF8000]">{pendingRepairs.length} Pending</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200" data-testid="badge-inprogress-count">
-              <Wrench className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">{inProgressRepairs.length} In Progress</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-[#17BEBB]33" data-testid="badge-inprogress-count">
+              <Wrench className="w-4 h-4 text-[#17BEBB]" />
+              <span className="text-sm font-medium text-[#17BEBB]">{inProgressRepairs.length} In Progress</span>
             </div>
           </div>
         </div>
 
         {/* Dashboard Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" data-testid="dashboard-metrics">
-          <Card className="bg-gradient-to-br from-[#0078D4] to-[#3B82F6] text-white">
+          <Card className="bg-gradient-to-br from-[#2374AB] to-[#3B82F6] text-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 opacity-80" />
@@ -459,7 +459,7 @@ export default function RepairQueue() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-amber-500 to-amber-400 text-white">
+          <Card className="bg-gradient-to-br from-[#FF8000] to-[#FF8000] text-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4 opacity-80" />
@@ -470,7 +470,7 @@ export default function RepairQueue() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-600 to-purple-500 text-white">
+          <Card className="bg-gradient-to-br from-[#17BEBB] to-[#17BEBB] text-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Wrench className="w-4 h-4 opacity-80" />
@@ -481,7 +481,7 @@ export default function RepairQueue() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-600 to-green-500 text-white">
+          <Card className="bg-gradient-to-br from-[#22D69A] to-[#22D69A] text-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle className="w-4 h-4 opacity-80" />
@@ -495,7 +495,7 @@ export default function RepairQueue() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-[#0078D4]" />
+                <Users className="w-4 h-4 text-[#2374AB]" />
                 <span className="text-sm text-slate-600">Active Techs</span>
               </div>
               <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.activeTechs}</div>
@@ -506,7 +506,7 @@ export default function RepairQueue() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-[#F97316]" />
+                <TrendingUp className="w-4 h-4 text-[#FF8000]" />
                 <span className="text-sm text-slate-600">Avg per Tech</span>
               </div>
               <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.avgPerTech}</div>
@@ -534,7 +534,7 @@ export default function RepairQueue() {
           <TabsContent value="by-tech" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -580,7 +580,7 @@ export default function RepairQueue() {
           <TabsContent value="pending" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2374AB]" />
               </div>
             ) : pendingRepairs.length === 0 ? (
               <Card>

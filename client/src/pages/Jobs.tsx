@@ -518,7 +518,7 @@ export default function Jobs() {
         <div className="flex items-center justify-between">
           <div>
             <Link href="/">
-              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-cyan-400" data-testid="btn-back">
+              <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-[#17BEBB]" data-testid="btn-back">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Dashboard
               </Button>
@@ -534,16 +534,16 @@ export default function Jobs() {
             <Dialog open={createJobOpen} onOpenChange={setCreateJobOpen}>
               <DialogTrigger asChild>
                 <Button
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 shadow-md"
+                  className="gap-2 bg-[#22D69A] hover:bg-[#22D69A] text-white border border-emerald-400 shadow-md"
                   data-testid="btn-create-job"
                 >
                   <Plus className="w-4 h-4" />
                   Create Job
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-slate-900 border-sky-400/40 text-white max-w-lg">
+              <DialogContent className="bg-slate-900 border-[#2374AB]/40 text-white max-w-lg">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-display text-sky-400">Create New Job in Pool Brain</DialogTitle>
+                  <DialogTitle className="text-xl font-display text-[#2374AB]">Create New Job in Pool Brain</DialogTitle>
                   <DialogDescription className="text-slate-400">
                     Fill in the details below to create a new repair or service job.
                   </DialogDescription>
@@ -645,7 +645,7 @@ export default function Jobs() {
                   <Button
                     onClick={() => createJobMutation.mutate(newJob)}
                     disabled={!newJob.customerId || !newJob.title || createJobMutation.isPending}
-                    className="bg-sky-500 hover:bg-sky-400 text-white"
+                    className="bg-[#2374AB] hover:bg-[#2374AB] text-white"
                     data-testid="btn-submit-job"
                   >
                     {createJobMutation.isPending ? (
@@ -676,7 +676,7 @@ export default function Jobs() {
                 refetch();
               }}
               disabled={isFetching}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-white border border-sky-400 rounded-lg font-ui text-sm transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-[#2374AB] hover:bg-[#2374AB] text-white border border-[#2374AB] rounded-lg font-ui text-sm transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               data-testid="refresh-jobs-btn"
             >
               {isFetching ? (
@@ -711,10 +711,10 @@ export default function Jobs() {
         ) : data ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#2374AB]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <Wrench className="w-5 h-5 text-sky-400" />
+                  <div className="w-10 h-10 rounded-full bg-[#2374AB]/30 flex items-center justify-center border border-[#2374AB]/50">
+                    <Wrench className="w-5 h-5 text-[#2374AB]" />
                   </div>
                   <div>
                     <p className="text-xl font-bold font-ui text-white" data-testid="total-jobs-count">{data.summary.totalJobs}</p>
@@ -733,10 +733,10 @@ export default function Jobs() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-amber-500/40 shadow-lg">
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#FF8000]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/30 flex items-center justify-center border border-amber-400/50">
-                    <Clock className="w-5 h-5 text-amber-400" />
+                  <div className="w-10 h-10 rounded-full bg-[#FF8000]/30 flex items-center justify-center border border-[#FF8000]/50">
+                    <Clock className="w-5 h-5 text-[#FF8000]" />
                   </div>
                   <div>
                     <p className="text-xl font-bold font-ui text-white" data-testid="in-progress-count">{jobStatusData.inProgressCount}</p>
@@ -744,9 +744,9 @@ export default function Jobs() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-emerald-500/40 shadow-lg">
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#22D69A]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center border border-emerald-400/50">
+                  <div className="w-10 h-10 rounded-full bg-[#22D69A]/30 flex items-center justify-center border border-emerald-400/50">
                     <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
@@ -755,10 +755,10 @@ export default function Jobs() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#2374AB]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <Settings className="w-5 h-5 text-sky-400" />
+                  <div className="w-10 h-10 rounded-full bg-[#2374AB]/30 flex items-center justify-center border border-[#2374AB]/50">
+                    <Settings className="w-5 h-5 text-[#2374AB]" />
                   </div>
                   <div>
                     <p className="text-xl font-bold font-ui text-white" data-testid="sr-count">{srData.srCount}</p>
@@ -766,9 +766,9 @@ export default function Jobs() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-purple-500/40 shadow-lg">
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#17BEBB]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center border border-purple-400/50">
+                  <div className="w-10 h-10 rounded-full bg-[#17BEBB]/30 flex items-center justify-center border border-purple-400/50">
                     <FileDown className="w-5 h-5 text-purple-400" />
                   </div>
                   <div>
@@ -777,10 +777,10 @@ export default function Jobs() {
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 shadow-lg">
+              <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#2374AB]/40 shadow-lg">
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-sky-500/30 flex items-center justify-center border border-sky-400/50">
-                    <DollarSign className="w-5 h-5 text-sky-400" />
+                  <div className="w-10 h-10 rounded-full bg-[#2374AB]/30 flex items-center justify-center border border-[#2374AB]/50">
+                    <DollarSign className="w-5 h-5 text-[#2374AB]" />
                   </div>
                   <div>
                     <p className="text-xl font-bold font-ui text-white" data-testid="total-value">{formatPrice(data.summary.totalValue)}</p>
@@ -791,54 +791,54 @@ export default function Jobs() {
             </div>
 
             <Tabs defaultValue="sr" className="w-full">
-              <TabsList className="bg-slate-800/80 border border-sky-400/30 flex-wrap shadow-lg">
-                <TabsTrigger value="sr" data-testid="tab-sr" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+              <TabsList className="bg-slate-800/80 border border-[#2374AB]/30 flex-wrap shadow-lg">
+                <TabsTrigger value="sr" data-testid="tab-sr" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <Settings className="w-4 h-4 mr-2" />
                   SR Jobs ({srData.srCount})
                 </TabsTrigger>
-                <TabsTrigger value="sr-stats" data-testid="tab-sr-stats" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="sr-stats" data-testid="tab-sr-stats" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <TrendingUp className="w-4 h-4 mr-2" />
                   Service Tech Stats
                 </TabsTrigger>
-                <TabsTrigger value="repair-techs" data-testid="tab-repair-techs" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="repair-techs" data-testid="tab-repair-techs" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <HardHat className="w-4 h-4 mr-2" />
                   Repair Techs ({repairTechData.totalJobs})
                 </TabsTrigger>
-                <TabsTrigger value="accounts" data-testid="tab-accounts" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="accounts" data-testid="tab-accounts" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <Building2 className="w-4 h-4 mr-2" />
                   By Account ({data.summary.accountCount})
                 </TabsTrigger>
-                <TabsTrigger value="technicians" data-testid="tab-technicians" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="technicians" data-testid="tab-technicians" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <User className="w-4 h-4 mr-2" />
                   By Technician ({data.summary.techsWithJobsCount})
                 </TabsTrigger>
-                <TabsTrigger value="completed" data-testid="tab-completed" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="completed" data-testid="tab-completed" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Completed ({data.summary.completedCount})
                 </TabsTrigger>
-                <TabsTrigger value="pending" data-testid="tab-pending" className="data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="pending" data-testid="tab-pending" className="data-[state=active]:bg-[#2374AB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <Clock className="w-4 h-4 mr-2" />
                   Pending ({data.summary.pendingCount})
                 </TabsTrigger>
-                <TabsTrigger value="quotes" data-testid="tab-quotes" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="quotes" data-testid="tab-quotes" className="data-[state=active]:bg-[#17BEBB] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <FileDown className="w-4 h-4 mr-2" />
                   Quotes ({quotesData.totalQuotes})
                 </TabsTrigger>
-                <TabsTrigger value="commissions" data-testid="tab-commissions" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="commissions" data-testid="tab-commissions" className="data-[state=active]:bg-[#22D69A] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <DollarSign className="w-4 h-4 mr-2" />
                   Commissions
                 </TabsTrigger>
-                <TabsTrigger value="repairs-extracted" data-testid="tab-repairs-extracted" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
+                <TabsTrigger value="repairs-extracted" data-testid="tab-repairs-extracted" className="data-[state=active]:bg-[#FF8000] data-[state=active]:text-white data-[state=active]:shadow-md text-slate-300 hover:text-white">
                   <Wrench className="w-4 h-4 mr-2" />
                   Repairs ({repairsData?.summary.totalRepairs || 0})
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="sr" className="mt-4">
-                <div className="mb-4 p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-sky-400/40 rounded-lg shadow-lg">
+                <div className="mb-4 p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-[#2374AB]/40 rounded-lg shadow-lg">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Settings className="w-5 h-5 text-sky-400" />
+                      <Settings className="w-5 h-5 text-[#2374AB]" />
                       <h3 className="font-ui font-semibold text-white">Service Repairs (SR)</h3>
                     </div>
                     <div className="flex gap-2">
@@ -854,7 +854,7 @@ export default function Jobs() {
                       <Button
                         size="sm"
                         onClick={() => exportSRAccountsPDF(srData.srByTechnician)}
-                        className="bg-emerald-600/80 text-white border border-emerald-400/50 hover:bg-emerald-500/80"
+                        className="bg-[#22D69A]/80 text-white border border-emerald-400/50 hover:bg-[#22D69A]/80"
                         data-testid="btn-export-sr-accounts-pdf"
                       >
                         <FileDown className="w-3 h-3 mr-1" />
@@ -863,7 +863,7 @@ export default function Jobs() {
                       <Button
                         size="sm"
                         onClick={() => setShowArchived(false)}
-                        className={!showArchived ? "bg-sky-500 text-white shadow-md" : "bg-slate-700/80 text-slate-300 border border-slate-500/50 hover:bg-slate-600/80"}
+                        className={!showArchived ? "bg-[#2374AB] text-white shadow-md" : "bg-slate-700/80 text-slate-300 border border-slate-500/50 hover:bg-slate-600/80"}
                         data-testid="btn-show-active-jobs"
                       >
                         Active ({srData.srCount})
@@ -871,7 +871,7 @@ export default function Jobs() {
                       <Button
                         size="sm"
                         onClick={() => setShowArchived(true)}
-                        className={showArchived ? "bg-sky-500 text-white shadow-md" : "bg-slate-700/80 text-slate-300 border border-slate-500/50 hover:bg-slate-600/80"}
+                        className={showArchived ? "bg-[#2374AB] text-white shadow-md" : "bg-slate-700/80 text-slate-300 border border-slate-500/50 hover:bg-slate-600/80"}
                         data-testid="btn-show-archived-jobs"
                       >
                         <Archive className="w-3 h-3 mr-1" />
@@ -883,8 +883,8 @@ export default function Jobs() {
                     {showArchived ? "Archived jobs - click Restore to bring back." : "Small repairs under $500, grouped by technician. Click any job to see full details."}
                   </p>
                   <div className="flex gap-4 mt-2 text-sm">
-                    <span className="text-sky-300 font-semibold">{srData.srCount} SR Jobs</span>
-                    <span className="text-sky-300 font-semibold">{formatPrice(srData.srValue)} Total</span>
+                    <span className="text-[#2374AB] font-semibold">{srData.srCount} SR Jobs</span>
+                    <span className="text-[#2374AB] font-semibold">{formatPrice(srData.srValue)} Total</span>
                     <span className="text-slate-400">{Object.keys(srData.srByTechnician).length} Technicians</span>
                   </div>
                 </div>
@@ -935,9 +935,9 @@ export default function Jobs() {
 
                   return (
                     <div className="space-y-4">
-                      <div className="p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-sky-400/40 rounded-lg shadow-lg">
+                      <div className="p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-[#2374AB]/40 rounded-lg shadow-lg">
                         <div className="flex items-center gap-2 mb-2">
-                          <BarChart3 className="w-5 h-5 text-sky-400" />
+                          <BarChart3 className="w-5 h-5 text-[#2374AB]" />
                           <h3 className="font-ui font-semibold text-white">Service Tech Performance Stats</h3>
                         </div>
                         <p className="text-sm text-slate-300">
@@ -947,17 +947,17 @@ export default function Jobs() {
 
                       {topEarner && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-amber-400/50 shadow-lg">
+                          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-[#FF8000]/50 shadow-lg">
                             <CardContent className="p-4">
                               <div className="flex items-center gap-3 mb-2">
-                                <Trophy className="w-8 h-8 text-amber-400" />
+                                <Trophy className="w-8 h-8 text-[#FF8000]" />
                                 <div>
-                                  <p className="text-xs text-amber-400 uppercase tracking-wider font-semibold">Top Earner</p>
+                                  <p className="text-xs text-[#FF8000] uppercase tracking-wider font-semibold">Top Earner</p>
                                   <p className="text-xl font-ui font-bold text-white">{topEarner.name}</p>
                                 </div>
                               </div>
                               <div className="flex gap-4 text-sm">
-                                <span className="text-amber-300 font-semibold">{formatPrice(topEarner.totalValue)}</span>
+                                <span className="text-[#FF8000] font-semibold">{formatPrice(topEarner.totalValue)}</span>
                                 <span className="text-slate-300">{topEarner.jobCount} jobs</span>
                               </div>
                             </CardContent>
@@ -983,16 +983,16 @@ export default function Jobs() {
                       <ScrollArea className="h-[550px]">
                         <div className="space-y-4">
                           {techStats.map((tech, index) => (
-                            <Card key={tech.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-sky-400/40 hover:border-sky-300/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`sr-stat-${tech.name}`}>
+                            <Card key={tech.name} className="bg-gradient-to-br from-slate-800/90 to-slate-900/80 border-[#2374AB]/40 hover:border-[#2374AB]/60 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-300 shadow-lg" data-testid={`sr-stat-${tech.name}`}>
                               <CardHeader className="pb-2">
                                 <CardTitle className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-500/40 to-sky-600/30 flex items-center justify-center border border-sky-400/50 shadow-md">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#2374AB]/40 to-sky-600/30 flex items-center justify-center border border-[#2374AB]/50 shadow-md">
                                       <span className="text-lg font-bold text-white">#{index + 1}</span>
                                     </div>
                                     <div>
                                       <p className="font-ui text-lg text-white font-semibold">{tech.name}</p>
-                                      <p className="text-xs text-sky-300/80">
+                                      <p className="text-xs text-[#2374AB]/80">
                                         {tech.completedCount}/{tech.jobCount} completed
                                       </p>
                                     </div>
@@ -1000,10 +1000,10 @@ export default function Jobs() {
                                   <div className="text-right">
                                     <p className="font-ui font-bold text-2xl text-white">{formatPrice(tech.totalValue)}</p>
                                     <div className="flex gap-2 mt-1">
-                                      <Badge className="bg-sky-500/30 text-sky-200 border-sky-400/50 text-xs shadow-sm">
+                                      <Badge className="bg-[#2374AB]/30 text-sky-200 border-[#2374AB]/50 text-xs shadow-sm">
                                         10%: {formatPrice(tech.commission10)}
                                       </Badge>
-                                      <Badge className="bg-sky-600/30 text-sky-100 border-sky-300/50 text-xs shadow-sm">
+                                      <Badge className="bg-sky-600/30 text-[#2374AB1A] border-[#2374AB]/50 text-xs shadow-sm">
                                         15%: {formatPrice(tech.commission15)}
                                       </Badge>
                                     </div>
@@ -1011,7 +1011,7 @@ export default function Jobs() {
                                 </CardTitle>
                               </CardHeader>
                               <CardContent className="pt-0">
-                                <div className="mt-3 pt-3 border-t border-sky-400/20">
+                                <div className="mt-3 pt-3 border-t border-[#2374AB]/20">
                                   <p className="text-xs text-slate-400 uppercase tracking-wider mb-2">Repair Types</p>
                                   <div className="flex flex-wrap gap-2">
                                     {tech.repairTypes.slice(0, 8).map(([type, data]) => (
@@ -1039,21 +1039,21 @@ export default function Jobs() {
 
               <TabsContent value="repair-techs" className="mt-4">
                 <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-sky-400/40 rounded-lg shadow-lg">
+                  <div className="p-4 bg-gradient-to-r from-slate-800/90 to-slate-900/90 border border-[#2374AB]/40 rounded-lg shadow-lg">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <HardHat className="w-5 h-5 text-sky-400" />
+                        <HardHat className="w-5 h-5 text-[#2374AB]" />
                         <h3 className="font-ui font-semibold text-white">Repair Technicians</h3>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="flex gap-2 text-sm">
-                          <span className="text-sky-300 font-semibold">{repairTechData.totalJobs} Jobs</span>
-                          <span className="text-sky-300 font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
+                          <span className="text-[#2374AB] font-semibold">{repairTechData.totalJobs} Jobs</span>
+                          <span className="text-[#2374AB] font-semibold">{formatPrice(repairTechData.totalValue)} Total</span>
                         </div>
                         <Button
                           size="sm"
                           onClick={() => exportRepairTechsPDF(repairTechData.repairTechs, MONTHLY_QUOTA)}
-                          className="gap-1 bg-sky-500 text-white hover:bg-sky-400 border-0 shadow-md"
+                          className="gap-1 bg-[#2374AB] text-white hover:bg-[#2374AB] border-0 shadow-md"
                           data-testid="btn-export-repair-techs-pdf"
                         >
                           <FileDown className="w-3 h-3" />
@@ -1066,7 +1066,7 @@ export default function Jobs() {
                         onClick={() => setSelectedRepairTech(null)}
                         className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all shadow-sm ${
                           selectedRepairTech === null 
-                            ? 'bg-sky-500 text-white shadow-[0_0_12px_rgba(56,189,248,0.5)]' 
+                            ? 'bg-[#2374AB] text-white shadow-[0_0_12px_rgba(56,189,248,0.5)]' 
                             : 'bg-slate-700/80 text-slate-300 hover:bg-slate-600/80 border border-slate-500/50'
                         }`}
                         data-testid="repair-tech-all"
@@ -1081,14 +1081,14 @@ export default function Jobs() {
                             onClick={() => setSelectedRepairTech(name)}
                             className={`px-3 py-1.5 rounded-full font-ui text-sm transition-all flex items-center gap-2 shadow-sm ${
                               selectedRepairTech === name 
-                                ? 'bg-sky-500 text-white shadow-[0_0_12px_rgba(56,189,248,0.5)]' 
+                                ? 'bg-[#2374AB] text-white shadow-[0_0_12px_rgba(56,189,248,0.5)]' 
                                 : 'bg-slate-700/80 text-slate-300 hover:bg-slate-600/80 border border-slate-500/50'
                             }`}
                             data-testid={`repair-tech-btn-${name}`}
                           >
                             {name}
                             {techData && (
-                              <span className="text-xs text-sky-300/80">({techData.jobs.length})</span>
+                              <span className="text-xs text-[#2374AB]/80">({techData.jobs.length})</span>
                             )}
                           </button>
                         );
@@ -1098,17 +1098,17 @@ export default function Jobs() {
 
                   {!selectedRepairTech && repairTechData.topEarner && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-amber-400/50 shadow-lg">
+                      <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-[#FF8000]/50 shadow-lg">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-2">
-                            <Trophy className="w-8 h-8 text-amber-400" />
+                            <Trophy className="w-8 h-8 text-[#FF8000]" />
                             <div>
-                              <p className="text-xs text-amber-400 uppercase tracking-wider font-semibold">Top Earner</p>
+                              <p className="text-xs text-[#FF8000] uppercase tracking-wider font-semibold">Top Earner</p>
                               <p className="text-xl font-ui font-bold text-white">{repairTechData.topEarner.name}</p>
                             </div>
                           </div>
                           <div className="flex gap-4 text-sm">
-                            <span className="text-amber-300 font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
+                            <span className="text-[#FF8000] font-semibold">{formatPrice(repairTechData.topEarner.totalValue)}</span>
                             <span className="text-slate-300">{repairTechData.topEarner.jobs.length} jobs</span>
                           </div>
                         </CardContent>
@@ -1259,7 +1259,7 @@ export default function Jobs() {
                             <CardHeader className="pb-2">
                               <CardTitle className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-full bg-emerald-500/30 flex items-center justify-center border border-emerald-400/50">
+                                  <div className="w-10 h-10 rounded-full bg-[#22D69A]/30 flex items-center justify-center border border-emerald-400/50">
                                     <User className="w-5 h-5 text-emerald-400" />
                                   </div>
                                   <div>
