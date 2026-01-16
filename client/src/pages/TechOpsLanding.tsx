@@ -51,7 +51,7 @@ const techOpsOptions = [
     label: "Chemicals Dropped-Off", 
     href: "/tech-ops/chemicals-dropoff",
     icon: Droplets, 
-    color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33",
+    color: "bg-[#22D69A]1A text-[#16A679] border-[#22D69A]33",
     description: "Log chemicals delivered or dropped off at a property"
   },
   { 
@@ -89,7 +89,7 @@ const entryTypeLabels: Record<string, { label: string; color: string; icon: any 
   repairs_needed: { label: "Repairs Needed", color: "bg-red-100 text-red-700", icon: Wrench },
   service_repairs: { label: "Service Repairs", color: "bg-[#17BEBB]1A text-[#0D9488]", icon: Wrench },
   chemical_order: { label: "Chemical Orders", color: "bg-[#0078D4]1A text-[#0078D4]", icon: Droplets },
-  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-[#22D69A]1A text-[#22D69A]", icon: Droplets },
+  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-[#22D69A]1A text-[#16A679]", icon: Droplets },
   windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-[#17BEBB]1A text-[#0D9488]", icon: Wind },
   report_issue: { label: "Report Issues", color: "bg-[#FF8000]1A text-[#D35400]", icon: AlertTriangle },
 };
@@ -97,7 +97,7 @@ const entryTypeLabels: Record<string, { label: string; color: string; icon: any 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Pending", color: "bg-[#FF8000]1A text-[#D35400]", icon: Clock },
   reviewed: { label: "Reviewed", color: "bg-[#0078D4]1A text-[#0078D4]", icon: FileText },
-  completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#22D69A]", icon: CheckCircle },
+  completed: { label: "Completed", color: "bg-[#22D69A]1A text-[#16A679]", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-600", icon: XCircle },
   archived: { label: "Archived", color: "bg-slate-100 text-slate-500", icon: Archive },
 };
@@ -368,8 +368,8 @@ export default function TechOpsLanding() {
                 <div className="text-sm text-[#D35400]">Pending</div>
               </div>
               <div className="p-4 bg-[#22D69A]1A rounded-lg border border-[#22D69A]33" data-testid="metric-completed">
-                <div className="text-2xl font-bold text-[#22D69A]">{summary?.byStatus?.completed || 0}</div>
-                <div className="text-sm text-[#22D69A]">Completed</div>
+                <div className="text-2xl font-bold text-[#16A679]">{summary?.byStatus?.completed || 0}</div>
+                <div className="text-sm text-[#16A679]">Completed</div>
               </div>
               <div className="p-4 bg-red-50 rounded-lg border border-red-200" data-testid="metric-repairs">
                 <div className="text-2xl font-bold text-red-700">{summary?.byType?.repairs_needed || 0}</div>

@@ -2003,14 +2003,14 @@ export default function Estimates() {
                                 Approved
                               </Badge>
                               {estimate.customerApproverName && (
-                                <div className="flex items-center gap-1 text-xs text-[#22D69A] bg-[#22D69A]1A px-2 py-1 rounded-full">
+                                <div className="flex items-center gap-1 text-xs text-[#16A679] bg-[#22D69A]1A px-2 py-1 rounded-full">
                                   <User className="w-3 h-3" />
                                   <span>
                                     {estimate.customerApproverName}
                                     {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
                                   </span>
                                   {estimate.approvedAt && (
-                                    <span className="text-[#22D69A]">
+                                    <span className="text-[#16A679]">
                                       • {new Date(estimate.approvedAt).toLocaleDateString()}
                                     </span>
                                   )}
@@ -2037,14 +2037,14 @@ export default function Estimates() {
                                 Needs Scheduling
                               </Badge>
                               {estimate.customerApproverName && (
-                                <div className="flex items-center gap-1 text-xs text-[#22D69A] bg-[#22D69A]1A px-2 py-1 rounded-full">
+                                <div className="flex items-center gap-1 text-xs text-[#16A679] bg-[#22D69A]1A px-2 py-1 rounded-full">
                                   <User className="w-3 h-3" />
                                   <span>
                                     {estimate.customerApproverName}
                                     {estimate.customerApproverTitle && ` (${estimate.customerApproverTitle})`}
                                   </span>
                                   {estimate.approvedAt && (
-                                    <span className="text-[#22D69A]">
+                                    <span className="text-[#16A679]">
                                       • {new Date(estimate.approvedAt).toLocaleDateString()}
                                     </span>
                                   )}

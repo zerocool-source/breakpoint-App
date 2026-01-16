@@ -46,7 +46,7 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
   chemicals_dropoff: { 
     label: "Chemicals Drop-Off", 
     icon: Droplets, 
-    color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33",
+    color: "bg-[#22D69A]1A text-[#16A679] border-[#22D69A]33",
     description: "Log chemicals delivered or dropped off at a property"
   },
   windy_day_cleanup: { 
@@ -72,13 +72,13 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33", icon: Clock, label: "Pending" },
   reviewed: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: CheckCircle, label: "Reviewed" },
-  completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
+  completed: { color: "bg-[#22D69A]1A text-[#16A679] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle, label: "Cancelled" },
   archived: { color: "bg-slate-100 text-slate-500 border-slate-200", icon: XCircle, label: "Archived" },
 };
 
 const priorityConfig: Record<string, { bg: string; text: string; label: string }> = {
-  low: { bg: "bg-[#22D69A]1A", text: "text-[#22D69A]", label: "Low" },
+  low: { bg: "bg-[#22D69A]1A", text: "text-[#16A679]", label: "Low" },
   normal: { bg: "bg-[#FF8000]1A", text: "text-[#D35400]", label: "Medium" },
   high: { bg: "bg-[#FF8000]1A", text: "text-[#D35400]", label: "High" },
   urgent: { bg: "bg-red-100", text: "text-red-700", label: "Urgent" },
@@ -874,7 +874,7 @@ export default function TechOps() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-[#22D69A] hover:text-[#22D69A] hover:bg-[#22D69A]1A"
+                                className="text-[#16A679] hover:text-[#16A679] hover:bg-[#22D69A]1A"
                                 onClick={() => reviewMutation.mutate(entry.id)}
                                 data-testid={`button-review-${entry.id}`}
                               >

@@ -742,7 +742,7 @@ export default function SupervisorTeams() {
                                   {entry.priority || "normal"}
                                 </Badge>
                                 {entry.status === "reviewed" && (
-                                  <Badge className="bg-[#22D69A]1A text-[#22D69A] text-xs">
+                                  <Badge className="bg-[#22D69A]1A text-[#16A679] text-xs">
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
                                     Reviewed
                                   </Badge>
@@ -795,7 +795,7 @@ export default function SupervisorTeams() {
                         data-testid={`activity-reviewed-${entry.id}`}
                       >
                         <div className="w-8 h-8 rounded-full bg-[#22D69A]1A flex items-center justify-center">
-                          <CheckCircle2 className="w-4 h-4 text-[#22D69A]" />
+                          <CheckCircle2 className="w-4 h-4 text-[#16A679]" />
                         </div>
                         <div className="flex-1">
                           <p className="text-sm text-slate-700">
@@ -814,7 +814,7 @@ export default function SupervisorTeams() {
                             {formatDate(entry.updatedAt || entry.createdAt)}
                           </p>
                         </div>
-                        <Badge className="bg-[#22D69A]1A text-[#22D69A] text-xs">Reviewed</Badge>
+                        <Badge className="bg-[#22D69A]1A text-[#16A679] text-xs">Reviewed</Badge>
                       </div>
                     ))}
                     {filteredActivity.length === 0 && (
