@@ -245,7 +245,7 @@ export default function Emergencies() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#1E3A8A]" />
+                <Filter className="w-5 h-5 text-[#4169E1]" />
                 Filter Emergencies
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
@@ -313,7 +313,7 @@ export default function Emergencies() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="p-4 bg-slate-50 rounded-lg border border-slate-200" data-testid="metric-total">
-                <div className="text-2xl font-bold text-[#1E3A8A]">{summary?.total || 0}</div>
+                <div className="text-2xl font-bold text-[#4169E1]">{summary?.total || 0}</div>
                 <div className="text-sm text-slate-500">Total Emergencies</div>
               </div>
               <div className="p-4 bg-amber-50 rounded-lg border border-amber-200" data-testid="metric-pending">
@@ -368,7 +368,7 @@ export default function Emergencies() {
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
               </div>
             ) : emergencies.length === 0 ? (
               <div className="text-center py-12 text-slate-500">

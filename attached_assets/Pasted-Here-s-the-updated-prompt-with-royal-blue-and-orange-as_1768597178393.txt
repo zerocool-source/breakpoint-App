@@ -1,0 +1,155 @@
+Here's the updated prompt with royal blue and orange as your primary colors:
+
+Prompt for Replit:
+I want to update the UI design across the entire Business Intelligence app (Command Center) to have a more polished, modern, data-rich dashboard feel. Apply these design changes globally to all pages and components.
+Overall Design Style:
+Clean, modern enterprise dashboard with a layered card-based layout. Use floating panels and subtle shadows to create depth. White and light gray backgrounds with generous whitespace to keep dense data readable. The design should feel professional, data-rich, and scannable at a glance.
+Color System - Apply Consistently Across All Pages:
+ColorHexUsagePrimary Royal Blue#4169E1Sidebar background, primary buttons, active navigation states, links, iconsAccent Orange#F97316Secondary buttons, highlights, call-to-action elements, hover accents, badges for attentionSuccess Green#22C55EPositive metrics, completed status, good performance, approvedWarning Yellow#FBBF24Medium priority, behind schedule, pending statesCritical Red#EF4444Urgent items, emergencies, high priority, critical badges, errorsLight Gray#F8FAFCPage backgrounds, subtle dividersWhite#FFFFFFCards, content panels, modalsDark Gray#1F2937Primary textMedium Gray#6B7280Secondary text, timestamps, descriptions
+Component Updates:
+1. Sidebar Navigation
+
+Royal blue background (#4169E1)
+White icons and text for menu items
+Active state: orange highlight bar on left edge or orange background accent with white text
+Hover state: subtle lightening of background
+Expandable sections with subtle chevron arrows
+Search bar at top with darker blue background input
+Beta badges in orange for new features
+
+2. Top Header Bar
+
+Clean white background with subtle bottom border
+Global search bar centered with placeholder "Search properties, alerts, customers..."
+Date/time display on right
+User avatar with dropdown
+Notification bell with badge count (orange badge)
+Primary action button "Sync Pool Brain" in royal blue with icon, hover state in orange
+
+3. Stat Cards (KPI Tiles)
+
+White background with subtle shadow (shadow-sm)
+Rounded corners (rounded-xl)
+Left-aligned label in small gray text
+Large bold number as primary metric
+Subtle icon on right side
+Color-coded left border or icon based on status:
+
+Orange border/icon for pending items needing attention
+Green for approved/completed
+Royal blue for scheduled/in progress
+Red for urgent/active repairs
+
+
+
+4. Data Cards (Emergencies, Activity Items)
+
+White background, rounded-lg, subtle shadow
+Priority badges: Critical (red), High (orange), Medium (yellow), Low (gray)
+Show key info: title, brief description (truncated to 2 lines max)
+Submitted by with role, timestamp showing relative time ("3 days ago")
+Hover state with slight elevation change and subtle orange left border
+
+5. Pipeline/Funnel Visualizations
+
+Vertical list with status dots (colored circles) on left
+Status labels with count badges on right
+Count badges in rounded pills with matching status color
+Use orange for items needing action, royal blue for in-progress, green for complete
+
+6. Tables and Lists
+
+Clean borders, alternating row backgrounds optional
+Sortable column headers with subtle hover (orange underline on hover)
+Status badges inline with color coding
+Pagination at bottom with page numbers, active page in royal blue
+"View All" links in royal blue, hover to orange
+
+7. Financial Summary Cards
+
+Large dollar amounts in bold dark text
+Segmented bar or breakdown showing pipeline stages
+Color-coded amounts: Pending = orange, Scheduled = royal blue, Completed = green
+
+8. Filters and Dropdowns
+
+Clean white dropdowns with subtle borders
+Checkbox filters for multi-select, checked state in royal blue
+Date range pickers with calendar icon in royal blue
+Active filters highlighted with orange indicator
+"Clear filters" option in orange text
+
+9. Buttons
+
+Primary: Solid royal blue (#4169E1) with white text, rounded-lg
+Secondary: White background with royal blue border and royal blue text
+Accent/CTA: Solid orange (#F97316) with white text for high-priority actions
+Danger: Red background for destructive actions
+Hover states: Primary buttons get slight orange tint, secondary buttons fill with light blue
+
+10. Badges and Tags
+
+Rounded-full pills
+Subtle background (20% opacity of the color) with matching text color
+Examples:
+
+"Draft" = gray
+"Pending Approval" = orange
+"Approved" = green
+"Scheduled" = royal blue
+"Critical" = red
+"From Service Repair" = orange with wrench icon
+
+
+
+11. Empty States
+
+Centered icon in royal blue (muted)
+Helpful message explaining what will appear
+Optional action button in orange to create first item
+
+12. Modals and Floating Panels
+
+White background with larger shadow
+Close button (X) in top right, gray default, red on hover
+Header with royal blue accent or underline
+Action buttons at bottom: Cancel (gray), Confirm (royal blue), or urgent action (orange)
+
+13. Notifications and Alerts
+
+Info: Royal blue background/border
+Success: Green background/border
+Warning: Orange background/border
+Error: Red background/border
+
+Interactive States:
+
+Links: Royal blue default, orange on hover
+Clickable cards: Subtle orange left border on hover
+Active tabs: Royal blue background or orange underline
+Focus states: Orange ring for accessibility
+
+Spacing and Typography:
+
+Use consistent padding: p-4 for cards, p-6 for larger sections
+Section headers: text-lg font-semibold in dark gray with "View All" links in royal blue
+Sublines/descriptions: text-sm text-gray-500
+Generous margin between sections (mb-6 or mb-8)
+
+Apply These Changes To:
+
+Overview dashboard
+All Operations Hub pages (Tech Ops, Repair Queue, Repair Foreman, Emergencies)
+Technicians section
+Scheduling pages
+Jobs section
+Reports pages
+Estimates section
+Chats Hub (Channels, Supervisor Messages)
+Fleet section
+Vendors section
+Automations section
+Settings pages
+All modals, forms, and detail views
+
+Make sure the design is consistent across every page so the app feels cohesive and professional. The royal blue and orange combination should create a bold, energetic, trustworthy brand feel while maintaining readability and clear visual hierarchy. Keep the existing functionality but elevate the visual polish to match this enterprise dashboard aesthetic.

@@ -61,11 +61,11 @@ function NavItemComponent({
 
   if (item.disabled) {
     return (
-      <div className="flex items-center gap-3 px-3 py-2 text-slate-400 cursor-not-allowed text-sm rounded-lg">
+      <div className="flex items-center gap-3 px-3 py-2 text-white/40 cursor-not-allowed text-sm rounded-lg">
         <item.icon className="w-4 h-4" />
         <span>{item.label}</span>
         {item.badge && (
-          <span className="ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-500">
+          <span className="ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full bg-white/10 text-white/60">
             {item.badge}
           </span>
         )}
@@ -80,16 +80,16 @@ function NavItemComponent({
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
           isActive 
-            ? "bg-[#1E3A8A] text-white shadow-sm" 
-            : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+            ? "bg-white text-[#4169E1] shadow-sm" 
+            : "text-white/90 hover:bg-white/15"
         )}
       >
-        <item.icon className={cn("w-4 h-4", isActive ? "text-white" : "text-[#1E3A8A]")} />
+        <item.icon className={cn("w-4 h-4", isActive ? "text-[#4169E1]" : "text-white/90")} />
         <span>{item.label}</span>
         {item.badge && (
           <span className={cn(
             "ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full",
-            isActive ? "bg-white/20 text-white" : "bg-[#F97316] text-white"
+            isActive ? "bg-[#F97316] text-white" : "bg-[#F97316] text-white"
           )}>
             {item.badge}
           </span>
@@ -105,20 +105,20 @@ function NavItemComponent({
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full text-left",
           hasActiveChild 
-            ? "bg-[#EFF6FF] text-[#1E3A8A]" 
-            : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+            ? "bg-white/15 text-white" 
+            : "text-white/90 hover:bg-white/10"
         )}
       >
-        <item.icon className={cn("w-4 h-4", hasActiveChild ? "text-[#1E3A8A]" : "text-[#1E3A8A]")} />
+        <item.icon className="w-4 h-4 text-white/90" />
         <span className="flex-1">{item.label}</span>
         <ChevronRight className={cn(
-          "w-4 h-4 transition-transform duration-200",
-          isExpanded ? "rotate-90 text-[#1E3A8A]" : "text-slate-400"
+          "w-4 h-4 transition-transform duration-200 text-white/60",
+          isExpanded && "rotate-90 text-white"
         )} />
       </button>
       
       {isExpanded && item.children && (
-        <div className="ml-4 mt-1 space-y-0.5 pl-4 border-l-2 border-slate-200">
+        <div className="ml-4 mt-1 space-y-0.5 pl-4 border-l-2 border-white/20">
           {item.children.map((child) => {
             const isChildActive = child.href ? location === child.href : false;
             const hasSubChildren = child.children && child.children.length > 0;
@@ -129,11 +129,11 @@ function NavItemComponent({
                 <div key={child.label}>
                   <div className={cn(
                     "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
-                    hasActiveSubChild ? "text-[#1E3A8A]" : "text-slate-600"
+                    hasActiveSubChild ? "text-white" : "text-white/70"
                   )}>
                     <span>{child.label}</span>
                   </div>
-                  <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-slate-200">
+                  <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-white/20">
                     {child.children!.map((subChild) => {
                       const isSubActive = location === subChild.href;
                       return (
@@ -143,15 +143,15 @@ function NavItemComponent({
                           className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
                             isSubActive 
-                              ? "bg-[#1E3A8A] text-white shadow-sm" 
-                              : "text-slate-500 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+                              ? "bg-white text-[#4169E1] shadow-sm" 
+                              : "text-white/70 hover:bg-white/10 hover:text-white"
                           )}
                         >
                           <span className="flex-1">{subChild.label}</span>
                           {subChild.badge !== undefined && subChild.badge > 0 && (
                             <span className={cn(
                               "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
-                              isSubActive ? "bg-white/20 text-white" : "bg-[#F97316] text-white"
+                              isSubActive ? "bg-[#F97316] text-white" : "bg-[#F97316] text-white"
                             )}>
                               {subChild.badge}
                             </span>
@@ -171,15 +171,14 @@ function NavItemComponent({
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
                   isChildActive 
-                    ? "bg-[#1E3A8A] text-white shadow-sm" 
-                    : "text-slate-600 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+                    ? "bg-white text-[#4169E1] shadow-sm" 
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 )}
               >
                 <span className="flex-1">{child.label}</span>
                 {child.badge !== undefined && child.badge > 0 && (
                   <span className={cn(
-                    "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
-                    isChildActive ? "bg-white/20 text-white" : "bg-[#F97316] text-white"
+                    "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center bg-[#F97316] text-white"
                   )}>
                     {child.badge}
                   </span>
@@ -317,14 +316,16 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-60 h-screen bg-white border-r border-[#E2E8F0] flex flex-col fixed left-0 top-0 z-50 shadow-sm">
-      <div className="p-4 border-b border-[#E2E8F0]">
+    <aside className="w-60 h-screen bg-[#4169E1] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
+      <div className="p-4 border-b border-white/10">
         <div className="flex flex-col items-center gap-2">
-          <img 
-            src={BreakpointLogo} 
-            alt="Breakpoint Intelligence" 
-            className="h-24 w-auto object-contain"
-          />
+          <div className="h-20 w-20 bg-white rounded-xl p-2 shadow-sm">
+            <img 
+              src={BreakpointLogo} 
+              alt="Breakpoint Intelligence" 
+              className="h-full w-full object-contain"
+            />
+          </div>
           <span className="px-3 py-1 text-[10px] font-semibold bg-[#F97316] text-white rounded-full uppercase tracking-wide">
             Beta
           </span>
@@ -333,11 +334,11 @@ export function Sidebar() {
 
       <div className="px-3 py-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
           <input 
             type="text" 
             placeholder="Search..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A5FA] focus:border-transparent transition-all"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-transparent transition-all"
           />
         </div>
       </div>
@@ -354,17 +355,17 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-[#E2E8F0]">
+      <div className="p-3 border-t border-white/10">
         <Link 
           href="/customers"
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 mb-1",
             location === "/customers" 
-              ? "bg-[#1E3A8A] text-white shadow-sm" 
-              : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+              ? "bg-white text-[#4169E1] shadow-sm" 
+              : "text-white/90 hover:bg-white/15"
           )}
         >
-          <Users className={cn("w-4 h-4", location === "/customers" ? "text-white" : "text-[#1E3A8A]")} />
+          <Users className={cn("w-4 h-4", location === "/customers" ? "text-[#4169E1]" : "text-white/90")} />
           <span>Customers</span>
         </Link>
         <Link 
@@ -372,11 +373,11 @@ export function Sidebar() {
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
             location === "/settings" 
-              ? "bg-[#1E3A8A] text-white shadow-sm" 
-              : "text-slate-700 hover:bg-[#EFF6FF] hover:text-[#1E3A8A]"
+              ? "bg-white text-[#4169E1] shadow-sm" 
+              : "text-white/90 hover:bg-white/15"
           )}
         >
-          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-white" : "text-[#1E3A8A]")} />
+          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-[#4169E1]" : "text-white/90")} />
           <span>Settings</span>
         </Link>
       </div>

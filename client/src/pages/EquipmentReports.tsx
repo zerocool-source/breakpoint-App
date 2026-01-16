@@ -124,7 +124,7 @@ export default function EquipmentReports() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-[#1E3A8A]">Equipment Reports</h1>
+              <h1 className="text-3xl font-bold text-[#4169E1]">Equipment Reports</h1>
               <p className="text-slate-600 mt-1">
                 Jobs mentioning tear downs, de-soots, and heaters from Pool Brain
               </p>
@@ -132,7 +132,7 @@ export default function EquipmentReports() {
             <Button 
               onClick={handleExport}
               disabled={isExporting || isLoading}
-              className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+              className="bg-[#4169E1] hover:bg-[#4169E1]/90"
               data-testid="button-export-excel"
             >
               {isExporting ? (
@@ -155,7 +155,7 @@ export default function EquipmentReports() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-slate-500">Total Jobs</p>
-                    <p className="text-2xl font-bold text-[#1E3A8A]">{equipmentJobs.length}</p>
+                    <p className="text-2xl font-bold text-[#4169E1]">{equipmentJobs.length}</p>
                   </div>
                   <FileSpreadsheet className="w-8 h-8 text-[#60A5FA]" />
                 </div>
@@ -212,7 +212,7 @@ export default function EquipmentReports() {
           <Card className="bg-white shadow-sm border-[#E2E8F0] mb-6">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#1E3A8A]" />
+                <Filter className="w-5 h-5 text-[#4169E1]" />
                 Date Range Filter
               </CardTitle>
             </CardHeader>
@@ -243,7 +243,7 @@ export default function EquipmentReports() {
                 <Button 
                   onClick={() => refetch()} 
                   variant="outline"
-                  className="border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#EFF6FF]"
+                  className="border-[#4169E1] text-[#4169E1] hover:bg-[#EFF6FF]"
                   data-testid="button-apply-filter"
                 >
                   Apply Filter
@@ -281,7 +281,7 @@ export default function EquipmentReports() {
                 </Alert>
               ) : isLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
                   <span className="ml-3 text-slate-600">Loading equipment jobs from Pool Brain...</span>
                 </div>
               ) : equipmentJobs.length === 0 ? (
@@ -295,12 +295,12 @@ export default function EquipmentReports() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-[#F8FAFC]">
-                        <TableHead className="font-semibold text-[#1E3A8A]">Date</TableHead>
-                        <TableHead className="font-semibold text-[#1E3A8A]">Property</TableHead>
-                        <TableHead className="font-semibold text-[#1E3A8A]">Customer</TableHead>
-                        <TableHead className="font-semibold text-[#1E3A8A]">Technician</TableHead>
-                        <TableHead className="font-semibold text-[#1E3A8A]">Type</TableHead>
-                        <TableHead className="font-semibold text-[#1E3A8A]">Job Title</TableHead>
+                        <TableHead className="font-semibold text-[#4169E1]">Date</TableHead>
+                        <TableHead className="font-semibold text-[#4169E1]">Property</TableHead>
+                        <TableHead className="font-semibold text-[#4169E1]">Customer</TableHead>
+                        <TableHead className="font-semibold text-[#4169E1]">Technician</TableHead>
+                        <TableHead className="font-semibold text-[#4169E1]">Type</TableHead>
+                        <TableHead className="font-semibold text-[#4169E1]">Job Title</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

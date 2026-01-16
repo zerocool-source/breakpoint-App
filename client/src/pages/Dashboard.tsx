@@ -171,7 +171,7 @@ export default function Dashboard() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-[#1E3A8A]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
         </div>
       </AppLayout>
     );
@@ -188,7 +188,7 @@ export default function Dashboard() {
           <Button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
-            className="gap-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+            className="gap-2 bg-[#4169E1] hover:bg-[#4169E1]/90"
             data-testid="button-sync-poolbrain"
           >
             <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
@@ -217,7 +217,7 @@ export default function Dashboard() {
           </Card>
 
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#1E3A8A]/50 transition-all border-l-4 border-l-[#1E3A8A]"
+            className="cursor-pointer hover:shadow-md hover:border-[#4169E1]/50 transition-all border-l-4 border-l-[#4169E1]"
             onClick={() => navigate("/estimates")}
             data-testid="card-needs-scheduling"
           >
@@ -226,10 +226,10 @@ export default function Dashboard() {
                 <div>
                   <p className="text-xs text-[#64748B] uppercase tracking-wide">Needs Scheduling</p>
                   <p className="text-3xl font-bold text-[#1E293B]">{summary?.needsScheduling || 0}</p>
-                  <p className="text-sm text-[#1E3A8A]">Approved jobs awaiting</p>
+                  <p className="text-sm text-[#4169E1]">Approved jobs awaiting</p>
                 </div>
-                <div className="p-3 rounded-full bg-[#1E3A8A]/10">
-                  <Calendar className="w-6 h-6 text-[#1E3A8A]" />
+                <div className="p-3 rounded-full bg-[#4169E1]/10">
+                  <Calendar className="w-6 h-6 text-[#4169E1]" />
                 </div>
               </div>
             </CardContent>
@@ -333,7 +333,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#1E3A8A]" />
+                    <FileText className="w-5 h-5 text-[#4169E1]" />
                     Estimate Pipeline
                   </CardTitle>
                   <CardDescription>Job estimates by status</CardDescription>
@@ -398,10 +398,10 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-[#1E3A8A]/5 to-[#60A5FA]/5 border border-[#1E3A8A]/20">
+                <div className="p-4 rounded-lg bg-gradient-to-r from-[#4169E1]/5 to-[#60A5FA]/5 border border-[#4169E1]/20">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-[#64748B]">Total Pipeline Value</span>
-                    <span className="text-2xl font-bold text-[#1E3A8A]">{formatCurrency(metrics?.values.total || 0)}</span>
+                    <span className="text-2xl font-bold text-[#4169E1]">{formatCurrency(metrics?.values.total || 0)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -448,9 +448,9 @@ export default function Dashboard() {
                         data-testid={`activity-item-${item.id}`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#1E3A8A]/10" : "bg-[#F97316]/10"}`}>
+                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#4169E1]/10" : "bg-[#F97316]/10"}`}>
                             {item.type === "estimate" ? (
-                              <FileText className="w-4 h-4 text-[#1E3A8A]" />
+                              <FileText className="w-4 h-4 text-[#4169E1]" />
                             ) : (
                               <Wrench className="w-4 h-4 text-[#F97316]" />
                             )}
@@ -540,8 +540,8 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/tech-ops")} data-testid="card-tech-ops">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#1E3A8A]/10">
-                  <Users className="w-5 h-5 text-[#1E3A8A]" />
+                <div className="p-2 rounded-lg bg-[#4169E1]/10">
+                  <Users className="w-5 h-5 text-[#4169E1]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-[#1E293B]">Tech Ops</p>

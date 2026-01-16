@@ -15,7 +15,7 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* ClickUp-inspired Color Palette */
+  /* Enterprise Dashboard Color Palette */
   --color-background: #FFFFFF;
   --color-foreground: #1E293B;
 
@@ -26,7 +26,7 @@
   --color-popover-foreground: #1E293B;
 
   /* Primary: Royal Blue */
-  --color-primary: #1E3A8A;
+  --color-primary: #4169E1;
   --color-primary-foreground: #FFFFFF;
 
   /* Secondary: Orange */
@@ -37,33 +37,36 @@
   --color-muted: #F8FAFC;
   --color-muted-foreground: #64748B;
 
-  /* Accent: Baby Blue */
-  --color-accent: #60A5FA;
+  /* Accent: Orange for CTAs */
+  --color-accent: #F97316;
   --color-accent-foreground: #FFFFFF;
 
+  /* Status colors */
+  --color-success: #22C55E;
+  --color-warning: #FBBF24;
   --color-destructive: #EF4444;
   --color-destructive-foreground: #FFFFFF;
 
   --color-border: #E2E8F0;
   --color-input: #F1F5F9;
-  --color-ring: #60A5FA;
+  --color-ring: #F97316;
 
   /* Chart colors */
-  --color-chart-1: #1E3A8A;
+  --color-chart-1: #4169E1;
   --color-chart-2: #F97316;
-  --color-chart-3: #60A5FA;
-  --color-chart-4: #10B981;
-  --color-chart-5: #8B5CF6;
+  --color-chart-3: #22C55E;
+  --color-chart-4: #FBBF24;
+  --color-chart-5: #EF4444;
   
-  /* Sidebar */
-  --color-sidebar: #F8FAFC;
-  --color-sidebar-foreground: #1E293B;
-  --color-sidebar-primary: #1E3A8A;
-  --color-sidebar-primary-foreground: #FFFFFF;
-  --color-sidebar-accent: #EFF6FF;
-  --color-sidebar-accent-foreground: #1E3A8A;
-  --color-sidebar-border: #E2E8F0;
-  --color-sidebar-ring: #60A5FA;
+  /* Sidebar - Royal Blue Background */
+  --color-sidebar: #4169E1;
+  --color-sidebar-foreground: #FFFFFF;
+  --color-sidebar-primary: #FFFFFF;
+  --color-sidebar-primary-foreground: #4169E1;
+  --color-sidebar-accent: rgba(255, 255, 255, 0.15);
+  --color-sidebar-accent-foreground: #FFFFFF;
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-ring: #F97316;
 }
 
 @layer base {
@@ -84,32 +87,48 @@
   }
   
   .clickup-card-interactive {
-    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200 hover:shadow-md hover:border-primary/30 cursor-pointer;
+    @apply bg-white border border-border shadow-sm rounded-xl transition-all duration-200 hover:shadow-md hover:border-[#F97316]/30 cursor-pointer;
   }
 
-  /* Status badge styles */
+  /* Status badge styles - 20% opacity backgrounds */
   .badge-primary {
-    @apply bg-primary/10 text-primary border-primary/20;
+    @apply bg-[#4169E1]/20 text-[#4169E1];
   }
   
   .badge-accent {
-    @apply bg-accent/10 text-accent border-accent/20;
+    @apply bg-[#F97316]/20 text-[#F97316];
   }
   
   .badge-secondary {
-    @apply bg-secondary/10 text-secondary border-secondary/20;
+    @apply bg-[#F97316]/20 text-[#F97316];
   }
   
   .badge-success {
-    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+    @apply bg-[#22C55E]/20 text-[#22C55E];
   }
   
   .badge-warning {
-    @apply bg-amber-50 text-amber-700 border-amber-200;
+    @apply bg-[#FBBF24]/20 text-[#B45309];
   }
   
   .badge-danger {
-    @apply bg-red-50 text-red-700 border-red-200;
+    @apply bg-[#EF4444]/20 text-[#EF4444];
+  }
+  
+  .badge-scheduled {
+    @apply bg-[#4169E1]/20 text-[#4169E1];
+  }
+  
+  .badge-pending {
+    @apply bg-[#F97316]/20 text-[#F97316];
+  }
+  
+  .badge-completed {
+    @apply bg-[#22C55E]/20 text-[#22C55E];
+  }
+  
+  .badge-critical {
+    @apply bg-[#EF4444]/20 text-[#EF4444];
   }
 }
 
