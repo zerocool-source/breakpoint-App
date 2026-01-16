@@ -372,22 +372,22 @@ export default function Estimates() {
   const getSourceLabel = (sourceType: string | null): string => {
     const normalized = normalizeSourceType(sourceType);
     switch (normalized) {
-      case "repair_tech": return "Repair Tech";
-      case "service_tech": return "Service Tech";
-      case "office_staff": return "Office Staff";
-      case "emergency": return "Emergency";
-      default: return "Office Staff";
+      case "repair_tech": return "Field Estimate";
+      case "service_tech": return "SR Estimate";
+      case "office_staff": return "Office Estimate";
+      case "emergency": return "SOS Estimate";
+      default: return "Office Estimate";
     }
   };
 
   const getSourceBadgeColor = (sourceType: string | null): string => {
     const normalized = normalizeSourceType(sourceType);
     switch (normalized) {
-      case "repair_tech": return "bg-blue-100 text-blue-700 border-blue-200";
-      case "service_tech": return "bg-purple-100 text-purple-700 border-purple-200";
-      case "office_staff": return "bg-gray-100 text-gray-700 border-gray-200";
-      case "emergency": return "bg-red-100 text-red-700 border-red-200";
-      default: return "bg-gray-100 text-gray-700 border-gray-200";
+      case "repair_tech": return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
+      case "service_tech": return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
+      case "office_staff": return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
+      case "emergency": return "bg-[#FF6A00] text-white border-[#FF6A00]";
+      default: return "bg-[#1E3A8A] text-white border-[#1E3A8A]";
     }
   };
 
@@ -1862,43 +1862,19 @@ export default function Estimates() {
                             <FileText className="w-5 h-5 text-[#0077C5]" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="text-[16px] font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{getEstimateTitle(estimate)}</h3>
+                            <h3 className="text-[17px] font-bold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                              {estimate.propertyName}
+                            </h3>
+                            <div className="flex items-center gap-2 flex-wrap mt-1">
+                              <span className="text-[14px] font-medium text-[#1E293B]">{getEstimateTitle(estimate)}</span>
                               {estimate.estimateNumber && (
-                                <span className="text-sm text-[#6B7280]">#{estimate.estimateNumber}</span>
+                                <span className="text-[13px] text-[#6B7280]">#{estimate.estimateNumber}</span>
                               )}
-                              {/* Show item count as X-SR for service repairs */}
-                              {estimate.items && estimate.items.length > 0 && (
-                                <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[11px] px-2 py-0.5 rounded-full">
-                                  {getItemCountLabel(estimate)}
-                                </Badge>
+                              {estimate.items && estimate.items.length > 0 && normalizeSourceType(estimate.sourceType) === "service_tech" && (
+                                <span className="text-[13px] text-[#6B7280]">- {estimate.items.length} items</span>
                               )}
-                              <Badge className={`${config.color} border text-[11px] px-2 py-0.5 rounded-full`}>
-                                {config.label}
-                              </Badge>
-                              <Badge className={`${getSourceBadgeColor(estimate.sourceType)} border text-[11px] px-2 py-0.5 rounded-full`}>
-                                {getSourceLabel(estimate.sourceType)}
-                              </Badge>
-                              {estimate.tags && estimate.tags.length > 0 && estimate.tags.map((tag, tagIdx) => (
-                                <Badge 
-                                  key={tagIdx} 
-                                  variant="outline" 
-                                  className="text-[11px] px-2 py-0.5 rounded-full border-slate-400 text-slate-600"
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
                             </div>
-                            <div className="flex items-center gap-4 text-[14px] text-[#6B7280] mt-1.5">
-                              <span className="flex items-center gap-1.5">
-                                <MapPin className="w-3.5 h-3.5" />
-                                {estimate.propertyName}
-                                {estimate.woRequired && (
-                                  <Badge className="ml-1 bg-[#FFF7ED] text-[#FF6A00] border-[#FFEDD5] text-[10px] px-1.5 py-0 rounded-full">
-                                    WO
-                                  </Badge>
-                                )}
-                              </span>
+                            <div className="flex items-center gap-4 text-[13px] text-[#6B7280] mt-1">
                               <span className="flex items-center gap-1.5">
                                 <CalendarIcon className="w-3.5 h-3.5" />
                                 {formatDate(estimate.estimateDate || estimate.createdAt)}
@@ -1910,6 +1886,11 @@ export default function Estimates() {
                                   {estimate.photos.filter((p: string) => p && !p.includes('[object Object]')).length}
                                 </span>
                               )}
+                            </div>
+                            <div className="mt-2">
+                              <Badge className={`${getSourceBadgeColor(estimate.sourceType)} text-[11px] px-3 py-1 rounded`}>
+                                {getSourceLabel(estimate.sourceType)}
+                              </Badge>
                             </div>
                           </div>
                           <div className="text-right mr-4">
