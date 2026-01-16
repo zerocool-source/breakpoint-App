@@ -429,7 +429,7 @@ export default function TechOps() {
             </div>
           </div>
           <Button
-            className="bg-[#4169E1] hover:bg-[#1E40AF]"
+            className="bg-[#0078D4] hover:bg-[#1E40AF]"
             onClick={() => setShowAddDialog(true)}
             data-testid="button-add-entry"
           >
@@ -510,7 +510,7 @@ export default function TechOps() {
             <CardTitle className="text-lg flex items-center gap-2">
               {entryType === "windy_day_cleanup" ? (
                 <>
-                  <Building className="w-5 h-5 text-[#4169E1]" />
+                  <Building className="w-5 h-5 text-[#0078D4]" />
                   Entries by Property
                 </>
               ) : (
@@ -521,7 +521,7 @@ export default function TechOps() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
@@ -536,7 +536,7 @@ export default function TechOps() {
                   {entriesByProperty.map(([propertyKey, group]) => (
                     <div key={propertyKey} className="border border-slate-200 rounded-lg overflow-hidden" data-testid={`property-group-${propertyKey}`}>
                       {/* Property Header */}
-                      <div className="bg-gradient-to-r from-[#4169E1] to-[#3B82F6] text-white p-4">
+                      <div className="bg-gradient-to-r from-[#0078D4] to-[#3B82F6] text-white p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
                             <Building className="w-5 h-5" />
@@ -606,7 +606,7 @@ export default function TechOps() {
                                         <button
                                           key={idx}
                                           onClick={() => openLightbox(photos, idx)}
-                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#4169E1] transition-colors"
+                                          className="relative group w-16 h-16 rounded-lg overflow-hidden border border-slate-200 hover:border-[#0078D4] transition-colors"
                                         >
                                           <img
                                             src={photo}
@@ -724,7 +724,7 @@ export default function TechOps() {
                             {/* Property Info */}
                             <div className="bg-slate-50 rounded-md p-3 space-y-1">
                               <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-[#4169E1]" />
+                                <MapPin className="w-4 h-4 text-[#0078D4]" />
                                 <span className="font-semibold text-[#1E293B]">{entry.propertyName || "No property"}</span>
                               </div>
                               {(entry as any).propertyAddress && (
@@ -777,7 +777,7 @@ export default function TechOps() {
                                     <button
                                       key={idx}
                                       onClick={() => openLightbox(photos, idx)}
-                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#4169E1] transition-colors"
+                                      className="relative group w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-[#0078D4] transition-colors"
                                       data-testid={`photo-thumb-${entry.id}-${idx}`}
                                     >
                                       <img
@@ -804,7 +804,7 @@ export default function TechOps() {
                               <>
                                 <Button
                                   size="sm"
-                                  className="bg-[#4169E1] hover:bg-[#1E40AF] text-white"
+                                  className="bg-[#0078D4] hover:bg-[#1E40AF] text-white"
                                   onClick={() => handleOpenConvertDialog(entry)}
                                   data-testid={`button-convert-${entry.id}`}
                                 >
@@ -1009,7 +1009,7 @@ export default function TechOps() {
               Cancel
             </Button>
             <Button
-              className="bg-[#4169E1] hover:bg-[#1E40AF]"
+              className="bg-[#0078D4] hover:bg-[#1E40AF]"
               onClick={handleSubmit}
               disabled={!form.technicianName || !form.propertyId || createMutation.isPending}
               data-testid="button-submit-entry"
@@ -1074,7 +1074,7 @@ export default function TechOps() {
               Cancel
             </Button>
             <Button
-              className="bg-[#4169E1] hover:bg-[#1E40AF]"
+              className="bg-[#0078D4] hover:bg-[#1E40AF]"
               onClick={handleConvertToEstimate}
               disabled={convertToEstimateMutation.isPending}
               data-testid="button-confirm-convert"

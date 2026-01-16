@@ -197,7 +197,7 @@ export default function Visits() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : visits.length === 0 ? (
               <div className="text-center py-12 text-slate-500">

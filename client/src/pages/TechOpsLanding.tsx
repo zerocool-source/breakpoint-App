@@ -213,8 +213,8 @@ export default function TechOpsLanding() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#4169E1]/10 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-[#4169E1]" />
+            <div className="w-12 h-12 rounded-lg bg-[#0078D4]/10 flex items-center justify-center">
+              <Wrench className="w-6 h-6 text-[#0078D4]" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-techops">Tech Ops</h1>
@@ -243,7 +243,7 @@ export default function TechOpsLanding() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#4169E1] text-sm transition-colors flex-1">
+                      <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
                         {option.label}
                       </span>
                       {count > 0 && (
@@ -251,7 +251,7 @@ export default function TechOpsLanding() {
                           {count}
                         </span>
                       )}
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#4169E1] transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
                     </div>
                   </CardContent>
                 </Card>
@@ -272,10 +272,10 @@ export default function TechOpsLanding() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#4169E1] text-sm transition-colors flex-1">
+                      <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
                         {option.label}
                       </span>
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#4169E1] transition-colors" />
+                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
                     </div>
                   </CardContent>
                 </Card>
@@ -288,7 +288,7 @@ export default function TechOpsLanding() {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="w-5 h-5 text-[#4169E1]" />
+                <Filter className="w-5 h-5 text-[#0078D4]" />
                 Dashboard & Filters
               </CardTitle>
               <div className="flex items-center gap-3 flex-wrap">
@@ -360,7 +360,7 @@ export default function TechOpsLanding() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
               <div className="p-4 bg-slate-50 rounded-lg border border-slate-200" data-testid="metric-total">
-                <div className="text-2xl font-bold text-[#4169E1]">{summary?.total || 0}</div>
+                <div className="text-2xl font-bold text-[#0078D4]">{summary?.total || 0}</div>
                 <div className="text-sm text-slate-500">Total Submissions</div>
               </div>
               <div className="p-4 bg-amber-50 rounded-lg border border-amber-200" data-testid="metric-pending">
@@ -387,7 +387,7 @@ export default function TechOpsLanding() {
 
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : entries.length === 0 ? (
               <div className="text-center py-12 text-slate-500">

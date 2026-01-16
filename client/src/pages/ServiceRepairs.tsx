@@ -409,7 +409,7 @@ export default function ServiceRepairs() {
             <h1 className="text-2xl font-bold text-[#1E293B]">Service Repairs</h1>
             <p className="text-[#64748B]">
               Manage Code Canvas service repair submissions
-              <span className="ml-2 font-medium text-[#4169E1]">
+              <span className="ml-2 font-medium text-[#0078D4]">
                 ({filteredAndSortedRepairs.length} of {serviceRepairs.length} repairs)
               </span>
             </p>
@@ -525,7 +525,7 @@ export default function ServiceRepairs() {
               key={key}
               variant={statusFilter === key ? "default" : "ghost"}
               size="sm"
-              className={statusFilter === key ? "bg-[#4169E1]" : ""}
+              className={statusFilter === key ? "bg-[#0078D4]" : ""}
               onClick={() => setStatusFilter(key)}
               data-testid={`tab-${key}`}
             >
@@ -553,7 +553,7 @@ export default function ServiceRepairs() {
             </span>
             <Button 
               size="sm" 
-              className="bg-[#4169E1] hover:bg-[#1E40AF] ml-auto"
+              className="bg-[#0078D4] hover:bg-[#1E40AF] ml-auto"
               onClick={() => batchToEstimateMutation.mutate(pendingInSelection)}
               disabled={batchToEstimateMutation.isPending}
               data-testid="button-batch-to-estimate"
@@ -613,7 +613,7 @@ export default function ServiceRepairs() {
                           )}
                         </div>
                       </div>
-                      <Badge className="bg-[#4169E1] text-white">
+                      <Badge className="bg-[#0078D4] text-white">
                         {propertyGroup.repairs.length} {propertyGroup.repairs.length === 1 ? 'Repair' : 'Repairs'}
                       </Badge>
                     </div>
@@ -629,7 +629,7 @@ export default function ServiceRepairs() {
                             key={repair.id} 
                             className={`border-l-4 rounded-lg p-4 transition-all ${
                               selectedRepairs.has(repair.id) 
-                                ? "border-l-[#4169E1] bg-blue-50/50" 
+                                ? "border-l-[#0078D4] bg-blue-50/50" 
                                 : "border-l-[#F97316] bg-slate-50 hover:bg-slate-100"
                             }`}
                             data-testid={`card-repair-${repair.id}`}
@@ -652,7 +652,7 @@ export default function ServiceRepairs() {
                                 <div className="flex items-start justify-between">
                                   <div className="flex items-center gap-3">
                                     <Badge 
-                                      className="text-lg font-bold px-3 py-1 bg-[#4169E1] text-white"
+                                      className="text-lg font-bold px-3 py-1 bg-[#0078D4] text-white"
                                       data-testid={`badge-sr-${repair.jobNumber}`}
                                     >
                                       {repair.jobNumber}
@@ -737,7 +737,7 @@ export default function ServiceRepairs() {
                                     <span className="text-slate-500">Parts:</span>
                                     <span className="ml-1 font-medium">{formatCurrency(repair.partsAmount)}</span>
                                   </div>
-                                  <div className="text-sm font-bold text-[#4169E1] ml-auto">
+                                  <div className="text-sm font-bold text-[#0078D4] ml-auto">
                                     Total: {formatCurrency(repair.totalAmount)}
                                   </div>
                                 </div>

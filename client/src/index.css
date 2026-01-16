@@ -26,7 +26,7 @@
   --color-popover-foreground: #1E293B;
 
   /* Primary: Royal Blue */
-  --color-primary: #4169E1;
+  --color-primary: #0078D4;
   --color-primary-foreground: #FFFFFF;
 
   /* Secondary: Orange */
@@ -52,17 +52,17 @@
   --color-ring: #F97316;
 
   /* Chart colors */
-  --color-chart-1: #4169E1;
+  --color-chart-1: #0078D4;
   --color-chart-2: #F97316;
   --color-chart-3: #22C55E;
   --color-chart-4: #FBBF24;
   --color-chart-5: #EF4444;
   
   /* Sidebar - Royal Blue Background */
-  --color-sidebar: #4169E1;
+  --color-sidebar: #0078D4;
   --color-sidebar-foreground: #FFFFFF;
   --color-sidebar-primary: #FFFFFF;
-  --color-sidebar-primary-foreground: #4169E1;
+  --color-sidebar-primary-foreground: #0078D4;
   --color-sidebar-accent: rgba(255, 255, 255, 0.15);
   --color-sidebar-accent-foreground: #FFFFFF;
   --color-sidebar-border: rgba(255, 255, 255, 0.1);
@@ -92,7 +92,7 @@
 
   /* Status badge styles - 20% opacity backgrounds */
   .badge-primary {
-    @apply bg-[#4169E1]/20 text-[#4169E1];
+    @apply bg-[#0078D4]/20 text-[#0078D4];
   }
   
   .badge-accent {
@@ -116,7 +116,7 @@
   }
   
   .badge-scheduled {
-    @apply bg-[#4169E1]/20 text-[#4169E1];
+    @apply bg-[#0078D4]/20 text-[#0078D4];
   }
   
   .badge-pending {

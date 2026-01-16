@@ -14,14 +14,14 @@ interface StatCardProps {
 
 export function StatCard({ title, value, change, trend, icon: Icon, color = "primary", delay = 0 }: StatCardProps) {
   const iconColors = {
-    primary: "bg-[#4169E1] text-white",
+    primary: "bg-[#0078D4] text-white",
     secondary: "bg-[#F97316] text-white",
     accent: "bg-[#60A5FA] text-white",
     destructive: "bg-red-500 text-white",
   };
 
   const cardAccents = {
-    primary: "border-l-4 border-l-[#4169E1]",
+    primary: "border-l-4 border-l-[#0078D4]",
     secondary: "border-l-4 border-l-[#F97316]",
     accent: "border-l-4 border-l-[#60A5FA]",
     destructive: "border-l-4 border-l-red-500",

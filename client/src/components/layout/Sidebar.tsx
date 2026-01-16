@@ -80,11 +80,11 @@ function NavItemComponent({
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
           isActive 
-            ? "bg-white text-[#4169E1] shadow-sm" 
+            ? "bg-white text-[#0078D4] shadow-sm" 
             : "text-white/90 hover:bg-white/15"
         )}
       >
-        <item.icon className={cn("w-4 h-4", isActive ? "text-[#4169E1]" : "text-white/90")} />
+        <item.icon className={cn("w-4 h-4", isActive ? "text-[#0078D4]" : "text-white/90")} />
         <span>{item.label}</span>
         {item.badge && (
           <span className={cn(
@@ -143,7 +143,7 @@ function NavItemComponent({
                           className={cn(
                             "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
                             isSubActive 
-                              ? "bg-white text-[#4169E1] shadow-sm" 
+                              ? "bg-white text-[#0078D4] shadow-sm" 
                               : "text-white/70 hover:bg-white/10 hover:text-white"
                           )}
                         >
@@ -171,7 +171,7 @@ function NavItemComponent({
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
                   isChildActive 
-                    ? "bg-white text-[#4169E1] shadow-sm" 
+                    ? "bg-white text-[#0078D4] shadow-sm" 
                     : "text-white/70 hover:bg-white/10 hover:text-white"
                 )}
               >
@@ -316,7 +316,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-60 h-screen bg-[#4169E1] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
+    <aside className="w-60 h-screen bg-[#0078D4] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
       <div className="p-4 border-b border-white/10">
         <div className="flex flex-col items-center gap-2">
           <div className="h-20 w-20 bg-white rounded-xl p-2 shadow-sm">
@@ -361,11 +361,11 @@ export function Sidebar() {
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 mb-1",
             location === "/customers" 
-              ? "bg-white text-[#4169E1] shadow-sm" 
+              ? "bg-white text-[#0078D4] shadow-sm" 
               : "text-white/90 hover:bg-white/15"
           )}
         >
-          <Users className={cn("w-4 h-4", location === "/customers" ? "text-[#4169E1]" : "text-white/90")} />
+          <Users className={cn("w-4 h-4", location === "/customers" ? "text-[#0078D4]" : "text-white/90")} />
           <span>Customers</span>
         </Link>
         <Link 
@@ -373,11 +373,11 @@ export function Sidebar() {
           className={cn(
             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
             location === "/settings" 
-              ? "bg-white text-[#4169E1] shadow-sm" 
+              ? "bg-white text-[#0078D4] shadow-sm" 
               : "text-white/90 hover:bg-white/15"
           )}
         >
-          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-[#4169E1]" : "text-white/90")} />
+          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-[#0078D4]" : "text-white/90")} />
           <span>Settings</span>
         </Link>
       </div>

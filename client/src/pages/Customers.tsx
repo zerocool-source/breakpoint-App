@@ -2237,7 +2237,7 @@ function CustomerDetailPanel({
                     "border-l-4",
                     contact.contactType === "repairs" && "border-l-[#F97316]",
                     contact.contactType === "chemicals" && "border-l-[#60A5FA]",
-                    contact.contactType === "primary" && "border-l-[#4169E1]"
+                    contact.contactType === "primary" && "border-l-[#0078D4]"
                   )}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
@@ -2254,7 +2254,7 @@ function CustomerDetailPanel({
                                   "text-xs capitalize",
                                   contact.contactType === "repairs" && "border-[#F97316] text-[#F97316] bg-orange-50",
                                   contact.contactType === "chemicals" && "border-[#60A5FA] text-[#60A5FA] bg-blue-50",
-                                  contact.contactType === "primary" && "border-[#4169E1] text-[#4169E1] bg-blue-50"
+                                  contact.contactType === "primary" && "border-[#0078D4] text-[#0078D4] bg-blue-50"
                                 )}
                               >
                                 {contact.contactType}

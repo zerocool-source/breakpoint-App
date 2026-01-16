@@ -255,7 +255,7 @@ export default function RepairQueue() {
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold text-[#4169E1]">
+            <span className="font-mono text-sm font-semibold text-[#0078D4]">
               {repair.jobNumber || "—"}
             </span>
             <Badge className={statusCfg.color}>
@@ -368,14 +368,14 @@ export default function RepairQueue() {
     return (
       <Card
         key={techData.tech}
-        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#4169E1] shadow-lg' : ''}`}
+        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#0078D4] shadow-lg' : ''}`}
         onClick={() => setSelectedTech(selectedTech === techData.tech ? null : techData.tech)}
         data-testid={`tech-card-${techData.tech.replace(/\s+/g, '-').toLowerCase()}`}
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
-              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#4169E1] text-white"}>
+              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#0078D4] text-white"}>
                 {getInitials(techData.tech)}
               </AvatarFallback>
             </Avatar>
@@ -448,7 +448,7 @@ export default function RepairQueue() {
 
         {/* Dashboard Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" data-testid="dashboard-metrics">
-          <Card className="bg-gradient-to-br from-[#4169E1] to-[#3B82F6] text-white">
+          <Card className="bg-gradient-to-br from-[#0078D4] to-[#3B82F6] text-white">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-4 h-4 opacity-80" />
@@ -495,7 +495,7 @@ export default function RepairQueue() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-[#4169E1]" />
+                <Users className="w-4 h-4 text-[#0078D4]" />
                 <span className="text-sm text-slate-600">Active Techs</span>
               </div>
               <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.activeTechs}</div>
@@ -534,7 +534,7 @@ export default function RepairQueue() {
           <TabsContent value="by-tech" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -580,7 +580,7 @@ export default function RepairQueue() {
           <TabsContent value="pending" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#4169E1]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
             ) : pendingRepairs.length === 0 ? (
               <Card>
