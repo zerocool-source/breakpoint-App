@@ -1039,12 +1039,12 @@ export default function SupervisorTeams() {
                   <Card className="border-[#0078D4]/20 bg-[#0078D4]/10">
                     <CardContent className="pt-4 text-center">
                       <div className="w-10 h-10 rounded-full bg-[#0078D4]/20 flex items-center justify-center mx-auto mb-2">
-                        <ShoppingCart className="w-5 h-5 text-[#0078D4]" />
+                        <MapPin className="w-5 h-5 text-[#0078D4]" />
                       </div>
                       <div className="text-2xl font-bold text-[#0078D4]" data-testid="metric-checked-out">
                         {supervisorProfile?.metrics.checkedOut || 0}
                       </div>
-                      <div className="text-xs text-[#0078D4]">Accounts Checked Out</div>
+                      <div className="text-xs text-[#0078D4]">Inspected Property</div>
                     </CardContent>
                   </Card>
                   <Card className="border-[#0078D4]/20 bg-[#0078D4]/10">
