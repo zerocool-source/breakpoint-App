@@ -317,7 +317,7 @@ export function Sidebar() {
 
   return (
     <aside className="w-60 h-screen bg-[#0078D4] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-white/10 text-[#ede4e4] bg-[#f0e6e6]">
         <div className="flex flex-col items-center gap-2">
           <div className="h-20 w-20 bg-white rounded-xl p-2 shadow-sm">
             <img 
@@ -331,7 +331,6 @@ export function Sidebar() {
           </span>
         </div>
       </div>
-
       <div className="px-3 py-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
@@ -342,7 +341,6 @@ export function Sidebar() {
           />
         </div>
       </div>
-      
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin">
         {navItems.map((item) => (
           <NavItemComponent
@@ -354,7 +352,6 @@ export function Sidebar() {
           />
         ))}
       </nav>
-
       <div className="p-3 border-t border-white/10">
         <Link 
           href="/customers"
