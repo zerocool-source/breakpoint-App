@@ -245,10 +245,14 @@ export function Sidebar() {
       children: [
         { label: "Supervisor Management", href: "/supervisor-management", section: "Team Management" },
         { label: "Tech Ops", href: "/tech-ops", section: "Tech Ops" },
-        { label: "Repair Queue", href: "/repair-queue" },
-        { label: "Repair Foreman", href: "/tech-foreman" },
         { label: "Emergencies", href: "/emergencies" },
       ]
+    },
+    { 
+      key: "repairQueue",
+      icon: Wrench, 
+      label: "Repair Queue", 
+      href: "/repair-queue"
     },
     { 
       key: "technicians",

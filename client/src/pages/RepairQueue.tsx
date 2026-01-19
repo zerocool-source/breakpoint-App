@@ -158,6 +158,22 @@ export default function RepairQueue() {
     },
   });
 
+  const { data: estimates = [] } = useQuery<any[]>({
+    queryKey: ["estimates-for-repair-queue"],
+    queryFn: async () => {
+      const response = await fetch("/api/estimates");
+      if (!response.ok) throw new Error("Failed to fetch estimates");
+      const data = await response.json();
+      return data.estimates || [];
+    },
+  });
+
+  const estimatesFromRepairs = useMemo(() => {
+    return estimates
+      .filter((e: any) => e.sourceServiceRepairId || e.repairTechName)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [estimates]);
+
   const reassignMutation = useMutation({
     mutationFn: async ({ repairId, estimateId, techId, techName }: { repairId: string; estimateId: string | null; techId: number; techName: string }) => {
       const repairResponse = await fetch(`/api/service-repairs/${repairId}`, {
@@ -529,6 +545,9 @@ export default function RepairQueue() {
             <TabsTrigger value="completed" data-testid="tab-completed">
               Completed ({completedRepairs.length})
             </TabsTrigger>
+            <TabsTrigger value="estimates-log" data-testid="tab-estimates-log">
+              <FileText className="w-4 h-4 mr-2" /> Estimates Log ({estimatesFromRepairs.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="by-tech" className="mt-4">
@@ -623,6 +642,97 @@ export default function RepairQueue() {
               <ScrollArea className="max-h-[600px]">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {completedRepairs.map(renderRepairCard)}
+                </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
+
+          <TabsContent value="estimates-log" className="mt-4">
+            {estimatesFromRepairs.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-slate-500">
+                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No estimates submitted by repair technicians</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <ScrollArea className="max-h-[600px]">
+                <div className="space-y-3">
+                  {estimatesFromRepairs.map((estimate: any) => {
+                    const statusColors: Record<string, string> = {
+                      draft: "bg-slate-100 text-slate-700",
+                      pending_approval: "bg-[#FF8000]1A text-[#D35400]",
+                      approved: "bg-[#22D69A]1A text-[#22D69A]",
+                      rejected: "bg-red-100 text-red-600",
+                      needs_scheduling: "bg-[#0078D4]1A text-[#0078D4]",
+                      scheduled: "bg-[#17BEBB]1A text-[#0D9488]",
+                      completed: "bg-[#22D69A]1A text-[#22D69A]",
+                      ready_to_invoice: "bg-amber-100 text-amber-700",
+                      invoiced: "bg-purple-100 text-purple-700",
+                    };
+                    const statusLabels: Record<string, string> = {
+                      draft: "Draft",
+                      pending_approval: "Pending Approval",
+                      approved: "Approved",
+                      rejected: "Rejected",
+                      needs_scheduling: "Needs Scheduling",
+                      scheduled: "Scheduled",
+                      completed: "Completed",
+                      ready_to_invoice: "Ready to Invoice",
+                      invoiced: "Invoiced",
+                    };
+
+                    return (
+                      <Card key={estimate.id} className="border border-slate-200 hover:shadow-sm transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-[#1E293B] truncate">
+                                  {estimate.title || "Untitled Estimate"}
+                                </span>
+                                <Badge className={`${statusColors[estimate.status] || "bg-slate-100 text-slate-600"} text-xs`}>
+                                  {statusLabels[estimate.status] || estimate.status}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {estimate.propertyName || "Unknown Property"}
+                                </span>
+                                {estimate.repairTechName && (
+                                  <span className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {estimate.repairTechName}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {formatDate(estimate.createdAt)}
+                                </span>
+                              </div>
+                              {estimate.description && (
+                                <p className="text-xs text-slate-600 mt-2 line-clamp-2">{estimate.description}</p>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div className="font-semibold text-[#1E293B]">
+                                {formatCurrency(estimate.totalAmount)}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-[#0078D4] hover:text-[#0078D4]/80 mt-1"
+                                onClick={() => window.location.href = `/estimates?id=${estimate.id}`}
+                              >
+                                <Eye className="w-3 h-3 mr-1" /> View
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             )}
