@@ -284,6 +284,12 @@ export default function Scheduling() {
     estimatedTime: 30,
   });
 
+  const [showOverrideDialog, setShowOverrideDialog] = useState(false);
+  const [overrideType, setOverrideType] = useState<"reassign" | "cover">("reassign");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideNotes, setOverrideNotes] = useState("");
+  const [overrideTechnicianId, setOverrideTechnicianId] = useState("");
+
   const { data: allRoutesData, isLoading } = useQuery({
     queryKey: ["all-routes"],
     queryFn: async () => {
@@ -303,6 +309,18 @@ export default function Scheduling() {
   });
 
   const customers = customersData?.customers || [];
+
+  const { data: techniciansData } = useQuery<{ technicians: { id: string; firstName: string; lastName: string; role: string; active: boolean }[] }>({
+    queryKey: ["/api/technicians"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians");
+      if (!response.ok) return { technicians: [] };
+      return response.json();
+    },
+  });
+
+  const technicians = techniciansData?.technicians || [];
+  const activeTechnicians = technicians.filter(t => t.active);
 
   const getDateRange = () => {
     // Get the Monday of the current week as start date
@@ -451,6 +469,66 @@ export default function Scheduling() {
       toast({ title: "Assigned to Route", description: "Visit has been scheduled." });
     },
   });
+
+  const createOverrideMutation = useMutation({
+    mutationFn: async (data: {
+      date: string;
+      propertyId: string;
+      propertyName: string;
+      originalTechnicianId: string | null;
+      originalTechnicianName: string | null;
+      coveringTechnicianId: string;
+      coveringTechnicianName: string;
+      overrideType: string;
+      reason: string;
+      notes: string;
+    }) => {
+      const response = await fetch("/api/route-overrides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          createdByName: "Office Staff",
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create route override");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Route Override Created", description: "Temporary assignment has been saved." });
+      setShowOverrideDialog(false);
+      setOverrideReason("");
+      setOverrideNotes("");
+      setOverrideTechnicianId("");
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleCreateOverride = () => {
+    if (!selectedRoute || !overrideTechnicianId) return;
+    
+    const coveringTech = activeTechnicians.find(t => t.id === overrideTechnicianId);
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    
+    selectedRoute.stops.forEach(stop => {
+      createOverrideMutation.mutate({
+        date: today.toISOString(),
+        propertyId: stop.propertyId,
+        propertyName: stop.propertyName,
+        originalTechnicianId: selectedRoute.technicianId,
+        originalTechnicianName: selectedRoute.technicianName,
+        coveringTechnicianId: overrideTechnicianId,
+        coveringTechnicianName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : "",
+        overrideType: overrideType === "reassign" ? "reassign" : "split",
+        reason: overrideReason,
+        notes: overrideNotes,
+      });
+    });
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const { occurrence } = event.active.data.current as { occurrence: UnscheduledOccurrence };
@@ -941,6 +1019,28 @@ export default function Scheduling() {
                                               >
                                                 <Plus className="h-4 w-4 mr-2" />
                                                 Add Stop
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedRoute(route);
+                                                  setOverrideType("reassign");
+                                                  setShowOverrideDialog(true);
+                                                }}
+                                              >
+                                                <Navigation className="h-4 w-4 mr-2" />
+                                                Reassign Today
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedRoute(route);
+                                                  setOverrideType("cover");
+                                                  setShowOverrideDialog(true);
+                                                }}
+                                              >
+                                                <Clock className="h-4 w-4 mr-2" />
+                                                Temporary Cover
                                               </DropdownMenuItem>
                                               <DropdownMenuItem
                                                 className="text-red-600"
@@ -1458,6 +1558,84 @@ export default function Scheduling() {
                   className="bg-[#FF8000] hover:bg-[#E67300] text-white"
                 >
                   Add Stop
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Route Override Dialog */}
+          <Dialog open={showOverrideDialog} onOpenChange={setShowOverrideDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {overrideType === "reassign" ? "Reassign Route Today" : "Temporary Cover"}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="bg-slate-50 p-3 rounded-lg">
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium">Route:</span> {selectedRoute?.name}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium">Original Tech:</span> {selectedRoute?.technicianName || "Unassigned"}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium">Stops:</span> {selectedRoute?.stops?.length || 0}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Covering Technician *</Label>
+                  <Select value={overrideTechnicianId} onValueChange={setOverrideTechnicianId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select technician..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeTechnicians.filter(t => t.id !== selectedRoute?.technicianId).map(tech => (
+                        <SelectItem key={tech.id} value={tech.id}>
+                          {tech.firstName} {tech.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Reason</Label>
+                  <Select value={overrideReason} onValueChange={setOverrideReason}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select reason..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sick">Sick</SelectItem>
+                      <SelectItem value="PTO">PTO</SelectItem>
+                      <SelectItem value="Emergency">Emergency</SelectItem>
+                      <SelectItem value="Route Optimization">Route Optimization</SelectItem>
+                      <SelectItem value="Training">Training</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Input
+                    value={overrideNotes}
+                    onChange={(e) => setOverrideNotes(e.target.value)}
+                    placeholder="Optional notes..."
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowOverrideDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateOverride}
+                  disabled={!overrideTechnicianId || createOverrideMutation.isPending}
+                  className="bg-[#FF8000] hover:bg-[#E67300] text-white"
+                >
+                  {createOverrideMutation.isPending ? "Saving..." : "Confirm Override"}
                 </Button>
               </DialogFooter>
             </DialogContent>
