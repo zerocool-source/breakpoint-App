@@ -74,6 +74,8 @@ interface Route {
   estimatedOnSiteTime: number | null;
   sortOrder: number | null;
   stops: RouteStop[];
+  isVirtual?: boolean;
+  createdAt?: string | null;
 }
 
 interface Customer {
@@ -785,8 +787,75 @@ export default function Scheduling() {
         grouped[route.dayOfWeek].push(route);
       }
     }
+    
+    // Create virtual routes for covering technicians based on active overrides
+    if (activeOverrides.length > 0) {
+      // Group overrides by covering technician and day
+      const coveringTechRoutes: Record<string, { techId: string; techName: string; dayOfWeek: number; stops: RouteStop[]; color: string }> = {};
+      
+      for (const override of activeOverrides) {
+        const overrideDate = new Date(override.date);
+        const dayOfWeek = overrideDate.getDay();
+        const key = `${override.coveringTechnicianId}-${dayOfWeek}`;
+        
+        // Find the original stop from allRoutes
+        let originalStop: RouteStop | undefined;
+        for (const route of allRoutes) {
+          const found = route.stops.find(s => s.propertyId === override.propertyId);
+          if (found) {
+            originalStop = found;
+            break;
+          }
+        }
+        
+        if (originalStop && override.coveringTechnicianId) {
+          if (!coveringTechRoutes[key]) {
+            // Get a color for this virtual route
+            const colorIndex = Object.keys(coveringTechRoutes).length % ROUTE_COLORS.length;
+            coveringTechRoutes[key] = {
+              techId: override.coveringTechnicianId,
+              techName: override.coveringTechnicianName || "Unknown",
+              dayOfWeek,
+              stops: [],
+              color: ROUTE_COLORS[colorIndex],
+            };
+          }
+          // Add the covered stop (mark as covered)
+          coveringTechRoutes[key].stops.push({
+            ...originalStop,
+            id: `covered-${originalStop.id}-${override.id}`,
+          });
+        }
+      }
+      
+      // Add virtual routes to the grouped structure
+      for (const key of Object.keys(coveringTechRoutes)) {
+        const virtualRoute = coveringTechRoutes[key];
+        const existingRoute = grouped[virtualRoute.dayOfWeek]?.find(
+          r => r.technicianId === virtualRoute.techId
+        );
+        
+        if (!existingRoute) {
+          // Create a new virtual route for this covering technician
+          grouped[virtualRoute.dayOfWeek].push({
+            id: `virtual-${virtualRoute.techId}-${virtualRoute.dayOfWeek}`,
+            name: `${virtualRoute.techName}'s Coverage`,
+            technicianId: virtualRoute.techId,
+            technicianName: virtualRoute.techName,
+            color: virtualRoute.color,
+            dayOfWeek: virtualRoute.dayOfWeek,
+            stops: virtualRoute.stops,
+            estimatedMiles: null,
+            estimatedDriveTime: null,
+            createdAt: null,
+            isVirtual: true,
+          } as Route & { isVirtual?: boolean });
+        }
+      }
+    }
+    
     return grouped;
-  }, [allRoutes]);
+  }, [allRoutes, activeOverrides]);
 
   const filteredRoutesAllDays = useMemo(() => {
     if (!filterCustomerName && !filterCustomerId) return null;
@@ -1172,7 +1241,14 @@ export default function Scheduling() {
                                           <p className="text-xs text-[#6C7A96] mt-0.5">
                                             {route.technicianName || "Unassigned"}
                                           </p>
-                                          {hasOverride && (
+                                          {route.isVirtual && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 border border-purple-300">
+                                                📋 Covering Stops
+                                              </span>
+                                            </div>
+                                          )}
+                                          {hasOverride && !route.isVirtual && (
                                             <div className="flex flex-wrap gap-1 mt-1">
                                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-300">
                                                 ⏱ Temp Coverage
