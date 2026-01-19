@@ -48,6 +48,7 @@ export const technicians = pgTable("technicians", {
   role: text("role").default("service"), // "service", "repair", "supervisor", "foreman"
   supervisorId: varchar("supervisor_id"), // Self-referential FK for team hierarchy
   truckNumber: text("truck_number"), // Assigned truck number
+  commissionPercent: integer("commission_percent").default(0), // Commission % on parts for service repairs
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
