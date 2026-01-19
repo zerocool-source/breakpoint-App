@@ -18,8 +18,12 @@ import {
   Users, User, ChevronDown, ChevronRight, Phone, Mail, Plus, 
   UserMinus, UserPlus, Loader2, Search, ArrowRight, AlertTriangle,
   ClipboardList, MessageSquare, MapPin, Clock, CheckCircle2, Filter, X, CalendarIcon,
-  BarChart3, Download, Activity, FileCheck2, HandHelping, XCircle, ShoppingCart
+  BarChart3, Download, Activity, FileCheck2, HandHelping, XCircle, ShoppingCart,
+  ClipboardCheck, Image, Upload, Trash2
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import type { QcInspection } from "@shared/schema";
 import type { Technician, TechOpsEntry, SupervisorActivity } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
@@ -63,6 +67,15 @@ export default function SupervisorTeams() {
   const [profileDateRange, setProfileDateRange] = useState<DateRange | undefined>();
 
   const hasActiveFilters = propertyFilter || supervisorFilter || technicianFilter || dateRange?.from;
+
+  // QC Inspections state
+  const [showQcInspectionForm, setShowQcInspectionForm] = useState(false);
+  const [qcPropertySearch, setQcPropertySearch] = useState("");
+  const [qcSelectedProperty, setQcSelectedProperty] = useState<{ id: string; name: string; address: string } | null>(null);
+  const [qcSelectedSupervisor, setQcSelectedSupervisor] = useState<string>("");
+  const [qcTitle, setQcTitle] = useState("");
+  const [qcNotes, setQcNotes] = useState("");
+  const [qcPhotos, setQcPhotos] = useState<string[]>([]);
 
   const clearAllFilters = () => {
     setPropertyFilter("");
@@ -140,6 +153,119 @@ export default function SupervisorTeams() {
     },
     enabled: !!selectedProfileSupervisor && showProfileDialog,
   });
+
+  // QC Inspections queries
+  const { data: qcInspections = [], refetch: refetchQcInspections } = useQuery<QcInspection[]>({
+    queryKey: ["qc-inspections"],
+    queryFn: async () => {
+      const response = await fetch("/api/qc-inspections?limit=50");
+      if (!response.ok) throw new Error("Failed to fetch QC inspections");
+      const data = await response.json();
+      return data.inspections || [];
+    },
+  });
+
+  const { data: qcMetrics } = useQuery<{
+    totalAssigned: number;
+    totalCompleted: number;
+    twoWeeks: { assigned: number; completed: number };
+    month: { assigned: number; completed: number };
+    bySupervisor: { supervisorId: string; supervisorName: string; total: number; completed: number; pending: number }[];
+  }>({
+    queryKey: ["qc-inspection-metrics"],
+    queryFn: async () => {
+      const response = await fetch("/api/qc-inspections/metrics");
+      if (!response.ok) throw new Error("Failed to fetch QC metrics");
+      return response.json();
+    },
+  });
+
+  const { data: qcPropertyResults = [] } = useQuery<{ id: string; name: string; address: string; type: string }[]>({
+    queryKey: ["qc-property-search", qcPropertySearch],
+    queryFn: async () => {
+      if (qcPropertySearch.length < 2) return [];
+      const response = await fetch(`/api/qc-inspections/search-properties?q=${encodeURIComponent(qcPropertySearch)}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.properties || [];
+    },
+    enabled: qcPropertySearch.length >= 2,
+  });
+
+  const createQcInspectionMutation = useMutation({
+    mutationFn: async (data: {
+      supervisorId: string;
+      supervisorName: string;
+      propertyId: string | null;
+      propertyName: string;
+      propertyAddress: string;
+      title: string;
+      notes: string;
+      photos: string[];
+    }) => {
+      const response = await fetch("/api/qc-inspections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create QC inspection");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["qc-inspections"] });
+      queryClient.invalidateQueries({ queryKey: ["qc-inspection-metrics"] });
+      resetQcForm();
+      toast({ title: "QC Inspection Created", description: "The inspection has been assigned to the supervisor" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create QC inspection", variant: "destructive" });
+    },
+  });
+
+  const updateQcInspectionMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const response = await fetch(`/api/qc-inspections/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error("Failed to update QC inspection");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["qc-inspections"] });
+      queryClient.invalidateQueries({ queryKey: ["qc-inspection-metrics"] });
+      toast({ title: "Inspection Updated" });
+    },
+  });
+
+  const resetQcForm = () => {
+    setShowQcInspectionForm(false);
+    setQcPropertySearch("");
+    setQcSelectedProperty(null);
+    setQcSelectedSupervisor("");
+    setQcTitle("");
+    setQcNotes("");
+    setQcPhotos([]);
+  };
+
+  const handleCreateQcInspection = () => {
+    if (!qcSelectedSupervisor || !qcSelectedProperty) {
+      toast({ title: "Missing Fields", description: "Please select a supervisor and property", variant: "destructive" });
+      return;
+    }
+    const supervisor = supervisors.find(s => s.id === qcSelectedSupervisor);
+    createQcInspectionMutation.mutate({
+      supervisorId: qcSelectedSupervisor,
+      supervisorName: supervisor ? `${supervisor.firstName} ${supervisor.lastName}` : "",
+      propertyId: qcSelectedProperty.id,
+      propertyName: qcSelectedProperty.name,
+      propertyAddress: qcSelectedProperty.address,
+      title: qcTitle,
+      notes: qcNotes,
+      photos: qcPhotos,
+    });
+  };
 
   const supervisors = allTechnicians.filter(t => t.role === "supervisor" && t.active);
   const unassignedTechnicians = allTechnicians.filter(
@@ -693,7 +819,7 @@ export default function SupervisorTeams() {
         </Card>
 
         <Tabs defaultValue="concerns" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="concerns" className="gap-2" data-testid="tab-concerns">
               <AlertTriangle className="w-4 h-4" />
               Supervisor Concerns
@@ -704,6 +830,15 @@ export default function SupervisorTeams() {
             <TabsTrigger value="activity" className="gap-2" data-testid="tab-activity">
               <ClipboardList className="w-4 h-4" />
               Activity Log
+            </TabsTrigger>
+            <TabsTrigger value="qc-inspections" className="gap-2" data-testid="tab-qc-inspections">
+              <ClipboardCheck className="w-4 h-4" />
+              QC Inspections
+              {qcInspections.filter(i => i.status === 'assigned').length > 0 && (
+                <Badge className="ml-1 bg-[#0078D4] text-white text-xs px-1.5 py-0">
+                  {qcInspections.filter(i => i.status === 'assigned').length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -856,6 +991,297 @@ export default function SupervisorTeams() {
                 </ScrollArea>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="qc-inspections">
+            <div className="space-y-4">
+              {/* QC Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="border-[#0078D4]/20 bg-[#0078D4]/5">
+                  <CardContent className="pt-4 text-center">
+                    <div className="text-2xl font-bold text-[#0078D4]" data-testid="qc-metric-total">
+                      {qcMetrics?.totalAssigned || 0}
+                    </div>
+                    <div className="text-xs text-slate-600">Total Assigned</div>
+                  </CardContent>
+                </Card>
+                <Card className="border-[#16A679]/20 bg-[#16A679]/5">
+                  <CardContent className="pt-4 text-center">
+                    <div className="text-2xl font-bold text-[#16A679]" data-testid="qc-metric-completed">
+                      {qcMetrics?.totalCompleted || 0}
+                    </div>
+                    <div className="text-xs text-slate-600">Total Completed</div>
+                  </CardContent>
+                </Card>
+                <Card className="border-[#FF8000]/20 bg-[#FF8000]/5">
+                  <CardContent className="pt-4 text-center">
+                    <div className="text-2xl font-bold text-[#D35400]" data-testid="qc-metric-2weeks">
+                      {qcMetrics?.twoWeeks.assigned || 0} / {qcMetrics?.twoWeeks.completed || 0}
+                    </div>
+                    <div className="text-xs text-slate-600">Last 2 Weeks (Assigned/Completed)</div>
+                  </CardContent>
+                </Card>
+                <Card className="border-slate-200 bg-slate-50">
+                  <CardContent className="pt-4 text-center">
+                    <div className="text-2xl font-bold text-slate-700" data-testid="qc-metric-month">
+                      {qcMetrics?.month.assigned || 0} / {qcMetrics?.month.completed || 0}
+                    </div>
+                    <div className="text-xs text-slate-600">Last Month (Assigned/Completed)</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Assign New QC Inspection */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ClipboardCheck className="w-5 h-5 text-[#0078D4]" />
+                      Assign QC Inspection
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      className="bg-[#0078D4] hover:bg-[#1E40AF]"
+                      onClick={() => setShowQcInspectionForm(!showQcInspectionForm)}
+                      data-testid="button-toggle-qc-form"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      New Inspection
+                    </Button>
+                  </div>
+                </CardHeader>
+                {showQcInspectionForm && (
+                  <CardContent className="border-t pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="qc-supervisor">Assign To Supervisor *</Label>
+                        <Select value={qcSelectedSupervisor} onValueChange={setQcSelectedSupervisor}>
+                          <SelectTrigger id="qc-supervisor" data-testid="select-qc-supervisor">
+                            <SelectValue placeholder="Select supervisor..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {supervisors.map((sup) => (
+                              <SelectItem key={sup.id} value={sup.id}>
+                                {sup.firstName} {sup.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="qc-property">Property *</Label>
+                        <div className="relative">
+                          <Input
+                            id="qc-property"
+                            placeholder="Search property..."
+                            value={qcSelectedProperty ? qcSelectedProperty.name : qcPropertySearch}
+                            onChange={(e) => {
+                              setQcPropertySearch(e.target.value);
+                              setQcSelectedProperty(null);
+                            }}
+                            data-testid="input-qc-property-search"
+                          />
+                          {qcPropertyResults.length > 0 && !qcSelectedProperty && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+                              {qcPropertyResults.map((prop) => (
+                                <button
+                                  key={prop.id}
+                                  className="w-full px-3 py-2 text-left hover:bg-slate-50 text-sm"
+                                  onClick={() => {
+                                    setQcSelectedProperty(prop);
+                                    setQcPropertySearch("");
+                                  }}
+                                  data-testid={`property-option-${prop.id}`}
+                                >
+                                  <div className="font-medium">{prop.name}</div>
+                                  {prop.address && (
+                                    <div className="text-xs text-slate-500">{prop.address}</div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {qcSelectedProperty && (
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <MapPin className="w-3 h-3" />
+                            {qcSelectedProperty.address || "No address"}
+                            <button
+                              onClick={() => setQcSelectedProperty(null)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="qc-title">Title</Label>
+                        <Input
+                          id="qc-title"
+                          placeholder="Inspection title..."
+                          value={qcTitle}
+                          onChange={(e) => setQcTitle(e.target.value)}
+                          data-testid="input-qc-title"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2 space-y-2">
+                        <Label htmlFor="qc-notes">Notes</Label>
+                        <Textarea
+                          id="qc-notes"
+                          placeholder="Add notes for the supervisor..."
+                          value={qcNotes}
+                          onChange={(e) => setQcNotes(e.target.value)}
+                          rows={3}
+                          data-testid="input-qc-notes"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2 flex justify-end gap-2">
+                        <Button variant="outline" onClick={resetQcForm}>
+                          Cancel
+                        </Button>
+                        <Button
+                          className="bg-[#0078D4] hover:bg-[#1E40AF]"
+                          onClick={handleCreateQcInspection}
+                          disabled={createQcInspectionMutation.isPending || !qcSelectedSupervisor || !qcSelectedProperty}
+                          data-testid="button-create-qc-inspection"
+                        >
+                          {createQcInspectionMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Plus className="w-4 h-4 mr-1" />
+                          )}
+                          Assign Inspection
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* QC Inspection Activity Log */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-[#0078D4]" />
+                    QC Inspection Log
+                    <Badge className="ml-2 bg-slate-100 text-slate-700">
+                      {qcInspections.length} Inspections
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {qcInspections.length === 0 ? (
+                    <div className="text-center py-12 text-slate-500">
+                      <ClipboardCheck className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No QC inspections assigned yet</p>
+                      <p className="text-sm mt-1">Use the form above to assign inspections to supervisors</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="max-h-[400px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Supervisor</TableHead>
+                            <TableHead>Property</TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {qcInspections.map((inspection) => (
+                            <TableRow key={inspection.id} data-testid={`qc-row-${inspection.id}`}>
+                              <TableCell className="text-sm text-slate-600">
+                                {inspection.createdAt ? format(new Date(inspection.createdAt), "MMM d, h:mm a") : "—"}
+                              </TableCell>
+                              <TableCell className="text-sm font-medium">
+                                {inspection.supervisorName || "—"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">{inspection.propertyName}</div>
+                                {inspection.propertyAddress && (
+                                  <div className="text-xs text-slate-500">{inspection.propertyAddress}</div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {inspection.title || "—"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={cn(
+                                  inspection.status === 'completed' ? 'bg-[#16A679]/10 text-[#16A679]' :
+                                  inspection.status === 'in_progress' ? 'bg-[#FF8000]/10 text-[#D35400]' :
+                                  'bg-[#0078D4]/10 text-[#0078D4]'
+                                )}>
+                                  {inspection.status === 'completed' ? 'Completed' :
+                                   inspection.status === 'in_progress' ? 'In Progress' : 'Assigned'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {inspection.status !== 'completed' && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-[#16A679] hover:bg-[#16A679]/10"
+                                    onClick={() => updateQcInspectionMutation.mutate({ id: inspection.id, status: 'completed' })}
+                                    data-testid={`button-complete-${inspection.id}`}
+                                  >
+                                    <CheckCircle2 className="w-4 h-4 mr-1" />
+                                    Complete
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Supervisor Performance */}
+              {qcMetrics?.bySupervisor && qcMetrics.bySupervisor.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-[#0078D4]" />
+                      Supervisor Performance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {qcMetrics.bySupervisor.map((sup) => (
+                        <div key={sup.supervisorId} className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="font-medium text-slate-700">{sup.supervisorName || 'Unknown'}</div>
+                            <div className="text-sm text-slate-500">
+                              {sup.total} assigned, {sup.completed} completed, {sup.pending} pending
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-[#16A679] rounded-full" 
+                                style={{ width: `${sup.total > 0 ? (sup.completed / sup.total) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-slate-600">
+                              {sup.total > 0 ? Math.round((sup.completed / sup.total) * 100) : 0}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
         </Tabs>
