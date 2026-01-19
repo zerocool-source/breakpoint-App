@@ -43,6 +43,7 @@ interface Technician {
   lastName: string;
   phone: string | null;
   email: string | null;
+  truckNumber: string | null;
   active: boolean;
   role: string;
 }
@@ -821,6 +822,9 @@ export default function ServiceTechs() {
                 <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Email
                 </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Truck #
+                </th>
                 <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
@@ -832,13 +836,13 @@ export default function ServiceTechs() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     Loading technicians...
                   </td>
                 </tr>
               ) : filteredTechnicians.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     {searchQuery ? "No technicians match your search" : "No service technicians found. Click 'Add Tech' to add one."}
                   </td>
                 </tr>
@@ -876,6 +880,15 @@ export default function ServiceTechs() {
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         {tech.email || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        {tech.truckNumber ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium text-sm">
+                            #{tech.truckNumber}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center">

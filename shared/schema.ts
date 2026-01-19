@@ -47,6 +47,7 @@ export const technicians = pgTable("technicians", {
   photoUrl: text("photo_url"), // Profile photo URL
   role: text("role").default("service"), // "service", "repair", "supervisor", "foreman"
   supervisorId: varchar("supervisor_id"), // Self-referential FK for team hierarchy
+  truckNumber: text("truck_number"), // Assigned truck number
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
