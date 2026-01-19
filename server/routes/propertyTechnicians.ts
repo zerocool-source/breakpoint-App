@@ -11,6 +11,9 @@ const autoGenerateSchema = z.object({
 const batchOverrideSchema = z.object({
   overrides: z.array(z.object({
     date: z.string(),
+    startDate: z.string().nullable().optional(),
+    endDate: z.string().nullable().optional(),
+    coverageType: z.enum(["single_day", "extended_cover", "split_route"]).optional().default("single_day"),
     propertyId: z.string(),
     propertyName: z.string(),
     originalTechnicianId: z.string().nullable(),
@@ -513,13 +516,16 @@ export function registerPropertyTechnicianRoutes(app: any) {
       
       const { overrides } = parseResult.data;
 
-      const createdOverrides = await db.transaction(async (tx) => {
+      const createdOverrides = await db.transaction(async (tx: any) => {
         const results = [];
         for (const override of overrides) {
           const [created] = await tx
             .insert(routeOverrides)
             .values({
               date: new Date(override.date),
+              startDate: override.startDate ? new Date(override.startDate) : null,
+              endDate: override.endDate ? new Date(override.endDate) : null,
+              coverageType: override.coverageType || "single_day",
               propertyId: override.propertyId,
               propertyName: override.propertyName,
               originalTechnicianId: override.originalTechnicianId,
@@ -529,6 +535,7 @@ export function registerPropertyTechnicianRoutes(app: any) {
               overrideType: override.overrideType,
               reason: override.reason,
               notes: override.notes,
+              active: true,
               createdByName: override.createdByName || "Office Staff",
             })
             .returning();
