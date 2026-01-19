@@ -76,6 +76,8 @@ export default function SupervisorTeams() {
   const [qcTitle, setQcTitle] = useState("");
   const [qcNotes, setQcNotes] = useState("");
   const [qcPhotos, setQcPhotos] = useState<string[]>([]);
+  const [qcDueDate, setQcDueDate] = useState<Date | undefined>();
+  const [qcDatePickerOpen, setQcDatePickerOpen] = useState(false);
 
   const clearAllFilters = () => {
     setPropertyFilter("");
@@ -202,6 +204,7 @@ export default function SupervisorTeams() {
       title: string;
       notes: string;
       photos: string[];
+      dueDate: string | null;
     }) => {
       const response = await fetch("/api/qc-inspections", {
         method: "POST",
@@ -247,6 +250,8 @@ export default function SupervisorTeams() {
     setQcTitle("");
     setQcNotes("");
     setQcPhotos([]);
+    setQcDueDate(undefined);
+    setQcDatePickerOpen(false);
   };
 
   const handleCreateQcInspection = () => {
@@ -264,6 +269,7 @@ export default function SupervisorTeams() {
       title: qcTitle,
       notes: qcNotes,
       photos: qcPhotos,
+      dueDate: qcDueDate ? qcDueDate.toISOString() : null,
     });
   };
 
@@ -806,6 +812,36 @@ export default function SupervisorTeams() {
                   onChange={(e) => setQcTitle(e.target.value)}
                   data-testid="input-qc-title"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Schedule Date</Label>
+                <Popover open={qcDatePickerOpen} onOpenChange={setQcDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !qcDueDate && "text-muted-foreground"
+                      )}
+                      data-testid="button-qc-due-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {qcDueDate ? format(qcDueDate, "PPP") : "Select date..."}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={qcDueDate}
+                      onSelect={(date) => {
+                        setQcDueDate(date);
+                        setQcDatePickerOpen(false);
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
