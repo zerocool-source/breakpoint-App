@@ -1,6 +1,28 @@
 import { db } from "../db";
-import { propertyTechnicians, routeOverrides, technicians } from "@shared/schema";
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { propertyTechnicians, routeOverrides, technicians, routeStops, routes, customers } from "@shared/schema";
+import { eq, and, desc, gte, lte, sql, inArray } from "drizzle-orm";
+import { z } from "zod";
+
+const autoGenerateSchema = z.object({
+  technicianId: z.string().min(1, "Technician ID is required"),
+  dayOfWeek: z.number().int().min(0).max(6).optional(),
+});
+
+const batchOverrideSchema = z.object({
+  overrides: z.array(z.object({
+    date: z.string(),
+    propertyId: z.string(),
+    propertyName: z.string(),
+    originalTechnicianId: z.string().nullable(),
+    originalTechnicianName: z.string().nullable(),
+    coveringTechnicianId: z.string(),
+    coveringTechnicianName: z.string(),
+    overrideType: z.string(),
+    reason: z.string().optional(),
+    notes: z.string().optional(),
+    createdByName: z.string().optional(),
+  })).min(1, "At least one override is required"),
+});
 
 export function registerPropertyTechnicianRoutes(app: any) {
   app.get("/api/property-technicians/:propertyId", async (req: any, res: any) => {
@@ -234,6 +256,215 @@ export function registerPropertyTechnicianRoutes(app: any) {
       });
     } catch (error: any) {
       console.error("Error fetching route history:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/routes/:routeId/generate-stops", async (req: any, res: any) => {
+    try {
+      const { routeId } = req.params;
+      const { technicianId, properties } = req.body;
+
+      if (!properties || !Array.isArray(properties) || properties.length === 0) {
+        return res.status(400).json({ error: "Properties array is required" });
+      }
+
+      const route = await db.select().from(routes).where(eq(routes.id, routeId)).limit(1);
+      if (route.length === 0) {
+        return res.status(404).json({ error: "Route not found" });
+      }
+
+      const existingStops = await db
+        .select()
+        .from(routeStops)
+        .where(eq(routeStops.routeId, routeId));
+
+      const existingPropertyIds = new Set(existingStops.map(s => s.propertyId));
+
+      const newStops = [];
+      let sortOrder = existingStops.length;
+
+      for (const property of properties) {
+        if (!existingPropertyIds.has(property.propertyId)) {
+          const [stop] = await db
+            .insert(routeStops)
+            .values({
+              routeId,
+              propertyId: property.propertyId,
+              propertyName: property.propertyName || property.poolName || "Unknown",
+              customerId: property.customerId,
+              customerName: property.customerName,
+              poolId: property.poolId,
+              address: property.address,
+              city: property.city,
+              state: property.state,
+              zip: property.zip,
+              poolName: property.poolName,
+              sortOrder: sortOrder++,
+              estimatedTime: property.estimatedTime || 30,
+              notes: property.notes,
+              frequency: property.frequency || "weekly",
+            })
+            .returning();
+          newStops.push(stop);
+        }
+      }
+
+      res.json({
+        message: `Generated ${newStops.length} new route stops`,
+        stops: newStops,
+        skipped: properties.length - newStops.length
+      });
+    } catch (error: any) {
+      console.error("Error generating route stops:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/routes/auto-generate-from-assignments", async (req: any, res: any) => {
+    try {
+      const parseResult = autoGenerateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.errors[0].message });
+      }
+      
+      const { technicianId, dayOfWeek } = parseResult.data;
+
+      const assignments = await db
+        .select({
+          id: propertyTechnicians.id,
+          propertyId: propertyTechnicians.propertyId,
+          technicianId: propertyTechnicians.technicianId,
+          customerId: customers.id,
+          customerName: customers.name,
+          propertyName: customers.name,
+          address: customers.address,
+          city: customers.city,
+          state: customers.state,
+          zip: customers.zip,
+        })
+        .from(propertyTechnicians)
+        .leftJoin(customers, eq(propertyTechnicians.propertyId, customers.id))
+        .where(eq(propertyTechnicians.technicianId, technicianId));
+
+      if (assignments.length === 0) {
+        return res.json({ message: "No property assignments found for this technician", stops: [] });
+      }
+
+      let targetRoute = null;
+      
+      if (dayOfWeek !== undefined) {
+        const existingRoutes = await db
+          .select()
+          .from(routes)
+          .where(and(
+            eq(routes.technicianId, technicianId),
+            eq(routes.dayOfWeek, dayOfWeek)
+          ))
+          .limit(1);
+        
+        targetRoute = existingRoutes[0];
+      } else {
+        const techRoutes = await db
+          .select()
+          .from(routes)
+          .where(eq(routes.technicianId, technicianId))
+          .limit(1);
+        
+        targetRoute = techRoutes[0];
+      }
+
+      if (!targetRoute) {
+        return res.status(404).json({ 
+          error: "No route found for this technician. Please create a route first." 
+        });
+      }
+
+      const existingStops = await db
+        .select()
+        .from(routeStops)
+        .where(eq(routeStops.routeId, targetRoute.id));
+
+      const existingPropertyIds = new Set(existingStops.map(s => s.propertyId));
+
+      const newStops = [];
+      let sortOrder = existingStops.length;
+
+      for (const assignment of assignments) {
+        if (!existingPropertyIds.has(assignment.propertyId)) {
+          const [stop] = await db
+            .insert(routeStops)
+            .values({
+              routeId: targetRoute.id,
+              propertyId: assignment.propertyId,
+              propertyName: assignment.propertyName || "Unknown Property",
+              customerId: assignment.customerId,
+              customerName: assignment.customerName,
+              address: assignment.address,
+              city: assignment.city,
+              state: assignment.state,
+              zip: assignment.zip,
+              sortOrder: sortOrder++,
+              estimatedTime: 30,
+              frequency: "weekly",
+            })
+            .returning();
+          newStops.push(stop);
+        }
+      }
+
+      res.json({
+        message: `Auto-generated ${newStops.length} route stops from ${assignments.length} property assignments`,
+        routeId: targetRoute.id,
+        routeName: targetRoute.name,
+        stops: newStops,
+        skipped: assignments.length - newStops.length
+      });
+    } catch (error: any) {
+      console.error("Error auto-generating route stops:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/route-overrides/batch", async (req: any, res: any) => {
+    try {
+      const parseResult = batchOverrideSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error.errors[0].message });
+      }
+      
+      const { overrides } = parseResult.data;
+
+      const createdOverrides = await db.transaction(async (tx) => {
+        const results = [];
+        for (const override of overrides) {
+          const [created] = await tx
+            .insert(routeOverrides)
+            .values({
+              date: new Date(override.date),
+              propertyId: override.propertyId,
+              propertyName: override.propertyName,
+              originalTechnicianId: override.originalTechnicianId,
+              originalTechnicianName: override.originalTechnicianName,
+              coveringTechnicianId: override.coveringTechnicianId,
+              coveringTechnicianName: override.coveringTechnicianName,
+              overrideType: override.overrideType,
+              reason: override.reason,
+              notes: override.notes,
+              createdByName: override.createdByName || "Office Staff",
+            })
+            .returning();
+          results.push(created);
+        }
+        return results;
+      });
+
+      res.json({
+        message: `Created ${createdOverrides.length} route overrides`,
+        overrides: createdOverrides
+      });
+    } catch (error: any) {
+      console.error("Error creating batch route overrides:", error);
       res.status(500).json({ error: error.message });
     }
   });

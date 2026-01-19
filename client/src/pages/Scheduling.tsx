@@ -471,7 +471,7 @@ export default function Scheduling() {
   });
 
   const createOverrideMutation = useMutation({
-    mutationFn: async (data: {
+    mutationFn: async (overrides: Array<{
       date: string;
       propertyId: string;
       propertyName: string;
@@ -482,20 +482,20 @@ export default function Scheduling() {
       overrideType: string;
       reason: string;
       notes: string;
-    }) => {
-      const response = await fetch("/api/route-overrides", {
+    }>) => {
+      const response = await fetch("/api/route-overrides/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          createdByName: "Office Staff",
-        }),
+        body: JSON.stringify({ overrides }),
       });
-      if (!response.ok) throw new Error("Failed to create route override");
+      if (!response.ok) throw new Error("Failed to create route overrides");
       return response.json();
     },
-    onSuccess: () => {
-      toast({ title: "Route Override Created", description: "Temporary assignment has been saved." });
+    onSuccess: (data) => {
+      toast({ 
+        title: "Route Override Created", 
+        description: `Created ${data.overrides?.length || 0} overrides for today.` 
+      });
       setShowOverrideDialog(false);
       setOverrideReason("");
       setOverrideNotes("");
@@ -514,21 +514,46 @@ export default function Scheduling() {
     const today = new Date();
     today.setHours(12, 0, 0, 0);
     
-    selectedRoute.stops.forEach(stop => {
-      createOverrideMutation.mutate({
-        date: today.toISOString(),
-        propertyId: stop.propertyId,
-        propertyName: stop.propertyName,
-        originalTechnicianId: selectedRoute.technicianId,
-        originalTechnicianName: selectedRoute.technicianName,
-        coveringTechnicianId: overrideTechnicianId,
-        coveringTechnicianName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : "",
-        overrideType: overrideType === "reassign" ? "reassign" : "split",
-        reason: overrideReason,
-        notes: overrideNotes,
-      });
-    });
+    const overrides = selectedRoute.stops.map(stop => ({
+      date: today.toISOString(),
+      propertyId: stop.propertyId,
+      propertyName: stop.propertyName,
+      originalTechnicianId: selectedRoute.technicianId,
+      originalTechnicianName: selectedRoute.technicianName,
+      coveringTechnicianId: overrideTechnicianId,
+      coveringTechnicianName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : "",
+      overrideType: overrideType === "reassign" ? "reassign" : "split",
+      reason: overrideReason,
+      notes: overrideNotes,
+    }));
+    
+    createOverrideMutation.mutate(overrides);
   };
+
+  const autoGenerateStopsMutation = useMutation({
+    mutationFn: async (data: { technicianId: string; dayOfWeek: number }) => {
+      const response = await fetch("/api/routes/auto-generate-from-assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate route stops");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Route Stops Generated", 
+        description: data.message || `Generated ${data.stops?.length || 0} stops.`
+      });
+      queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   const handleDragStart = (event: DragStartEvent) => {
     const { occurrence } = event.active.data.current as { occurrence: UnscheduledOccurrence };
@@ -1041,6 +1066,26 @@ export default function Scheduling() {
                                               >
                                                 <Clock className="h-4 w-4 mr-2" />
                                                 Temporary Cover
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  if (route.technicianId) {
+                                                    autoGenerateStopsMutation.mutate({
+                                                      technicianId: route.technicianId,
+                                                      dayOfWeek: route.dayOfWeek
+                                                    });
+                                                  } else {
+                                                    toast({
+                                                      title: "No Technician Assigned",
+                                                      description: "Please assign a technician to this route first.",
+                                                      variant: "destructive"
+                                                    });
+                                                  }
+                                                }}
+                                              >
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Generate Stops from Assignments
                                               </DropdownMenuItem>
                                               <DropdownMenuItem
                                                 className="text-red-600"
