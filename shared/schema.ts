@@ -293,6 +293,8 @@ export const techOpsEntries = pgTable("tech_ops_entries", {
   invoiceSentToVendorId: varchar("invoice_sent_to_vendor_id"), // Which vendor invoice was sent to
   invoiceTemplateId: varchar("invoice_template_id"), // Which template was used
   partsCost: integer("parts_cost").default(0), // Parts cost in cents for service repairs/windy day cleanup (for commission calculation)
+  commissionPercent: integer("commission_percent"), // Override commission % for this specific entry
+  commissionAmount: integer("commission_amount"), // Override commission amount in cents for this specific entry
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

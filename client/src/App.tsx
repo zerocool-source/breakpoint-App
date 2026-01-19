@@ -11,7 +11,7 @@ import Intelligence from "@/pages/Intelligence";
 import Automations from "@/pages/Automations";
 import Settings from "@/pages/Settings";
 import Chat from "@/pages/Chat";
-import Repairs from "@/pages/Repairs";
+import RepairsUnified from "@/pages/RepairsUnified";
 import Chemicals from "@/pages/Chemicals";
 import Jobs from "@/pages/Jobs";
 import Payroll from "@/pages/Payroll";
@@ -50,7 +50,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
-      <Route path="/repairs" component={Repairs} />
+      <Route path="/repairs" component={RepairsUnified} />
       <Route path="/chemicals" component={Chemicals} />
       <Route path="/jobs" component={Jobs} />
       <Route path="/payroll" component={Payroll} />
