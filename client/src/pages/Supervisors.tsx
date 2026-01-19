@@ -480,9 +480,9 @@ export default function Supervisors() {
         </div>
 
         {/* Top Grid - Supervisors & Teams + Unassigned Technicians + Team Summary */}
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-12 gap-6">
           {/* Supervisors & Teams */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="col-span-5 bg-white rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-slate-600" />
@@ -551,7 +551,7 @@ export default function Supervisors() {
           </div>
 
           {/* Unassigned Technicians */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="col-span-4 bg-white rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-slate-600" />
@@ -613,7 +613,7 @@ export default function Supervisors() {
           </div>
 
           {/* Team Summary */}
-          <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="col-span-3 bg-white rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-center mb-4">
               <div className="text-center">
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2">
