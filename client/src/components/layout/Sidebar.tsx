@@ -371,15 +371,6 @@ export function Sidebar() {
       ]
     },
     { 
-      key: "vendors",
-      icon: Package, 
-      label: "Vendors", 
-      children: [
-        { label: "Invoice Vendors", href: "/invoice-vendors" },
-        { label: "Email Hub", href: "/email-hub" },
-      ]
-    },
-    { 
       key: "automations",
       icon: Zap, 
       label: "Automations", 
