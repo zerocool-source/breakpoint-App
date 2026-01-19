@@ -181,13 +181,14 @@ function EditTechnicianModal({
   open: boolean; 
   onClose: () => void;
   technician: Technician | null;
-  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string }) => void;
+  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string }) => void;
   onDelete: (id: string) => void;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [truckNumber, setTruckNumber] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -196,12 +197,13 @@ function EditTechnicianModal({
       setLastName(technician.lastName || "");
       setPhone(technician.phone || "");
       setEmail(technician.email || "");
+      setTruckNumber(technician.truckNumber || "");
     }
   }, [technician]);
 
   const handleSubmit = () => {
     if (!technician || !firstName.trim() || !lastName.trim()) return;
-    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email });
+    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email, truckNumber });
     onClose();
   };
 
@@ -217,6 +219,7 @@ function EditTechnicianModal({
     setLastName("");
     setPhone("");
     setEmail("");
+    setTruckNumber("");
     onClose();
   };
 
@@ -250,31 +253,51 @@ function EditTechnicianModal({
               
               <div className="flex-1 grid grid-cols-3 gap-4">
                 <div className="space-y-3">
-                  <Input
-                    placeholder="First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="bg-white"
-                    data-testid="input-edit-first-name"
-                  />
-                  <Input
-                    placeholder="Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="bg-white"
-                    data-testid="input-edit-last-name"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                    <Input
+                      placeholder="First Name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-first-name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                    <Input
+                      placeholder="Last Name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-last-name"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                    <Input
+                      placeholder="Phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-phone"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Truck #</label>
+                    <Input
+                      placeholder="Truck Number"
+                      value={truckNumber}
+                      onChange={(e) => setTruckNumber(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-truck-number"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Input
-                    placeholder="Phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="bg-white"
-                    data-testid="input-edit-phone"
-                  />
-                </div>
-                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                   <Input
                     placeholder="Email"
                     value={email}
@@ -663,6 +686,17 @@ export default function ServiceTechs() {
 
   const technicians = techniciansData?.technicians || [];
 
+  const { data: propertyCountsData } = useQuery<{ counts: Record<string, number> }>({
+    queryKey: ["/api/technician-properties/counts"],
+    queryFn: async () => {
+      const res = await fetch("/api/technician-properties/counts");
+      if (!res.ok) throw new Error("Failed to fetch property counts");
+      return res.json();
+    },
+  });
+
+  const propertyCounts = propertyCountsData?.counts || {};
+
   const addTechnicianMutation = useMutation({
     mutationFn: async (tech: { firstName: string; lastName: string; phone: string; email: string }) => {
       const res = await fetch("/api/technicians/add", {
@@ -679,7 +713,7 @@ export default function ServiceTechs() {
   });
 
   const updateTechnicianMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string } }) => {
       const res = await fetch(`/api/technicians/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -826,6 +860,9 @@ export default function ServiceTechs() {
                   Truck #
                 </th>
                 <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Properties
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="text-right px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -836,13 +873,13 @@ export default function ServiceTechs() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     Loading technicians...
                   </td>
                 </tr>
               ) : filteredTechnicians.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     {searchQuery ? "No technicians match your search" : "No service technicians found. Click 'Add Tech' to add one."}
                   </td>
                 </tr>
@@ -888,6 +925,15 @@ export default function ServiceTechs() {
                           </span>
                         ) : (
                           <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {(propertyCounts[tech.id] || 0) > 0 ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 font-medium text-sm">
+                            {propertyCounts[tech.id]}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">0</span>
                         )}
                       </td>
                       <td className="px-6 py-4">

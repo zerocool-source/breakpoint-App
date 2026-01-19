@@ -97,6 +97,28 @@ export function registerPropertyTechnicianRoutes(app: any) {
     }
   });
 
+  app.get("/api/technician-properties/counts", async (req: any, res: any) => {
+    try {
+      const results = await db
+        .select({
+          technicianId: propertyTechnicians.technicianId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(propertyTechnicians)
+        .groupBy(propertyTechnicians.technicianId);
+      
+      const counts: Record<string, number> = {};
+      for (const row of results) {
+        counts[row.technicianId] = row.count;
+      }
+      
+      res.json({ counts });
+    } catch (error: any) {
+      console.error("Error fetching property counts:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/technician-properties/:technicianId", async (req: any, res: any) => {
     try {
       const { technicianId } = req.params;
