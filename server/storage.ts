@@ -1907,7 +1907,7 @@ export class DbStorage implements IStorage {
       const techName = entry.technicianName || "Unknown";
       const tech = entry.technicianId ? technicianMap.get(entry.technicianId) : technicianByNameMap.get(techName);
       const commissionPercent = tech?.commissionPercent || 0;
-      const partsCost = (entry as any).partsCost || 0;
+      const partsCost = entry.partsCost || 0;
       
       if (!techStats[techName]) {
         techStats[techName] = {
