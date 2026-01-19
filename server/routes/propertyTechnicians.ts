@@ -310,6 +310,27 @@ export function registerPropertyTechnicianRoutes(app: any) {
     }
   });
 
+  app.patch("/api/route-overrides/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const { coveringTechnicianId, coveringTechnicianName } = req.body;
+      
+      const [updated] = await db
+        .update(routeOverrides)
+        .set({
+          coveringTechnicianId,
+          coveringTechnicianName,
+        })
+        .where(eq(routeOverrides.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating route override:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/route-history", async (req: any, res: any) => {
     try {
       const { startDate, endDate, technicianId, propertyId, reason, page = 1, limit = 50 } = req.query;

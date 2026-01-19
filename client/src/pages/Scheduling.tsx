@@ -26,7 +26,7 @@ import {
   Trash2, Edit, GripVertical, MoreVertical, 
   Map, List, ChevronLeft, ChevronRight,
   Navigation, Timer, ChevronDown, ChevronUp, Filter, EyeOff, ChevronsDownUp, X,
-  Calendar, Users
+  Calendar, Users, RefreshCw
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -581,6 +581,29 @@ export default function Scheduling() {
     },
     onSuccess: () => {
       toast({ title: "Coverage Removed", description: "Temporary coverage has been removed." });
+      queryClient.invalidateQueries({ queryKey: ["route-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["route-history"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const reassignOverrideMutation = useMutation({
+    mutationFn: async ({ overrideId, newTechnicianId, newTechnicianName }: { overrideId: string; newTechnicianId: string; newTechnicianName: string }) => {
+      const response = await fetch(`/api/route-overrides/${overrideId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          coveringTechnicianId: newTechnicianId,
+          coveringTechnicianName: newTechnicianName
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to reassign coverage");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Coverage Reassigned", description: "Coverage has been reassigned to a new technician." });
       queryClient.invalidateQueries({ queryKey: ["route-overrides"] });
       queryClient.invalidateQueries({ queryKey: ["route-history"] });
     },
@@ -1154,11 +1177,6 @@ export default function Scheduling() {
                                               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-300">
                                                 ⏱ Temp Coverage
                                               </span>
-                                              {overrideTypes.includes("single_day") && (
-                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
-                                                  Today Only
-                                                </span>
-                                              )}
                                               {overrideTypes.includes("extended_cover") && (
                                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
                                                   Extended
@@ -1382,8 +1400,38 @@ export default function Scheduling() {
                                                       <div className="flex items-center gap-2 mt-1">
                                                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-200 text-orange-800 border border-orange-300">
                                                           ⏱ Covered by: {stopOverride.coveringTechnicianName}
+                                                          <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                              <button
+                                                                className="ml-1 hover:bg-orange-300 rounded-full p-0.5 transition-colors"
+                                                                title="Reassign coverage"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                              >
+                                                                <RefreshCw className="h-3 w-3" />
+                                                              </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="start" className="max-h-48 overflow-y-auto">
+                                                              {(techniciansData?.technicians || [])
+                                                                .filter(t => t.active && t.id !== stopOverride.coveringTechnicianId)
+                                                                .map(tech => (
+                                                                  <DropdownMenuItem
+                                                                    key={tech.id}
+                                                                    onClick={(e) => {
+                                                                      e.stopPropagation();
+                                                                      reassignOverrideMutation.mutate({
+                                                                        overrideId: stopOverride.id,
+                                                                        newTechnicianId: tech.id,
+                                                                        newTechnicianName: `${tech.firstName} ${tech.lastName}`
+                                                                      });
+                                                                    }}
+                                                                  >
+                                                                    {tech.firstName} {tech.lastName}
+                                                                  </DropdownMenuItem>
+                                                                ))}
+                                                            </DropdownMenuContent>
+                                                          </DropdownMenu>
                                                           <button
-                                                            className="ml-1 hover:bg-orange-300 rounded-full p-0.5 transition-colors"
+                                                            className="ml-0.5 hover:bg-orange-300 rounded-full p-0.5 transition-colors"
                                                             title="Remove coverage"
                                                             onClick={(e) => {
                                                               e.stopPropagation();
