@@ -1605,3 +1605,50 @@ export const insertQcInspectionSchema = createInsertSchema(qcInspections).omit({
 
 export type InsertQcInspection = z.infer<typeof insertQcInspectionSchema>;
 export type QcInspection = typeof qcInspections.$inferSelect;
+
+// Property Technicians - Links properties to their assigned service technicians
+export const propertyTechnicians = pgTable("property_technicians", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull(), // FK to customers (property)
+  technicianId: varchar("technician_id").notNull(), // FK to technicians
+  technicianName: text("technician_name"), // Cached for display
+  assignedAt: timestamp("assigned_at").defaultNow(),
+  assignedById: varchar("assigned_by_id"), // Who made the assignment
+  assignedByName: text("assigned_by_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPropertyTechnicianSchema = createInsertSchema(propertyTechnicians).omit({
+  id: true,
+  assignedAt: true,
+  createdAt: true,
+});
+
+export type InsertPropertyTechnician = z.infer<typeof insertPropertyTechnicianSchema>;
+export type PropertyTechnician = typeof propertyTechnicians.$inferSelect;
+
+// Route Overrides - Temporary route changes (sick days, coverage, splits)
+export const routeOverrides = pgTable("route_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: timestamp("date").notNull(), // The date of the override
+  propertyId: varchar("property_id").notNull(), // FK to customers (property)
+  propertyName: text("property_name"),
+  originalTechnicianId: varchar("original_technician_id"), // FK to technicians
+  originalTechnicianName: text("original_technician_name"),
+  coveringTechnicianId: varchar("covering_technician_id"), // FK to technicians
+  coveringTechnicianName: text("covering_technician_name"),
+  overrideType: text("override_type").notNull(), // "reassign", "split", "cancel"
+  reason: text("reason"), // "Sick", "PTO", "Emergency", "Route Optimization", etc.
+  notes: text("notes"),
+  createdByUserId: varchar("created_by_user_id"),
+  createdByName: text("created_by_name"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertRouteOverrideSchema = createInsertSchema(routeOverrides).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRouteOverride = z.infer<typeof insertRouteOverrideSchema>;
+export type RouteOverride = typeof routeOverrides.$inferSelect;
