@@ -17,61 +17,93 @@ import {
 import type { TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
+const sectionConfig = {
+  chemicals: {
+    title: "Chemicals",
+    icon: Droplets,
+    color: "text-[#0078D4]",
+    bgColor: "bg-[#0078D4]/10",
+    options: [
+      { 
+        id: "chemical-order",
+        entryType: "chemical_order",
+        label: "Chemical Orders", 
+        href: "/tech-ops/chemical-order",
+        icon: Droplets, 
+        color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33",
+      },
+      { 
+        id: "chemicals-dropoff",
+        entryType: "chemicals_dropoff",
+        label: "Chemicals Dropped-Off", 
+        href: "/tech-ops/chemicals-dropoff",
+        icon: Droplets, 
+        color: "bg-[#22D69A]1A text-[#16A679] border-[#22D69A]33",
+      },
+    ]
+  },
+  repairs: {
+    title: "Repairs",
+    icon: Wrench,
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+    options: [
+      { 
+        id: "repairs-needed",
+        entryType: "repairs_needed",
+        label: "Repairs Needed", 
+        href: "/tech-ops/repairs-needed",
+        icon: Wrench, 
+        color: "bg-red-100 text-red-700 border-red-200",
+      },
+      { 
+        id: "service-repairs",
+        entryType: "service_repairs",
+        label: "Service Repairs", 
+        href: "/service-repairs",
+        icon: Wrench, 
+        color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
+      },
+    ]
+  },
+  service: {
+    title: "Service",
+    icon: Wind,
+    color: "text-[#0D9488]",
+    bgColor: "bg-[#17BEBB]/10",
+    options: [
+      { 
+        id: "windy-day-cleanup",
+        entryType: "windy_day_cleanup",
+        label: "Windy Day Clean Up", 
+        href: "/tech-ops/windy-day-cleanup",
+        icon: Wind, 
+        color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
+      },
+      { 
+        id: "report-issue",
+        entryType: "report_issue",
+        label: "Report Issues", 
+        href: "/tech-ops/report-issue",
+        icon: AlertTriangle, 
+        color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33",
+      },
+      { 
+        id: "emergencies",
+        entryType: "emergencies",
+        label: "Emergencies", 
+        href: "/emergencies",
+        icon: AlertTriangle, 
+        color: "bg-red-100 text-red-700 border-red-200",
+      },
+    ]
+  },
+};
+
 const techOpsOptions = [
-  { 
-    id: "repairs-needed",
-    entryType: "repairs_needed",
-    label: "Repairs Needed", 
-    href: "/tech-ops/repairs-needed",
-    icon: Wrench, 
-    color: "bg-red-100 text-red-700 border-red-200",
-    description: "Report equipment or pool repairs needed at a property"
-  },
-  { 
-    id: "service-repairs",
-    entryType: "service_repairs",
-    label: "Service Repairs", 
-    href: "/service-repairs",
-    icon: Wrench, 
-    color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
-    description: "Sub-$500 service technician repair jobs"
-  },
-  { 
-    id: "chemical-order",
-    entryType: "chemical_order",
-    label: "Chemical Orders", 
-    href: "/tech-ops/chemical-order",
-    icon: Droplets, 
-    color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33",
-    description: "Request chemicals to be ordered for a property"
-  },
-  { 
-    id: "chemicals-dropoff",
-    entryType: "chemicals_dropoff",
-    label: "Chemicals Dropped-Off", 
-    href: "/tech-ops/chemicals-dropoff",
-    icon: Droplets, 
-    color: "bg-[#22D69A]1A text-[#16A679] border-[#22D69A]33",
-    description: "Log chemicals delivered or dropped off at a property"
-  },
-  { 
-    id: "windy-day-cleanup",
-    entryType: "windy_day_cleanup",
-    label: "Windy Day Clean Up", 
-    href: "/tech-ops/windy-day-cleanup",
-    icon: Wind, 
-    color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
-    description: "Request extra cleaning after windy conditions"
-  },
-  { 
-    id: "report-issue",
-    entryType: "report_issue",
-    label: "Report Issues", 
-    href: "/tech-ops/report-issue",
-    icon: AlertTriangle, 
-    color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33",
-    description: "Report any issue or concern at a property"
-  },
+  ...sectionConfig.chemicals.options,
+  ...sectionConfig.repairs.options,
+  ...sectionConfig.service.options,
 ];
 
 
@@ -82,6 +114,7 @@ const entryTypeLabels: Record<string, { label: string; color: string; icon: any 
   chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "bg-[#22D69A]1A text-[#16A679]", icon: Droplets },
   windy_day_cleanup: { label: "Windy Day Clean Up", color: "bg-[#17BEBB]1A text-[#0D9488]", icon: Wind },
   report_issue: { label: "Report Issues", color: "bg-[#FF8000]1A text-[#D35400]", icon: AlertTriangle },
+  emergencies: { label: "Emergencies", color: "bg-red-100 text-red-700", icon: AlertTriangle },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -213,39 +246,54 @@ export default function TechOpsLanding() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {techOpsOptions.map((option) => {
-            const Icon = option.icon;
-            const count = getCountForType(option.entryType);
-            const unreadCount = getUnreadCount(option.entryType);
+        <div className="space-y-6">
+          {Object.entries(sectionConfig).map(([key, section]) => {
+            const SectionIcon = section.icon;
             return (
-              <Link key={option.href} href={option.href} data-testid={`link-techops-${option.id}`}>
-                <Card className="hover:shadow-md transition-all cursor-pointer group h-full relative" data-testid={`card-techops-${option.id}`}>
-                  {unreadCount > 0 && (
-                    <div className="absolute -top-2 -right-2 z-10">
-                      <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-red-500 text-white animate-pulse min-w-[20px] text-center" data-testid={`badge-new-${option.id}`}>
-                        {unreadCount} NEW
-                      </span>
-                    </div>
-                  )}
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
-                        {option.label}
-                      </span>
-                      {count > 0 && (
-                        <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#FF8000] text-white min-w-[24px] text-center">
-                          {count}
-                        </span>
-                      )}
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <div key={key} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${section.bgColor}`}>
+                    <SectionIcon className={`w-4 h-4 ${section.color}`} />
+                  </div>
+                  <h2 className={`text-sm font-semibold ${section.color}`}>{section.title}</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {section.options.map((option) => {
+                    const Icon = option.icon;
+                    const count = getCountForType(option.entryType);
+                    const unreadCount = getUnreadCount(option.entryType);
+                    return (
+                      <Link key={option.href} href={option.href} data-testid={`link-techops-${option.id}`}>
+                        <Card className="hover:shadow-md transition-all cursor-pointer group h-full relative" data-testid={`card-techops-${option.id}`}>
+                          {unreadCount > 0 && (
+                            <div className="absolute -top-2 -right-2 z-10">
+                              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-red-500 text-white animate-pulse min-w-[20px] text-center" data-testid={`badge-new-${option.id}`}>
+                                {unreadCount} NEW
+                              </span>
+                            </div>
+                          )}
+                          <CardContent className="pt-4 pb-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
+                                {option.label}
+                              </span>
+                              {count > 0 && (
+                                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#FF8000] text-white min-w-[24px] text-center">
+                                  {count}
+                                </span>
+                              )}
+                              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
