@@ -46,6 +46,8 @@ import {
   type Emergency, type InsertEmergency,
   type EstimateHistoryLog, type InsertEstimateHistoryLog,
   type SupervisorActivity, type InsertSupervisorActivity,
+  type ChemicalVendor, type InsertChemicalVendor,
+  type InvoiceTemplate, type InsertInvoiceTemplate,
   settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -54,7 +56,8 @@ import {
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
-  customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity
+  customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity,
+  chemicalVendors, invoiceTemplates
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
@@ -401,6 +404,21 @@ export interface IStorage {
   assignTagToCustomer(customerId: string, tagId: string): Promise<CustomerTagAssignment>;
   removeTagFromCustomer(customerId: string, tagId: string): Promise<void>;
   seedPrebuiltTags(): Promise<{ tagsCreated: number }>;
+
+  // Chemical Vendors
+  getChemicalVendors(): Promise<ChemicalVendor[]>;
+  getChemicalVendor(id: string): Promise<ChemicalVendor | undefined>;
+  createChemicalVendor(vendor: InsertChemicalVendor): Promise<ChemicalVendor>;
+  updateChemicalVendor(id: string, updates: Partial<InsertChemicalVendor>): Promise<ChemicalVendor | undefined>;
+  deleteChemicalVendor(id: string): Promise<void>;
+
+  // Invoice Templates
+  getInvoiceTemplates(): Promise<InvoiceTemplate[]>;
+  getInvoiceTemplate(id: string): Promise<InvoiceTemplate | undefined>;
+  createInvoiceTemplate(template: InsertInvoiceTemplate): Promise<InvoiceTemplate>;
+  updateInvoiceTemplate(id: string, updates: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined>;
+  deleteInvoiceTemplate(id: string): Promise<void>;
+  getDefaultInvoiceTemplate(): Promise<InvoiceTemplate | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -2803,6 +2821,73 @@ export class DbStorage implements IStorage {
     return db.select().from(supervisorActivity)
       .where(and(...conditions))
       .orderBy(desc(supervisorActivity.createdAt));
+  }
+
+  // Chemical Vendors
+  async getChemicalVendors(): Promise<ChemicalVendor[]> {
+    return db.select().from(chemicalVendors).orderBy(chemicalVendors.vendorName);
+  }
+
+  async getChemicalVendor(id: string): Promise<ChemicalVendor | undefined> {
+    const result = await db.select().from(chemicalVendors).where(eq(chemicalVendors.id, id));
+    return result[0];
+  }
+
+  async createChemicalVendor(vendor: InsertChemicalVendor): Promise<ChemicalVendor> {
+    const result = await db.insert(chemicalVendors).values(vendor as any).returning();
+    return result[0];
+  }
+
+  async updateChemicalVendor(id: string, updates: Partial<InsertChemicalVendor>): Promise<ChemicalVendor | undefined> {
+    const result = await db.update(chemicalVendors)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(chemicalVendors.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteChemicalVendor(id: string): Promise<void> {
+    await db.delete(chemicalVendors).where(eq(chemicalVendors.id, id));
+  }
+
+  // Invoice Templates
+  async getInvoiceTemplates(): Promise<InvoiceTemplate[]> {
+    return db.select().from(invoiceTemplates).orderBy(invoiceTemplates.templateName);
+  }
+
+  async getInvoiceTemplate(id: string): Promise<InvoiceTemplate | undefined> {
+    const result = await db.select().from(invoiceTemplates).where(eq(invoiceTemplates.id, id));
+    return result[0];
+  }
+
+  async getDefaultInvoiceTemplate(): Promise<InvoiceTemplate | undefined> {
+    const result = await db.select().from(invoiceTemplates).where(eq(invoiceTemplates.isDefault, true));
+    return result[0];
+  }
+
+  async createInvoiceTemplate(template: InsertInvoiceTemplate): Promise<InvoiceTemplate> {
+    // If this template is set as default, unset any existing defaults
+    if (template.isDefault) {
+      await db.update(invoiceTemplates).set({ isDefault: false }).where(eq(invoiceTemplates.isDefault, true));
+    }
+    const result = await db.insert(invoiceTemplates).values(template as any).returning();
+    return result[0];
+  }
+
+  async updateInvoiceTemplate(id: string, updates: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined> {
+    // If setting this as default, unset other defaults first
+    if (updates.isDefault) {
+      await db.update(invoiceTemplates).set({ isDefault: false }).where(eq(invoiceTemplates.isDefault, true));
+    }
+    const result = await db.update(invoiceTemplates)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(invoiceTemplates.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteInvoiceTemplate(id: string): Promise<void> {
+    await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id));
   }
 }
 
