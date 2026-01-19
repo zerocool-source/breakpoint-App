@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -11,101 +10,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Wrench, Droplets, AlertTriangle, ChevronRight, CalendarIcon,
-  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive, Users
+  Wrench, Droplets, AlertTriangle, CalendarIcon,
+  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive
 } from "lucide-react";
 import type { TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
-
-const sectionConfig = {
-  chemicals: {
-    title: "Chemicals",
-    icon: Droplets,
-    color: "text-[#0078D4]",
-    bgColor: "bg-[#0078D4]/10",
-    options: [
-      { 
-        id: "chemical-order",
-        entryType: "chemical_order",
-        label: "Chemical Orders", 
-        href: "/tech-ops/chemical-order",
-        icon: Droplets, 
-        color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33",
-      },
-      { 
-        id: "chemicals-dropoff",
-        entryType: "chemicals_dropoff",
-        label: "Chemicals Dropped-Off", 
-        href: "/tech-ops/chemicals-dropoff",
-        icon: Droplets, 
-        color: "bg-[#22D69A]1A text-[#16A679] border-[#22D69A]33",
-      },
-    ]
-  },
-  repairs: {
-    title: "Repairs",
-    icon: Wrench,
-    color: "text-red-600",
-    bgColor: "bg-red-100",
-    options: [
-      { 
-        id: "repairs-needed",
-        entryType: "repairs_needed",
-        label: "Repairs Needed", 
-        href: "/tech-ops/repairs-needed",
-        icon: Wrench, 
-        color: "bg-red-100 text-red-700 border-red-200",
-      },
-      { 
-        id: "service-repairs",
-        entryType: "service_repairs",
-        label: "Service Repairs", 
-        href: "/service-repairs",
-        icon: Wrench, 
-        color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
-      },
-    ]
-  },
-  service: {
-    title: "Service",
-    icon: Wind,
-    color: "text-[#0D9488]",
-    bgColor: "bg-[#17BEBB]/10",
-    options: [
-      { 
-        id: "windy-day-cleanup",
-        entryType: "windy_day_cleanup",
-        label: "Windy Day Clean Up", 
-        href: "/tech-ops/windy-day-cleanup",
-        icon: Wind, 
-        color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33",
-      },
-      { 
-        id: "report-issue",
-        entryType: "report_issue",
-        label: "Report Issues", 
-        href: "/tech-ops/report-issue",
-        icon: AlertTriangle, 
-        color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33",
-      },
-      { 
-        id: "emergencies",
-        entryType: "emergencies",
-        label: "Emergencies", 
-        href: "/emergencies",
-        icon: AlertTriangle, 
-        color: "bg-red-100 text-red-700 border-red-200",
-      },
-    ]
-  },
-};
-
-const techOpsOptions = [
-  ...sectionConfig.chemicals.options,
-  ...sectionConfig.repairs.options,
-  ...sectionConfig.service.options,
-];
-
 
 const entryTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
   repairs_needed: { label: "Repairs Needed", color: "bg-red-100 text-red-700", icon: Wrench },
@@ -167,47 +76,6 @@ export default function TechOpsLanding() {
     },
   });
 
-  const { data: serviceRepairsCount = 0 } = useQuery<number>({
-    queryKey: ["service-repairs-count-landing"],
-    queryFn: async () => {
-      const response = await fetch("/api/service-repairs");
-      if (!response.ok) return 0;
-      const data = await response.json();
-      return Array.isArray(data) ? data.filter((j: any) => j.status === "pending" || j.status === "in_progress").length : 0;
-    },
-  });
-
-  const { data: emergenciesCount = 0 } = useQuery<number>({
-    queryKey: ["emergencies-count-landing"],
-    queryFn: async () => {
-      const response = await fetch("/api/emergencies/summary");
-      if (!response.ok) return 0;
-      const data = await response.json();
-      return (data.byStatus?.pending_review || 0) + (data.byStatus?.in_progress || 0);
-    },
-  });
-
-  // Fetch unread counts for new submission badges
-  const { data: unreadCounts = {} } = useQuery<Record<string, number>>({
-    queryKey: ["tech-ops-unread-counts"],
-    queryFn: async () => {
-      const response = await fetch("/api/tech-ops/unread-counts");
-      if (!response.ok) return {};
-      return response.json();
-    },
-    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
-  });
-
-  const getCountForType = (entryType: string): number => {
-    if (entryType === "service_repairs") return serviceRepairsCount;
-    if (entryType === "emergencies") return emergenciesCount;
-    return summary?.byType?.[entryType] || 0;
-  };
-
-  const getUnreadCount = (entryType: string): number => {
-    return unreadCounts[entryType] || 0;
-  };
-
   const uniqueProperties = useMemo(() => {
     const props = new Map<string, string>();
     entries.forEach(e => {
@@ -244,58 +112,6 @@ export default function TechOpsLanding() {
               <p className="text-slate-500 text-sm">Field technician requests and submissions</p>
             </div>
           </div>
-        </div>
-
-        <div className="space-y-6">
-          {Object.entries(sectionConfig).map(([key, section]) => {
-            const SectionIcon = section.icon;
-            return (
-              <div key={key} className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${section.bgColor}`}>
-                    <SectionIcon className={`w-4 h-4 ${section.color}`} />
-                  </div>
-                  <h2 className={`text-sm font-semibold ${section.color}`}>{section.title}</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {section.options.map((option) => {
-                    const Icon = option.icon;
-                    const count = getCountForType(option.entryType);
-                    const unreadCount = getUnreadCount(option.entryType);
-                    return (
-                      <Link key={option.href} href={option.href} data-testid={`link-techops-${option.id}`}>
-                        <Card className="hover:shadow-md transition-all cursor-pointer group h-full relative" data-testid={`card-techops-${option.id}`}>
-                          {unreadCount > 0 && (
-                            <div className="absolute -top-2 -right-2 z-10">
-                              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-red-500 text-white animate-pulse min-w-[20px] text-center" data-testid={`badge-new-${option.id}`}>
-                                {unreadCount} NEW
-                              </span>
-                            </div>
-                          )}
-                          <CardContent className="pt-4 pb-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
-                                {option.label}
-                              </span>
-                              {count > 0 && (
-                                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#FF8000] text-white min-w-[24px] text-center">
-                                  {count}
-                                </span>
-                              )}
-                              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
         </div>
 
         <Card>
