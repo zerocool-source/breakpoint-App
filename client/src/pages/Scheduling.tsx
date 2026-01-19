@@ -286,12 +286,14 @@ export default function Scheduling() {
   });
 
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
-  const [overrideType, setOverrideType] = useState<"reassign" | "cover" | "extended" | "split">("reassign");
+  const [overrideType, setOverrideType] = useState<"reassign" | "extended" | "split">("reassign");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideNotes, setOverrideNotes] = useState("");
   const [overrideTechnicianId, setOverrideTechnicianId] = useState("");
+  const [overrideSecondTechnicianId, setOverrideSecondTechnicianId] = useState("");
   const [overrideStartDate, setOverrideStartDate] = useState<string>("");
   const [overrideEndDate, setOverrideEndDate] = useState<string>("");
+  const [splitStopAssignments, setSplitStopAssignments] = useState<Record<string, "tech1" | "tech2">>({});
 
   const { data: allRoutesData, isLoading } = useQuery({
     queryKey: ["all-routes"],
@@ -496,7 +498,7 @@ export default function Scheduling() {
     },
     onSuccess: (data) => {
       const typeLabel = overrideType === "extended" ? "extended coverage" : 
-                        overrideType === "split" ? "split route" : "override";
+                        overrideType === "split" ? "split route" : "reassignment";
       toast({ 
         title: "Route Override Created", 
         description: `Created ${data.overrides?.length || 0} ${typeLabel}${data.overrides?.length !== 1 ? 's' : ''}.` 
@@ -505,9 +507,12 @@ export default function Scheduling() {
       setOverrideReason("");
       setOverrideNotes("");
       setOverrideTechnicianId("");
+      setOverrideSecondTechnicianId("");
       setOverrideStartDate("");
       setOverrideEndDate("");
+      setSplitStopAssignments({});
       queryClient.invalidateQueries({ queryKey: ["all-routes"] });
+      queryClient.invalidateQueries({ queryKey: ["route-history"] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -515,9 +520,15 @@ export default function Scheduling() {
   });
 
   const handleCreateOverride = () => {
-    if (!selectedRoute || !overrideTechnicianId) return;
+    if (!selectedRoute) return;
+    if (overrideType === "split") {
+      if (!overrideTechnicianId || !overrideSecondTechnicianId) return;
+    } else {
+      if (!overrideTechnicianId) return;
+    }
     
     const coveringTech = activeTechnicians.find(t => t.id === overrideTechnicianId);
+    const secondTech = activeTechnicians.find(t => t.id === overrideSecondTechnicianId);
     const today = new Date();
     today.setHours(12, 0, 0, 0);
 
@@ -530,32 +541,54 @@ export default function Scheduling() {
     const getOverrideDbType = () => {
       if (overrideType === "reassign" || overrideType === "extended") return "reassign";
       if (overrideType === "split") return "split";
-      return "split"; 
+      return "reassign"; 
     };
     
-    const overrides = selectedRoute.stops.map(stop => ({
-      date: overrideType === "extended" && overrideStartDate 
-        ? new Date(overrideStartDate + "T12:00:00").toISOString() 
-        : today.toISOString(),
-      startDate: overrideType === "extended" && overrideStartDate 
-        ? new Date(overrideStartDate + "T00:00:00").toISOString() 
-        : null,
-      endDate: overrideType === "extended" && overrideEndDate 
-        ? new Date(overrideEndDate + "T23:59:59").toISOString() 
-        : null,
-      coverageType: getCoverageType(),
-      propertyId: stop.propertyId,
-      propertyName: stop.propertyName,
-      originalTechnicianId: selectedRoute.technicianId,
-      originalTechnicianName: selectedRoute.technicianName,
-      coveringTechnicianId: overrideTechnicianId,
-      coveringTechnicianName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : "",
-      overrideType: getOverrideDbType(),
-      reason: overrideReason,
-      notes: overrideNotes,
-    }));
-    
-    createOverrideMutation.mutate(overrides);
+    if (overrideType === "split") {
+      const overrides = selectedRoute.stops.map(stop => {
+        const assignment = splitStopAssignments[stop.id] || "tech1";
+        const assignedTech = assignment === "tech1" ? coveringTech : secondTech;
+        return {
+          date: today.toISOString(),
+          startDate: null,
+          endDate: null,
+          coverageType: getCoverageType(),
+          propertyId: stop.propertyId,
+          propertyName: stop.propertyName,
+          originalTechnicianId: selectedRoute.technicianId,
+          originalTechnicianName: selectedRoute.technicianName,
+          coveringTechnicianId: assignedTech?.id || "",
+          coveringTechnicianName: assignedTech ? `${assignedTech.firstName} ${assignedTech.lastName}` : "",
+          overrideType: getOverrideDbType(),
+          reason: overrideReason,
+          notes: `${overrideNotes}${overrideNotes ? " | " : ""}Assigned to ${assignment === "tech1" ? "Tech 1" : "Tech 2"}`,
+        };
+      });
+      createOverrideMutation.mutate(overrides);
+    } else {
+      const overrides = selectedRoute.stops.map(stop => ({
+        date: overrideType === "extended" && overrideStartDate 
+          ? new Date(overrideStartDate + "T12:00:00").toISOString() 
+          : today.toISOString(),
+        startDate: overrideType === "extended" && overrideStartDate 
+          ? new Date(overrideStartDate + "T00:00:00").toISOString() 
+          : null,
+        endDate: overrideType === "extended" && overrideEndDate 
+          ? new Date(overrideEndDate + "T23:59:59").toISOString() 
+          : null,
+        coverageType: getCoverageType(),
+        propertyId: stop.propertyId,
+        propertyName: stop.propertyName,
+        originalTechnicianId: selectedRoute.technicianId,
+        originalTechnicianName: selectedRoute.technicianName,
+        coveringTechnicianId: overrideTechnicianId,
+        coveringTechnicianName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : "",
+        overrideType: getOverrideDbType(),
+        reason: overrideReason,
+        notes: overrideNotes,
+      }));
+      createOverrideMutation.mutate(overrides);
+    }
   };
 
   const autoGenerateStopsMutation = useMutation({
@@ -1088,17 +1121,6 @@ export default function Scheduling() {
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   setSelectedRoute(route);
-                                                  setOverrideType("cover");
-                                                  setShowOverrideDialog(true);
-                                                }}
-                                              >
-                                                <Clock className="h-4 w-4 mr-2" />
-                                                Temporary Cover
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setSelectedRoute(route);
                                                   setOverrideType("extended");
                                                   const tomorrow = new Date();
                                                   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1117,6 +1139,11 @@ export default function Scheduling() {
                                                   e.stopPropagation();
                                                   setSelectedRoute(route);
                                                   setOverrideType("split");
+                                                  const initialAssignments: Record<string, "tech1" | "tech2"> = {};
+                                                  route.stops.forEach((stop, idx) => {
+                                                    initialAssignments[stop.id] = idx < Math.ceil(route.stops.length / 2) ? "tech1" : "tech2";
+                                                  });
+                                                  setSplitStopAssignments(initialAssignments);
                                                   setShowOverrideDialog(true);
                                                 }}
                                               >
@@ -1666,11 +1693,10 @@ export default function Scheduling() {
 
           {/* Route Override Dialog */}
           <Dialog open={showOverrideDialog} onOpenChange={setShowOverrideDialog}>
-            <DialogContent className="max-w-md">
+            <DialogContent className={overrideType === "split" ? "max-w-2xl" : "max-w-md"}>
               <DialogHeader>
                 <DialogTitle>
                   {overrideType === "reassign" && "Reassign Route Today"}
-                  {overrideType === "cover" && "Temporary Cover"}
                   {overrideType === "extended" && "Extended Cover"}
                   {overrideType === "split" && "Split Route"}
                 </DialogTitle>
@@ -1686,16 +1712,22 @@ export default function Scheduling() {
                   <p className="text-sm text-slate-600">
                     <span className="font-medium">Stops:</span> {selectedRoute?.stops?.length || 0}
                   </p>
+                  {overrideType === "reassign" && (
+                    <p className="text-xs text-green-600 mt-2">
+                      <Navigation className="h-3 w-3 inline mr-1" />
+                      The covering technician takes over all stops for today only. Tomorrow, the route automatically reverts.
+                    </p>
+                  )}
                   {overrideType === "extended" && (
                     <p className="text-xs text-blue-600 mt-2">
                       <Calendar className="h-3 w-3 inline mr-1" />
-                      All stops for this route will be covered during the selected date range.
+                      All stops for this route will be covered during the selected date range. After the end date, the route automatically reverts.
                     </p>
                   )}
                   {overrideType === "split" && (
                     <p className="text-xs text-amber-600 mt-2">
                       <Users className="h-3 w-3 inline mr-1" />
-                      Route stops will be divided between the covering technician and the original.
+                      Route stops will be divided between two technicians for today. Assign stops using the checkboxes below.
                     </p>
                   )}
                 </div>
@@ -1722,21 +1754,110 @@ export default function Scheduling() {
                   </div>
                 )}
                 
-                <div className="space-y-2">
-                  <Label>Covering Technician *</Label>
-                  <Select value={overrideTechnicianId} onValueChange={setOverrideTechnicianId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select technician..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeTechnicians.filter(t => t.id !== selectedRoute?.technicianId).map(tech => (
-                        <SelectItem key={tech.id} value={tech.id}>
-                          {tech.firstName} {tech.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {overrideType === "split" ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>First Technician *</Label>
+                      <Select value={overrideTechnicianId} onValueChange={setOverrideTechnicianId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select first tech..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeTechnicians.filter(t => t.id !== overrideSecondTechnicianId).map(tech => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.firstName} {tech.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Second Technician *</Label>
+                      <Select value={overrideSecondTechnicianId} onValueChange={setOverrideSecondTechnicianId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select second tech..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeTechnicians.filter(t => t.id !== overrideTechnicianId).map(tech => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.firstName} {tech.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Covering Technician *</Label>
+                    <Select value={overrideTechnicianId} onValueChange={setOverrideTechnicianId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select technician..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeTechnicians.filter(t => t.id !== selectedRoute?.technicianId).map(tech => (
+                          <SelectItem key={tech.id} value={tech.id}>
+                            {tech.firstName} {tech.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {overrideType === "split" && overrideTechnicianId && overrideSecondTechnicianId && (
+                  <div className="space-y-2">
+                    <Label>Assign Stops to Technicians</Label>
+                    <div className="border rounded-lg max-h-[200px] overflow-y-auto">
+                      {selectedRoute?.stops.map((stop, idx) => {
+                        const assignment = splitStopAssignments[stop.id] || "tech1";
+                        const tech1 = activeTechnicians.find(t => t.id === overrideTechnicianId);
+                        const tech2 = activeTechnicians.find(t => t.id === overrideSecondTechnicianId);
+                        return (
+                          <div 
+                            key={stop.id} 
+                            className={`flex items-center justify-between p-2 border-b last:border-b-0 ${
+                              assignment === "tech1" ? "bg-blue-50" : "bg-amber-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-slate-500 w-5">{idx + 1}</span>
+                              <span className="text-sm">{stop.propertyName}</span>
+                            </div>
+                            <Select 
+                              value={assignment} 
+                              onValueChange={(val: "tech1" | "tech2") => 
+                                setSplitStopAssignments(prev => ({ ...prev, [stop.id]: val }))
+                              }
+                            >
+                              <SelectTrigger className="w-[150px] h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="tech1">
+                                  {tech1 ? `${tech1.firstName} ${tech1.lastName}` : "Tech 1"}
+                                </SelectItem>
+                                <SelectItem value="tech2">
+                                  {tech2 ? `${tech2.firstName} ${tech2.lastName}` : "Tech 2"}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-4 text-xs text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-blue-200 rounded" />
+                        {Object.values(splitStopAssignments).filter(v => v === "tech1").length} stops to Tech 1
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-amber-200 rounded" />
+                        {Object.values(splitStopAssignments).filter(v => v === "tech2").length} stops to Tech 2
+                      </span>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label>Reason</Label>
@@ -1747,8 +1868,13 @@ export default function Scheduling() {
                     <SelectContent>
                       <SelectItem value="Sick">Sick</SelectItem>
                       <SelectItem value="PTO">PTO</SelectItem>
+                      {overrideType === "extended" && (
+                        <>
+                          <SelectItem value="Vacation">Vacation</SelectItem>
+                          <SelectItem value="Medical Leave">Medical Leave</SelectItem>
+                        </>
+                      )}
                       <SelectItem value="Emergency">Emergency</SelectItem>
-                      <SelectItem value="Route Optimization">Route Optimization</SelectItem>
                       <SelectItem value="Training">Training</SelectItem>
                       <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
@@ -1770,7 +1896,12 @@ export default function Scheduling() {
                 </Button>
                 <Button
                   onClick={handleCreateOverride}
-                  disabled={!overrideTechnicianId || createOverrideMutation.isPending || (overrideType === "extended" && (!overrideStartDate || !overrideEndDate))}
+                  disabled={
+                    createOverrideMutation.isPending || 
+                    (overrideType === "split" && (!overrideTechnicianId || !overrideSecondTechnicianId)) ||
+                    (overrideType !== "split" && !overrideTechnicianId) ||
+                    (overrideType === "extended" && (!overrideStartDate || !overrideEndDate))
+                  }
                   className="bg-[#FF8000] hover:bg-[#E67300] text-white"
                 >
                   {createOverrideMutation.isPending ? "Saving..." : "Confirm Override"}
