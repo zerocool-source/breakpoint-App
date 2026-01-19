@@ -1479,11 +1479,11 @@ export default function Scheduling() {
                                                           <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
                                                               <button
-                                                                className="ml-1 hover:bg-orange-300 rounded-full p-0.5 transition-colors"
+                                                                className="ml-1 w-5 h-5 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center transition-colors"
                                                                 title="Reassign coverage"
                                                                 onClick={(e) => e.stopPropagation()}
                                                               >
-                                                                <RefreshCw className="h-3 w-3" />
+                                                                <RefreshCw className="h-3 w-3 text-white" />
                                                               </button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="start" className="max-h-48 overflow-y-auto">
