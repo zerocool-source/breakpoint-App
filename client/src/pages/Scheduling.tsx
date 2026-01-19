@@ -571,6 +571,24 @@ export default function Scheduling() {
     },
   });
 
+  const removeOverrideMutation = useMutation({
+    mutationFn: async (overrideId: string) => {
+      const response = await fetch(`/api/route-overrides/${overrideId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to remove coverage");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Coverage Removed", description: "Temporary coverage has been removed." });
+      queryClient.invalidateQueries({ queryKey: ["route-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["route-history"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleCreateOverride = () => {
     if (!selectedRoute) return;
     if (overrideType === "split") {
@@ -1329,45 +1347,75 @@ export default function Scheduling() {
                                               No stops assigned to this route
                                             </div>
                                           ) : (
-                                            scheduledStops.map((stop: any, idx: number) => (
-                                              <div 
-                                                key={stop.id}
-                                                className="p-3 bg-white hover:bg-slate-50 flex items-start gap-3"
-                                                data-testid={`stop-${stop.id}`}
-                                              >
+                                            scheduledStops.map((stop: any, idx: number) => {
+                                              const stopOverride = routeOverrides.find(
+                                                (o: any) => o.propertyId === stop.propertyId
+                                              );
+                                              return (
                                                 <div 
-                                                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                                  style={{ backgroundColor: route.color }}
+                                                  key={stop.id}
+                                                  className={`p-3 hover:bg-slate-50 flex items-start gap-3 ${
+                                                    stopOverride ? "bg-orange-50" : "bg-white"
+                                                  }`}
+                                                  data-testid={`stop-${stop.id}`}
                                                 >
-                                                  {idx + 1}
+                                                  <div 
+                                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                                                    style={{ backgroundColor: route.color }}
+                                                  >
+                                                    {idx + 1}
+                                                  </div>
+                                                  <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-[#1F6FEB] text-sm hover:underline cursor-pointer">
+                                                      {stop.customerName || stop.propertyName}
+                                                    </p>
+                                                    {stop.poolName && stop.poolName !== stop.propertyName && (
+                                                      <p className="text-xs text-slate-600 mt-0.5">{stop.poolName}</p>
+                                                    )}
+                                                    <p className="text-xs text-[#6C7A96] mt-0.5">
+                                                      {stop.address}
+                                                      {stop.city && `, ${stop.city}`}
+                                                      {stop.state && `, ${stop.state}`}
+                                                      {stop.zip && ` ${stop.zip}`}
+                                                    </p>
+                                                    {stopOverride && (
+                                                      <div className="flex items-center gap-2 mt-1">
+                                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-200 text-orange-800 border border-orange-300">
+                                                          ⏱ Covered by: {stopOverride.coveringTechnicianName}
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  <div className="flex items-center gap-1">
+                                                    {stopOverride && (
+                                                      <button
+                                                        className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
+                                                        title="Remove coverage"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          if (confirm("Remove temporary coverage for this stop?")) {
+                                                            removeOverrideMutation.mutate(stopOverride.id);
+                                                          }
+                                                        }}
+                                                      >
+                                                        <X className="h-3.5 w-3.5" />
+                                                      </button>
+                                                    )}
+                                                    <button
+                                                      className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm("Remove this stop from route?")) {
+                                                          unassignStopMutation.mutate(stop.id);
+                                                        }
+                                                      }}
+                                                    >
+                                                      <Trash2 className="h-3.5 w-3.5" />
+                                                    </button>
+                                                  </div>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                  <p className="font-medium text-[#1F6FEB] text-sm hover:underline cursor-pointer">
-                                                    {stop.customerName || stop.propertyName}
-                                                  </p>
-                                                  {stop.poolName && stop.poolName !== stop.propertyName && (
-                                                    <p className="text-xs text-slate-600 mt-0.5">{stop.poolName}</p>
-                                                  )}
-                                                  <p className="text-xs text-[#6C7A96] mt-0.5">
-                                                    {stop.address}
-                                                    {stop.city && `, ${stop.city}`}
-                                                    {stop.state && `, ${stop.state}`}
-                                                    {stop.zip && ` ${stop.zip}`}
-                                                  </p>
-                                                </div>
-                                                <button
-                                                  className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (confirm("Remove this stop from route?")) {
-                                                      unassignStopMutation.mutate(stop.id);
-                                                    }
-                                                  }}
-                                                >
-                                                  <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                              </div>
-                                            ))
+                                              );
+                                            })
                                           )}
                                         </div>
                                         <div className="p-2 border-t border-slate-100 bg-white">
