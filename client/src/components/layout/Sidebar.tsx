@@ -49,12 +49,16 @@ function NavItemComponent({
   item, 
   isExpanded, 
   onToggle, 
-  location 
+  location,
+  expandedSubItems,
+  onToggleSubExpand
 }: { 
   item: NavItem; 
   isExpanded: boolean; 
   onToggle: () => void;
   location: string;
+  expandedSubItems: Set<string>;
+  onToggleSubExpand: (key: string) => void;
 }) {
   const hasChildren = item.children && item.children.length > 0;
   const isActive = item.href ? location === item.href : false;
@@ -130,41 +134,51 @@ function NavItemComponent({
               if (child.section) lastSection = child.section;
               
               if (hasSubChildren) {
+                const isSubExpanded = expandedSubItems.has(child.label);
                 return (
                   <div key={child.label}>
-                    <div className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
-                      hasActiveSubChild ? "text-white" : "text-white/70"
-                    )}>
-                      <span>{child.label}</span>
-                    </div>
-                    <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-white/20">
-                      {child.children!.map((subChild) => {
-                        const isSubActive = location === subChild.href;
-                        return (
-                          <Link
-                            key={subChild.href}
-                            href={subChild.href}
-                            className={cn(
-                              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
-                              isSubActive 
-                                ? "bg-white text-[#0078D4] shadow-sm" 
-                                : "text-white/70 hover:bg-white/10 hover:text-white"
-                            )}
-                          >
-                            <span className="flex-1">{subChild.label}</span>
-                            {subChild.badge !== undefined && subChild.badge > 0 && (
-                              <span className={cn(
-                                "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
-                                isSubActive ? "bg-[#FF8000] text-white" : "bg-[#FF8000] text-white"
-                              )}>
-                                {subChild.badge}
-                              </span>
-                            )}
-                          </Link>
-                        );
-                      })}
-                    </div>
+                    <button
+                      onClick={() => onToggleSubExpand(child.label)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium w-full text-left transition-colors",
+                        hasActiveSubChild ? "text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      <ChevronRight className={cn(
+                        "w-3 h-3 transition-transform duration-200",
+                        isSubExpanded && "rotate-90"
+                      )} />
+                      <span className="flex-1">{child.label}</span>
+                    </button>
+                    {isSubExpanded && (
+                      <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-white/20">
+                        {child.children!.map((subChild) => {
+                          const isSubActive = location === subChild.href;
+                          return (
+                            <Link
+                              key={subChild.href}
+                              href={subChild.href}
+                              className={cn(
+                                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
+                                isSubActive 
+                                  ? "bg-white text-[#0078D4] shadow-sm" 
+                                  : "text-white/70 hover:bg-white/10 hover:text-white"
+                              )}
+                            >
+                              <span className="flex-1">{subChild.label}</span>
+                              {subChild.badge !== undefined && subChild.badge > 0 && (
+                                <span className={cn(
+                                  "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
+                                  isSubActive ? "bg-[#FF8000] text-white" : "bg-[#FF8000] text-white"
+                                )}>
+                                  {subChild.badge}
+                                </span>
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -209,9 +223,22 @@ function NavItemComponent({
 export function Sidebar() {
   const [location] = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats", "operationsHub"]));
+  const [expandedSubItems, setExpandedSubItems] = useState<Set<string>>(new Set(["Repairs", "Chemicals", "Service"]));
 
   const toggleExpand = (key: string) => {
     setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const toggleSubExpand = (key: string) => {
+    setExpandedSubItems(prev => {
       const next = new Set(prev);
       if (next.has(key)) {
         next.delete(key);
@@ -243,9 +270,33 @@ export function Sidebar() {
       icon: Hammer, 
       label: "Operations Hub", 
       children: [
-        { label: "Supervisor Management", href: "/supervisor-management", section: "Team Management" },
+        { label: "Supervisor Management", href: "/supervisor-management", section: "Supervisor Management" },
         { label: "Tech Ops", href: "/tech-ops", section: "Tech Ops" },
-        { label: "Emergencies", href: "/emergencies" },
+        { 
+          label: "Repairs", 
+          section: "Tech Ops",
+          children: [
+            { label: "Repairs Needed", href: "/tech-ops/repairs-needed" },
+            { label: "Service Repairs", href: "/service-repairs" },
+          ]
+        },
+        { 
+          label: "Chemicals", 
+          section: "Tech Ops",
+          children: [
+            { label: "Chemical Orders", href: "/tech-ops/chemical-order" },
+            { label: "Chemicals Dropped-Off", href: "/tech-ops/chemicals-dropoff" },
+          ]
+        },
+        { 
+          label: "Service", 
+          section: "Tech Ops",
+          children: [
+            { label: "Windy Day Clean Up", href: "/tech-ops/windy-day-cleanup" },
+            { label: "Report Issues", href: "/tech-ops/report-issue" },
+            { label: "Emergencies", href: "/emergencies" },
+          ]
+        },
       ]
     },
     { 
@@ -371,6 +422,8 @@ export function Sidebar() {
             isExpanded={expandedItems.has(item.key)}
             onToggle={() => toggleExpand(item.key)}
             location={location}
+            expandedSubItems={expandedSubItems}
+            onToggleSubExpand={toggleSubExpand}
           />
         ))}
       </nav>
