@@ -337,12 +337,7 @@ export function Sidebar() {
       key: "reports",
       icon: FileBarChart, 
       label: "Reports", 
-      children: [
-        { label: "Repairs", href: "/report-repairs" },
-        { label: "Chemicals", href: "/report-chemicals" },
-        { label: "Commissions", href: "/commissions" },
-        { label: "Equipment Tracker", href: "/equipment" },
-      ]
+      href: "/reports"
     },
     { 
       key: "estimates",
