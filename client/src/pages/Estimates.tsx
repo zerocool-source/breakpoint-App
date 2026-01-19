@@ -933,6 +933,45 @@ export default function Estimates() {
     }
   };
 
+  const handleVerbalDecline = async () => {
+    if (!selectedEstimate || !verbalApproverName.trim() || !officeStaffName.trim()) return;
+    
+    try {
+      const response = await fetch(`/api/estimates/${selectedEstimate.id}/reject`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          rejectionReason: `Verbally declined by ${verbalApproverName.trim()}${verbalApproverTitle.trim() ? ` (${verbalApproverTitle.trim()})` : ""} - Recorded by: ${officeStaffName.trim()} via ${approvedByMethod}`,
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to record verbal decline");
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/metrics"] });
+      
+      setShowVerbalApprovalDialog(false);
+      setVerbalApproverName("");
+      setVerbalApproverTitle("");
+      setOfficeStaffName("");
+      setApprovedByMethod("phone");
+      setOtherMethodDetails("");
+      toast({ 
+        title: "Verbal Decline Recorded", 
+        description: `Estimate declined by ${verbalApproverName}.` 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to record verbal decline", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
 
   const handleApproval = async () => {
@@ -3297,6 +3336,16 @@ export default function Estimates() {
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setShowVerbalApprovalDialog(false)}>
                 Cancel
+              </Button>
+              <Button
+                onClick={handleVerbalDecline}
+                disabled={!verbalApproverName.trim() || !officeStaffName.trim()}
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+                data-testid="button-confirm-verbal-decline"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Record Decline
               </Button>
               <Button
                 onClick={handleVerbalApproval}
