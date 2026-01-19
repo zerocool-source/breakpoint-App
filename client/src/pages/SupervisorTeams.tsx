@@ -804,17 +804,6 @@ export default function SupervisorTeams() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="qc-title">Title</Label>
-                <Input
-                  id="qc-title"
-                  placeholder="Inspection title..."
-                  value={qcTitle}
-                  onChange={(e) => setQcTitle(e.target.value)}
-                  data-testid="input-qc-title"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label>Schedule Date</Label>
                 <Popover open={qcDatePickerOpen} onOpenChange={setQcDatePickerOpen}>
                   <PopoverTrigger asChild>
@@ -842,6 +831,17 @@ export default function SupervisorTeams() {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="qc-title">Title</Label>
+                <Input
+                  id="qc-title"
+                  placeholder="Inspection title..."
+                  value={qcTitle}
+                  onChange={(e) => setQcTitle(e.target.value)}
+                  data-testid="input-qc-title"
+                />
               </div>
 
               <div className="space-y-2">
