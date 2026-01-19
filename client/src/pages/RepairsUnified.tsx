@@ -508,13 +508,12 @@ export default function RepairsUnified() {
                         <TableBody>
                           {filteredServiceRepairs.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                              <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                                 No service repairs found
                               </TableCell>
                             </TableRow>
                           ) : (
-                            <>
-                              {filteredServiceRepairs.map((repair) => (
+                            filteredServiceRepairs.map((repair) => (
                                 <TableRow key={repair.id} data-testid={`service-repair-row-${repair.id}`}>
                                   <TableCell className="font-medium">{repair.propertyName}</TableCell>
                                   <TableCell className="max-w-[200px] truncate">{repair.description || "—"}</TableCell>
@@ -581,21 +580,20 @@ export default function RepairsUnified() {
                                     ) : null}
                                   </TableCell>
                                 </TableRow>
-                              ))}
-                              <TableRow className="bg-slate-100 font-semibold border-t-2">
-                                <TableCell colSpan={4} className="text-right">Totals:</TableCell>
-                                <TableCell className="text-right text-emerald-700">{formatCurrency(totalRepairRevenue)}</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell className="text-right text-orange-600">{formatCurrency(totalCommissions)}</TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                              <TableRow className="bg-slate-50 font-semibold">
-                                <TableCell colSpan={4} className="text-right">Net Revenue:</TableCell>
-                                <TableCell colSpan={3} className="text-right text-blue-700 text-lg">{formatCurrency(netRevenue)}</TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                            </>
+                              ))
                           )}
+                          <TableRow className="bg-slate-100 font-semibold border-t-2" data-testid="totals-row">
+                            <TableCell colSpan={4} className="text-right">Totals:</TableCell>
+                            <TableCell className="text-right text-emerald-700" data-testid="text-total-revenue">{formatCurrency(totalRepairRevenue)}</TableCell>
+                            <TableCell></TableCell>
+                            <TableCell className="text-right text-orange-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions)}</TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                          <TableRow className="bg-slate-50 font-semibold" data-testid="net-revenue-row">
+                            <TableCell colSpan={4} className="text-right">Net Revenue:</TableCell>
+                            <TableCell colSpan={3} className="text-right text-blue-700 text-lg" data-testid="text-net-revenue">{formatCurrency(netRevenue)}</TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
                         </TableBody>
                       </Table>
                     </ScrollArea>
