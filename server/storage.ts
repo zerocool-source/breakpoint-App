@@ -289,6 +289,34 @@ export interface IStorage {
   deleteTechOpsEntry(id: string): Promise<void>;
   getTechOpsUnreadCounts(): Promise<Record<string, number>>;
   markAllTechOpsRead(entryType?: string): Promise<void>;
+  getTechOpsCommissions(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<{
+    technicians: Array<{
+      technicianId: string;
+      technicianName: string;
+      commissionPercent: number;
+      serviceRepairsCount: number;
+      serviceRepairsPartsCost: number;
+      serviceRepairsCommission: number;
+      windyDayCount: number;
+      windyDayPartsCost: number;
+      windyDayCommission: number;
+      totalPartsCost: number;
+      totalCommission: number;
+    }>;
+    totals: {
+      serviceRepairsCount: number;
+      serviceRepairsPartsCost: number;
+      serviceRepairsCommission: number;
+      windyDayCount: number;
+      windyDayPartsCost: number;
+      windyDayCommission: number;
+      totalPartsCost: number;
+      totalCommission: number;
+    };
+  }>;
 
   // Pool WO Settings
   updatePoolWoSettings(poolId: string, woRequired: boolean, woNotes?: string): Promise<void>;
@@ -1813,6 +1841,124 @@ export class DbStorage implements IStorage {
         .set({ isRead: true, updatedAt: new Date() } as any)
         .where(eq(techOpsEntries.isRead, false));
     }
+  }
+
+  async getTechOpsCommissions(filters?: {
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<{
+    technicians: Array<{
+      technicianId: string;
+      technicianName: string;
+      commissionPercent: number;
+      serviceRepairsCount: number;
+      serviceRepairsPartsCost: number;
+      serviceRepairsCommission: number;
+      windyDayCount: number;
+      windyDayPartsCost: number;
+      windyDayCommission: number;
+      totalPartsCost: number;
+      totalCommission: number;
+    }>;
+    totals: {
+      serviceRepairsCount: number;
+      serviceRepairsPartsCost: number;
+      serviceRepairsCommission: number;
+      windyDayCount: number;
+      windyDayPartsCost: number;
+      windyDayCommission: number;
+      totalPartsCost: number;
+      totalCommission: number;
+    };
+  }> {
+    const conditions = [
+      or(
+        eq(techOpsEntries.entryType, "service_repairs"),
+        eq(techOpsEntries.entryType, "windy_day_cleanup")
+      )
+    ];
+    
+    if (filters?.startDate) {
+      conditions.push(gte(techOpsEntries.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(techOpsEntries.createdAt, filters.endDate));
+    }
+    
+    const entries = await db.select()
+      .from(techOpsEntries)
+      .where(and(...conditions));
+    
+    const allTechnicians = await db.select().from(technicians);
+    const technicianMap = new Map(allTechnicians.map(t => [t.id, t]));
+    const technicianByNameMap = new Map(allTechnicians.map(t => [`${t.firstName} ${t.lastName}`.trim(), t]));
+    
+    const techStats: Record<string, {
+      technicianId: string;
+      technicianName: string;
+      commissionPercent: number;
+      serviceRepairsCount: number;
+      serviceRepairsPartsCost: number;
+      windyDayCount: number;
+      windyDayPartsCost: number;
+    }> = {};
+    
+    for (const entry of entries) {
+      const techName = entry.technicianName || "Unknown";
+      const tech = entry.technicianId ? technicianMap.get(entry.technicianId) : technicianByNameMap.get(techName);
+      const commissionPercent = tech?.commissionPercent || 0;
+      const partsCost = (entry as any).partsCost || 0;
+      
+      if (!techStats[techName]) {
+        techStats[techName] = {
+          technicianId: entry.technicianId || "",
+          technicianName: techName,
+          commissionPercent,
+          serviceRepairsCount: 0,
+          serviceRepairsPartsCost: 0,
+          windyDayCount: 0,
+          windyDayPartsCost: 0,
+        };
+      }
+      
+      if (entry.entryType === "service_repairs") {
+        techStats[techName].serviceRepairsCount++;
+        techStats[techName].serviceRepairsPartsCost += partsCost;
+      } else if (entry.entryType === "windy_day_cleanup") {
+        techStats[techName].windyDayCount++;
+        techStats[techName].windyDayPartsCost += partsCost;
+      }
+    }
+    
+    const technicianResults = Object.values(techStats).map(stat => ({
+      ...stat,
+      serviceRepairsCommission: Math.round(stat.serviceRepairsPartsCost * (stat.commissionPercent / 100)),
+      windyDayCommission: Math.round(stat.windyDayPartsCost * (stat.commissionPercent / 100)),
+      totalPartsCost: stat.serviceRepairsPartsCost + stat.windyDayPartsCost,
+      totalCommission: Math.round((stat.serviceRepairsPartsCost + stat.windyDayPartsCost) * (stat.commissionPercent / 100)),
+    }));
+    
+    const totals = technicianResults.reduce((acc, tech) => ({
+      serviceRepairsCount: acc.serviceRepairsCount + tech.serviceRepairsCount,
+      serviceRepairsPartsCost: acc.serviceRepairsPartsCost + tech.serviceRepairsPartsCost,
+      serviceRepairsCommission: acc.serviceRepairsCommission + tech.serviceRepairsCommission,
+      windyDayCount: acc.windyDayCount + tech.windyDayCount,
+      windyDayPartsCost: acc.windyDayPartsCost + tech.windyDayPartsCost,
+      windyDayCommission: acc.windyDayCommission + tech.windyDayCommission,
+      totalPartsCost: acc.totalPartsCost + tech.totalPartsCost,
+      totalCommission: acc.totalCommission + tech.totalCommission,
+    }), {
+      serviceRepairsCount: 0,
+      serviceRepairsPartsCost: 0,
+      serviceRepairsCommission: 0,
+      windyDayCount: 0,
+      windyDayPartsCost: 0,
+      windyDayCommission: 0,
+      totalPartsCost: 0,
+      totalCommission: 0,
+    });
+    
+    return { technicians: technicianResults, totals };
   }
 
   // Pool WO Settings

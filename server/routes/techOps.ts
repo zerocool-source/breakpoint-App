@@ -528,4 +528,19 @@ export function registerTechOpsRoutes(app: Express) {
       res.status(500).json({ error: "Failed to mark entry as no charge" });
     }
   });
+
+  // Commissions Report: Get commission data for technicians based on service repairs and windy day cleanup
+  app.get("/api/tech-ops/commissions", async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const commissions = await storage.getTechOpsCommissions({
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+      });
+      res.json(commissions);
+    } catch (error: any) {
+      console.error("Error fetching commissions:", error);
+      res.status(500).json({ error: "Failed to fetch commissions" });
+    }
+  });
 }
