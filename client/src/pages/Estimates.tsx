@@ -1953,7 +1953,7 @@ export default function Estimates() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openVerbalApprovalDialog(estimate)}>
                                   <Phone className="w-4 h-4 mr-2" />
-                                  Record Verbal Approval
+                                  Log Verbal Approval
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1990,7 +1990,7 @@ export default function Estimates() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => openVerbalApprovalDialog(estimate)}>
                                     <Phone className="w-4 h-4 mr-2" />
-                                    Record Verbal Approval
+                                    Log Verbal Approval
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -3178,7 +3178,7 @@ export default function Estimates() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Phone className="w-5 h-5 text-[#2CA01C]" />
-                Record Verbal Approval
+                Log Verbal Approval
               </DialogTitle>
               <DialogDescription>
                 For special situations when approval was received verbally (phone, in-person, etc.)
