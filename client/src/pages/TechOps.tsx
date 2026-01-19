@@ -19,10 +19,12 @@ import {
   Wrench, Plus, Loader2, CheckCircle, Clock, XCircle,
   Droplets, Wind, AlertTriangle, FileText, User, MapPin, Trash2,
   CalendarIcon, Filter, Archive, FileUp, Zap, Image, X, ChevronLeft, ChevronRight,
-  Receipt, Ban, DollarSign, Building
+  Receipt, Ban, DollarSign, Building, Building2, Send, Mail, Truck, Package
 } from "lucide-react";
-import type { TechOpsEntry, Property } from "@shared/schema";
+import type { TechOpsEntry, Property, ChemicalVendor } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { ManageVendorsModal } from "@/components/vendors/ManageVendorsModal";
+import { InvoiceVendorModal } from "@/components/vendors/InvoiceVendorModal";
 
 const entryTypeConfig: Record<string, { label: string; icon: any; color: string; description: string }> = {
   repairs_needed: { 
@@ -84,6 +86,13 @@ const priorityConfig: Record<string, { bg: string; text: string; label: string }
   urgent: { bg: "bg-red-100", text: "text-red-700", label: "Urgent" },
 };
 
+const orderStatusConfig: Record<string, { color: string; icon: any; label: string }> = {
+  pending: { color: "bg-[#FF8000]/10 text-[#D35400] border-[#FF8000]/30", icon: Clock, label: "Pending" },
+  sent_to_vendor: { color: "bg-[#0078D4]/10 text-[#0078D4] border-[#0078D4]/30", icon: Send, label: "Sent to Vendor" },
+  confirmed: { color: "bg-purple-100 text-purple-700 border-purple-200", icon: CheckCircle, label: "Confirmed" },
+  delivered: { color: "bg-[#22D69A]/10 text-[#16A679] border-[#22D69A]/30", icon: Package, label: "Delivered" },
+};
+
 function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   return new Date(date).toLocaleString('en-US', { 
@@ -112,6 +121,9 @@ export default function TechOps() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [showVendorsModal, setShowVendorsModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceEntry, setInvoiceEntry] = useState<TechOpsEntry | null>(null);
 
   const openLightbox = (photos: string[], index: number) => {
     setLightboxImages(photos);
@@ -175,6 +187,16 @@ export default function TechOps() {
       if (!response.ok) throw new Error("Failed to fetch properties");
       return response.json();
     },
+  });
+
+  const { data: vendors = [] } = useQuery<ChemicalVendor[]>({
+    queryKey: ["vendors"],
+    queryFn: async () => {
+      const response = await fetch("/api/vendors");
+      if (!response.ok) throw new Error("Failed to fetch vendors");
+      return response.json();
+    },
+    enabled: entryType === "chemical_order",
   });
 
   // Fetch pending count for Windy Day Cleanup badge
@@ -270,6 +292,49 @@ export default function TechOps() {
       toast({ title: "Entry Deleted" });
     },
   });
+
+  const assignVendorMutation = useMutation({
+    mutationFn: async ({ id, vendorId, vendorName }: { id: string; vendorId: string; vendorName: string }) => {
+      const response = await fetch(`/api/tech-ops/${id}/assign-vendor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendorId, vendorName }),
+      });
+      if (!response.ok) throw new Error("Failed to assign vendor");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
+      toast({ title: "Vendor assigned successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to assign vendor", variant: "destructive" });
+    },
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ id, orderStatus }: { id: string; orderStatus: string }) => {
+      const response = await fetch(`/api/tech-ops/${id}/update-order-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderStatus }),
+      });
+      if (!response.ok) throw new Error("Failed to update order status");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops"] });
+      toast({ title: "Order status updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const openInvoiceModal = (entry: TechOpsEntry) => {
+    setInvoiceEntry(entry);
+    setShowInvoiceModal(true);
+  };
 
   const reviewMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -428,13 +493,25 @@ export default function TechOps() {
               <p className="text-slate-500 text-sm">{config.description}</p>
             </div>
           </div>
-          <Button
-            className="bg-[#0078D4] hover:bg-[#1E40AF]"
-            onClick={() => setShowAddDialog(true)}
-            data-testid="button-add-entry"
-          >
-            <Plus className="w-4 h-4 mr-2" /> New Entry
-          </Button>
+          <div className="flex items-center gap-2">
+            {entryType === "chemical_order" && (
+              <Button
+                variant="outline"
+                className="border-[#0078D4] text-[#0078D4] hover:bg-[#0078D4]/10"
+                onClick={() => setShowVendorsModal(true)}
+                data-testid="button-manage-vendors"
+              >
+                <Building2 className="w-4 h-4 mr-2" /> Manage Vendors
+              </Button>
+            )}
+            <Button
+              className="bg-[#0078D4] hover:bg-[#1E40AF]"
+              onClick={() => setShowAddDialog(true)}
+              data-testid="button-add-entry"
+            >
+              <Plus className="w-4 h-4 mr-2" /> New Entry
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap p-4 bg-slate-50 rounded-lg border border-slate-200">
@@ -754,10 +831,91 @@ export default function TechOps() {
 
                             {/* Chemical info (for other entry types) */}
                             {entry.chemicals && (
-                              <p className="text-sm text-slate-600">
-                                <strong>Chemicals:</strong> {entry.chemicals}
-                                {entry.quantity && ` (${entry.quantity})`}
-                              </p>
+                              <div className="space-y-3">
+                                <p className="text-sm text-slate-600">
+                                  <strong>Chemicals:</strong> {entry.chemicals}
+                                  {entry.quantity && ` (${entry.quantity})`}
+                                </p>
+                                
+                                {/* Vendor & Order Status for Chemical Orders */}
+                                {entryType === "chemical_order" && (
+                                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <div className="flex-1">
+                                        <Label className="text-xs text-slate-500 mb-1 block">Assigned Vendor</Label>
+                                        <Select 
+                                          value={(entry as any).vendorId || ""} 
+                                          onValueChange={(vendorId) => {
+                                            const vendor = vendors.find(v => v.id === vendorId);
+                                            if (vendor) {
+                                              assignVendorMutation.mutate({ 
+                                                id: entry.id, 
+                                                vendorId: vendor.id, 
+                                                vendorName: vendor.vendorName 
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          <SelectTrigger className="w-[200px]" data-testid={`select-vendor-${entry.id}`}>
+                                            <Building2 className="w-4 h-4 mr-2 text-slate-400" />
+                                            <SelectValue placeholder="Select vendor..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {vendors.filter((v: ChemicalVendor) => v.isActive !== false).map((vendor: ChemicalVendor) => (
+                                              <SelectItem key={vendor.id} value={vendor.id}>
+                                                {vendor.vendorName}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      
+                                      <div>
+                                        <Label className="text-xs text-slate-500 mb-1 block">Order Status</Label>
+                                        {(() => {
+                                          const orderStatus = (entry as any).orderStatus || "pending";
+                                          const statusCfg = orderStatusConfig[orderStatus] || orderStatusConfig.pending;
+                                          const OrderStatusIcon = statusCfg.icon;
+                                          return (
+                                            <Select 
+                                              value={orderStatus} 
+                                              onValueChange={(status) => updateOrderStatusMutation.mutate({ id: entry.id, orderStatus: status })}
+                                            >
+                                              <SelectTrigger className={cn("w-[160px]", statusCfg.color)} data-testid={`select-order-status-${entry.id}`}>
+                                                <OrderStatusIcon className="w-4 h-4 mr-2" />
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="pending">Pending</SelectItem>
+                                                <SelectItem value="sent_to_vendor">Sent to Vendor</SelectItem>
+                                                <SelectItem value="confirmed">Confirmed</SelectItem>
+                                                <SelectItem value="delivered">Delivered</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          );
+                                        })()}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs text-slate-500">
+                                        {(entry as any).invoiceSentAt && (
+                                          <span>Invoice sent: {format(new Date((entry as any).invoiceSentAt), "MMM d, yyyy h:mm a")}</span>
+                                        )}
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        className="bg-[#0078D4] hover:bg-[#1E40AF] text-white"
+                                        onClick={() => openInvoiceModal(entry)}
+                                        data-testid={`button-invoice-vendor-${entry.id}`}
+                                      >
+                                        <Mail className="w-4 h-4 mr-1" />
+                                        Invoice Vendor
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             )}
                             {entry.issueType && (
                               <p className="text-sm text-slate-600">
@@ -1138,6 +1296,19 @@ export default function TechOps() {
           </div>
         </div>
       )}
+
+      {/* Vendor Management Modal */}
+      <ManageVendorsModal 
+        open={showVendorsModal} 
+        onOpenChange={setShowVendorsModal} 
+      />
+
+      {/* Invoice Vendor Modal */}
+      <InvoiceVendorModal
+        open={showInvoiceModal}
+        onOpenChange={setShowInvoiceModal}
+        entry={invoiceEntry}
+      />
     </AppLayout>
   );
 }
