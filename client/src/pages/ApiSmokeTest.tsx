@@ -254,10 +254,8 @@ export default function ApiSmokeTest() {
                     )}
                     {result.status === "success" && result.data && (
                       <pre className="text-xs bg-white p-2 rounded mt-2 overflow-auto max-h-32">
-                        {(() => {
-                          const str = JSON.stringify(result.data, null, 2);
-                          return str.length > 500 ? str.substring(0, 500) + "..." : str;
-                        })()}
+                        {String(JSON.stringify(result.data, null, 2)).substring(0, 500)}
+                        {String(JSON.stringify(result.data)).length > 500 && "..."}
                       </pre>
                     )}
                   </div>
