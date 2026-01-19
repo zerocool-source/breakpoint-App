@@ -464,8 +464,8 @@ export default function SupervisorTeams() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -724,139 +724,123 @@ export default function SupervisorTeams() {
         </div>
 
         {/* QC Inspections Section - Assignment Form */}
-        <div className="space-y-4 mb-6">
-          {/* Assign New QC Inspection */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ClipboardCheck className="w-5 h-5 text-[#0078D4]" />
-                  Assign QC Inspection
-                </CardTitle>
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-[#0078D4]" />
+              Assign QC Inspection
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="qc-supervisor">Assign To Supervisor *</Label>
+                <Select value={qcSelectedSupervisor} onValueChange={setQcSelectedSupervisor}>
+                  <SelectTrigger id="qc-supervisor" data-testid="select-qc-supervisor">
+                    <SelectValue placeholder="Select supervisor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {supervisors.map((sup) => (
+                      <SelectItem key={sup.id} value={sup.id}>
+                        {sup.firstName} {sup.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="qc-property">Property *</Label>
+                <div className="relative">
+                  <Input
+                    id="qc-property"
+                    placeholder="Search property..."
+                    value={qcSelectedProperty ? qcSelectedProperty.name : qcPropertySearch}
+                    onChange={(e) => {
+                      setQcPropertySearch(e.target.value);
+                      setQcSelectedProperty(null);
+                    }}
+                    data-testid="input-qc-property-search"
+                  />
+                  {qcPropertyResults.length > 0 && !qcSelectedProperty && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+                      {qcPropertyResults.map((prop) => (
+                        <button
+                          key={prop.id}
+                          className="w-full px-3 py-2 text-left hover:bg-slate-50 text-sm"
+                          onClick={() => {
+                            setQcSelectedProperty(prop);
+                            setQcPropertySearch("");
+                          }}
+                          data-testid={`property-option-${prop.id}`}
+                        >
+                          <div className="font-medium">{prop.name}</div>
+                          {prop.address && (
+                            <div className="text-xs text-slate-500">{prop.address}</div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {qcSelectedProperty && (
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <MapPin className="w-3 h-3" />
+                    {qcSelectedProperty.address || "No address"}
+                    <button
+                      onClick={() => setQcSelectedProperty(null)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="qc-title">Title</Label>
+                <Input
+                  id="qc-title"
+                  placeholder="Inspection title..."
+                  value={qcTitle}
+                  onChange={(e) => setQcTitle(e.target.value)}
+                  data-testid="input-qc-title"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="qc-notes">Notes</Label>
+                <Textarea
+                  id="qc-notes"
+                  placeholder="Add notes for the supervisor..."
+                  value={qcNotes}
+                  onChange={(e) => setQcNotes(e.target.value)}
+                  rows={3}
+                  data-testid="input-qc-notes"
+                />
+              </div>
+
+              <div className="flex justify-center gap-3 pt-2">
+                <Button variant="outline" onClick={resetQcForm}>
+                  Cancel
+                </Button>
                 <Button
-                  size="sm"
                   className="bg-[#0078D4] hover:bg-[#1E40AF]"
-                  onClick={() => setShowQcInspectionForm(!showQcInspectionForm)}
-                  data-testid="button-toggle-qc-form"
+                  onClick={handleCreateQcInspection}
+                  disabled={createQcInspectionMutation.isPending || !qcSelectedSupervisor || !qcSelectedProperty}
+                  data-testid="button-create-qc-inspection"
                 >
-                  <Plus className="w-4 h-4 mr-1" />
-                  New Inspection
+                  {createQcInspectionMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4 mr-1" />
+                  )}
+                  Assign Inspection
                 </Button>
               </div>
-            </CardHeader>
-            {showQcInspectionForm && (
-              <CardContent className="border-t pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="qc-supervisor">Assign To Supervisor *</Label>
-                    <Select value={qcSelectedSupervisor} onValueChange={setQcSelectedSupervisor}>
-                      <SelectTrigger id="qc-supervisor" data-testid="select-qc-supervisor">
-                        <SelectValue placeholder="Select supervisor..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {supervisors.map((sup) => (
-                          <SelectItem key={sup.id} value={sup.id}>
-                            {sup.firstName} {sup.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="qc-property">Property *</Label>
-                    <div className="relative">
-                      <Input
-                        id="qc-property"
-                        placeholder="Search property..."
-                        value={qcSelectedProperty ? qcSelectedProperty.name : qcPropertySearch}
-                        onChange={(e) => {
-                          setQcPropertySearch(e.target.value);
-                          setQcSelectedProperty(null);
-                        }}
-                        data-testid="input-qc-property-search"
-                      />
-                      {qcPropertyResults.length > 0 && !qcSelectedProperty && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-auto">
-                          {qcPropertyResults.map((prop) => (
-                            <button
-                              key={prop.id}
-                              className="w-full px-3 py-2 text-left hover:bg-slate-50 text-sm"
-                              onClick={() => {
-                                setQcSelectedProperty(prop);
-                                setQcPropertySearch("");
-                              }}
-                              data-testid={`property-option-${prop.id}`}
-                            >
-                              <div className="font-medium">{prop.name}</div>
-                              {prop.address && (
-                                <div className="text-xs text-slate-500">{prop.address}</div>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {qcSelectedProperty && (
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <MapPin className="w-3 h-3" />
-                        {qcSelectedProperty.address || "No address"}
-                        <button
-                          onClick={() => setQcSelectedProperty(null)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="qc-title">Title</Label>
-                    <Input
-                      id="qc-title"
-                      placeholder="Inspection title..."
-                      value={qcTitle}
-                      onChange={(e) => setQcTitle(e.target.value)}
-                      data-testid="input-qc-title"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="qc-notes">Notes</Label>
-                    <Textarea
-                      id="qc-notes"
-                      placeholder="Add notes for the supervisor..."
-                      value={qcNotes}
-                      onChange={(e) => setQcNotes(e.target.value)}
-                      rows={3}
-                      data-testid="input-qc-notes"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2 flex justify-end gap-2">
-                    <Button variant="outline" onClick={resetQcForm}>
-                      Cancel
-                    </Button>
-                    <Button
-                      className="bg-[#0078D4] hover:bg-[#1E40AF]"
-                      onClick={handleCreateQcInspection}
-                      disabled={createQcInspectionMutation.isPending || !qcSelectedSupervisor || !qcSelectedProperty}
-                      data-testid="button-create-qc-inspection"
-                    >
-                      {createQcInspectionMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4 mr-1" />
-                      )}
-                      Assign Inspection
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="mb-6">
           <CardContent className="pt-4 pb-3">
