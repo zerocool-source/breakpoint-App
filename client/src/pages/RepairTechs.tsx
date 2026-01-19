@@ -181,13 +181,14 @@ function EditTechnicianModal({
   open: boolean; 
   onClose: () => void;
   technician: Technician | null;
-  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string }) => void;
+  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string }) => void;
   onDelete: (id: string) => void;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [truckNumber, setTruckNumber] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -196,12 +197,13 @@ function EditTechnicianModal({
       setLastName(technician.lastName || "");
       setPhone(technician.phone || "");
       setEmail(technician.email || "");
+      setTruckNumber(technician.truckNumber || "");
     }
   }, [technician]);
 
   const handleSubmit = () => {
     if (!technician || !firstName.trim() || !lastName.trim()) return;
-    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email });
+    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email, truckNumber });
     onClose();
   };
 
@@ -217,6 +219,7 @@ function EditTechnicianModal({
     setLastName("");
     setPhone("");
     setEmail("");
+    setTruckNumber("");
     onClose();
   };
 
@@ -250,31 +253,51 @@ function EditTechnicianModal({
               
               <div className="flex-1 grid grid-cols-3 gap-4">
                 <div className="space-y-3">
-                  <Input
-                    placeholder="First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="bg-white"
-                    data-testid="input-edit-first-name"
-                  />
-                  <Input
-                    placeholder="Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="bg-white"
-                    data-testid="input-edit-last-name"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                    <Input
+                      placeholder="First Name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-first-name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                    <Input
+                      placeholder="Last Name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-last-name"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                    <Input
+                      placeholder="Phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-phone"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Truck #</label>
+                    <Input
+                      placeholder="Truck Number"
+                      value={truckNumber}
+                      onChange={(e) => setTruckNumber(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-truck-number"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Input
-                    placeholder="Phone"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="bg-white"
-                    data-testid="input-edit-phone"
-                  />
-                </div>
-                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                   <Input
                     placeholder="Email"
                     value={email}
@@ -679,7 +702,7 @@ export default function RepairTechs() {
   });
 
   const updateTechnicianMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string } }) => {
       const res = await fetch(`/api/technicians/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
