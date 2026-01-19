@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, subDays, startOfDay } from "date-fns";
+import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -20,7 +30,8 @@ import {
 import {
   Wrench, Loader2, AlertCircle, CheckCircle2, Clock, Search,
   RefreshCw, Building2, User, Calendar, DollarSign, Percent,
-  FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff
+  FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff,
+  XCircle, Receipt, FileCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +89,7 @@ function formatCurrency(cents: number): string {
 export default function RepairsUnified() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("repairs-needed");
   const [searchTerm, setSearchTerm] = useState("");
   const [propertyFilter, setPropertyFilter] = useState("all");
@@ -85,6 +97,13 @@ export default function RepairsUnified() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [editingCommission, setEditingCommission] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ percent: number; amount: number }>({ percent: 0, amount: 0 });
+  
+  const [declineModal, setDeclineModal] = useState<{ open: boolean; alert: EnrichedAlert | null; reason: string }>({
+    open: false,
+    alert: null,
+    reason: "",
+  });
+  const [selectedServiceRepairs, setSelectedServiceRepairs] = useState<Set<string>>(new Set());
 
   const { data: alertsData = { alerts: [] }, isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
     queryKey: ["enrichedAlerts"],
@@ -162,6 +181,137 @@ export default function RepairsUnified() {
     },
     onError: () => {
       toast({ title: "Failed to update commission", variant: "destructive" });
+    },
+  });
+
+  const createEstimateMutation = useMutation({
+    mutationFn: async (estimateData: any) => {
+      const res = await fetch("/api/estimates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(estimateData),
+      });
+      if (!res.ok) throw new Error("Failed to create estimate");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      toast({ title: "Estimate created successfully" });
+      if (data.estimate?.id) {
+        navigate(`/estimates/${data.estimate.id}`);
+      }
+    },
+    onError: () => {
+      toast({ title: "Failed to create estimate", variant: "destructive" });
+    },
+  });
+
+  const declineRepairMutation = useMutation({
+    mutationFn: async ({ alertId, reason }: { alertId: string; reason?: string }) => {
+      const res = await fetch(`/api/alerts/${alertId}/decline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error("Failed to decline repair");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["enrichedAlerts"] });
+      toast({ title: "Repair request declined" });
+      setDeclineModal({ open: false, alert: null, reason: "" });
+    },
+    onError: () => {
+      toast({ title: "Failed to decline repair", variant: "destructive" });
+    },
+  });
+
+  const convertToEstimateMutation = useMutation({
+    mutationFn: async (repairIds: string[]) => {
+      const selectedRepairs = filteredServiceRepairs.filter(r => repairIds.includes(r.id));
+      if (selectedRepairs.length === 0) throw new Error("No repairs selected");
+      
+      const uniqueProperties = new Set(selectedRepairs.map(r => r.propertyId));
+      if (uniqueProperties.size > 1) {
+        throw new Error("MULTI_PROPERTY");
+      }
+      
+      const firstRepair = selectedRepairs[0];
+      const totalAmount = selectedRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
+      
+      const estimateData = {
+        propertyId: firstRepair.propertyId,
+        propertyName: firstRepair.propertyName,
+        title: selectedRepairs.length === 1 
+          ? `Service Repair - ${firstRepair.description || "Repair"}` 
+          : `Service Repairs (${selectedRepairs.length} items)`,
+        description: selectedRepairs.map(r => r.description).filter(Boolean).join("\n"),
+        status: "draft",
+        sourceType: "service_tech",
+        serviceRepairCount: selectedRepairs.length,
+        items: selectedRepairs.map((repair, idx) => ({
+          lineNumber: idx + 1,
+          productService: "Service Repair",
+          description: repair.description || "Service repair work",
+          quantity: 1,
+          rate: (repair.partsCost || 0) / 100,
+          amount: (repair.partsCost || 0) / 100,
+          taxable: false,
+        })),
+        subtotal: totalAmount / 100,
+        total: totalAmount / 100,
+      };
+
+      const res = await fetch("/api/estimates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(estimateData),
+      });
+      if (!res.ok) throw new Error("Failed to create estimate");
+      const result = await res.json();
+      
+      const failedUpdates: string[] = [];
+      for (const repairId of repairIds) {
+        try {
+          const updateRes = await fetch(`/api/tech-ops/${repairId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "converted" }),
+          });
+          if (!updateRes.ok) {
+            failedUpdates.push(repairId);
+          }
+        } catch {
+          failedUpdates.push(repairId);
+        }
+      }
+      
+      if (failedUpdates.length > 0) {
+        console.warn(`Failed to mark ${failedUpdates.length} repairs as converted`);
+      }
+      
+      return { ...result, convertedCount: repairIds.length - failedUpdates.length };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tech-ops-service-repairs"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      const count = selectedServiceRepairs.size;
+      setSelectedServiceRepairs(new Set());
+      toast({ title: `Estimate created from ${count} service repair${count !== 1 ? 's' : ''}` });
+      if (data.estimate?.id) {
+        navigate(`/estimates/${data.estimate.id}`);
+      }
+    },
+    onError: (error: Error) => {
+      if (error.message === "MULTI_PROPERTY") {
+        toast({ 
+          title: "Cannot combine repairs from different properties", 
+          description: "Please select repairs from the same property only.",
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Failed to convert to estimate", variant: "destructive" });
+      }
     },
   });
 
@@ -285,6 +435,92 @@ export default function RepairsUnified() {
       percent,
       amount: Math.round((partsCost * percent) / 100),
     });
+  };
+
+  const handleConvertToEstimate = (alert: EnrichedAlert) => {
+    const estimateData = {
+      propertyId: alert.customerId || alert.poolId,
+      propertyName: alert.customerName,
+      customerName: alert.customerName,
+      customerEmail: alert.email,
+      address: alert.address,
+      title: `Repair Request - ${alert.poolName}`,
+      description: alert.message,
+      status: "draft",
+      sourceType: "repair_tech",
+      items: [{
+        lineNumber: 1,
+        productService: "Repair Service",
+        description: alert.message,
+        quantity: 1,
+        rate: 0,
+        amount: 0,
+        taxable: false,
+      }],
+    };
+    createEstimateMutation.mutate(estimateData);
+  };
+
+  const handleInvoiceDirectly = (alert: EnrichedAlert) => {
+    const estimateData = {
+      propertyId: alert.customerId || alert.poolId,
+      propertyName: alert.customerName,
+      customerName: alert.customerName,
+      customerEmail: alert.email,
+      address: alert.address,
+      title: `Invoice - ${alert.poolName}`,
+      description: alert.message,
+      status: "ready_to_invoice",
+      sourceType: "repair_tech",
+      items: [{
+        lineNumber: 1,
+        productService: "Repair Service",
+        description: alert.message,
+        quantity: 1,
+        rate: 0,
+        amount: 0,
+        taxable: false,
+      }],
+    };
+    createEstimateMutation.mutate(estimateData);
+  };
+
+  const handleServiceRepairCheckbox = (repairId: string, checked: boolean) => {
+    setSelectedServiceRepairs(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(repairId);
+      } else {
+        next.delete(repairId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const nonConvertedIds = filteredServiceRepairs
+        .filter(r => r.status !== "converted")
+        .map(r => r.id);
+      setSelectedServiceRepairs(new Set(nonConvertedIds));
+    } else {
+      setSelectedServiceRepairs(new Set());
+    }
+  };
+
+  const selectedTotal = useMemo(() => {
+    return filteredServiceRepairs
+      .filter(r => selectedServiceRepairs.has(r.id))
+      .reduce((sum, r) => sum + (r.partsCost || 0), 0);
+  }, [filteredServiceRepairs, selectedServiceRepairs]);
+
+  const handleConvertSelectedToEstimate = () => {
+    const ids = Array.from(selectedServiceRepairs);
+    if (ids.length === 0) {
+      toast({ title: "No repairs selected", variant: "destructive" });
+      return;
+    }
+    convertToEstimateMutation.mutate(ids);
   };
 
   const isLoading = alertsLoading || techOpsLoading;
@@ -480,6 +716,42 @@ export default function RepairsUnified() {
                                         {format(new Date(alert.createdAt), "MMM d, yyyy")}
                                       </span>
                                     </div>
+                                    {!isCompleted && (
+                                      <div className="flex gap-2 mt-3 pt-3 border-t border-slate-200">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                          onClick={() => handleConvertToEstimate(alert)}
+                                          disabled={createEstimateMutation.isPending}
+                                          data-testid={`btn-convert-estimate-${alert.alertId}`}
+                                        >
+                                          <FileCheck className="w-3 h-3" />
+                                          Convert to Estimate
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                          onClick={() => setDeclineModal({ open: true, alert, reason: "" })}
+                                          data-testid={`btn-decline-${alert.alertId}`}
+                                        >
+                                          <XCircle className="w-3 h-3" />
+                                          Decline
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                                          onClick={() => handleInvoiceDirectly(alert)}
+                                          disabled={createEstimateMutation.isPending}
+                                          data-testid={`btn-invoice-${alert.alertId}`}
+                                        >
+                                          <Receipt className="w-3 h-3" />
+                                          Invoice
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -495,8 +767,17 @@ export default function RepairsUnified() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-50">
+                            <TableHead className="w-12">
+                              <Checkbox
+                                checked={selectedServiceRepairs.size > 0 && 
+                                  filteredServiceRepairs.filter(r => r.status !== "converted").length === selectedServiceRepairs.size}
+                                onCheckedChange={handleSelectAll}
+                                data-testid="checkbox-select-all"
+                              />
+                            </TableHead>
                             <TableHead>Property</TableHead>
                             <TableHead>Description</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead>Date Completed</TableHead>
                             <TableHead>Technician</TableHead>
                             <TableHead className="text-right">Repair Amount</TableHead>
@@ -508,15 +789,36 @@ export default function RepairsUnified() {
                         <TableBody>
                           {filteredServiceRepairs.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                              <TableCell colSpan={10} className="text-center py-8 text-slate-500">
                                 No service repairs found
                               </TableCell>
                             </TableRow>
                           ) : (
                             filteredServiceRepairs.map((repair) => (
-                                <TableRow key={repair.id} data-testid={`service-repair-row-${repair.id}`}>
+                                <TableRow 
+                                  key={repair.id} 
+                                  data-testid={`service-repair-row-${repair.id}`}
+                                  className={cn(repair.status === "converted" && "opacity-60 bg-slate-50")}
+                                >
+                                  <TableCell>
+                                    <Checkbox
+                                      checked={selectedServiceRepairs.has(repair.id)}
+                                      onCheckedChange={(checked) => handleServiceRepairCheckbox(repair.id, !!checked)}
+                                      disabled={repair.status === "converted"}
+                                      data-testid={`checkbox-service-${repair.id}`}
+                                    />
+                                  </TableCell>
                                   <TableCell className="font-medium">{repair.propertyName}</TableCell>
                                   <TableCell className="max-w-[200px] truncate">{repair.description || "—"}</TableCell>
+                                  <TableCell>
+                                    {repair.status === "converted" ? (
+                                      <Badge className="bg-purple-100 text-purple-700 text-xs">Converted</Badge>
+                                    ) : repair.status === "completed" ? (
+                                      <Badge className="bg-emerald-100 text-emerald-700 text-xs">Completed</Badge>
+                                    ) : (
+                                      <Badge className="bg-blue-100 text-blue-700 text-xs">Pending</Badge>
+                                    )}
+                                  </TableCell>
                                   <TableCell>{repair.completedAt ? format(new Date(repair.completedAt), "MMM d, yyyy") : format(new Date(repair.createdAt), "MMM d, yyyy")}</TableCell>
                                   <TableCell>{repair.technicianName || "—"}</TableCell>
                                   <TableCell className="text-right font-medium">{formatCurrency(repair.partsCost || 0)}</TableCell>
@@ -583,20 +885,58 @@ export default function RepairsUnified() {
                               ))
                           )}
                           <TableRow className="bg-slate-100 font-semibold border-t-2" data-testid="totals-row">
-                            <TableCell colSpan={4} className="text-right">Totals:</TableCell>
+                            <TableCell colSpan={6} className="text-right">Totals:</TableCell>
                             <TableCell className="text-right text-emerald-700" data-testid="text-total-revenue">{formatCurrency(totalRepairRevenue)}</TableCell>
                             <TableCell></TableCell>
                             <TableCell className="text-right text-orange-600" data-testid="text-total-commissions">{formatCurrency(totalCommissions)}</TableCell>
                             <TableCell></TableCell>
                           </TableRow>
                           <TableRow className="bg-slate-50 font-semibold" data-testid="net-revenue-row">
-                            <TableCell colSpan={4} className="text-right">Net Revenue:</TableCell>
+                            <TableCell colSpan={6} className="text-right">Net Revenue:</TableCell>
                             <TableCell colSpan={3} className="text-right text-blue-700 text-lg" data-testid="text-net-revenue">{formatCurrency(netRevenue)}</TableCell>
                             <TableCell></TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
                     </ScrollArea>
+                    
+                    {selectedServiceRepairs.size > 0 && (
+                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between" data-testid="selection-bar">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                          <span className="font-medium text-blue-800">
+                            {selectedServiceRepairs.size} item{selectedServiceRepairs.size !== 1 ? 's' : ''} selected
+                          </span>
+                          <span className="text-blue-600">—</span>
+                          <span className="font-bold text-blue-800" data-testid="text-selected-total">
+                            Total: {formatCurrency(selectedTotal)}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedServiceRepairs(new Set())}
+                          >
+                            Clear Selection
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={handleConvertSelectedToEstimate}
+                            disabled={convertToEstimateMutation.isPending}
+                            data-testid="btn-convert-selected"
+                          >
+                            {convertToEstimateMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : (
+                              <FileCheck className="w-4 h-4 mr-2" />
+                            )}
+                            Convert Selected to Estimate
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
                 </>
               )}
@@ -604,6 +944,59 @@ export default function RepairsUnified() {
           </Tabs>
         </Card>
       </div>
+
+      <Dialog open={declineModal.open} onOpenChange={(open) => !open && setDeclineModal({ open: false, alert: null, reason: "" })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline Repair Request</DialogTitle>
+            <DialogDescription>
+              {declineModal.alert && (
+                <>
+                  Are you sure you want to decline the repair request for <strong>{declineModal.alert.poolName}</strong> at <strong>{declineModal.alert.customerName}</strong>?
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700">Reason (optional)</label>
+              <Textarea
+                value={declineModal.reason}
+                onChange={(e) => setDeclineModal(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="Enter a reason for declining this repair request..."
+                className="mt-1"
+                data-testid="input-decline-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeclineModal({ open: false, alert: null, reason: "" })}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (declineModal.alert) {
+                  declineRepairMutation.mutate({
+                    alertId: String(declineModal.alert.alertId),
+                    reason: declineModal.reason || undefined,
+                  });
+                }
+              }}
+              disabled={declineRepairMutation.isPending}
+              data-testid="btn-confirm-decline"
+            >
+              {declineRepairMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Decline Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

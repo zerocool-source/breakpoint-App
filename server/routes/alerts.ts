@@ -59,6 +59,19 @@ export function registerAlertRoutes(app: any) {
     }
   });
 
+  // Decline a repair request
+  app.post("/api/alerts/:alertId/decline", async (req: Request, res: Response) => {
+    try {
+      const { alertId } = req.params;
+      const { reason } = req.body;
+      await storage.markAlertCompleted(alertId, "declined");
+      res.json({ success: true, alertId, reason });
+    } catch (error: any) {
+      console.error("Error declining alert:", error);
+      res.status(500).json({ error: "Failed to decline alert" });
+    }
+  });
+
   // Get photos for a specific alert/job from Pool Brain
   app.get("/api/alerts/:jobId/photos", async (req: Request, res: Response) => {
     try {
