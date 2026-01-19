@@ -65,6 +65,7 @@ function Router() {
       <Route path="/tech-services" component={ServiceTechs} />
       <Route path="/tech-repairs" component={RepairTechs} />
       <Route path="/supervisors" component={Supervisors} />
+      <Route path="/supervisor-management" component={Supervisors} />
       <Route path="/tech-supervisor" component={TechSupervisor} />
       <Route path="/tech-foreman" component={TechForeman} />
             <Route path="/fleet" component={Fleet} />

@@ -32,6 +32,7 @@ interface NavSubItem {
   href?: string;
   icon?: any;
   badge?: number;
+  section?: string;
   children?: NavSubSubItem[];
 }
 
@@ -119,73 +120,86 @@ function NavItemComponent({
       
       {isExpanded && item.children && (
         <div className="ml-4 mt-1 space-y-0.5 pl-4 border-l-2 border-white/20">
-          {item.children.map((child) => {
-            const isChildActive = child.href ? location === child.href : false;
-            const hasSubChildren = child.children && child.children.length > 0;
-            const hasActiveSubChild = child.children?.some(sub => location === sub.href);
-            
-            if (hasSubChildren) {
+          {(() => {
+            let lastSection: string | undefined = undefined;
+            return item.children.map((child) => {
+              const isChildActive = child.href ? location === child.href : false;
+              const hasSubChildren = child.children && child.children.length > 0;
+              const hasActiveSubChild = child.children?.some(sub => location === sub.href);
+              const showSectionHeader = child.section && child.section !== lastSection;
+              if (child.section) lastSection = child.section;
+              
+              if (hasSubChildren) {
+                return (
+                  <div key={child.label}>
+                    <div className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
+                      hasActiveSubChild ? "text-white" : "text-white/70"
+                    )}>
+                      <span>{child.label}</span>
+                    </div>
+                    <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-white/20">
+                      {child.children!.map((subChild) => {
+                        const isSubActive = location === subChild.href;
+                        return (
+                          <Link
+                            key={subChild.href}
+                            href={subChild.href}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
+                              isSubActive 
+                                ? "bg-white text-[#0078D4] shadow-sm" 
+                                : "text-white/70 hover:bg-white/10 hover:text-white"
+                            )}
+                          >
+                            <span className="flex-1">{subChild.label}</span>
+                            {subChild.badge !== undefined && subChild.badge > 0 && (
+                              <span className={cn(
+                                "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
+                                isSubActive ? "bg-[#FF8000] text-white" : "bg-[#FF8000] text-white"
+                              )}>
+                                {subChild.badge}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+              
               return (
-                <div key={child.label}>
-                  <div className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
-                    hasActiveSubChild ? "text-white" : "text-white/70"
-                  )}>
-                    <span>{child.label}</span>
-                  </div>
-                  <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-white/20">
-                    {child.children!.map((subChild) => {
-                      const isSubActive = location === subChild.href;
-                      return (
-                        <Link
-                          key={subChild.href}
-                          href={subChild.href}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
-                            isSubActive 
-                              ? "bg-white text-[#0078D4] shadow-sm" 
-                              : "text-white/70 hover:bg-white/10 hover:text-white"
-                          )}
-                        >
-                          <span className="flex-1">{subChild.label}</span>
-                          {subChild.badge !== undefined && subChild.badge > 0 && (
-                            <span className={cn(
-                              "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
-                              isSubActive ? "bg-[#FF8000] text-white" : "bg-[#FF8000] text-white"
-                            )}>
-                              {subChild.badge}
-                            </span>
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
+                <div key={child.href || child.label}>
+                  {showSectionHeader && (
+                    <div className="text-[10px] uppercase tracking-wider text-white/50 font-medium px-3 pt-2 pb-1">
+                      {child.section}
+                    </div>
+                  )}
+                  <Link
+                    href={child.href || "#"}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
+                      isChildActive 
+                        ? "bg-white text-[#0078D4] shadow-sm" 
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    {child.section && <Users className="w-3.5 h-3.5" />}
+                    <span className="flex-1">{child.label}</span>
+                    {child.section && <ChevronRight className="w-3.5 h-3.5 text-white/40" />}
+                    {child.badge !== undefined && child.badge > 0 && (
+                      <span className={cn(
+                        "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center bg-[#FF8000] text-white"
+                      )}>
+                        {child.badge}
+                      </span>
+                    )}
+                  </Link>
                 </div>
               );
-            }
-            
-            return (
-              <Link
-                key={child.href || child.label}
-                href={child.href || "#"}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
-                  isChildActive 
-                    ? "bg-white text-[#0078D4] shadow-sm" 
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                <span className="flex-1">{child.label}</span>
-                {child.badge !== undefined && child.badge > 0 && (
-                  <span className={cn(
-                    "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center bg-[#FF8000] text-white"
-                  )}>
-                    {child.badge}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+            });
+          })()}
         </div>
       )}
     </div>
@@ -229,7 +243,8 @@ export function Sidebar() {
       icon: Hammer, 
       label: "Operations Hub", 
       children: [
-        { label: "Tech Ops", href: "/tech-ops" },
+        { label: "Supervisor Management", href: "/supervisor-management", section: "Team Management" },
+        { label: "Tech Ops", href: "/tech-ops", section: "Tech Ops" },
         { label: "Repair Queue", href: "/repair-queue" },
         { label: "Repair Foreman", href: "/tech-foreman" },
         { label: "Emergencies", href: "/emergencies" },
