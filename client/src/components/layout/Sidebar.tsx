@@ -285,7 +285,6 @@ export function Sidebar() {
       label: "Chats Hub", 
       children: [
         { label: "Channels", href: "/channels" },
-        { label: "Supervisor Messages", href: "/supervisor-messages" },
       ]
     },
     { 
