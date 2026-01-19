@@ -40,6 +40,7 @@ import EstimateApproval from "@/pages/EstimateApproval";
 import EstimateHistory from "@/pages/EstimateHistory";
 import Emergencies from "@/pages/Emergencies";
 import SupervisorTeams from "@/pages/SupervisorTeams";
+import RouteHistory from "@/pages/RouteHistory";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import NotFound from "@/pages/not-found";
 
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/estimate-history" component={EstimateHistory} />
       <Route path="/service-repairs" component={ServiceRepairs} />
       <Route path="/scheduling" component={Scheduling} />
+      <Route path="/route-history" component={RouteHistory} />
       <Route path="/customers" component={Customers} />
       <Route path="/tech-services" component={ServiceTechs} />
       <Route path="/tech-repairs" component={RepairTechs} />

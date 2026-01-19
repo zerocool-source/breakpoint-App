@@ -248,7 +248,10 @@ export function Sidebar() {
       key: "scheduling",
       icon: Calendar, 
       label: "Scheduling", 
-      href: "/scheduling"
+      children: [
+        { label: "Calendar", href: "/scheduling" },
+        { label: "Route History", href: "/route-history" },
+      ]
     },
     { 
       key: "jobs",
