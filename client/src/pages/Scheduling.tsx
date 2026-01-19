@@ -294,6 +294,7 @@ export default function Scheduling() {
   const [overrideStartDate, setOverrideStartDate] = useState<string>("");
   const [overrideEndDate, setOverrideEndDate] = useState<string>("");
   const [splitStopAssignments, setSplitStopAssignments] = useState<Record<string, "tech1" | "tech2">>({});
+  const [selectedStopsForCoverage, setSelectedStopsForCoverage] = useState<Set<string>>(new Set());
 
   const { data: allRoutesData, isLoading } = useQuery({
     queryKey: ["all-routes"],
@@ -560,8 +561,10 @@ export default function Scheduling() {
       setOverrideStartDate("");
       setOverrideEndDate("");
       setSplitStopAssignments({});
+      setSelectedStopsForCoverage(new Set());
       queryClient.invalidateQueries({ queryKey: ["all-routes"] });
       queryClient.invalidateQueries({ queryKey: ["route-history"] });
+      queryClient.invalidateQueries({ queryKey: ["route-overrides"] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -615,7 +618,12 @@ export default function Scheduling() {
       });
       createOverrideMutation.mutate(overrides);
     } else {
-      const overrides = selectedRoute.stops.map(stop => ({
+      const stopsToOverride = selectedRoute.stops.filter(stop => selectedStopsForCoverage.has(stop.id));
+      if (stopsToOverride.length === 0) {
+        toast({ title: "Error", description: "Please select at least one stop to cover", variant: "destructive" });
+        return;
+      }
+      const overrides = stopsToOverride.map(stop => ({
         date: overrideType === "extended" && overrideStartDate 
           ? new Date(overrideStartDate + "T12:00:00").toISOString() 
           : today.toISOString(),
@@ -1125,19 +1133,22 @@ export default function Scheduling() {
                                           </p>
                                           {hasOverride && (
                                             <div className="flex flex-wrap gap-1 mt-1">
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700 border border-orange-300">
+                                                ⏱ Temp Coverage
+                                              </span>
                                               {overrideTypes.includes("single_day") && (
                                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
-                                                  Reassigned Today
+                                                  Today Only
                                                 </span>
                                               )}
                                               {overrideTypes.includes("extended_cover") && (
                                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
-                                                  Extended Cover
+                                                  Extended
                                                 </span>
                                               )}
                                               {overrideTypes.includes("split_route") && (
                                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">
-                                                  Split Route
+                                                  Split
                                                 </span>
                                               )}
                                               {coveringTechs.length > 0 && (
@@ -1195,6 +1206,7 @@ export default function Scheduling() {
                                                   e.stopPropagation();
                                                   setSelectedRoute(route);
                                                   setOverrideType("reassign");
+                                                  setSelectedStopsForCoverage(new Set(route.stops.map(s => s.id)));
                                                   setShowOverrideDialog(true);
                                                 }}
                                               >
@@ -1206,6 +1218,7 @@ export default function Scheduling() {
                                                   e.stopPropagation();
                                                   setSelectedRoute(route);
                                                   setOverrideType("extended");
+                                                  setSelectedStopsForCoverage(new Set(route.stops.map(s => s.id)));
                                                   const tomorrow = new Date();
                                                   tomorrow.setDate(tomorrow.getDate() + 1);
                                                   setOverrideStartDate(tomorrow.toISOString().split("T")[0]);
@@ -1872,21 +1885,97 @@ export default function Scheduling() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <Label>Covering Technician *</Label>
-                    <Select value={overrideTechnicianId} onValueChange={setOverrideTechnicianId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select technician..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activeTechnicians.filter(t => t.id !== selectedRoute?.technicianId).map(tech => (
-                          <SelectItem key={tech.id} value={tech.id}>
-                            {tech.firstName} {tech.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <>
+                    <div className="space-y-2">
+                      <Label>Covering Technician *</Label>
+                      <Select value={overrideTechnicianId} onValueChange={setOverrideTechnicianId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select technician..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeTechnicians.filter(t => t.id !== selectedRoute?.technicianId).map(tech => (
+                            <SelectItem key={tech.id} value={tech.id}>
+                              {tech.firstName} {tech.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {selectedRoute?.stops && selectedRoute.stops.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Select Stops to Cover</Label>
+                        <p className="text-xs text-slate-500">Check the stops you want the covering technician to handle</p>
+                        <div className="border rounded-lg max-h-[180px] overflow-y-auto">
+                          {selectedRoute.stops.map((stop, idx) => {
+                            const isSelected = selectedStopsForCoverage.has(stop.id);
+                            return (
+                              <div 
+                                key={stop.id} 
+                                className={`flex items-center gap-3 p-2 border-b last:border-b-0 cursor-pointer hover:bg-slate-50 transition-colors ${
+                                  isSelected ? "bg-green-50" : "bg-white"
+                                }`}
+                                onClick={() => {
+                                  setSelectedStopsForCoverage(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(stop.id)) {
+                                      next.delete(stop.id);
+                                    } else {
+                                      next.add(stop.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={isSelected}
+                                  onChange={() => {}}
+                                  className="h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+                                />
+                                <span className="text-xs font-medium text-slate-500 w-5">{idx + 1}</span>
+                                <div className="flex flex-col flex-1">
+                                  <span className="text-sm font-medium">{stop.propertyName}</span>
+                                  {stop.address && (
+                                    <span className="text-xs text-slate-400">{stop.address}</span>
+                                  )}
+                                </div>
+                                {isSelected && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-green-200 text-green-700">
+                                    Covered
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex gap-4 text-xs text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <div className="w-3 h-3 bg-green-200 rounded" />
+                            {selectedStopsForCoverage.size} stops selected for coverage
+                          </span>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => setSelectedStopsForCoverage(new Set(selectedRoute.stops.map(s => s.id)))}
+                          >
+                            Select All
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 px-2 text-xs"
+                            onClick={() => setSelectedStopsForCoverage(new Set())}
+                          >
+                            Clear All
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {overrideType === "split" && selectedRoute?.stops && selectedRoute.stops.length > 0 && (

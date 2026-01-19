@@ -16,9 +16,9 @@ const batchOverrideSchema = z.object({
     coverageType: z.enum(["single_day", "extended_cover", "split_route"]).optional().default("single_day"),
     propertyId: z.string(),
     propertyName: z.string(),
-    originalTechnicianId: z.string().nullable(),
+    originalTechnicianId: z.union([z.string(), z.number()]).nullable().transform(v => v === null ? null : String(v)),
     originalTechnicianName: z.string().nullable(),
-    coveringTechnicianId: z.string(),
+    coveringTechnicianId: z.union([z.string(), z.number()]).transform(v => String(v)),
     coveringTechnicianName: z.string(),
     overrideType: z.string(),
     reason: z.string().optional(),
@@ -360,7 +360,7 @@ export function registerPropertyTechnicianRoutes(app: any) {
         .from(routeStops)
         .where(eq(routeStops.routeId, routeId));
 
-      const existingPropertyIds = new Set(existingStops.map(s => s.propertyId));
+      const existingPropertyIds = new Set(existingStops.map((s: { propertyId: string | null }) => s.propertyId));
 
       const newStops = [];
       let sortOrder = existingStops.length;
@@ -466,7 +466,7 @@ export function registerPropertyTechnicianRoutes(app: any) {
         .from(routeStops)
         .where(eq(routeStops.routeId, targetRoute.id));
 
-      const existingPropertyIds = new Set(existingStops.map(s => s.propertyId));
+      const existingPropertyIds = new Set(existingStops.map((s: { propertyId: string | null }) => s.propertyId));
 
       const newStops = [];
       let sortOrder = existingStops.length;
