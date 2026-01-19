@@ -327,6 +327,22 @@ export default function Scheduling() {
   const technicians = techniciansData?.technicians || [];
   const activeTechnicians = technicians.filter(t => t.active);
 
+  interface RouteOverride {
+    id: string;
+    propertyId: string;
+    propertyName: string;
+    originalTechnicianId: string | null;
+    originalTechnicianName: string | null;
+    coveringTechnicianId: string;
+    coveringTechnicianName: string;
+    date: string;
+    startDate: string | null;
+    endDate: string | null;
+    coverageType: string;
+    overrideType: string;
+    reason: string | null;
+  }
+
   const getDateRange = () => {
     // Get the Monday of the current week as start date
     const today = new Date();
@@ -357,6 +373,39 @@ export default function Scheduling() {
   });
 
   const unscheduledOccurrences = unscheduledData?.occurrences || [];
+
+  const { data: overridesData } = useQuery<RouteOverride[]>({
+    queryKey: ["route-overrides", dateRange.start, dateRange.end],
+    queryFn: async () => {
+      const response = await fetch(`/api/route-overrides?startDate=${dateRange.start}&endDate=${dateRange.end}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  const activeOverrides = overridesData || [];
+
+  const getOverridesForRoute = (route: Route, dayDate: Date): RouteOverride[] => {
+    if (!activeOverrides.length || !route.stops?.length) return [];
+    const propertyIds = route.stops.map(s => s.propertyId);
+    const dateStr = dayDate.toISOString().split("T")[0];
+    
+    return activeOverrides.filter(override => {
+      if (!propertyIds.includes(override.propertyId)) return false;
+      
+      const overrideDate = new Date(override.date).toISOString().split("T")[0];
+      if (override.coverageType === "single_day") {
+        return overrideDate === dateStr;
+      } else if (override.coverageType === "extended_cover" && override.startDate && override.endDate) {
+        const start = new Date(override.startDate).toISOString().split("T")[0];
+        const end = new Date(override.endDate).toISOString().split("T")[0];
+        return dateStr >= start && dateStr <= end;
+      } else if (override.coverageType === "split_route") {
+        return overrideDate === dateStr;
+      }
+      return false;
+    });
+  };
 
   const unscheduledByDay = useMemo(() => {
     const grouped: Record<number, UnscheduledOccurrence[]> = {};
@@ -1029,11 +1078,22 @@ export default function Scheduling() {
                               const miles = route.estimatedMiles || Math.round(stopCount * 3.5);
                               const driveTime = route.estimatedDriveTime || Math.round(stopCount * 8);
                               const hasActivity = stopCount > 0;
+                              
+                              const routeOverrides = getOverridesForRoute(route, date);
+                              const hasOverride = routeOverrides.length > 0;
+                              const overrideTypes = Array.from(new Set(routeOverrides.map(o => o.coverageType)));
+                              const coveringTechs = Array.from(new Set(routeOverrides.map(o => o.coveringTechnicianName)));
 
                               return (
                                 <DroppableRouteCard key={route.id} route={route} dayOfWeek={dayOfWeek}>
                                   <div 
-                                    className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                                    className={`bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${
+                                      hasOverride ? "ring-2 ring-offset-1" : ""
+                                    } ${
+                                      overrideTypes.includes("split_route") ? "ring-amber-400" : 
+                                      overrideTypes.includes("extended_cover") ? "ring-blue-400" : 
+                                      hasOverride ? "ring-green-400" : ""
+                                    }`}
                                     style={{ borderLeft: `4px solid ${route.color}` }}
                                     onClick={() => toggleRouteExpanded(route.id)}
                                     data-testid={`route-card-${route.id}`}
@@ -1063,6 +1123,30 @@ export default function Scheduling() {
                                           <p className="text-xs text-[#6C7A96] mt-0.5">
                                             {route.technicianName || "Unassigned"}
                                           </p>
+                                          {hasOverride && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              {overrideTypes.includes("single_day") && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
+                                                  Reassigned Today
+                                                </span>
+                                              )}
+                                              {overrideTypes.includes("extended_cover") && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                                                  Extended Cover
+                                                </span>
+                                              )}
+                                              {overrideTypes.includes("split_route") && (
+                                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">
+                                                  Split Route
+                                                </span>
+                                              )}
+                                              {coveringTechs.length > 0 && (
+                                                <span className="text-[10px] text-slate-500">
+                                                  → {coveringTechs.join(", ")}
+                                                </span>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
                                         
                                         {/* Stop Count & Menu */}
