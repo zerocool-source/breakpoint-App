@@ -3345,7 +3345,7 @@ export default function Estimates() {
                 data-testid="button-confirm-verbal-decline"
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                Record Decline
+                Decline
               </Button>
               <Button
                 onClick={handleVerbalApproval}
@@ -3354,7 +3354,7 @@ export default function Estimates() {
                 data-testid="button-confirm-verbal-approval"
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Record Approval
+                Approved
               </Button>
             </DialogFooter>
           </DialogContent>
