@@ -23,6 +23,7 @@ import Scheduling from "@/pages/Scheduling";
 import Customers from "@/pages/Customers";
 import ServiceTechs from "@/pages/ServiceTechs";
 import RepairTechs from "@/pages/RepairTechs";
+import Supervisors from "@/pages/Supervisors";
 import Fleet from "@/pages/Fleet";
 import TruckInventory from "@/pages/TruckInventory";
 import Equipment from "@/pages/Equipment";
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/customers" component={Customers} />
       <Route path="/tech-services" component={ServiceTechs} />
       <Route path="/tech-repairs" component={RepairTechs} />
+      <Route path="/supervisors" component={Supervisors} />
       <Route path="/tech-supervisor" component={TechSupervisor} />
       <Route path="/tech-foreman" component={TechForeman} />
             <Route path="/fleet" component={Fleet} />

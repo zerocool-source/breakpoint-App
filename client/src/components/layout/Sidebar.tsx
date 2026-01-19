@@ -242,6 +242,7 @@ export function Sidebar() {
       children: [
         { label: "Repair Tech", href: "/tech-repairs" },
         { label: "Service Techs", href: "/tech-services" },
+        { label: "Supervisors", href: "/supervisors" },
       ]
     },
     { 
