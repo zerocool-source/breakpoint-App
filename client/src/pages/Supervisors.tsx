@@ -4,6 +4,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +29,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ChevronDown, Plus, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { 
+  Search, ChevronDown, Plus, Trash2, Users, UserCheck, ClipboardCheck, 
+  CalendarIcon, AlertTriangle, FileText, ChevronRight, RefreshCw,
+  Filter, Building2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Supervisor {
@@ -36,6 +53,17 @@ interface Supervisor {
   phone: string | null;
   email: string | null;
   truckNumber: string | null;
+  active: boolean;
+  role: string;
+}
+
+interface Technician {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  email: string | null;
+  supervisorId: string | null;
   active: boolean;
   role: string;
 }
@@ -356,14 +384,20 @@ function EditSupervisorModal({
 }
 
 export default function Supervisors() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState("concerns");
+  const [assignSupervisor, setAssignSupervisor] = useState("");
+  const [assignProperty, setAssignProperty] = useState("");
+  const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
+  const [inspectionTitle, setInspectionTitle] = useState("");
+  const [inspectionNotes, setInspectionNotes] = useState("");
+  const [filterProperty, setFilterProperty] = useState("all");
+  const [filterSupervisor, setFilterSupervisor] = useState("all");
+  const [filterTechnician, setFilterTechnician] = useState("all");
   const queryClient = useQueryClient();
 
-  const { data: supervisorsData, isLoading } = useQuery<{ technicians: Supervisor[] }>({
+  const { data: supervisorsData, isLoading: loadingSupervisors } = useQuery<{ technicians: Supervisor[] }>({
     queryKey: ["/api/technicians/stored", "supervisor"],
     queryFn: async () => {
       const res = await fetch("/api/technicians/stored?role=supervisor");
@@ -372,7 +406,19 @@ export default function Supervisors() {
     },
   });
 
+  const { data: techniciansData, isLoading: loadingTechnicians } = useQuery<{ technicians: Technician[] }>({
+    queryKey: ["/api/technicians/stored", "service"],
+    queryFn: async () => {
+      const res = await fetch("/api/technicians/stored?role=service");
+      if (!res.ok) throw new Error("Failed to fetch technicians");
+      return res.json();
+    },
+  });
+
   const supervisors = supervisorsData?.technicians || [];
+  const technicians = techniciansData?.technicians || [];
+  const unassignedTechnicians = technicians.filter(t => !t.supervisorId && t.active);
+  const totalTechnicians = technicians.filter(t => t.active).length;
 
   const addSupervisorMutation = useMutation({
     mutationFn: async (supervisor: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string }) => {
@@ -417,266 +463,402 @@ export default function Supervisors() {
     },
   });
 
-  const toggleStatusMutation = useMutation({
-    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
-      const res = await fetch(`/api/technicians/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ active }),
-      });
-      if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "supervisor"] });
-    },
-  });
-
-  const filteredSupervisors = supervisors
-    .filter((sup) => {
-      const fullName = `${sup.firstName || ""} ${sup.lastName || ""}`.toLowerCase();
-      const phone = (sup.phone || "").toLowerCase();
-      const email = (sup.email || "").toLowerCase();
-      const matchesSearch = 
-        fullName.includes(searchQuery.toLowerCase()) ||
-        phone.includes(searchQuery.toLowerCase()) ||
-        email.includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = 
-        statusFilter === "all" ? true :
-        statusFilter === "active" ? sup.active :
-        !sup.active;
-
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
-
-  const itemsPerPage = 11;
-  const totalPages = Math.ceil(filteredSupervisors.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedSupervisors = filteredSupervisors.slice(startIndex, endIndex);
+  const activeSupervisors = supervisors.filter(s => s.active);
 
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Supervisors</h1>
-        </div>
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="bg-[#0078D4] text-white border-[#0078D4] hover:bg-[#0078D4]/90 hover:text-white gap-2"
-                  data-testid="dropdown-filter"
-                >
-                  Filter: {statusFilter === "all" ? "All" : statusFilter === "active" ? "Active" : "Inactive"}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={() => setStatusFilter("all")}>All</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("active")}>Active</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("inactive")}>Inactive</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search name, phone #, email"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-[300px] bg-white"
-                data-testid="input-search"
-              />
-            </div>
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+            <Users className="w-5 h-5 text-slate-600" />
           </div>
-
-          <Button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-[#0078D4] hover:bg-[#0078D4]/90 text-white gap-2"
-            data-testid="button-add-supervisor"
-          >
-            <Plus className="h-4 w-4" />
-            Add Supervisor
-          </Button>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Supervisor Team Management</h1>
+            <p className="text-sm text-slate-500">Manage supervisor teams and technician assignments</p>
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-100 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Supervisor
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Phone
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Truck #
-                </th>
-                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    Loading supervisors...
-                  </td>
-                </tr>
-              ) : filteredSupervisors.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                    {searchQuery ? "No supervisors match your search" : "No supervisors found. Click 'Add Supervisor' to add one."}
-                  </td>
-                </tr>
+        {/* Top Grid - Supervisors & Teams + Unassigned Technicians + Team Summary */}
+        <div className="grid grid-cols-3 gap-6">
+          {/* Supervisors & Teams */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-slate-600" />
+                <h2 className="font-semibold text-slate-900">Supervisors & Teams</h2>
+                <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                  {activeSupervisors.length} Supervisors
+                </Badge>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0"
+                onClick={() => setShowAddModal(true)}
+                data-testid="button-add-supervisor"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {loadingSupervisors ? (
+                <div className="text-center py-4 text-slate-500">Loading...</div>
+              ) : activeSupervisors.length === 0 ? (
+                <div className="text-center py-4 text-slate-500">No supervisors found</div>
               ) : (
-                paginatedSupervisors.map((sup) => {
-                  const fullName = `${sup.firstName || ""} ${sup.lastName || ""}`.trim();
+                activeSupervisors.map((sup) => {
+                  const fullName = `${sup.firstName} ${sup.lastName}`.trim();
                   const initials = getInitials(sup.firstName, sup.lastName);
                   const avatarColor = getAvatarColor(fullName);
+                  const techCount = technicians.filter(t => t.supervisorId === sup.id).length;
                   
                   return (
-                    <tr key={sup.id} className="hover:bg-slate-50" data-testid={`row-supervisor-${sup.id}`}>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold",
-                            avatarColor
-                          )}>
-                            {initials}
+                    <div 
+                      key={sup.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                      onClick={() => setEditingSupervisor(sup)}
+                      data-testid={`supervisor-card-${sup.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold",
+                          avatarColor
+                        )}>
+                          {initials}
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-900">{fullName}</div>
+                          <div className="text-xs text-slate-500 flex items-center gap-1">
+                            <span className="text-blue-600">{sup.truckNumber ? `#${sup.truckNumber}` : "No truck"}</span>
+                            <span>•</span>
+                            <span>{sup.email || "No email"}</span>
                           </div>
-                          <span className="font-medium text-[#0078D4]">{fullName}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {sup.phone || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {sup.email || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {sup.truckNumber ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium text-sm">
-                            #{sup.truckNumber}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center">
-                          <Switch 
-                            checked={sup.active} 
-                            onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: sup.id, active: checked })}
-                            className="data-[state=checked]:bg-[#0078D4]"
-                            data-testid={`switch-status-${sup.id}`}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button 
-                          variant="link" 
-                          className="text-[#0078D4] hover:text-blue-800 p-0 h-auto"
-                          onClick={() => setEditingSupervisor(sup)}
-                          data-testid={`button-edit-${sup.id}`}
-                        >
-                          Edit
-                        </Button>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                          {techCount} Technicians
+                        </Badge>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {/* Unassigned Technicians */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-slate-600" />
+                <h2 className="font-semibold text-slate-900">Unassigned Technicians</h2>
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                  <RefreshCw className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search technicians..."
+                  className="pl-10 h-9 bg-slate-50 border-slate-200"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[240px] overflow-y-auto">
+              {loadingTechnicians ? (
+                <div className="text-center py-4 text-slate-500">Loading...</div>
+              ) : unassignedTechnicians.length === 0 ? (
+                <div className="text-center py-4 text-slate-500">All technicians assigned</div>
+              ) : (
+                unassignedTechnicians.map((tech) => {
+                  const fullName = `${tech.firstName} ${tech.lastName}`.trim();
+                  const initials = getInitials(tech.firstName, tech.lastName);
+                  const avatarColor = getAvatarColor(fullName);
+                  
+                  return (
+                    <div 
+                      key={tech.id}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                      data-testid={`unassigned-tech-${tech.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold",
+                          avatarColor
+                        )}>
+                          {initials}
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-900 text-sm">{fullName}</div>
+                          <div className="text-xs text-slate-500">{tech.phone || "No phone"}</div>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="h-7 text-xs">
+                        <Plus className="w-3 h-3 mr-1" />
+                        Assign
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Team Summary */}
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-center mb-4">
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2">
+                  <Users className="w-6 h-6 text-slate-500" />
+                </div>
+                <h2 className="font-semibold text-slate-900">Team Summary</h2>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-sm text-slate-600">Total Supervisors:</span>
+                <span className="font-semibold text-slate-900">{activeSupervisors.length}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                <span className="text-sm text-slate-600">Total Technicians:</span>
+                <span className="font-semibold text-slate-900">{totalTechnicians}</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-blue-600">Unassigned:</span>
+                <span className="font-semibold text-blue-600">{unassignedTechnicians.length}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border border-slate-200 rounded-lg">
-          <div className="text-sm text-slate-600">
-            Showing {filteredSupervisors.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredSupervisors.length)} of {filteredSupervisors.length} supervisors
+        {/* Assign QC Inspection */}
+        <div className="bg-white rounded-lg border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ClipboardCheck className="w-5 h-5 text-slate-600" />
+            <h2 className="font-semibold text-slate-900">Assign QC Inspection</h2>
           </div>
           
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-              >
-                First
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                Prev
-              </Button>
-              {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
-                const page = Math.max(1, Math.min(currentPage - 1, totalPages - 2)) + i;
-                if (page > totalPages) return null;
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className={currentPage === page ? "bg-[#0078D4]" : ""}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                Last
-              </Button>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Assign To Supervisor <span className="text-red-500">*</span>
+              </label>
+              <Select value={assignSupervisor} onValueChange={setAssignSupervisor}>
+                <SelectTrigger data-testid="select-assign-supervisor">
+                  <SelectValue placeholder="Select supervisor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeSupervisors.map(sup => (
+                    <SelectItem key={sup.id} value={sup.id}>
+                      {sup.firstName} {sup.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Property <span className="text-red-500">*</span>
+              </label>
+              <Input 
+                placeholder="Search property..."
+                value={assignProperty}
+                onChange={(e) => setAssignProperty(e.target.value)}
+                data-testid="input-assign-property"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !scheduleDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {scheduleDate ? format(scheduleDate, "PPP") : "Select date..."}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={scheduleDate}
+                    onSelect={setScheduleDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+              <Input 
+                placeholder="Inspection title..."
+                value={inspectionTitle}
+                onChange={(e) => setInspectionTitle(e.target.value)}
+                data-testid="input-inspection-title"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+              <Textarea 
+                placeholder="Add notes for the supervisor..."
+                value={inspectionNotes}
+                onChange={(e) => setInspectionNotes(e.target.value)}
+                className="min-h-[80px]"
+                data-testid="textarea-inspection-notes"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline">Cancel</Button>
+            <Button className="bg-[#0078D4] hover:bg-[#0078D4]/90">
+              <Plus className="w-4 h-4 mr-2" />
+              Assign Inspection
+            </Button>
+          </div>
         </div>
+
+        {/* Filter Results */}
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Filter className="w-4 h-4" />
+              <span>Filter Results:</span>
+            </div>
+            <Select value={filterProperty} onValueChange={setFilterProperty}>
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="All Properties" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Properties</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterSupervisor} onValueChange={setFilterSupervisor}>
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="All Supervisors" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Supervisors</SelectItem>
+                {activeSupervisors.map(sup => (
+                  <SelectItem key={sup.id} value={sup.id}>
+                    {sup.firstName} {sup.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterTechnician} onValueChange={setFilterTechnician}>
+              <SelectTrigger className="w-[150px] h-9">
+                <SelectValue placeholder="All Technicians" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Technicians</SelectItem>
+              </SelectContent>
+            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-2">
+                  <CalendarIcon className="w-4 h-4" />
+                  Date Range
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Tabs Section */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-lg border border-slate-200">
+          <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+            <TabsTrigger 
+              value="concerns"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Supervisor Concerns
+            </TabsTrigger>
+            <TabsTrigger 
+              value="activity"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Activity Log
+            </TabsTrigger>
+            <TabsTrigger 
+              value="inspections"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
+            >
+              <ClipboardCheck className="w-4 h-4 mr-2" />
+              QC Inspection Log
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="concerns" className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-orange-500" />
+                <h3 className="font-semibold text-slate-900">Supervisor Concerns</h3>
+                <Badge variant="outline" className="text-orange-600 border-orange-300">0 Issues</Badge>
+              </div>
+            </div>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-8 h-8 text-slate-400" />
+              </div>
+              <p className="text-slate-600 font-medium">No supervisor concerns reported</p>
+              <p className="text-sm text-slate-500 mt-1">Concerns from supervisors will appear here</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="activity" className="p-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-slate-400" />
+              </div>
+              <p className="text-slate-600 font-medium">No activity recorded</p>
+              <p className="text-sm text-slate-500 mt-1">Activity log entries will appear here</p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="inspections" className="p-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <ClipboardCheck className="w-8 h-8 text-slate-400" />
+              </div>
+              <p className="text-slate-600 font-medium">No QC inspections scheduled</p>
+              <p className="text-sm text-slate-500 mt-1">Scheduled inspections will appear here</p>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Modals */}
+        <AddSupervisorModal 
+          open={showAddModal} 
+          onClose={() => setShowAddModal(false)} 
+          onAdd={(data) => addSupervisorMutation.mutate(data)}
+        />
+        <EditSupervisorModal 
+          open={!!editingSupervisor}
+          onClose={() => setEditingSupervisor(null)}
+          supervisor={editingSupervisor}
+          onSave={(id, data) => updateSupervisorMutation.mutate({ id, data })}
+          onDelete={(id) => deleteSupervisorMutation.mutate(id)}
+        />
       </div>
-
-      <AddSupervisorModal
-        open={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAdd={(supervisor) => addSupervisorMutation.mutate(supervisor)}
-      />
-
-      <EditSupervisorModal
-        open={!!editingSupervisor}
-        onClose={() => setEditingSupervisor(null)}
-        supervisor={editingSupervisor}
-        onSave={(id, data) => updateSupervisorMutation.mutate({ id, data })}
-        onDelete={(id) => deleteSupervisorMutation.mutate(id)}
-      />
     </AppLayout>
   );
 }
