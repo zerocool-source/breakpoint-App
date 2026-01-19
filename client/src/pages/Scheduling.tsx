@@ -1889,9 +1889,10 @@ export default function Scheduling() {
                   </div>
                 )}
 
-                {overrideType === "split" && overrideTechnicianId && overrideSecondTechnicianId && (
+                {overrideType === "split" && selectedRoute?.stops && selectedRoute.stops.length > 0 && (
                   <div className="space-y-2">
                     <Label>Assign Stops to Technicians</Label>
+                    <p className="text-xs text-slate-500">Click on a stop to toggle between Tech 1 and Tech 2</p>
                     <div className="border rounded-lg max-h-[200px] overflow-y-auto">
                       {selectedRoute?.stops.map((stop, idx) => {
                         const assignment = splitStopAssignments[stop.id] || "tech1";
@@ -1900,32 +1901,46 @@ export default function Scheduling() {
                         return (
                           <div 
                             key={stop.id} 
-                            className={`flex items-center justify-between p-2 border-b last:border-b-0 ${
+                            className={`flex items-center justify-between p-2 border-b last:border-b-0 cursor-pointer hover:opacity-80 transition-opacity ${
                               assignment === "tech1" ? "bg-blue-50" : "bg-amber-50"
                             }`}
+                            onClick={() => {
+                              setSplitStopAssignments(prev => ({
+                                ...prev,
+                                [stop.id]: prev[stop.id] === "tech2" ? "tech1" : "tech2"
+                              }));
+                            }}
                           >
                             <div className="flex items-center gap-2">
+                              <input 
+                                type="checkbox" 
+                                checked={assignment === "tech2"}
+                                onChange={() => {
+                                  setSplitStopAssignments(prev => ({
+                                    ...prev,
+                                    [stop.id]: prev[stop.id] === "tech2" ? "tech1" : "tech2"
+                                  }));
+                                }}
+                                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                              />
                               <span className="text-xs font-medium text-slate-500 w-5">{idx + 1}</span>
-                              <span className="text-sm">{stop.propertyName}</span>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{stop.propertyName}</span>
+                                {stop.address && (
+                                  <span className="text-xs text-slate-400">{stop.address}</span>
+                                )}
+                              </div>
                             </div>
-                            <Select 
-                              value={assignment} 
-                              onValueChange={(val: "tech1" | "tech2") => 
-                                setSplitStopAssignments(prev => ({ ...prev, [stop.id]: val }))
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              assignment === "tech1" 
+                                ? "bg-blue-200 text-blue-700" 
+                                : "bg-amber-200 text-amber-700"
+                            }`}>
+                              {assignment === "tech1" 
+                                ? (tech1 ? `${tech1.firstName}` : "Tech 1")
+                                : (tech2 ? `${tech2.firstName}` : "Tech 2")
                               }
-                            >
-                              <SelectTrigger className="w-[150px] h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="tech1">
-                                  {tech1 ? `${tech1.firstName} ${tech1.lastName}` : "Tech 1"}
-                                </SelectItem>
-                                <SelectItem value="tech2">
-                                  {tech2 ? `${tech2.firstName} ${tech2.lastName}` : "Tech 2"}
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                            </span>
                           </div>
                         );
                       })}
@@ -1933,7 +1948,7 @@ export default function Scheduling() {
                     <div className="flex gap-4 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-blue-200 rounded" />
-                        {Object.values(splitStopAssignments).filter(v => v === "tech1").length} stops to Tech 1
+                        {Object.values(splitStopAssignments).filter(v => v === "tech1").length || selectedRoute.stops.length} stops to Tech 1
                       </span>
                       <span className="flex items-center gap-1">
                         <div className="w-3 h-3 bg-amber-200 rounded" />
