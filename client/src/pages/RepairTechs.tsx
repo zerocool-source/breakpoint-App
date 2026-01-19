@@ -33,7 +33,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ChevronDown, Plus, Image, Trash2, Clock, FileText } from "lucide-react";
+import { Search, ChevronDown, Plus, Image, Trash2, Clock, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -337,6 +337,22 @@ interface FieldEntry {
   submittedAt: string;
 }
 
+interface TechnicianProperty {
+  id: string;
+  technicianId: string;
+  propertyId: string;
+  propertyName: string | null;
+  customerName: string | null;
+  address: string | null;
+  assignedAt: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  address: string | null;
+}
+
 function ServiceLogSidebar({
   technician,
   onClose,
@@ -344,6 +360,10 @@ function ServiceLogSidebar({
   technician: Technician | null;
   onClose: () => void;
 }) {
+  const [activeTab, setActiveTab] = useState<"log" | "properties">("properties");
+  const [propertySearch, setPropertySearch] = useState("");
+  const queryClient = useQueryClient();
+
   const { data, isLoading } = useQuery<{ entries: FieldEntry[] }>({
     queryKey: ["/api/technicians", technician?.id, "entries"],
     queryFn: async () => {
@@ -351,7 +371,71 @@ function ServiceLogSidebar({
       if (!res.ok) throw new Error("Failed to fetch entries");
       return res.json();
     },
+    enabled: !!technician && activeTab === "log",
+  });
+
+  const { data: propertiesData, isLoading: propertiesLoading } = useQuery<TechnicianProperty[]>({
+    queryKey: ["/api/technician-properties", technician?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-properties/${technician?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
     enabled: !!technician,
+  });
+
+  const { data: customersData } = useQuery<{ customers: Customer[] }>({
+    queryKey: ["/api/customers"],
+    queryFn: async () => {
+      const res = await fetch("/api/customers");
+      if (!res.ok) return { customers: [] };
+      return res.json();
+    },
+  });
+
+  const assignedProperties = propertiesData || [];
+  const customers = customersData?.customers || [];
+  const assignedPropertyIds = new Set(assignedProperties.map(p => p.propertyId));
+  
+  const filteredCustomers = customers.filter(c => 
+    !assignedPropertyIds.has(c.id) &&
+    c.name.toLowerCase().includes(propertySearch.toLowerCase())
+  );
+
+  const addPropertyMutation = useMutation({
+    mutationFn: async (customerId: string) => {
+      const customer = customers.find(c => c.id === customerId);
+      const res = await fetch("/api/technician-properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          technicianId: technician?.id,
+          propertyId: customerId,
+          propertyName: customer?.name,
+          customerName: customer?.name,
+          address: customer?.address,
+          assignedByName: "Office Staff",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to assign property");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties", technician?.id] });
+      setPropertySearch("");
+    },
+  });
+
+  const removePropertyMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
+      const res = await fetch(`/api/technician-properties/${assignmentId}`, {
+        method: "DELETE",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties", technician?.id] });
+    },
   });
 
   const entries = data?.entries || [];
@@ -388,67 +472,168 @@ function ServiceLogSidebar({
             </div>
             <div>
               <SheetTitle className="text-white text-lg">{fullName}</SheetTitle>
-              <p className="text-[#0078D4]1A text-sm">Service Log</p>
+              <p className="text-blue-200 text-sm">Repair Technician</p>
             </div>
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-100px)]">
-          <div className="p-6 space-y-4">
-            {isLoading ? (
-              <div className="text-center py-12 text-slate-500">
-                Loading service entries...
-              </div>
-            ) : entries.length === 0 ? (
-              <div className="text-center py-12 text-slate-500">
-                <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p>No service entries found</p>
-                <p className="text-sm mt-1">
-                  Entries will appear here when synced from the field app
-                </p>
-              </div>
-            ) : (
-              entries.map((entry) => {
-                const payload = parsePayload(entry.payload);
-                const submittedDate = new Date(entry.submittedAt);
-
-                return (
-                  <div
-                    key={entry.id}
-                    className="bg-slate-50 border border-slate-200 rounded-lg p-4"
-                    data-testid={`entry-${entry.id}`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#0078D4]1A text-blue-800 capitalize">
-                        {entry.entryType}
-                      </span>
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
-                        <Clock className="w-3 h-3" />
-                        {format(submittedDate, "MMM d, yyyy h:mm a")}
-                      </div>
-                    </div>
-                    {payload.notes && (
-                      <p className="text-sm text-slate-700 mt-2">
-                        {payload.notes}
-                      </p>
-                    )}
-                    {payload.raw && (
-                      <p className="text-sm text-slate-700 mt-2">
-                        {payload.raw}
-                      </p>
-                    )}
-                    {Object.keys(payload).length > 0 &&
-                      !payload.notes &&
-                      !payload.raw && (
-                        <pre className="text-xs text-slate-600 mt-2 bg-white p-2 rounded border overflow-auto">
-                          {JSON.stringify(payload, null, 2)}
-                        </pre>
-                      )}
-                  </div>
-                );
-              })
-            )}
+        <div className="border-b">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab("properties")}
+              className={cn(
+                "flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors",
+                activeTab === "properties"
+                  ? "border-[#0078D4] text-[#0078D4]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Assigned Properties
+            </button>
+            <button
+              onClick={() => setActiveTab("log")}
+              className={cn(
+                "flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors",
+                activeTab === "log"
+                  ? "border-[#0078D4] text-[#0078D4]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              )}
+            >
+              Service Log
+            </button>
           </div>
+        </div>
+
+        <ScrollArea className="h-[calc(100vh-180px)]">
+          {activeTab === "properties" ? (
+            <div className="p-4 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search properties to add..."
+                  value={propertySearch}
+                  onChange={(e) => setPropertySearch(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-properties"
+                />
+              </div>
+              
+              {propertySearch && filteredCustomers.length > 0 && (
+                <div className="border rounded-lg bg-white shadow-sm max-h-48 overflow-y-auto">
+                  {filteredCustomers.slice(0, 10).map(customer => (
+                    <button
+                      key={customer.id}
+                      onClick={() => addPropertyMutation.mutate(customer.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b last:border-b-0"
+                      data-testid={`add-property-${customer.id}`}
+                    >
+                      <p className="font-medium text-sm text-slate-700">{customer.name}</p>
+                      {customer.address && (
+                        <p className="text-xs text-slate-500">{customer.address}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {propertiesLoading ? (
+                <div className="text-center py-8 text-slate-500">Loading properties...</div>
+              ) : assignedProperties.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No properties assigned</p>
+                  <p className="text-xs mt-1">Search above to add properties</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {assignedProperties.map((prop) => (
+                    <div
+                      key={prop.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50"
+                      data-testid={`assigned-property-${prop.id}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm text-slate-700 truncate">
+                          {prop.propertyName || prop.customerName || "Unknown"}
+                        </p>
+                        {prop.address && (
+                          <p className="text-xs text-slate-500 truncate">{prop.address}</p>
+                        )}
+                        <p className="text-xs text-slate-400">
+                          Assigned {new Date(prop.assignedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                        onClick={() => removePropertyMutation.mutate(prop.id)}
+                        data-testid={`remove-property-${prop.id}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-6 space-y-4">
+              {isLoading ? (
+                <div className="text-center py-12 text-slate-500">
+                  Loading service entries...
+                </div>
+              ) : entries.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p>No service entries found</p>
+                  <p className="text-sm mt-1">
+                    Entries will appear here when synced from the field app
+                  </p>
+                </div>
+              ) : (
+                entries.map((entry) => {
+                  const payload = parsePayload(entry.payload);
+                  const submittedDate = new Date(entry.submittedAt);
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className="bg-slate-50 border border-slate-200 rounded-lg p-4"
+                      data-testid={`entry-${entry.id}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                          {entry.entryType}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs text-slate-500">
+                          <Clock className="w-3 h-3" />
+                          {format(submittedDate, "MMM d, yyyy h:mm a")}
+                        </div>
+                      </div>
+                      {payload.notes && (
+                        <p className="text-sm text-slate-700 mt-2">
+                          {payload.notes}
+                        </p>
+                      )}
+                      {payload.raw && (
+                        <p className="text-sm text-slate-700 mt-2">
+                          {payload.raw}
+                        </p>
+                      )}
+                      {Object.keys(payload).length > 0 &&
+                        !payload.notes &&
+                        !payload.raw && (
+                          <pre className="text-xs text-slate-600 mt-2 bg-white p-2 rounded border overflow-auto">
+                            {JSON.stringify(payload, null, 2)}
+                          </pre>
+                        )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </ScrollArea>
       </SheetContent>
     </Sheet>

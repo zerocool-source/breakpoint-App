@@ -94,6 +94,84 @@ export function registerPropertyTechnicianRoutes(app: any) {
     }
   });
 
+  app.get("/api/technician-properties/:technicianId", async (req: any, res: any) => {
+    try {
+      const { technicianId } = req.params;
+      const assignments = await db
+        .select({
+          id: propertyTechnicians.id,
+          technicianId: propertyTechnicians.technicianId,
+          propertyId: propertyTechnicians.propertyId,
+          technicianName: propertyTechnicians.technicianName,
+          propertyName: customers.name,
+          customerName: customers.name,
+          address: customers.address,
+          assignedAt: propertyTechnicians.assignedAt,
+        })
+        .from(propertyTechnicians)
+        .leftJoin(customers, eq(propertyTechnicians.propertyId, customers.id))
+        .where(eq(propertyTechnicians.technicianId, technicianId))
+        .orderBy(desc(propertyTechnicians.assignedAt));
+      res.json(assignments);
+    } catch (error: any) {
+      console.error("Error fetching technician properties:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/technician-properties", async (req: any, res: any) => {
+    try {
+      const { technicianId, propertyId, propertyName, customerName, address, assignedByName } = req.body;
+      
+      const tech = await db
+        .select()
+        .from(technicians)
+        .where(eq(technicians.id, technicianId))
+        .limit(1);
+      
+      const technicianName = tech[0] ? `${tech[0].firstName} ${tech[0].lastName}` : null;
+
+      const existing = await db
+        .select()
+        .from(propertyTechnicians)
+        .where(and(
+          eq(propertyTechnicians.propertyId, propertyId),
+          eq(propertyTechnicians.technicianId, technicianId)
+        ))
+        .limit(1);
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ error: "Property already assigned to this technician" });
+      }
+
+      const [assignment] = await db
+        .insert(propertyTechnicians)
+        .values({
+          propertyId,
+          technicianId,
+          technicianName,
+          assignedByName,
+        })
+        .returning();
+
+      res.json(assignment);
+    } catch (error: any) {
+      console.error("Error assigning property to technician:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/technician-properties/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      await db.delete(propertyTechnicians).where(eq(propertyTechnicians.id, id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error removing property from technician:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/route-overrides", async (req: any, res: any) => {
     try {
       const { startDate, endDate, technicianId, propertyId, reason } = req.query;
