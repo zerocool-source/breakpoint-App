@@ -23,6 +23,10 @@ export function registerTechnicianRoutes(app: any) {
       const technicians = (techsData.data || []).map((t: any) => ({
         id: t.RecordID,
         name: t.Name || `${t.FirstName || ''} ${t.LastName || ''}`.trim() || "Unknown",
+        firstName: t.FirstName || t.Name?.split(' ')[0] || "Unknown",
+        lastName: t.LastName || t.Name?.split(' ').slice(1).join(' ') || "",
+        role: t.Role || "service",
+        active: t.Active !== false && t.Active !== 0 && t.Active !== "0",
       }));
 
       res.json({ technicians });
