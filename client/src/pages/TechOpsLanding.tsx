@@ -74,16 +74,6 @@ const techOpsOptions = [
   },
 ];
 
-const managementOptions = [
-  { 
-    id: "supervisor-management",
-    label: "Supervisor Management", 
-    href: "/supervisor-teams",
-    icon: Users, 
-    color: "bg-slate-100 text-slate-700 border-slate-200",
-    description: "Manage supervisor teams and technician assignments"
-  },
-];
 
 const entryTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
   repairs_needed: { label: "Repairs Needed", color: "bg-red-100 text-red-700", icon: Wrench },
@@ -251,30 +241,6 @@ export default function TechOpsLanding() {
                           {count}
                         </span>
                       )}
-                      <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <h3 className="lg:col-span-4 text-sm font-medium text-slate-500 -mb-2">Team Management</h3>
-          {managementOptions.map((option) => {
-            const Icon = option.icon;
-            return (
-              <Link key={option.href} href={option.href} data-testid={`link-mgmt-${option.id}`}>
-                <Card className="hover:shadow-md transition-all cursor-pointer group h-full border-dashed" data-testid={`card-mgmt-${option.id}`}>
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${option.color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span className="font-medium text-[#1E293B] group-hover:text-[#0078D4] text-sm transition-colors flex-1">
-                        {option.label}
-                      </span>
                       <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#0078D4] transition-colors" />
                     </div>
                   </CardContent>
