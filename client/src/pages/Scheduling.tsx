@@ -1380,27 +1380,25 @@ export default function Scheduling() {
                                                     </p>
                                                     {stopOverride && (
                                                       <div className="flex items-center gap-2 mt-1">
-                                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-200 text-orange-800 border border-orange-300">
+                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-200 text-orange-800 border border-orange-300">
                                                           ⏱ Covered by: {stopOverride.coveringTechnicianName}
+                                                          <button
+                                                            className="ml-1 hover:bg-orange-300 rounded-full p-0.5 transition-colors"
+                                                            title="Remove coverage"
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              if (confirm("Remove temporary coverage for this stop?")) {
+                                                                removeOverrideMutation.mutate(stopOverride.id);
+                                                              }
+                                                            }}
+                                                          >
+                                                            <X className="h-3 w-3" />
+                                                          </button>
                                                         </span>
                                                       </div>
                                                     )}
                                                   </div>
                                                   <div className="flex items-center gap-1">
-                                                    {stopOverride && (
-                                                      <button
-                                                        className="p-1 text-orange-400 hover:text-orange-600 transition-colors"
-                                                        title="Remove coverage"
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          if (confirm("Remove temporary coverage for this stop?")) {
-                                                            removeOverrideMutation.mutate(stopOverride.id);
-                                                          }
-                                                        }}
-                                                      >
-                                                        <X className="h-3.5 w-3.5" />
-                                                      </button>
-                                                    )}
                                                     <button
                                                       className="p-1 text-slate-400 hover:text-red-500 transition-colors"
                                                       onClick={(e) => {
