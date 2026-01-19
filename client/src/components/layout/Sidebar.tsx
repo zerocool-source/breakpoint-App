@@ -16,6 +16,9 @@ import {
   Package,
   Hammer,
   Search,
+  Droplets,
+  Wind,
+  AlertTriangle,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -259,8 +262,29 @@ export function Sidebar() {
       icon: Briefcase, 
       label: "Jobs", 
       children: [
-        { label: "Repairs", href: "/jobs" },
-        { label: "Chemicals", href: "/job-chemicals" },
+        { 
+          label: "Repairs",
+          children: [
+            { label: "Repairs Needed", href: "/tech-ops/repairs-needed" },
+            { label: "Service Repairs", href: "/service-repairs" },
+          ]
+        },
+        { 
+          label: "Chemicals",
+          children: [
+            { label: "Chemical Orders", href: "/tech-ops/chemical-order" },
+            { label: "Chemicals Dropped-Off", href: "/tech-ops/chemicals-dropoff" },
+          ]
+        },
+      ]
+    },
+    { 
+      key: "service",
+      icon: Wind, 
+      label: "Service", 
+      children: [
+        { label: "Windy Day Clean Up", href: "/tech-ops/windy-day-cleanup" },
+        { label: "Report Issues", href: "/tech-ops/report-issue" },
       ]
     },
     { 
