@@ -305,15 +305,15 @@ export function registerReportRoutes(app: any) {
         estimates,
         techOpsEntries,
         technicians,
+        equipment,
         commissions
       ] = await Promise.all([
         storage.getEstimates(),
         storage.getTechOpsEntries({ startDate: start, endDate: end }),
         storage.getTechnicians(),
+        storage.getAllEquipment().catch(() => []),
         storage.getTechOpsCommissions({ startDate: start, endDate: end }).catch(() => ({ technicians: [], totals: {} }))
       ]);
-      
-      const equipment: any[] = [];
 
       const filteredEstimates = estimates.filter(e => {
         const created = new Date(e.createdAt || 0);

@@ -140,6 +140,7 @@ export interface IStorage {
   deletePool(id: string): Promise<void>;
 
   // Equipment
+  getAllEquipment(): Promise<Equipment[]>;
   getEquipmentByCustomer(customerId: string): Promise<Equipment[]>;
   getEquipment(id: string): Promise<Equipment | undefined>;
   createEquipment(equip: InsertEquipment): Promise<Equipment>;
@@ -813,6 +814,10 @@ export class DbStorage implements IStorage {
   }
 
   // Equipment
+  async getAllEquipment(): Promise<Equipment[]> {
+    return db.select().from(equipment);
+  }
+
   async getEquipmentByCustomer(customerId: string): Promise<Equipment[]> {
     return db.select().from(equipment).where(eq(equipment.customerId, customerId));
   }
