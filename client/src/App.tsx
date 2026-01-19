@@ -41,6 +41,7 @@ import EstimateHistory from "@/pages/EstimateHistory";
 import Emergencies from "@/pages/Emergencies";
 import SupervisorTeams from "@/pages/SupervisorTeams";
 import ChatHubs from "@/pages/ChatHubs";
+import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/supervisor-messages" component={ChatHubs} />
       <Route path="/settings" component={Settings} />
       <Route path="/approve/:token" component={EstimateApproval} />
+      <Route path="/api-test" component={ApiSmokeTest} />
       <Route component={NotFound} />
     </Switch>
   );
