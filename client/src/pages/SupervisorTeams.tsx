@@ -723,44 +723,8 @@ export default function SupervisorTeams() {
           </div>
         </div>
 
-        {/* QC Inspections Section - Metrics and Assignment Form */}
+        {/* QC Inspections Section - Assignment Form */}
         <div className="space-y-4 mb-6">
-          {/* QC Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="border-[#0078D4]/20 bg-[#0078D4]/5">
-              <CardContent className="pt-4 text-center">
-                <div className="text-2xl font-bold text-[#0078D4]" data-testid="qc-metric-total">
-                  {qcMetrics?.totalAssigned || 0}
-                </div>
-                <div className="text-xs text-slate-600">Total Assigned</div>
-              </CardContent>
-            </Card>
-            <Card className="border-[#16A679]/20 bg-[#16A679]/5">
-              <CardContent className="pt-4 text-center">
-                <div className="text-2xl font-bold text-[#16A679]" data-testid="qc-metric-completed">
-                  {qcMetrics?.totalCompleted || 0}
-                </div>
-                <div className="text-xs text-slate-600">Total Completed</div>
-              </CardContent>
-            </Card>
-            <Card className="border-[#FF8000]/20 bg-[#FF8000]/5">
-              <CardContent className="pt-4 text-center">
-                <div className="text-2xl font-bold text-[#D35400]" data-testid="qc-metric-2weeks">
-                  {qcMetrics?.twoWeeks.assigned || 0} / {qcMetrics?.twoWeeks.completed || 0}
-                </div>
-                <div className="text-xs text-slate-600">Last 2 Weeks (Assigned/Completed)</div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200 bg-slate-50">
-              <CardContent className="pt-4 text-center">
-                <div className="text-2xl font-bold text-slate-700" data-testid="qc-metric-month">
-                  {qcMetrics?.month.assigned || 0} / {qcMetrics?.month.completed || 0}
-                </div>
-                <div className="text-xs text-slate-600">Last Month (Assigned/Completed)</div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Assign New QC Inspection */}
           <Card>
             <CardHeader className="pb-3">
