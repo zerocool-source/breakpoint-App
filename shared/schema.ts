@@ -1575,3 +1575,33 @@ export const insertSupervisorActivitySchema = createInsertSchema(supervisorActiv
 
 export type InsertSupervisorActivity = z.infer<typeof insertSupervisorActivitySchema>;
 export type SupervisorActivity = typeof supervisorActivity.$inferSelect;
+
+// QC Inspections - Office staff assigns property inspections to supervisors
+export const qcInspections = pgTable("qc_inspections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  supervisorId: varchar("supervisor_id").notNull(), // FK to technicians with role='supervisor'
+  supervisorName: text("supervisor_name"),
+  propertyId: varchar("property_id"), // FK to customers/pools
+  propertyName: text("property_name").notNull(),
+  propertyAddress: text("property_address"),
+  title: text("title"), // User-defined title for the inspection
+  notes: text("notes"),
+  photos: text("photos").array(), // URLs to uploaded images
+  status: text("status").default("assigned"), // assigned, in_progress, completed, cancelled
+  assignedById: varchar("assigned_by_id"), // FK to technicians/users who assigned it
+  assignedByName: text("assigned_by_name"),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  completionNotes: text("completion_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertQcInspectionSchema = createInsertSchema(qcInspections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertQcInspection = z.infer<typeof insertQcInspectionSchema>;
+export type QcInspection = typeof qcInspections.$inferSelect;
