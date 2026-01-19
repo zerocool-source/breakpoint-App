@@ -73,14 +73,14 @@ const OVERRIDE_TYPE_COLORS: Record<string, string> = {
 };
 
 const COVERAGE_TYPE_COLORS: Record<string, string> = {
-  single_day: "bg-slate-100 text-slate-700",
-  extended_cover: "bg-amber-100 text-amber-800",
-  split_route: "bg-purple-100 text-purple-800",
+  single_day: "bg-green-100 text-green-700",
+  extended_cover: "bg-blue-100 text-blue-700",
+  split_route: "bg-amber-100 text-amber-700",
 };
 
 const COVERAGE_TYPE_LABELS: Record<string, string> = {
-  single_day: "Single Day",
-  extended_cover: "Extended",
+  single_day: "Reassign Today",
+  extended_cover: "Extended Cover",
   split_route: "Split Route",
 };
 
@@ -303,8 +303,9 @@ export default function RouteHistory() {
                       <TableHead>Property</TableHead>
                       <TableHead>Original Tech</TableHead>
                       <TableHead>Covered By</TableHead>
-                      <TableHead>Coverage</TableHead>
+                      <TableHead>Action Type</TableHead>
                       <TableHead>Reason</TableHead>
+                      <TableHead>Changed By</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Timestamp</TableHead>
                     </TableRow>
@@ -332,6 +333,9 @@ export default function RouteHistory() {
                             </Badge>
                           </TableCell>
                           <TableCell>{override.reason || "-"}</TableCell>
+                          <TableCell className="text-slate-600 text-sm">
+                            {override.createdByName || "System"}
+                          </TableCell>
                           <TableCell>
                             {override.active === false ? (
                               <Badge variant="outline" className="text-slate-400">Expired</Badge>
