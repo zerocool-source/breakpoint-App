@@ -383,9 +383,195 @@ function EditSupervisorModal({
   );
 }
 
+function SupervisorTeamModal({
+  open,
+  onClose,
+  supervisor,
+  technicians,
+  onAssign,
+  onUnassign,
+}: {
+  open: boolean;
+  onClose: () => void;
+  supervisor: Supervisor | null;
+  technicians: Technician[];
+  onAssign: (techId: string, supervisorId: string) => void;
+  onUnassign: (techId: string) => void;
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  if (!supervisor) return null;
+  
+  const fullName = `${supervisor.firstName} ${supervisor.lastName}`.trim();
+  const initials = getInitials(supervisor.firstName, supervisor.lastName);
+  const avatarColor = getAvatarColor(fullName);
+  
+  const assignedTechs = technicians.filter(t => t.supervisorId === supervisor.id && t.active);
+  const unassignedTechs = technicians.filter(t => !t.supervisorId && t.active);
+  const filteredUnassigned = unassignedTechs.filter(t => {
+    const name = `${t.firstName} ${t.lastName}`.toLowerCase();
+    return name.includes(searchQuery.toLowerCase());
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[700px] p-0 gap-0 max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-3">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold",
+              avatarColor
+            )}>
+              {initials}
+            </div>
+            {fullName}'s Team
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="p-6 overflow-y-auto flex-1">
+          <div className="grid grid-cols-2 gap-6">
+            {/* Assigned Technicians */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Assigned Technicians
+                </h3>
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  {assignedTechs.length}
+                </Badge>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto border border-slate-200 rounded-lg p-2">
+                {assignedTechs.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-sm">
+                    No technicians assigned yet
+                  </div>
+                ) : (
+                  assignedTechs.map((tech) => {
+                    const techName = `${tech.firstName} ${tech.lastName}`.trim();
+                    const techInitials = getInitials(tech.firstName, tech.lastName);
+                    const techColor = getAvatarColor(techName);
+                    
+                    return (
+                      <div 
+                        key={tech.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-green-50 border border-green-200"
+                        data-testid={`assigned-tech-${tech.id}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold",
+                            techColor
+                          )}>
+                            {techInitials}
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 text-sm">{techName}</div>
+                            <div className="text-xs text-slate-500">{tech.phone || "No phone"}</div>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => onUnassign(tech.id)}
+                          data-testid={`button-remove-tech-${tech.id}`}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Remove
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Available Technicians */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4" />
+                  Available Technicians
+                </h3>
+                <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+                  {unassignedTechs.length}
+                </Badge>
+              </div>
+              <div className="mb-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search technicians..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-9 bg-slate-50 border-slate-200"
+                    data-testid="input-search-available-techs"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2 max-h-[260px] overflow-y-auto border border-slate-200 rounded-lg p-2">
+                {filteredUnassigned.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-sm">
+                    {searchQuery ? "No matching technicians" : "All technicians are assigned"}
+                  </div>
+                ) : (
+                  filteredUnassigned.map((tech) => {
+                    const techName = `${tech.firstName} ${tech.lastName}`.trim();
+                    const techInitials = getInitials(tech.firstName, tech.lastName);
+                    const techColor = getAvatarColor(techName);
+                    
+                    return (
+                      <div 
+                        key={tech.id}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 border border-slate-100"
+                        data-testid={`available-tech-${tech.id}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold",
+                            techColor
+                          )}>
+                            {techInitials}
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 text-sm">{techName}</div>
+                            <div className="text-xs text-slate-500">{tech.phone || "No phone"}</div>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                          onClick={() => onAssign(tech.id, supervisor.id)}
+                          data-testid={`button-add-tech-${tech.id}`}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+          <Button onClick={onClose} className="bg-[#0078D4] hover:bg-[#0078D4]/90">
+            Done
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Supervisors() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null);
+  const [managingTeamSupervisor, setManagingTeamSupervisor] = useState<Supervisor | null>(null);
   const [activeTab, setActiveTab] = useState("concerns");
   const [assignSupervisor, setAssignSupervisor] = useState("");
   const [assignProperty, setAssignProperty] = useState("");
@@ -463,6 +649,21 @@ export default function Supervisors() {
     },
   });
 
+  const assignTechnicianMutation = useMutation({
+    mutationFn: async ({ techId, supervisorId }: { techId: string; supervisorId: string | null }) => {
+      const res = await fetch(`/api/technicians/${techId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ supervisorId }),
+      });
+      if (!res.ok) throw new Error("Failed to update technician");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "service"] });
+    },
+  });
+
   const activeSupervisors = supervisors.filter(s => s.active);
 
   return (
@@ -517,11 +718,13 @@ export default function Supervisors() {
                   return (
                     <div 
                       key={sup.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors cursor-pointer"
-                      onClick={() => setEditingSupervisor(sup)}
+                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
                       data-testid={`supervisor-card-${sup.id}`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div 
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
+                        onClick={() => setEditingSupervisor(sup)}
+                      >
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold",
                           avatarColor
@@ -537,8 +740,12 @@ export default function Supervisors() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                        onClick={() => setManagingTeamSupervisor(sup)}
+                        data-testid={`button-manage-team-${sup.id}`}
+                      >
+                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
                           {techCount} Technicians
                         </Badge>
                         <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -857,6 +1064,14 @@ export default function Supervisors() {
           supervisor={editingSupervisor}
           onSave={(id, data) => updateSupervisorMutation.mutate({ id, data })}
           onDelete={(id) => deleteSupervisorMutation.mutate(id)}
+        />
+        <SupervisorTeamModal
+          open={!!managingTeamSupervisor}
+          onClose={() => setManagingTeamSupervisor(null)}
+          supervisor={managingTeamSupervisor}
+          technicians={technicians}
+          onAssign={(techId, supervisorId) => assignTechnicianMutation.mutate({ techId, supervisorId })}
+          onUnassign={(techId) => assignTechnicianMutation.mutate({ techId, supervisorId: null })}
         />
       </div>
     </AppLayout>
