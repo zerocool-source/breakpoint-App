@@ -25,7 +25,8 @@ import {
   Plus, MapPin, Clock, 
   Trash2, Edit, GripVertical, MoreVertical, 
   Map, List, ChevronLeft, ChevronRight,
-  Navigation, Timer, ChevronDown, ChevronUp, Filter, EyeOff, ChevronsDownUp, X
+  Navigation, Timer, ChevronDown, ChevronUp, Filter, EyeOff, ChevronsDownUp, X,
+  Calendar, Users
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -285,10 +286,12 @@ export default function Scheduling() {
   });
 
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
-  const [overrideType, setOverrideType] = useState<"reassign" | "cover">("reassign");
+  const [overrideType, setOverrideType] = useState<"reassign" | "cover" | "extended" | "split">("reassign");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideNotes, setOverrideNotes] = useState("");
   const [overrideTechnicianId, setOverrideTechnicianId] = useState("");
+  const [overrideStartDate, setOverrideStartDate] = useState<string>("");
+  const [overrideEndDate, setOverrideEndDate] = useState<string>("");
 
   const { data: allRoutesData, isLoading } = useQuery({
     queryKey: ["all-routes"],
@@ -492,14 +495,18 @@ export default function Scheduling() {
       return response.json();
     },
     onSuccess: (data) => {
+      const typeLabel = overrideType === "extended" ? "extended coverage" : 
+                        overrideType === "split" ? "split route" : "override";
       toast({ 
         title: "Route Override Created", 
-        description: `Created ${data.overrides?.length || 0} overrides for today.` 
+        description: `Created ${data.overrides?.length || 0} ${typeLabel}${data.overrides?.length !== 1 ? 's' : ''}.` 
       });
       setShowOverrideDialog(false);
       setOverrideReason("");
       setOverrideNotes("");
       setOverrideTechnicianId("");
+      setOverrideStartDate("");
+      setOverrideEndDate("");
       queryClient.invalidateQueries({ queryKey: ["all-routes"] });
     },
     onError: (error: any) => {
@@ -513,16 +520,37 @@ export default function Scheduling() {
     const coveringTech = activeTechnicians.find(t => t.id === overrideTechnicianId);
     const today = new Date();
     today.setHours(12, 0, 0, 0);
+
+    const getCoverageType = () => {
+      if (overrideType === "extended") return "extended_cover";
+      if (overrideType === "split") return "split_route";
+      return "single_day";
+    };
+
+    const getOverrideDbType = () => {
+      if (overrideType === "reassign" || overrideType === "extended") return "reassign";
+      if (overrideType === "split") return "split";
+      return "split"; 
+    };
     
     const overrides = selectedRoute.stops.map(stop => ({
-      date: today.toISOString(),
+      date: overrideType === "extended" && overrideStartDate 
+        ? new Date(overrideStartDate + "T12:00:00").toISOString() 
+        : today.toISOString(),
+      startDate: overrideType === "extended" && overrideStartDate 
+        ? new Date(overrideStartDate + "T00:00:00").toISOString() 
+        : null,
+      endDate: overrideType === "extended" && overrideEndDate 
+        ? new Date(overrideEndDate + "T23:59:59").toISOString() 
+        : null,
+      coverageType: getCoverageType(),
       propertyId: stop.propertyId,
       propertyName: stop.propertyName,
       originalTechnicianId: selectedRoute.technicianId,
       originalTechnicianName: selectedRoute.technicianName,
       coveringTechnicianId: overrideTechnicianId,
       coveringTechnicianName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : "",
-      overrideType: overrideType === "reassign" ? "reassign" : "split",
+      overrideType: getOverrideDbType(),
       reason: overrideReason,
       notes: overrideNotes,
     }));
@@ -1070,6 +1098,34 @@ export default function Scheduling() {
                                               <DropdownMenuItem
                                                 onClick={(e) => {
                                                   e.stopPropagation();
+                                                  setSelectedRoute(route);
+                                                  setOverrideType("extended");
+                                                  const tomorrow = new Date();
+                                                  tomorrow.setDate(tomorrow.getDate() + 1);
+                                                  setOverrideStartDate(tomorrow.toISOString().split("T")[0]);
+                                                  const endWeek = new Date(tomorrow);
+                                                  endWeek.setDate(endWeek.getDate() + 6);
+                                                  setOverrideEndDate(endWeek.toISOString().split("T")[0]);
+                                                  setShowOverrideDialog(true);
+                                                }}
+                                              >
+                                                <Calendar className="h-4 w-4 mr-2" />
+                                                Extended Cover
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedRoute(route);
+                                                  setOverrideType("split");
+                                                  setShowOverrideDialog(true);
+                                                }}
+                                              >
+                                                <Users className="h-4 w-4 mr-2" />
+                                                Split Route
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
                                                   if (route.technicianId) {
                                                     autoGenerateStopsMutation.mutate({
                                                       technicianId: route.technicianId,
@@ -1613,7 +1669,10 @@ export default function Scheduling() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {overrideType === "reassign" ? "Reassign Route Today" : "Temporary Cover"}
+                  {overrideType === "reassign" && "Reassign Route Today"}
+                  {overrideType === "cover" && "Temporary Cover"}
+                  {overrideType === "extended" && "Extended Cover"}
+                  {overrideType === "split" && "Split Route"}
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
@@ -1627,7 +1686,41 @@ export default function Scheduling() {
                   <p className="text-sm text-slate-600">
                     <span className="font-medium">Stops:</span> {selectedRoute?.stops?.length || 0}
                   </p>
+                  {overrideType === "extended" && (
+                    <p className="text-xs text-blue-600 mt-2">
+                      <Calendar className="h-3 w-3 inline mr-1" />
+                      All stops for this route will be covered during the selected date range.
+                    </p>
+                  )}
+                  {overrideType === "split" && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      <Users className="h-3 w-3 inline mr-1" />
+                      Route stops will be divided between the covering technician and the original.
+                    </p>
+                  )}
                 </div>
+
+                {overrideType === "extended" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Start Date *</Label>
+                      <Input
+                        type="date"
+                        value={overrideStartDate}
+                        onChange={(e) => setOverrideStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Date *</Label>
+                      <Input
+                        type="date"
+                        value={overrideEndDate}
+                        onChange={(e) => setOverrideEndDate(e.target.value)}
+                        min={overrideStartDate}
+                      />
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label>Covering Technician *</Label>
@@ -1677,7 +1770,7 @@ export default function Scheduling() {
                 </Button>
                 <Button
                   onClick={handleCreateOverride}
-                  disabled={!overrideTechnicianId || createOverrideMutation.isPending}
+                  disabled={!overrideTechnicianId || createOverrideMutation.isPending || (overrideType === "extended" && (!overrideStartDate || !overrideEndDate))}
                   className="bg-[#FF8000] hover:bg-[#E67300] text-white"
                 >
                   {createOverrideMutation.isPending ? "Saving..." : "Confirm Override"}

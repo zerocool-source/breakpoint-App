@@ -28,6 +28,9 @@ import { cn } from "@/lib/utils";
 interface RouteOverride {
   id: string;
   date: string;
+  startDate: string | null;
+  endDate: string | null;
+  coverageType: string;
   propertyId: string;
   propertyName: string | null;
   originalTechnicianId: string | null;
@@ -37,6 +40,7 @@ interface RouteOverride {
   overrideType: string;
   reason: string | null;
   notes: string | null;
+  active: boolean | null;
   createdByUserId: string | null;
   createdByName: string | null;
   createdAt: string;
@@ -66,6 +70,18 @@ const OVERRIDE_TYPE_COLORS: Record<string, string> = {
   reassign: "bg-blue-100 text-blue-800",
   split: "bg-purple-100 text-purple-800",
   cancel: "bg-red-100 text-red-800",
+};
+
+const COVERAGE_TYPE_COLORS: Record<string, string> = {
+  single_day: "bg-slate-100 text-slate-700",
+  extended_cover: "bg-amber-100 text-amber-800",
+  split_route: "bg-purple-100 text-purple-800",
+};
+
+const COVERAGE_TYPE_LABELS: Record<string, string> = {
+  single_day: "Single Day",
+  extended_cover: "Extended",
+  split_route: "Split Route",
 };
 
 export default function RouteHistory() {
@@ -283,37 +299,52 @@ export default function RouteHistory() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50">
-                      <TableHead>Date</TableHead>
+                      <TableHead>Date / Range</TableHead>
                       <TableHead>Property</TableHead>
                       <TableHead>Original Tech</TableHead>
                       <TableHead>Covered By</TableHead>
-                      <TableHead>Type</TableHead>
+                      <TableHead>Coverage</TableHead>
                       <TableHead>Reason</TableHead>
-                      <TableHead>Changed By</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Timestamp</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {history.map((override) => (
-                      <TableRow key={override.id} data-testid={`row-override-${override.id}`}>
-                        <TableCell className="font-medium">
-                          {format(new Date(override.date), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell>{override.propertyName || "Unknown"}</TableCell>
-                        <TableCell>{override.originalTechnicianName || "-"}</TableCell>
-                        <TableCell>{override.coveringTechnicianName || "-"}</TableCell>
-                        <TableCell>
-                          <Badge className={cn("capitalize", OVERRIDE_TYPE_COLORS[override.overrideType] || "bg-gray-100 text-gray-800")}>
-                            {override.overrideType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{override.reason || "-"}</TableCell>
-                        <TableCell>{override.createdByName || "System"}</TableCell>
-                        <TableCell className="text-slate-500 text-sm">
-                          {format(new Date(override.createdAt), "MMM d, h:mm a")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {history.map((override) => {
+                      const isExtended = override.coverageType === "extended_cover" && override.startDate && override.endDate;
+                      return (
+                        <TableRow key={override.id} data-testid={`row-override-${override.id}`}>
+                          <TableCell className="font-medium">
+                            {isExtended ? (
+                              <div className="flex flex-col">
+                                <span className="text-sm">{format(new Date(override.startDate!), "MMM d")} - {format(new Date(override.endDate!), "MMM d, yyyy")}</span>
+                              </div>
+                            ) : (
+                              format(new Date(override.date), "MMM d, yyyy")
+                            )}
+                          </TableCell>
+                          <TableCell>{override.propertyName || "Unknown"}</TableCell>
+                          <TableCell>{override.originalTechnicianName || "-"}</TableCell>
+                          <TableCell>{override.coveringTechnicianName || "-"}</TableCell>
+                          <TableCell>
+                            <Badge className={cn("text-xs", COVERAGE_TYPE_COLORS[override.coverageType] || "bg-gray-100 text-gray-800")}>
+                              {COVERAGE_TYPE_LABELS[override.coverageType] || override.coverageType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{override.reason || "-"}</TableCell>
+                          <TableCell>
+                            {override.active === false ? (
+                              <Badge variant="outline" className="text-slate-400">Expired</Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800">Active</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-slate-500 text-sm">
+                            {format(new Date(override.createdAt), "MMM d, h:mm a")}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
