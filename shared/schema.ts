@@ -1628,18 +1628,23 @@ export type InsertPropertyTechnician = z.infer<typeof insertPropertyTechnicianSc
 export type PropertyTechnician = typeof propertyTechnicians.$inferSelect;
 
 // Route Overrides - Temporary route changes (sick days, coverage, splits)
+// coverageType: 'single_day' (one date), 'extended_cover' (date range), 'split_route' (divide between techs)
 export const routeOverrides = pgTable("route_overrides", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  date: timestamp("date").notNull(), // The date of the override
+  date: timestamp("date").notNull(), // The date of the override (for single_day) or fallback
+  startDate: timestamp("start_date"), // Start of coverage range (for extended_cover)
+  endDate: timestamp("end_date"), // End of coverage range (for extended_cover)
+  coverageType: text("coverage_type").notNull().default("single_day"), // single_day, extended_cover, split_route
   propertyId: varchar("property_id").notNull(), // FK to customers (property)
   propertyName: text("property_name"),
   originalTechnicianId: varchar("original_technician_id"), // FK to technicians
   originalTechnicianName: text("original_technician_name"),
-  coveringTechnicianId: varchar("covering_technician_id"), // FK to technicians
+  coveringTechnicianId: varchar("covering_technician_id"), // FK to technicians (for single_day/extended)
   coveringTechnicianName: text("covering_technician_name"),
   overrideType: text("override_type").notNull(), // "reassign", "split", "cancel"
   reason: text("reason"), // "Sick", "PTO", "Emergency", "Route Optimization", etc.
   notes: text("notes"),
+  active: boolean("active").default(true),
   createdByUserId: varchar("created_by_user_id"),
   createdByName: text("created_by_name"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -1652,3 +1657,24 @@ export const insertRouteOverrideSchema = createInsertSchema(routeOverrides).omit
 
 export type InsertRouteOverride = z.infer<typeof insertRouteOverrideSchema>;
 export type RouteOverride = typeof routeOverrides.$inferSelect;
+
+// Split Route Items - For split_route overrides, tracks which tech handles which property portion
+export const splitRouteItems = pgTable("split_route_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  overrideId: varchar("override_id").notNull(), // FK to route_overrides
+  propertyId: varchar("property_id").notNull(), // FK to customers (property)
+  propertyName: text("property_name"),
+  coveringTechnicianId: varchar("covering_technician_id").notNull(), // FK to technicians
+  coveringTechnicianName: text("covering_technician_name"),
+  percentageSplit: integer("percentage_split"), // Optional: how much of the route this tech handles
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSplitRouteItemSchema = createInsertSchema(splitRouteItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSplitRouteItem = z.infer<typeof insertSplitRouteItemSchema>;
+export type SplitRouteItem = typeof splitRouteItems.$inferSelect;
