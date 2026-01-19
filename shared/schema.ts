@@ -220,6 +220,51 @@ export const insertPropertyAccessNoteSchema = createInsertSchema(propertyAccessN
 export type InsertPropertyAccessNote = z.infer<typeof insertPropertyAccessNoteSchema>;
 export type PropertyAccessNote = typeof propertyAccessNotes.$inferSelect;
 
+// Chemical Vendors (suppliers for chemical orders)
+export const chemicalVendors = pgTable("chemical_vendors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vendorName: text("vendor_name").notNull(),
+  contactPerson: text("contact_person"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  notes: text("notes"), // For account numbers, special instructions, etc.
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertChemicalVendorSchema = createInsertSchema(chemicalVendors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertChemicalVendor = z.infer<typeof insertChemicalVendorSchema>;
+export type ChemicalVendor = typeof chemicalVendors.$inferSelect;
+
+// Invoice Templates (for chemical order invoices)
+export const invoiceTemplates = pgTable("invoice_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateName: text("template_name").notNull(),
+  headerText: text("header_text"),
+  footerText: text("footer_text"),
+  termsConditions: text("terms_conditions"),
+  layoutPreferences: json("layout_preferences"), // JSON for layout options
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInvoiceTemplateSchema = createInsertSchema(invoiceTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
+export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
+
 // Tech Ops Entries (field technician submissions)
 export const techOpsEntries = pgTable("tech_ops_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -240,6 +285,12 @@ export const techOpsEntries = pgTable("tech_ops_entries", {
   photos: text("photos").array(), // Array of photo URLs
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
+  vendorId: varchar("vendor_id"), // For chemical orders - assigned vendor
+  vendorName: text("vendor_name"), // Denormalized vendor name for display
+  orderStatus: text("order_status").default("pending"), // "pending", "sent_to_vendor", "confirmed", "delivered"
+  invoiceSentAt: timestamp("invoice_sent_at"), // When invoice was sent
+  invoiceSentToVendorId: varchar("invoice_sent_to_vendor_id"), // Which vendor invoice was sent to
+  invoiceTemplateId: varchar("invoice_template_id"), // Which template was used
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -248,6 +299,7 @@ export const insertTechOpsEntrySchema = createInsertSchema(techOpsEntries).omit(
   id: true,
   reviewedBy: true,
   reviewedAt: true,
+  invoiceSentAt: true,
   createdAt: true,
   updatedAt: true,
 });

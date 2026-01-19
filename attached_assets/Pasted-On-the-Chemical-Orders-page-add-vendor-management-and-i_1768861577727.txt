@@ -1,0 +1,23 @@
+On the Chemical Orders page, add vendor management and invoice functionality so office staff can assign orders to vendors and quickly send invoices via email.
+Vendor Management Section:
+Add a "Manage Vendors" button in the top right area of the Chemical Orders page (next to "New Entry"). When clicked, open a modal or side panel to manage chemical vendors. Each vendor entry should have: Vendor Name, Contact Person, Email, Phone Number, Address, and Notes (for account numbers, special instructions, etc.). Include "+ Add Vendor" button to add new vendors and edit/delete options for existing ones. Store vendors in a chemical_vendors table in Supabase.
+Order Entry Updates:
+When a chemical order comes in (or when viewing an order entry), add a "Vendor" dropdown field that lists all saved vendors. Staff can assign which vendor this order should go to. Also add an "Invoice Vendor" button on each order row/card.
+Invoice Button & Email Flow:
+When staff clicks "Invoice Vendor" on an order:
+
+Open a modal showing invoice template options (dropdown to select template)
+Display a preview of the invoice populated with: vendor info (from selected vendor), chemical order details (items, quantities, units from the order), property/delivery info, and order date
+Include an "Edit" option to make any adjustments before sending
+"Send Invoice" button opens the user's default email client (mailto: link) with:
+
+To: vendor's email address
+Subject: "Chemical Order - [Property Name] - [Date]"
+Body: formatted invoice details or attached PDF
+
+
+
+Invoice Templates:
+Under Vendors in the sidebar (or within the Manage Vendors modal), add an "Invoice Templates" section where staff can create and save different invoice templates. Each template can have: Template Name, Header text, Footer text, Terms & Conditions, and layout preferences. When invoicing, staff picks which template to use and the system fills in the order-specific details.
+Order Status Tracking:
+Add a status field to chemical orders: Pending → Sent to Vendor → Confirmed → Delivered. When an invoice is sent, automatically update status to "Sent to Vendor". Include timestamp of when invoice was sent and to which vendor.
