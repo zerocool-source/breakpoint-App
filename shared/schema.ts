@@ -9,6 +9,7 @@ export const settings = pgTable("settings", {
   poolBrainApiKey: text("pool_brain_api_key"),
   poolBrainCompanyId: text("pool_brain_company_id"),
   defaultAiModel: text("default_ai_model").default("goss-20b"),
+  globalActiveSeason: text("global_active_season").default("summer"), // "summer" or "winter" - global seasonal schedule setting
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
@@ -350,7 +351,10 @@ export const routeSchedules = pgTable("route_schedules", {
   isActive: boolean("is_active").default(false),
   frequency: text("frequency").default("weekly"), // "weekly", "biweekly", "custom"
   frequencyInterval: integer("frequency_interval").default(1), // Number of weeks between visits
-  visitDays: text("visit_days").array(), // Array of day names: ["monday", "wednesday", "friday"]
+  visitDays: text("visit_days").array(), // Array of day names: ["monday", "wednesday", "friday"] - LEGACY, now uses seasonal
+  summerVisitDays: text("summer_visit_days").array(), // Summer schedule visit days
+  winterVisitDays: text("winter_visit_days").array(), // Winter schedule visit days
+  activeSeason: text("active_season").default("summer"), // "summer" or "winter" - which schedule is currently active
   routeNotes: text("route_notes"),
   endDate: timestamp("end_date"),
   lastGeneratedThrough: timestamp("last_generated_through"),

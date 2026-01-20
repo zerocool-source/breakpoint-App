@@ -116,6 +116,7 @@ export interface IStorage {
   getActiveRouteSchedules(): Promise<RouteSchedule[]>;
   upsertRouteSchedule(propertyId: string, schedule: Partial<InsertRouteSchedule>): Promise<RouteSchedule>;
   updateRouteSchedule(id: string, updates: Partial<InsertRouteSchedule>): Promise<RouteSchedule | undefined>;
+  switchAllSchedulesToSeason(season: string): Promise<number>;
 
   // Service Occurrences
   getServiceOccurrencesByProperty(propertyId: string): Promise<ServiceOccurrence[]>;
@@ -695,6 +696,13 @@ export class DbStorage implements IStorage {
       .where(eq(routeSchedules.id, id))
       .returning();
     return result[0];
+  }
+
+  async switchAllSchedulesToSeason(season: string): Promise<number> {
+    const result = await db.update(routeSchedules)
+      .set({ activeSeason: season, updatedAt: new Date() })
+      .returning();
+    return result.length;
   }
 
   // Service Occurrences
