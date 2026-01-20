@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Wind, AlertTriangle, AlertCircle, Clock, CheckCircle, MapPin, User, Calendar,
-  RefreshCw, Image as ImageIcon, PlayCircle, FileText, Building2
+  RefreshCw, Image as ImageIcon, PlayCircle, FileText, Building2, Eye, Archive, 
+  DollarSign, Download, ChevronLeft, ChevronRight, X
 } from "lucide-react";
 import type { TechOpsEntry, Emergency } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -53,6 +56,17 @@ export default function Service() {
   const [selectedEntry, setSelectedEntry] = useState<TechOpsEntry | null>(null);
   const [selectedEmergency, setSelectedEmergency] = useState<Emergency | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  
+  // Windy Day filters
+  const [windyPropertyFilter, setWindyPropertyFilter] = useState<string>("all");
+  const [windyTechFilter, setWindyTechFilter] = useState<string>("all");
+  
+  // Review modal state
+  const [reviewModalEntry, setReviewModalEntry] = useState<TechOpsEntry | null>(null);
+  const [reviewPhotoIndex, setReviewPhotoIndex] = useState(0);
+  
+  // Confirm invoice dialog state
+  const [invoiceConfirmEntry, setInvoiceConfirmEntry] = useState<TechOpsEntry | null>(null);
 
   // Fetch Windy Day Clean Up entries
   const { data: windyEntries = [], isLoading: windyLoading, refetch: refetchWindy } = useQuery({
@@ -118,16 +132,45 @@ export default function Service() {
     },
   });
 
-  // Group windy entries by property
+  // Get unique properties and technicians for filters
+  const uniqueWindyProperties = useMemo(() => {
+    const props = new Set<string>();
+    (windyEntries as TechOpsEntry[]).forEach(entry => {
+      if (entry.propertyName) props.add(entry.propertyName);
+    });
+    return Array.from(props).sort();
+  }, [windyEntries]);
+
+  const uniqueWindyTechs = useMemo(() => {
+    const techs = new Set<string>();
+    (windyEntries as TechOpsEntry[]).forEach(entry => {
+      if (entry.technicianName) techs.add(entry.technicianName);
+    });
+    return Array.from(techs).sort();
+  }, [windyEntries]);
+
+  // Filter and group windy entries
+  const filteredWindyEntries = useMemo(() => {
+    let entries = windyEntries as TechOpsEntry[];
+    if (windyPropertyFilter !== "all") {
+      entries = entries.filter(e => e.propertyName === windyPropertyFilter);
+    }
+    if (windyTechFilter !== "all") {
+      entries = entries.filter(e => e.technicianName === windyTechFilter);
+    }
+    return entries;
+  }, [windyEntries, windyPropertyFilter, windyTechFilter]);
+
+  // Group filtered windy entries by property
   const windyByProperty = useMemo(() => {
     const groups: Record<string, TechOpsEntry[]> = {};
-    (windyEntries as TechOpsEntry[]).forEach(entry => {
+    filteredWindyEntries.forEach(entry => {
       const key = entry.propertyName || "Unknown Property";
       if (!groups[key]) groups[key] = [];
       groups[key].push(entry);
     });
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
-  }, [windyEntries]);
+  }, [filteredWindyEntries]);
 
   // Stats
   const pendingWindy = (windyEntries as TechOpsEntry[]).filter(e => e.status === "pending").length;
@@ -138,6 +181,81 @@ export default function Service() {
     refetchWindy();
     refetchIssues();
     refetchEmergencies();
+  };
+
+  // Handle dismiss (archive) action
+  const handleDismiss = (entry: TechOpsEntry, e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateTechOpsMutation.mutate({ id: entry.id, status: "archived" });
+  };
+
+  // Handle send as invoice action
+  const handleSendAsInvoice = (entry: TechOpsEntry, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setInvoiceConfirmEntry(entry);
+  };
+
+  const confirmSendAsInvoice = () => {
+    if (invoiceConfirmEntry) {
+      updateTechOpsMutation.mutate(
+        { id: invoiceConfirmEntry.id, status: "completed" },
+        {
+          onSuccess: () => {
+            toast({ title: "Invoice sent", description: `Windy day cleanup for ${invoiceConfirmEntry.propertyName} marked as invoiced.` });
+            setInvoiceConfirmEntry(null);
+          }
+        }
+      );
+    }
+  };
+
+  // Handle review action
+  const handleReview = (entry: TechOpsEntry, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReviewModalEntry(entry);
+    setReviewPhotoIndex(0);
+  };
+
+  // Export report function
+  const handleExportReport = () => {
+    const entries = filteredWindyEntries;
+    
+    // Group by technician for summary
+    const techSummary: Record<string, { jobs: number; totalAmount: number; totalCommission: number }> = {};
+    
+    let csvContent = "Property,Technician,Date,Job Amount,Commission %,Commission Amount\n";
+    
+    entries.forEach(entry => {
+      const jobAmount = entry.partsCost || 0;
+      const commissionRate = 15; // Default commission rate
+      const commissionAmount = Math.round(jobAmount * commissionRate / 100);
+      
+      const techName = entry.technicianName || "Unknown";
+      if (!techSummary[techName]) {
+        techSummary[techName] = { jobs: 0, totalAmount: 0, totalCommission: 0 };
+      }
+      techSummary[techName].jobs += 1;
+      techSummary[techName].totalAmount += jobAmount;
+      techSummary[techName].totalCommission += commissionAmount;
+      
+      csvContent += `"${entry.propertyName || "Unknown"}","${techName}","${format(new Date(entry.createdAt || new Date()), "MM/dd/yyyy")}","${formatCurrency(jobAmount)}","${commissionRate}%","${formatCurrency(commissionAmount)}"\n`;
+    });
+    
+    // Add blank line and summary
+    csvContent += "\n\nTechnician Summary\n";
+    csvContent += "Technician,Total Jobs,Total Amount,Total Commission\n";
+    Object.entries(techSummary).forEach(([tech, summary]) => {
+      csvContent += `"${tech}","${summary.jobs}","${formatCurrency(summary.totalAmount)}","${formatCurrency(summary.totalCommission)}"\n`;
+    });
+    
+    // Download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `windy_day_report_${format(new Date(), "yyyy-MM-dd")}.csv`;
+    link.click();
+    
+    toast({ title: "Report exported", description: "Windy day report has been downloaded." });
   };
 
   const isLoading = windyLoading || issuesLoading || emergenciesLoading;
@@ -237,10 +355,48 @@ export default function Service() {
           <TabsContent value="windy" className="mt-4">
             <Card className="bg-white">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Wind className="w-5 h-5 text-orange-600" />
-                  Windy Day Clean Up
-                </CardTitle>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Wind className="w-5 h-5 text-orange-600" />
+                    Windy Day Clean Up
+                  </CardTitle>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Select value={windyPropertyFilter} onValueChange={setWindyPropertyFilter}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-windy-property">
+                        <Building2 className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="All Properties" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Properties</SelectItem>
+                        {uniqueWindyProperties.map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={windyTechFilter} onValueChange={setWindyTechFilter}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-windy-tech">
+                        <User className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="All Technicians" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Technicians</SelectItem>
+                        {uniqueWindyTechs.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportReport}
+                      className="gap-2"
+                      data-testid="button-export-windy-report"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Report
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {windyLoading ? (
@@ -253,7 +409,7 @@ export default function Service() {
                     <p>No windy day cleanup entries found</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[calc(100vh-400px)]">
+                  <ScrollArea className="h-[calc(100vh-450px)]">
                     <div className="space-y-4 pr-4">
                       {windyByProperty.map(([propertyName, entries]) => (
                         <div key={propertyName} className="border rounded-lg overflow-hidden">
@@ -270,13 +426,12 @@ export default function Service() {
                               return (
                                 <div
                                   key={entry.id}
-                                  className="p-4 hover:bg-slate-50 cursor-pointer transition-colors"
-                                  onClick={() => { setSelectedEntry(entry); setPhotoIndex(0); }}
+                                  className="p-4 hover:bg-slate-50 transition-colors"
                                   data-testid={`card-windy-${entry.id}`}
                                 >
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                                         <Badge className={cn("text-xs", statusInfo.color)}>
                                           {statusInfo.label}
                                         </Badge>
@@ -287,8 +442,8 @@ export default function Service() {
                                         )}
                                       </div>
                                       <p className="text-sm text-slate-600 mb-2">{entry.description || "Windy day cleanup"}</p>
-                                      <div className="flex items-center gap-4 text-xs text-slate-500">
-                                        <span className="flex items-center gap-1">
+                                      <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
+                                        <span className="flex items-center gap-1 font-bold text-orange-700 bg-orange-100 px-2 py-1 rounded">
                                           <User className="w-3 h-3" />
                                           {entry.technicianName}
                                         </span>
@@ -304,9 +459,41 @@ export default function Service() {
                                         )}
                                       </div>
                                     </div>
-                                    {entry.partsCost && entry.partsCost > 0 && (
-                                      <p className="font-bold text-emerald-600">{formatCurrency(entry.partsCost)}</p>
-                                    )}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {entry.partsCost && entry.partsCost > 0 && (
+                                        <span className="font-bold text-emerald-600 mr-2">{formatCurrency(entry.partsCost)}</span>
+                                      )}
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                        onClick={(e) => handleReview(entry, e)}
+                                        data-testid={`button-review-${entry.id}`}
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        Review
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                        onClick={(e) => handleDismiss(entry, e)}
+                                        data-testid={`button-dismiss-${entry.id}`}
+                                      >
+                                        <Archive className="w-3 h-3" />
+                                        Dismiss
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="gap-1 bg-emerald-600 hover:bg-emerald-700"
+                                        onClick={(e) => handleSendAsInvoice(entry, e)}
+                                        data-testid={`button-invoice-${entry.id}`}
+                                      >
+                                        <DollarSign className="w-3 h-3" />
+                                        Send as Invoice
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -444,7 +631,7 @@ export default function Service() {
                                 <div className="flex items-center gap-4 text-xs text-slate-500">
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3" />
-                                    {emergency.submitterName}
+                                    {emergency.submittedByName}
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
@@ -610,7 +797,7 @@ export default function Service() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Submitted By</p>
-                  <p className="font-medium">{selectedEmergency.submitterName}</p>
+                  <p className="font-medium">{selectedEmergency.submittedByName}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Date</p>
@@ -700,6 +887,191 @@ export default function Service() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Windy Day Review Modal */}
+      <Dialog open={!!reviewModalEntry} onOpenChange={() => setReviewModalEntry(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wind className="w-5 h-5 text-orange-600" />
+              Windy Day Cleanup Details
+            </DialogTitle>
+            <DialogDescription>
+              Full submission details and attached photos
+            </DialogDescription>
+          </DialogHeader>
+          {reviewModalEntry && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-500">Property</p>
+                  <p className="font-medium text-slate-900">{reviewModalEntry.propertyName || "Unknown Property"}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Submitted By</p>
+                  <p className="font-bold text-orange-700 bg-orange-100 px-2 py-1 rounded inline-block">
+                    {reviewModalEntry.technicianName || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Date/Time</p>
+                  <p className="font-medium">{formatDate(reviewModalEntry.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Status</p>
+                  <Badge className={cn("text-xs", statusConfig[reviewModalEntry.status || "pending"]?.color)}>
+                    {statusConfig[reviewModalEntry.status || "pending"]?.label}
+                  </Badge>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Description</p>
+                <p className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  {reviewModalEntry.description || "No description provided"}
+                </p>
+              </div>
+
+              {reviewModalEntry.partsCost && reviewModalEntry.partsCost > 0 && (
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Job Amount</p>
+                  <p className="text-xl font-bold text-emerald-600">{formatCurrency(reviewModalEntry.partsCost)}</p>
+                </div>
+              )}
+
+              {/* Photo Gallery */}
+              {reviewModalEntry.photos && reviewModalEntry.photos.length > 0 ? (
+                <div>
+                  <p className="text-sm text-slate-500 mb-2">Photos ({reviewModalEntry.photos.length})</p>
+                  <div className="relative">
+                    <img
+                      src={reviewModalEntry.photos[reviewPhotoIndex]}
+                      alt={`Photo ${reviewPhotoIndex + 1}`}
+                      className="w-full h-72 object-cover rounded-lg border"
+                    />
+                    {reviewModalEntry.photos.length > 1 && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="absolute left-2 top-1/2 -translate-y-1/2"
+                          onClick={() => setReviewPhotoIndex(prev => prev > 0 ? prev - 1 : reviewModalEntry.photos!.length - 1)}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="absolute right-2 top-1/2 -translate-y-1/2"
+                          onClick={() => setReviewPhotoIndex(prev => prev < reviewModalEntry.photos!.length - 1 ? prev + 1 : 0)}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                          {reviewModalEntry.photos.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setReviewPhotoIndex(idx)}
+                              className={cn(
+                                "w-2.5 h-2.5 rounded-full transition-all",
+                                idx === reviewPhotoIndex ? "bg-white shadow-lg" : "bg-white/50"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {/* Thumbnail strip */}
+                  {reviewModalEntry.photos.length > 1 && (
+                    <div className="flex gap-2 mt-2 overflow-x-auto pb-2">
+                      {reviewModalEntry.photos.map((photo, idx) => (
+                        <img
+                          key={idx}
+                          src={photo}
+                          alt={`Thumbnail ${idx + 1}`}
+                          onClick={() => setReviewPhotoIndex(idx)}
+                          className={cn(
+                            "w-16 h-16 object-cover rounded cursor-pointer border-2 transition-all",
+                            idx === reviewPhotoIndex ? "border-orange-500" : "border-transparent opacity-70 hover:opacity-100"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-6 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                  <ImageIcon className="w-10 h-10 mx-auto mb-2 text-slate-400" />
+                  <p className="text-slate-500">No photos attached</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4 border-t">
+                {reviewModalEntry.status === "pending" && (
+                  <>
+                    <Button
+                      onClick={() => {
+                        updateTechOpsMutation.mutate({ id: reviewModalEntry.id, status: "completed" });
+                        setReviewModalEntry(null);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark Completed
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        updateTechOpsMutation.mutate({ id: reviewModalEntry.id, status: "archived" });
+                        setReviewModalEntry(null);
+                      }}
+                    >
+                      <Archive className="w-4 h-4 mr-2" />
+                      Dismiss
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReviewModalEntry(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice Confirmation Dialog */}
+      <AlertDialog open={!!invoiceConfirmEntry} onOpenChange={() => setInvoiceConfirmEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Send as Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to send this windy day cleanup as an invoice?
+              {invoiceConfirmEntry && (
+                <div className="mt-3 p-3 bg-slate-50 rounded-lg">
+                  <p><strong>Property:</strong> {invoiceConfirmEntry.propertyName}</p>
+                  <p><strong>Technician:</strong> {invoiceConfirmEntry.technicianName}</p>
+                  {invoiceConfirmEntry.partsCost && invoiceConfirmEntry.partsCost > 0 && (
+                    <p><strong>Amount:</strong> {formatCurrency(invoiceConfirmEntry.partsCost)}</p>
+                  )}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmSendAsInvoice}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
