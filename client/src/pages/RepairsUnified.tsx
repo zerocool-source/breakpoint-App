@@ -268,11 +268,11 @@ export default function RepairsUnified() {
       }
       
       const firstRepair = selectedRepairs[0];
-      const totalAmount = selectedRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
+      const totalAmountCents = selectedRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
       
       const estimateData = {
         propertyId: firstRepair.propertyId,
-        propertyName: firstRepair.propertyName,
+        propertyName: firstRepair.propertyName || "Unknown Property",
         title: selectedRepairs.length === 1 
           ? `Service Repair - ${firstRepair.description || "Repair"}` 
           : `Service Repairs (${selectedRepairs.length} items)`,
@@ -281,17 +281,16 @@ export default function RepairsUnified() {
         sourceType: "service_tech",
         serviceRepairCount: selectedRepairs.length,
         sourceServiceRepairIds: repairIds,
+        totalAmount: totalAmountCents,
         items: selectedRepairs.map((repair, idx) => ({
           lineNumber: idx + 1,
           productService: "Service Repair",
           description: repair.description || "Service repair work",
           quantity: 1,
-          rate: (repair.partsCost || 0) / 100,
-          amount: (repair.partsCost || 0) / 100,
+          rate: repair.partsCost || 0,
+          amount: repair.partsCost || 0,
           taxable: false,
         })),
-        subtotal: totalAmount / 100,
-        total: totalAmount / 100,
       };
 
       const res = await fetch("/api/estimates", {
