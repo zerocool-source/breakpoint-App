@@ -768,13 +768,13 @@ export default function RepairsUnified() {
                               return acc;
                             }, {} as Record<string, typeof filteredServiceRepairs>)
                           ).map(([propertyName, repairs]) => (
-                            <div key={propertyName} className="space-y-2">
-                              <div className="flex items-center gap-2 px-2">
-                                <Building2 className="w-4 h-4 text-slate-500" />
-                                <h3 className="font-semibold text-slate-800">{propertyName}</h3>
-                                <span className="text-xs text-slate-500">({repairs.length} repair{repairs.length !== 1 ? 's' : ''})</span>
+                            <div key={propertyName} className="space-y-3">
+                              <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-100 border-l-4 border-blue-600 rounded-r-lg">
+                                <Building2 className="w-5 h-5 text-blue-600" />
+                                <h3 className="font-bold text-lg text-slate-900">{propertyName}</h3>
+                                <span className="text-sm text-slate-500 font-medium">({repairs.length} repair{repairs.length !== 1 ? 's' : ''})</span>
                               </div>
-                              <div className="space-y-2">
+                              <div className="space-y-2 pl-2">
                                 {repairs.map((repair) => (
                                   <div
                                     key={repair.id}
