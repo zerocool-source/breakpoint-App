@@ -223,7 +223,7 @@ function NavItemComponent({
 export function Sidebar() {
   const [location] = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats", "operationsHub"]));
-  const [expandedSubItems, setExpandedSubItems] = useState<Set<string>>(new Set(["Repairs", "Chemicals", "Service"]));
+  const [expandedSubItems, setExpandedSubItems] = useState<Set<string>>(new Set(["Repairs"]));
 
   const toggleExpand = (key: string) => {
     setExpandedItems(prev => {
@@ -274,15 +274,7 @@ export function Sidebar() {
         { label: "Tech Ops", href: "/tech-ops", section: "Tech Ops" },
         { label: "Repairs", href: "/repairs", section: "Tech Ops" },
         { label: "Chemicals", href: "/chemicals", section: "Tech Ops" },
-        { 
-          label: "Service", 
-          section: "Tech Ops",
-          children: [
-            { label: "Windy Day Clean Up", href: "/tech-ops/windy-day-cleanup" },
-            { label: "Report Issues", href: "/tech-ops/report-issue" },
-            { label: "Emergencies", href: "/emergencies" },
-          ]
-        },
+        { label: "Service", href: "/service", section: "Tech Ops" },
       ]
     },
     { 

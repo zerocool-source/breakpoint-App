@@ -40,6 +40,7 @@ import TechForeman from "@/pages/TechForeman";
 import EstimateApproval from "@/pages/EstimateApproval";
 import EstimateHistory from "@/pages/EstimateHistory";
 import Emergencies from "@/pages/Emergencies";
+import Service from "@/pages/Service";
 import SupervisorTeams from "@/pages/SupervisorTeams";
 import RouteHistory from "@/pages/RouteHistory";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
@@ -78,6 +79,7 @@ function Router() {
       <Route path="/tech-ops/:type" component={TechOps} />
       <Route path="/supervisor-teams" component={SupervisorTeams} />
       <Route path="/emergencies" component={Emergencies} />
+      <Route path="/service" component={Service} />
       <Route path="/repair-queue" component={RepairQueue} />
       <Route path="/operations" component={Operations} />
       <Route path="/report-equipment" component={EquipmentReports} />
