@@ -230,9 +230,7 @@ export default function RepairsUnified() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
       toast({ title: "Estimate created successfully" });
-      if (data.estimate?.id) {
-        navigate(`/estimates/${data.estimate.id}`);
-      }
+      navigate("/estimates");
     },
     onError: () => {
       toast({ title: "Failed to create estimate", variant: "destructive" });
@@ -337,9 +335,7 @@ export default function RepairsUnified() {
       const count = selectedServiceRepairs.size;
       setSelectedServiceRepairs(new Set());
       toast({ title: `Estimate created from ${count} service repair${count !== 1 ? 's' : ''}` });
-      if (data.estimate?.id) {
-        navigate(`/estimates/${data.estimate.id}`);
-      }
+      navigate("/estimates");
     },
     onError: (error: Error) => {
       if (error.message === "MULTI_PROPERTY") {
@@ -1282,7 +1278,7 @@ export default function RepairsUnified() {
                     {/* Estimate Header */}
                     <div 
                       className="bg-indigo-50 p-4 border-b cursor-pointer hover:bg-indigo-100 transition-colors"
-                      onClick={() => group.estimate?.id && navigate(`/estimates/${group.estimate.id}`)}
+                      onClick={() => navigate("/estimates")}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
