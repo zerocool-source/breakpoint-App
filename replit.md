@@ -55,13 +55,18 @@ Routes are organized into domain-specific modules in `server/routes/`:
 - `technicians.ts` - Technician management, Pool Brain sync
 - `chat.ts` - AI chat proxy, conversation history
 - `fleet.ts` - Fleet trucks, maintenance records, inventory
-- `scheduling.ts` - Route scheduling, stops, unscheduled items
+- `scheduling.ts` - Route scheduling, stops, unscheduled items, seasonal visit days:
+    - Properties can have separate summer and winter visit day schedules
+    - Active season determines which schedule is used for route generation
+    - Backend auto-selects summerVisitDays or winterVisitDays based on activeSeason
+- `settings.ts` - API configuration, global active season toggle:
+    - GET /api/settings/active-season - Returns current global season
+    - POST /api/settings/switch-all-season - Bulk updates all property schedules to specified season
 - `payroll.ts` - Pay periods, payroll entries
 - `channels.ts` - Communication channels, threads, messages
 - `pm.ts` - Preventive maintenance schedules, service types
 - `sync.ts` - Field Tech Sync API for mobile app
 - `properties.ts` - Property repair summaries
-- `settings.ts` - API configuration
 - `estimates.ts` - Estimate management with enhanced workflow:
     - Workflow: Draft → Pending Approval → Approved → Needs Scheduling → Scheduled → Completed → Ready to Invoice → Invoiced
     - Dedicated endpoints for each workflow transition: /approve, /reject, /schedule, /complete, /ready-to-invoice, /invoice
