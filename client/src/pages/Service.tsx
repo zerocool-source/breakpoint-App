@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Wind, AlertTriangle, AlertCircle, Clock, CheckCircle, MapPin, User, Calendar,
   RefreshCw, Image as ImageIcon, PlayCircle, FileText, Building2, Eye, Archive, 
-  DollarSign, Download, ChevronLeft, ChevronRight, X
+  DollarSign, Download, ChevronLeft, ChevronRight, X, Percent
 } from "lucide-react";
 import type { TechOpsEntry, Emergency } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -446,6 +446,10 @@ export default function Service() {
                                         <span className="flex items-center gap-1 font-bold text-orange-700 bg-orange-100 px-2 py-1 rounded">
                                           <User className="w-3 h-3" />
                                           {entry.technicianName}
+                                        </span>
+                                        <span className="flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
+                                          <Percent className="w-3 h-3" />
+                                          15% Commission
                                         </span>
                                         <span className="flex items-center gap-1">
                                           <Calendar className="w-3 h-3" />
