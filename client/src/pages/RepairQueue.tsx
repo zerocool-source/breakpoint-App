@@ -1167,11 +1167,8 @@ export default function RepairQueue() {
             <TabsTrigger value="by-tech" data-testid="tab-by-tech">
               <Users className="w-4 h-4 mr-2" /> By Technician
             </TabsTrigger>
-            <TabsTrigger value="pending" data-testid="tab-pending">
-              Pending ({pendingRepairs.length})
-            </TabsTrigger>
-            <TabsTrigger value="in_progress" data-testid="tab-in-progress">
-              In Progress ({inProgressRepairs.length})
+            <TabsTrigger value="active-jobs" data-testid="tab-active-jobs">
+              <Wrench className="w-4 h-4 mr-2" /> Active Jobs ({pendingRepairs.length + inProgressRepairs.length})
             </TabsTrigger>
             <TabsTrigger value="completed" data-testid="tab-completed">
               Completed ({completedRepairs.length})
@@ -1233,8 +1230,8 @@ export default function RepairQueue() {
             )}
           </TabsContent>
 
-          {/* Two-column layout for filtered views */}
-          <TabsContent value="pending" className="mt-4">
+          {/* Active Jobs Tab - Shows all jobs currently assigned and not yet completed */}
+          <TabsContent value="active-jobs" className="mt-4">
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="lg:col-span-1">
                 <FiltersPanel />
@@ -1244,38 +1241,16 @@ export default function RepairQueue() {
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
                   </div>
-                ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "assigned").length === 0 ? (
-                  <Card>
-                    <CardContent className="py-12 text-center text-slate-500">
-                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No pending repairs{hasActiveFilters ? " matching filters" : ""}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredRepairs.filter(r => r.status === "pending" || r.status === "assigned").map(renderRepairCard)}
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="in_progress" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
-                {filteredRepairs.filter(r => r.status === "in_progress").length === 0 ? (
+                ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center text-slate-500">
                       <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No repairs in progress{hasActiveFilters ? " matching filters" : ""}</p>
+                      <p>No active jobs{hasActiveFilters ? " matching filters" : ""}</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredRepairs.filter(r => r.status === "in_progress").map(renderRepairCard)}
+                    {filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").map(renderRepairCard)}
                   </div>
                 )}
               </div>
@@ -1283,6 +1258,11 @@ export default function RepairQueue() {
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1577,9 +1557,16 @@ export default function RepairQueue() {
                 )}
               </CardContent>
             </Card>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="estimates-log" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1796,9 +1783,16 @@ export default function RepairQueue() {
                 )}
               </CardContent>
             </Card>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="emergencies" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1987,9 +1981,16 @@ export default function RepairQueue() {
                 )}
               </CardContent>
             </Card>
+            </div>
+          </div>
           </TabsContent>
 
           <TabsContent value="parts-ordered" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -2039,6 +2040,8 @@ export default function RepairQueue() {
                 </div>
               </CardContent>
             </Card>
+            </div>
+          </div>
           </TabsContent>
         </Tabs>
       </div>
