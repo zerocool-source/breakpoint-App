@@ -1059,6 +1059,114 @@ export default function RepairQueue() {
     </Card>
   );
 
+  // Horizontal inline filters panel for full-width tables
+  const HorizontalFiltersPanel = () => (
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+          <Filter className="w-4 h-4" />
+          <span>Filters:</span>
+        </div>
+        
+        <div className="flex-1 min-w-[180px] max-w-[220px]">
+          <Label className="text-xs text-slate-500 mb-1 block">Property</Label>
+          <div className="relative">
+            <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              placeholder="Search..."
+              value={propertySearch}
+              onChange={(e) => setPropertySearch(e.target.value)}
+              className="pl-7 h-8 text-sm"
+              data-testid="input-property-search-inline"
+            />
+          </div>
+        </div>
+
+        <div className="min-w-[160px]">
+          <Label className="text-xs text-slate-500 mb-1 block">Repair Tech</Label>
+          <Select value={techFilter} onValueChange={setTechFilter}>
+            <SelectTrigger className="h-8 text-sm" data-testid="select-tech-filter-inline">
+              <SelectValue placeholder="All Techs" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Technicians</SelectItem>
+              {uniqueTechs.map(tech => (
+                <SelectItem key={tech} value={tech}>{tech}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="min-w-[130px]">
+          <Label className="text-xs text-slate-500 mb-1 block">From</Label>
+          <Input
+            type="date"
+            value={dateFromFilter}
+            onChange={(e) => setDateFromFilter(e.target.value)}
+            className="h-8 text-sm"
+            data-testid="input-date-from-inline"
+          />
+        </div>
+
+        <div className="min-w-[130px]">
+          <Label className="text-xs text-slate-500 mb-1 block">To</Label>
+          <Input
+            type="date"
+            value={dateToFilter}
+            onChange={(e) => setDateToFilter(e.target.value)}
+            className="h-8 text-sm"
+            data-testid="input-date-to-inline"
+          />
+        </div>
+
+        <div className="min-w-[140px]">
+          <Label className="text-xs text-slate-500 mb-1 block">Status</Label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-sm" data-testid="select-status-filter-inline">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="assigned">Assigned</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="min-w-[120px]">
+          <Label className="text-xs text-slate-500 mb-1 block">Priority</Label>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="h-8 text-sm" data-testid="select-priority-filter-inline">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-slate-500 hover:text-slate-700"
+            onClick={clearFilters}
+            data-testid="button-clear-filters-inline"
+          >
+            <X className="w-3.5 h-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -1232,37 +1340,27 @@ export default function RepairQueue() {
 
           {/* Active Jobs Tab - Shows all jobs currently assigned and not yet completed */}
           <TabsContent value="active-jobs" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
+            <HorizontalFiltersPanel />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
               </div>
-              <div className="lg:col-span-3">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
-                  </div>
-                ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").length === 0 ? (
-                  <Card>
-                    <CardContent className="py-12 text-center text-slate-500">
-                      <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No active jobs{hasActiveFilters ? " matching filters" : ""}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").map(renderRepairCard)}
-                  </div>
-                )}
+            ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-slate-500">
+                  <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No active jobs{hasActiveFilters ? " matching filters" : ""}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").map(renderRepairCard)}
               </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
+            <HorizontalFiltersPanel />
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1557,16 +1655,10 @@ export default function RepairQueue() {
                 )}
               </CardContent>
             </Card>
-              </div>
-            </div>
           </TabsContent>
 
           <TabsContent value="estimates-log" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
+            <HorizontalFiltersPanel />
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1783,16 +1875,10 @@ export default function RepairQueue() {
                 )}
               </CardContent>
             </Card>
-              </div>
-            </div>
           </TabsContent>
 
           <TabsContent value="emergencies" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
+            <HorizontalFiltersPanel />
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1981,16 +2067,10 @@ export default function RepairQueue() {
                 )}
               </CardContent>
             </Card>
-            </div>
-          </div>
           </TabsContent>
 
           <TabsContent value="parts-ordered" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
+            <HorizontalFiltersPanel />
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -2040,8 +2120,6 @@ export default function RepairQueue() {
                 </div>
               </CardContent>
             </Card>
-            </div>
-          </div>
           </TabsContent>
         </Tabs>
       </div>
