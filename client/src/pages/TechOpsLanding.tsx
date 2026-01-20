@@ -9,11 +9,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Wrench, Droplets, AlertTriangle, CalendarIcon,
-  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive, DollarSign, TrendingUp
+  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive
 } from "lucide-react";
 import type { TechOpsEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -78,47 +76,6 @@ export default function TechOpsLanding() {
     },
   });
 
-  interface CommissionData {
-    technicians: Array<{
-      technicianId: string;
-      technicianName: string;
-      commissionPercent: number;
-      serviceRepairsCount: number;
-      serviceRepairsPartsCost: number;
-      serviceRepairsCommission: number;
-      windyDayCount: number;
-      windyDayPartsCost: number;
-      windyDayCommission: number;
-      totalPartsCost: number;
-      totalCommission: number;
-    }>;
-    totals: {
-      serviceRepairsCount: number;
-      serviceRepairsPartsCost: number;
-      serviceRepairsCommission: number;
-      windyDayCount: number;
-      windyDayPartsCost: number;
-      windyDayCommission: number;
-      totalPartsCost: number;
-      totalCommission: number;
-    };
-  }
-
-  const { data: commissions, isLoading: commissionsLoading } = useQuery<CommissionData>({
-    queryKey: ["tech-ops-commissions", dateRange],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (dateRange.from) params.set("startDate", startOfDay(dateRange.from).toISOString());
-      if (dateRange.to) params.set("endDate", endOfDay(dateRange.to).toISOString());
-      const response = await fetch(`/api/tech-ops/commissions?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch commissions");
-      return response.json();
-    },
-  });
-
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
-  };
 
   const uniqueProperties = useMemo(() => {
     const props = new Map<string, string>();
@@ -158,16 +115,7 @@ export default function TechOpsLanding() {
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-4">
-          <TabsList data-testid="tabs-techops">
-            <TabsTrigger value="dashboard" data-testid="tab-dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="commissions" data-testid="tab-commissions">
-              <DollarSign className="w-4 h-4 mr-1" />
-              Commissions Report
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard">
+        <div className="space-y-4">
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -346,110 +294,7 @@ export default function TechOpsLanding() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="commissions">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-emerald-600" />
-                    Technician Commissions Report
-                  </CardTitle>
-                  <div className="text-sm text-slate-500">
-                    {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200" data-testid="comm-total-commission">
-                    <div className="text-2xl font-bold text-emerald-600">
-                      {formatCurrency(commissions?.totals?.totalCommission || 0)}
-                    </div>
-                    <div className="text-sm text-emerald-600">Total Commissions</div>
-                  </div>
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200" data-testid="comm-total-parts">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {formatCurrency(commissions?.totals?.totalPartsCost || 0)}
-                    </div>
-                    <div className="text-sm text-blue-600">Total Parts Cost</div>
-                  </div>
-                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200" data-testid="comm-service-repairs">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {commissions?.totals?.serviceRepairsCount || 0}
-                    </div>
-                    <div className="text-sm text-purple-600">Service Repairs</div>
-                  </div>
-                  <div className="p-4 bg-teal-50 rounded-lg border border-teal-200" data-testid="comm-windy-day">
-                    <div className="text-2xl font-bold text-teal-600">
-                      {commissions?.totals?.windyDayCount || 0}
-                    </div>
-                    <div className="text-sm text-teal-600">Windy Day Cleanups</div>
-                  </div>
-                </div>
-
-                {commissionsLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
-                  </div>
-                ) : !commissions?.technicians?.length ? (
-                  <div className="text-center py-12 text-slate-500">
-                    <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No commission data for the selected period</p>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50">
-                          <TableHead>Technician</TableHead>
-                          <TableHead className="text-center">Commission %</TableHead>
-                          <TableHead className="text-center">Service Repairs</TableHead>
-                          <TableHead className="text-right">Service Parts</TableHead>
-                          <TableHead className="text-right">Service Comm.</TableHead>
-                          <TableHead className="text-center">Windy Day</TableHead>
-                          <TableHead className="text-right">Windy Parts</TableHead>
-                          <TableHead className="text-right">Windy Comm.</TableHead>
-                          <TableHead className="text-right font-bold">Total Comm.</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {commissions.technicians.map((tech) => (
-                          <TableRow key={tech.technicianName} data-testid={`comm-row-${tech.technicianName}`}>
-                            <TableCell className="font-medium">{tech.technicianName}</TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                {tech.commissionPercent}%
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">{tech.serviceRepairsCount}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(tech.serviceRepairsPartsCost)}</TableCell>
-                            <TableCell className="text-right text-emerald-600">{formatCurrency(tech.serviceRepairsCommission)}</TableCell>
-                            <TableCell className="text-center">{tech.windyDayCount}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(tech.windyDayPartsCost)}</TableCell>
-                            <TableCell className="text-right text-emerald-600">{formatCurrency(tech.windyDayCommission)}</TableCell>
-                            <TableCell className="text-right font-bold text-emerald-600">{formatCurrency(tech.totalCommission)}</TableCell>
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-slate-50 font-medium">
-                          <TableCell colSpan={2}>Totals</TableCell>
-                          <TableCell className="text-center">{commissions.totals.serviceRepairsCount}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(commissions.totals.serviceRepairsPartsCost)}</TableCell>
-                          <TableCell className="text-right text-emerald-600">{formatCurrency(commissions.totals.serviceRepairsCommission)}</TableCell>
-                          <TableCell className="text-center">{commissions.totals.windyDayCount}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(commissions.totals.windyDayPartsCost)}</TableCell>
-                          <TableCell className="text-right text-emerald-600">{formatCurrency(commissions.totals.windyDayCommission)}</TableCell>
-                          <TableCell className="text-right font-bold text-emerald-600">{formatCurrency(commissions.totals.totalCommission)}</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </AppLayout>
   );

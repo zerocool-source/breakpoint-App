@@ -12,10 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   FileBarChart, CalendarIcon, Download, FileText, DollarSign,
   TrendingUp, Wrench, Droplets, Wind, Users, Search, Loader2,
-  CheckCircle, Clock, Package, ArrowUpDown
+  CheckCircle, Clock, Package, ArrowUpDown, MapPin, User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +53,33 @@ interface ReportsData {
   };
 }
 
+interface CommissionData {
+  technicians: Array<{
+    technicianId: string;
+    technicianName: string;
+    commissionPercent: number;
+    serviceRepairsCount: number;
+    serviceRepairsPartsCost: number;
+    serviceRepairsCommission: number;
+    windyDayCount: number;
+    windyDayPartsCost: number;
+    windyDayCommission: number;
+    totalPartsCost: number;
+    totalCommission: number;
+    propertyNames?: string[];
+  }>;
+  totals: {
+    serviceRepairsCount: number;
+    serviceRepairsPartsCost: number;
+    serviceRepairsCommission: number;
+    windyDayCount: number;
+    windyDayPartsCost: number;
+    windyDayCommission: number;
+    totalPartsCost: number;
+    totalCommission: number;
+  };
+}
+
 export default function Reports() {
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: startOfMonth(subMonths(new Date(), 2)),
@@ -59,6 +88,12 @@ export default function Reports() {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  // Commissions Report filters
+  const [commSelectedProperty, setCommSelectedProperty] = useState<string>("all");
+  const [commSelectedTech, setCommSelectedTech] = useState<string>("all");
+  const [includeWindyDay, setIncludeWindyDay] = useState(true);
+  const [includeServiceRepairs, setIncludeServiceRepairs] = useState(true);
 
   const { data: reportsData, isLoading } = useQuery<ReportsData>({
     queryKey: ["reports", dateRange],
@@ -71,6 +106,72 @@ export default function Reports() {
       return response.json();
     },
   });
+
+  // Commissions data fetch
+  const { data: commissions, isLoading: commissionsLoading } = useQuery<CommissionData>({
+    queryKey: ["tech-ops-commissions", dateRange],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("startDate", startOfDay(dateRange.from).toISOString());
+      params.set("endDate", endOfDay(dateRange.to).toISOString());
+      const response = await fetch(`/api/tech-ops/commissions?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch commissions");
+      return response.json();
+    },
+  });
+
+  // Derive unique properties and technicians from commissions data for filters
+  const uniqueCommProperties = useMemo(() => {
+    const properties = new Set<string>();
+    commissions?.technicians?.forEach(tech => {
+      tech.propertyNames?.forEach(p => properties.add(p));
+    });
+    return Array.from(properties).sort();
+  }, [commissions]);
+
+  const uniqueCommTechs = useMemo(() => {
+    return commissions?.technicians?.map(t => t.technicianName) || [];
+  }, [commissions]);
+
+  // Filter commissions data based on filters
+  const filteredCommissions = useMemo(() => {
+    if (!commissions?.technicians) return null;
+    
+    let filtered = commissions.technicians;
+    
+    // Filter by technician
+    if (commSelectedTech !== "all") {
+      filtered = filtered.filter(t => t.technicianName === commSelectedTech);
+    }
+    
+    // Recalculate totals based on filtered data
+    const totals = {
+      serviceRepairsCount: includeServiceRepairs ? filtered.reduce((sum, t) => sum + t.serviceRepairsCount, 0) : 0,
+      serviceRepairsPartsCost: includeServiceRepairs ? filtered.reduce((sum, t) => sum + t.serviceRepairsPartsCost, 0) : 0,
+      serviceRepairsCommission: includeServiceRepairs ? filtered.reduce((sum, t) => sum + t.serviceRepairsCommission, 0) : 0,
+      windyDayCount: includeWindyDay ? filtered.reduce((sum, t) => sum + t.windyDayCount, 0) : 0,
+      windyDayPartsCost: includeWindyDay ? filtered.reduce((sum, t) => sum + t.windyDayPartsCost, 0) : 0,
+      windyDayCommission: includeWindyDay ? filtered.reduce((sum, t) => sum + t.windyDayCommission, 0) : 0,
+      totalPartsCost: (includeServiceRepairs ? filtered.reduce((sum, t) => sum + t.serviceRepairsPartsCost, 0) : 0) +
+                      (includeWindyDay ? filtered.reduce((sum, t) => sum + t.windyDayPartsCost, 0) : 0),
+      totalCommission: (includeServiceRepairs ? filtered.reduce((sum, t) => sum + t.serviceRepairsCommission, 0) : 0) +
+                       (includeWindyDay ? filtered.reduce((sum, t) => sum + t.windyDayCommission, 0) : 0),
+    };
+    
+    // Modify each technician's displayed values based on filters
+    const displayTechs = filtered.map(t => ({
+      ...t,
+      serviceRepairsCount: includeServiceRepairs ? t.serviceRepairsCount : 0,
+      serviceRepairsPartsCost: includeServiceRepairs ? t.serviceRepairsPartsCost : 0,
+      serviceRepairsCommission: includeServiceRepairs ? t.serviceRepairsCommission : 0,
+      windyDayCount: includeWindyDay ? t.windyDayCount : 0,
+      windyDayPartsCost: includeWindyDay ? t.windyDayPartsCost : 0,
+      windyDayCommission: includeWindyDay ? t.windyDayCommission : 0,
+      totalCommission: (includeServiceRepairs ? t.serviceRepairsCommission : 0) + (includeWindyDay ? t.windyDayCommission : 0),
+    }));
+    
+    return { technicians: displayTechs, totals };
+  }, [commissions, commSelectedTech, includeWindyDay, includeServiceRepairs]);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
@@ -444,6 +545,184 @@ export default function Reports() {
                 color="bg-blue-500"
               />
             </div>
+
+            {/* Commissions Report Section */}
+            <Card className="bg-white">
+              <CardHeader>
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-emerald-600" />
+                    Commissions Report
+                  </CardTitle>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Select value={commSelectedProperty} onValueChange={setCommSelectedProperty}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-comm-property">
+                        <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="All Properties" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Properties</SelectItem>
+                        {uniqueCommProperties.map(p => (
+                          <SelectItem key={p} value={p}>{p}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={commSelectedTech} onValueChange={setCommSelectedTech}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-comm-technician">
+                        <User className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="All Technicians" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Technicians</SelectItem>
+                        {uniqueCommTechs.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="flex items-center gap-4 border rounded-lg px-3 py-2 bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="include-windy" 
+                          checked={includeWindyDay} 
+                          onCheckedChange={(checked) => setIncludeWindyDay(!!checked)}
+                          data-testid="checkbox-include-windy"
+                        />
+                        <Label htmlFor="include-windy" className="text-sm cursor-pointer flex items-center gap-1">
+                          <Wind className="w-4 h-4 text-teal-600" />
+                          Windy Day
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="include-service" 
+                          checked={includeServiceRepairs} 
+                          onCheckedChange={(checked) => setIncludeServiceRepairs(!!checked)}
+                          data-testid="checkbox-include-service"
+                        />
+                        <Label htmlFor="include-service" className="text-sm cursor-pointer flex items-center gap-1">
+                          <Wrench className="w-4 h-4 text-purple-600" />
+                          Service Repairs
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Commission Summary Metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200" data-testid="comm-total-commission">
+                    <div className="text-2xl font-bold text-emerald-600">
+                      {formatCurrency(filteredCommissions?.totals?.totalCommission || 0)}
+                    </div>
+                    <div className="text-sm text-emerald-600">Total Commissions</div>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200" data-testid="comm-total-parts">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {formatCurrency(filteredCommissions?.totals?.totalPartsCost || 0)}
+                    </div>
+                    <div className="text-sm text-blue-600">Total Parts Cost</div>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200" data-testid="comm-service-repairs">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {filteredCommissions?.totals?.serviceRepairsCount || 0}
+                    </div>
+                    <div className="text-sm text-purple-600">Service Repairs</div>
+                  </div>
+                  <div className="p-4 bg-teal-50 rounded-lg border border-teal-200" data-testid="comm-windy-day">
+                    <div className="text-2xl font-bold text-teal-600">
+                      {filteredCommissions?.totals?.windyDayCount || 0}
+                    </div>
+                    <div className="text-sm text-teal-600">Windy Day Cleanups</div>
+                  </div>
+                </div>
+
+                {/* Commission Table */}
+                {commissionsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+                  </div>
+                ) : !filteredCommissions?.technicians?.length ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No commission data for the selected period</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead>Technician</TableHead>
+                          <TableHead className="text-center">Commission %</TableHead>
+                          {includeServiceRepairs && (
+                            <>
+                              <TableHead className="text-center">Service Repairs</TableHead>
+                              <TableHead className="text-right">Service Parts</TableHead>
+                              <TableHead className="text-right">Service Comm.</TableHead>
+                            </>
+                          )}
+                          {includeWindyDay && (
+                            <>
+                              <TableHead className="text-center">Windy Day</TableHead>
+                              <TableHead className="text-right">Windy Parts</TableHead>
+                              <TableHead className="text-right">Windy Comm.</TableHead>
+                            </>
+                          )}
+                          <TableHead className="text-right font-bold">Total Comm.</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredCommissions.technicians.map((tech) => (
+                          <TableRow key={tech.technicianName} data-testid={`comm-row-${tech.technicianName}`}>
+                            <TableCell className="font-medium">{tech.technicianName}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                {tech.commissionPercent}%
+                              </Badge>
+                            </TableCell>
+                            {includeServiceRepairs && (
+                              <>
+                                <TableCell className="text-center">{tech.serviceRepairsCount}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(tech.serviceRepairsPartsCost)}</TableCell>
+                                <TableCell className="text-right text-emerald-600">{formatCurrency(tech.serviceRepairsCommission)}</TableCell>
+                              </>
+                            )}
+                            {includeWindyDay && (
+                              <>
+                                <TableCell className="text-center">{tech.windyDayCount}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(tech.windyDayPartsCost)}</TableCell>
+                                <TableCell className="text-right text-emerald-600">{formatCurrency(tech.windyDayCommission)}</TableCell>
+                              </>
+                            )}
+                            <TableCell className="text-right font-bold text-emerald-600">{formatCurrency(tech.totalCommission)}</TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-slate-50 font-medium">
+                          <TableCell colSpan={2}>Totals</TableCell>
+                          {includeServiceRepairs && (
+                            <>
+                              <TableCell className="text-center">{filteredCommissions.totals.serviceRepairsCount}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(filteredCommissions.totals.serviceRepairsPartsCost)}</TableCell>
+                              <TableCell className="text-right text-emerald-600">{formatCurrency(filteredCommissions.totals.serviceRepairsCommission)}</TableCell>
+                            </>
+                          )}
+                          {includeWindyDay && (
+                            <>
+                              <TableCell className="text-center">{filteredCommissions.totals.windyDayCount}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(filteredCommissions.totals.windyDayPartsCost)}</TableCell>
+                              <TableCell className="text-right text-emerald-600">{formatCurrency(filteredCommissions.totals.windyDayCommission)}</TableCell>
+                            </>
+                          )}
+                          <TableCell className="text-right font-bold text-emerald-600">{formatCurrency(filteredCommissions.totals.totalCommission)}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
