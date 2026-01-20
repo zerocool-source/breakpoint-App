@@ -653,7 +653,7 @@ export default function RepairsUnified() {
                         All ({repairAlerts.length})
                       </Button>
                     </div>
-                    <ScrollArea className="max-h-[500px]">
+                    <ScrollArea className="h-[calc(100vh-450px)] min-h-[300px]">
                       {filteredRepairAlerts.length === 0 ? (
                         <div className="text-center py-12 text-slate-500">
                           <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -751,8 +751,8 @@ export default function RepairsUnified() {
                     </ScrollArea>
                   </TabsContent>
 
-                  <TabsContent value="service-repairs" className="mt-0">
-                    <ScrollArea className="max-h-[600px]">
+                  <TabsContent value="service-repairs" className="mt-0 flex flex-col h-[calc(100vh-400px)] min-h-[400px]">
+                    <ScrollArea className="flex-1">
                       {filteredServiceRepairs.length === 0 ? (
                         <div className="text-center py-12 text-slate-500">
                           <Wrench className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -838,11 +838,11 @@ export default function RepairsUnified() {
                       )}
                     </ScrollArea>
                     
-                    {/* Running Total Footer */}
-                    <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    {/* Sticky Running Total Footer */}
+                    <div className="sticky bottom-0 mt-4 p-4 bg-white border-t border-slate-200 shadow-lg rounded-b-lg">
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-slate-600">
-                          <span className="font-medium">{selectedServiceRepairs.size}</span> selected
+                          <span className="font-medium text-blue-600">{selectedServiceRepairs.size}</span> selected
                         </div>
                         <div className="flex items-center gap-6">
                           <div className="text-right">
@@ -850,7 +850,7 @@ export default function RepairsUnified() {
                             <p className={cn(
                               "text-xl font-bold",
                               selectedTotal >= 45000 && selectedTotal <= 55000 ? "text-emerald-600" : 
-                              selectedTotal > 55000 ? "text-orange-600" : "text-slate-800"
+                              selectedTotal > 55000 ? "text-orange-600" : "text-blue-600"
                             )} data-testid="text-selected-total">
                               {formatCurrency(selectedTotal)}
                             </p>
