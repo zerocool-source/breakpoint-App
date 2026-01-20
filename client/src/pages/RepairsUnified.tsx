@@ -31,7 +31,7 @@ import {
   Wrench, Loader2, AlertCircle, CheckCircle2, Clock, Search,
   RefreshCw, Building2, User, Calendar, DollarSign, Percent,
   FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff,
-  XCircle, Receipt, FileCheck
+  XCircle, FileCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -461,30 +461,6 @@ export default function RepairsUnified() {
     createEstimateMutation.mutate(estimateData);
   };
 
-  const handleInvoiceDirectly = (alert: EnrichedAlert) => {
-    const estimateData = {
-      propertyId: alert.customerId || alert.poolId,
-      propertyName: alert.customerName,
-      customerName: alert.customerName,
-      customerEmail: alert.email,
-      address: alert.address,
-      title: `Invoice - ${alert.poolName}`,
-      description: alert.message,
-      status: "ready_to_invoice",
-      sourceType: "repair_tech",
-      items: [{
-        lineNumber: 1,
-        productService: "Repair Service",
-        description: alert.message,
-        quantity: 1,
-        rate: 0,
-        amount: 0,
-        taxable: false,
-      }],
-    };
-    createEstimateMutation.mutate(estimateData);
-  };
-
   const handleServiceRepairCheckbox = (repairId: string, checked: boolean) => {
     setSelectedServiceRepairs(prev => {
       const next = new Set(prev);
@@ -738,17 +714,6 @@ export default function RepairsUnified() {
                                         >
                                           <XCircle className="w-3 h-3" />
                                           Decline
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                                          onClick={() => handleInvoiceDirectly(alert)}
-                                          disabled={createEstimateMutation.isPending}
-                                          data-testid={`btn-invoice-${alert.alertId}`}
-                                        >
-                                          <Receipt className="w-3 h-3" />
-                                          Invoice
                                         </Button>
                                       </div>
                                     )}
