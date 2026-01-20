@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,9 +22,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
-  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays
+  User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
+  Download, X, AlertCircle, Package, Search, Filter
 } from "lucide-react";
-import type { ServiceRepairJob, Technician } from "@shared/schema";
+import type { ServiceRepairJob, Technician, Emergency } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33", icon: Clock, label: "Pending" },
@@ -33,6 +35,14 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
   estimated: { color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: DollarSign, label: "Estimated" },
   batched: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: Target, label: "Batched" },
+};
+
+const priorityConfig: Record<string, { color: string; label: string }> = {
+  low: { color: "bg-slate-100 text-slate-600", label: "Low" },
+  normal: { color: "bg-blue-100 text-blue-600", label: "Normal" },
+  high: { color: "bg-orange-100 text-orange-600", label: "High" },
+  urgent: { color: "bg-red-100 text-red-600", label: "Urgent" },
+  critical: { color: "bg-red-200 text-red-700", label: "Critical" },
 };
 
 const defaultStatus = { color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock, label: "Unknown" };
@@ -49,6 +59,14 @@ function formatDate(date: Date | string | null | undefined): string {
   });
 }
 
+function formatDateTime(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  return new Date(date).toLocaleString('en-US', { 
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit'
+  });
+}
+
 function getInitials(name: string | null | undefined): string {
   if (!name) return "?";
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
@@ -62,6 +80,15 @@ export default function RepairQueue() {
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [selectedRepairForReassign, setSelectedRepairForReassign] = useState<ServiceRepairJob | null>(null);
   const [newTechId, setNewTechId] = useState<string>("");
+
+  // Filter states
+  const [propertyFilter, setPropertyFilter] = useState<string>("");
+  const [techFilter, setTechFilter] = useState<string>("all");
+  const [dateFromFilter, setDateFromFilter] = useState<string>("");
+  const [dateToFilter, setDateToFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [propertySearch, setPropertySearch] = useState<string>("");
 
   const { data: repairs = [], isLoading } = useQuery<ServiceRepairJob[]>({
     queryKey: ["service-repairs"],
@@ -81,14 +108,179 @@ export default function RepairQueue() {
     },
   });
 
-  const pendingRepairs = repairs.filter(r => r.status === "pending" || r.status === "assigned");
-  const inProgressRepairs = repairs.filter(r => r.status === "in_progress");
-  const completedRepairs = repairs.filter(r => r.status === "completed");
+  const { data: emergencies = [] } = useQuery<Emergency[]>({
+    queryKey: ["emergencies"],
+    queryFn: async () => {
+      const response = await fetch("/api/emergencies");
+      if (!response.ok) throw new Error("Failed to fetch emergencies");
+      return response.json();
+    },
+  });
+
+  // Get unique properties for filter dropdown
+  const uniqueProperties = useMemo(() => {
+    const props = new Set<string>();
+    repairs.forEach(r => r.propertyName && props.add(r.propertyName));
+    return Array.from(props).sort();
+  }, [repairs]);
+
+  // Filtered properties based on search
+  const filteredProperties = useMemo(() => {
+    if (!propertySearch) return uniqueProperties;
+    return uniqueProperties.filter(p => 
+      p.toLowerCase().includes(propertySearch.toLowerCase())
+    );
+  }, [uniqueProperties, propertySearch]);
+
+  // Get unique technicians for filter dropdown
+  const uniqueTechs = useMemo(() => {
+    const techs = new Set<string>();
+    repairs.forEach(r => r.technicianName && techs.add(r.technicianName));
+    return Array.from(techs).sort();
+  }, [repairs]);
+
+  // Apply all filters to repairs
+  const filteredRepairs = useMemo(() => {
+    return repairs.filter(repair => {
+      // Property filter
+      if (propertyFilter && repair.propertyName !== propertyFilter) {
+        return false;
+      }
+      // Tech filter
+      if (techFilter !== "all" && repair.technicianName !== techFilter) {
+        return false;
+      }
+      // Status filter - treat "pending" filter as including both "pending" and "assigned" statuses
+      if (statusFilter !== "all") {
+        if (statusFilter === "pending") {
+          if (repair.status !== "pending" && repair.status !== "assigned") return false;
+        } else if (repair.status !== statusFilter) {
+          return false;
+        }
+      }
+      // Date range filter
+      if (dateFromFilter) {
+        const repairDate = new Date(repair.jobDate || repair.createdAt || "");
+        const fromDate = new Date(dateFromFilter);
+        if (repairDate < fromDate) return false;
+      }
+      if (dateToFilter) {
+        const repairDate = new Date(repair.jobDate || repair.createdAt || "");
+        const toDate = new Date(dateToFilter);
+        toDate.setHours(23, 59, 59, 999);
+        if (repairDate > toDate) return false;
+      }
+      return true;
+    });
+  }, [repairs, propertyFilter, techFilter, statusFilter, dateFromFilter, dateToFilter]);
+
+  // Filter emergencies - map repair status filters to emergency statuses
+  const filteredEmergencies = useMemo(() => {
+    return emergencies.filter(emergency => {
+      if (propertyFilter && emergency.propertyName !== propertyFilter) return false;
+      // Map repair status filter to emergency status filter
+      if (statusFilter !== "all") {
+        // Emergency statuses: pending_review, in_progress, resolved
+        // Map repair statuses to emergency statuses
+        const statusMapping: Record<string, string[]> = {
+          pending: ["pending_review"],
+          assigned: ["pending_review"],
+          in_progress: ["in_progress"],
+          completed: ["resolved"],
+        };
+        const mappedStatuses = statusMapping[statusFilter] || [];
+        if (mappedStatuses.length > 0 && !mappedStatuses.includes(emergency.status)) {
+          return false;
+        }
+      }
+      if (priorityFilter !== "all" && emergency.priority !== priorityFilter) return false;
+      if (dateFromFilter) {
+        const date = new Date(emergency.createdAt || "");
+        if (date < new Date(dateFromFilter)) return false;
+      }
+      if (dateToFilter) {
+        const date = new Date(emergency.createdAt || "");
+        const toDate = new Date(dateToFilter);
+        toDate.setHours(23, 59, 59, 999);
+        if (date > toDate) return false;
+      }
+      return true;
+    });
+  }, [emergencies, propertyFilter, statusFilter, priorityFilter, dateFromFilter, dateToFilter]);
+
+  const clearFilters = () => {
+    setPropertyFilter("");
+    setTechFilter("all");
+    setDateFromFilter("");
+    setDateToFilter("");
+    setStatusFilter("all");
+    setPriorityFilter("all");
+    setPropertySearch("");
+  };
+
+  const hasActiveFilters = propertyFilter || techFilter !== "all" || dateFromFilter || dateToFilter || statusFilter !== "all" || priorityFilter !== "all";
+
+  // Derive status-specific arrays from filtered repairs
+  const pendingRepairs = useMemo(() => 
+    filteredRepairs.filter(r => r.status === "pending" || r.status === "assigned"), 
+    [filteredRepairs]
+  );
+  const inProgressRepairs = useMemo(() => 
+    filteredRepairs.filter(r => r.status === "in_progress"), 
+    [filteredRepairs]
+  );
+  const completedRepairs = useMemo(() => 
+    filteredRepairs.filter(r => r.status === "completed"), 
+    [filteredRepairs]
+  );
+
+  // Export functionality
+  const exportToCSV = () => {
+    const dataToExport = filteredRepairs;
+    
+    const headers = [
+      "Job Title",
+      "Property Name",
+      "Address",
+      "Assigned Tech",
+      "Priority",
+      "Status",
+      "Date Assigned",
+      "Date Completed",
+      "Notes"
+    ];
+
+    const rows = dataToExport.map(repair => [
+      repair.description || repair.jobNumber || "",
+      repair.propertyName || "",
+      repair.propertyAddress || "",
+      repair.technicianName || "Unassigned",
+      repair.priority || "normal",
+      statusConfig[repair.status || "pending"]?.label || repair.status || "",
+      formatDate(repair.jobDate || repair.createdAt),
+      repair.status === "completed" ? formatDate(repair.updatedAt) : "",
+      (repair.techNotes || "").replace(/,/g, ";").replace(/\n/g, " ")
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `repair_queue_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    toast({ title: "Export Complete", description: `Exported ${dataToExport.length} repair jobs to CSV` });
+  };
 
   const repairsByTech = useMemo(() => {
     const grouped: Record<string, { tech: string; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number }> = {};
     
-    repairs.forEach(repair => {
+    filteredRepairs.forEach(repair => {
       const techName = repair.technicianName || "Unassigned";
       if (!grouped[techName]) {
         grouped[techName] = { tech: techName, repairs: [], pending: 0, inProgress: 0, completed: 0, totalValue: 0 };
@@ -105,21 +297,26 @@ export default function RepairQueue() {
       if (b.tech === "Unassigned") return -1;
       return (b.pending + b.inProgress) - (a.pending + a.inProgress);
     });
-  }, [repairs]);
+  }, [filteredRepairs]);
 
   const dashboardMetrics = useMemo(() => {
-    const totalValue = repairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
-    const pendingValue = pendingRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
-    const inProgressValue = inProgressRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
-    const completedValue = completedRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    // Compute filtered status arrays inline to avoid dependency issues
+    const pending = filteredRepairs.filter(r => r.status === "pending" || r.status === "assigned");
+    const inProgress = filteredRepairs.filter(r => r.status === "in_progress");
+    const completed = filteredRepairs.filter(r => r.status === "completed");
+    
+    const totalValue = filteredRepairs.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const pendingValue = pending.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const inProgressValue = inProgress.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const completedValue = completed.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
     const activeTechs = repairsByTech.filter(t => t.tech !== "Unassigned" && (t.pending > 0 || t.inProgress > 0)).length;
-    const avgPerTech = activeTechs > 0 ? (pendingRepairs.length + inProgressRepairs.length) / activeTechs : 0;
+    const avgPerTech = activeTechs > 0 ? (pending.length + inProgress.length) / activeTechs : 0;
 
     return {
-      totalJobs: repairs.length,
-      pending: pendingRepairs.length,
-      inProgress: inProgressRepairs.length,
-      completed: completedRepairs.length,
+      totalJobs: filteredRepairs.length,
+      pending: pending.length,
+      inProgress: inProgress.length,
+      completed: completed.length,
       totalValue,
       pendingValue,
       inProgressValue,
@@ -127,7 +324,7 @@ export default function RepairQueue() {
       activeTechs,
       avgPerTech: Math.round(avgPerTech * 10) / 10,
     };
-  }, [repairs, pendingRepairs, inProgressRepairs, completedRepairs, repairsByTech]);
+  }, [filteredRepairs, repairsByTech]);
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -349,8 +546,7 @@ export default function RepairQueue() {
               <Button
                 size="sm"
                 variant="ghost"
-                className="ml-auto"
-                data-testid={`button-actions-${repair.id}`}
+                data-testid={`button-more-${repair.id}`}
               >
                 <MoreVertical className="w-4 h-4" />
               </Button>
@@ -437,6 +633,180 @@ export default function RepairQueue() {
     );
   };
 
+  const renderEmergencyRow = (emergency: Emergency) => {
+    const priorityCfg = priorityConfig[emergency.priority || "normal"] || priorityConfig.normal;
+    const emergencyStatusConfig: Record<string, { color: string; label: string }> = {
+      pending_review: { color: "bg-orange-100 text-orange-600", label: "Pending Review" },
+      in_progress: { color: "bg-blue-100 text-blue-600", label: "In Progress" },
+      resolved: { color: "bg-green-100 text-green-600", label: "Resolved" },
+    };
+    const statusCfg = emergencyStatusConfig[emergency.status] || emergencyStatusConfig.pending_review;
+
+    return (
+      <div
+        key={emergency.id}
+        className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all"
+        data-testid={`emergency-item-${emergency.id}`}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <Badge className={priorityCfg.color}>
+              {priorityCfg.label}
+            </Badge>
+            <Badge className={statusCfg.color}>
+              {statusCfg.label}
+            </Badge>
+          </div>
+          <span className="text-lg font-bold text-[#1E293B]">
+            {formatCurrency(emergency.totalAmount)}
+          </span>
+        </div>
+
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin className="w-4 h-4 text-slate-400" />
+            <span className="font-medium">{emergency.propertyName || "No property"}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <User className="w-4 h-4 text-slate-400" />
+            <span>Submitted by: {emergency.submittedByName || "Unknown"}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <span>{formatDateTime(emergency.createdAt)}</span>
+          </div>
+        </div>
+
+        {emergency.description && (
+          <p className="text-sm text-slate-600 line-clamp-2">{emergency.description}</p>
+        )}
+      </div>
+    );
+  };
+
+  // Filters panel component
+  const FiltersPanel = () => (
+    <Card className="bg-white border border-slate-200 shadow-sm sticky top-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold text-[#1E293B] flex items-center gap-2">
+          <Filter className="w-4 h-4" />
+          Filters
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Property</Label>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search properties..."
+              value={propertySearch}
+              onChange={(e) => setPropertySearch(e.target.value)}
+              className="pl-8 mb-2"
+              data-testid="input-property-search"
+            />
+          </div>
+          <Select value={propertyFilter || "all"} onValueChange={(val) => setPropertyFilter(val === "all" ? "" : val)}>
+            <SelectTrigger data-testid="select-property-filter">
+              <SelectValue placeholder="All Properties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Properties</SelectItem>
+              {filteredProperties.map(prop => (
+                <SelectItem key={prop} value={prop}>{prop}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Repair Tech</Label>
+          <Select value={techFilter} onValueChange={setTechFilter}>
+            <SelectTrigger data-testid="select-tech-filter">
+              <SelectValue placeholder="All Technicians" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Technicians</SelectItem>
+              {uniqueTechs.map(tech => (
+                <SelectItem key={tech} value={tech}>{tech}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Date Range</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs text-slate-500">From</Label>
+              <Input
+                type="date"
+                value={dateFromFilter}
+                onChange={(e) => setDateFromFilter(e.target.value)}
+                data-testid="input-date-from"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-500">To</Label>
+              <Input
+                type="date"
+                value={dateToFilter}
+                onChange={(e) => setDateToFilter(e.target.value)}
+                data-testid="input-date-to"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Status</Label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger data-testid="select-status-filter">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="pending">Pending (incl. Assigned)</SelectItem>
+              <SelectItem value="assigned">Assigned Only</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Priority</Label>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger data-testid="select-priority-filter">
+              <SelectValue placeholder="All Priorities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {hasActiveFilters && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={clearFilters}
+            data-testid="button-clear-filters"
+          >
+            <X className="w-4 h-4 mr-1" />
+            Clear Filters
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
@@ -451,6 +821,15 @@ export default function RepairQueue() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={exportToCSV}
+              className="text-[#0078D4] border-[#0078D4] hover:bg-[#0078D4]/10"
+              data-testid="button-export"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="badge-pending-count">
               <Clock className="w-4 h-4 text-[#D35400]" />
               <span className="text-sm font-medium text-[#D35400]">{pendingRepairs.length} Pending</span>
@@ -532,7 +911,7 @@ export default function RepairQueue() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="by-tech" data-testid="tab-by-tech">
               <Users className="w-4 h-4 mr-2" /> By Technician
             </TabsTrigger>
@@ -547,6 +926,12 @@ export default function RepairQueue() {
             </TabsTrigger>
             <TabsTrigger value="estimates-log" data-testid="tab-estimates-log">
               <FileText className="w-4 h-4 mr-2" /> Estimates Log ({estimatesFromRepairs.length})
+            </TabsTrigger>
+            <TabsTrigger value="emergencies" data-testid="tab-emergencies">
+              <AlertCircle className="w-4 h-4 mr-2" /> Emergencies ({emergencies.length})
+            </TabsTrigger>
+            <TabsTrigger value="parts-ordered" data-testid="tab-parts-ordered">
+              <Package className="w-4 h-4 mr-2" /> Parts Ordered
             </TabsTrigger>
           </TabsList>
 
@@ -596,55 +981,77 @@ export default function RepairQueue() {
             )}
           </TabsContent>
 
+          {/* Two-column layout for filtered views */}
           <TabsContent value="pending" className="mt-4">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
               </div>
-            ) : pendingRepairs.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-slate-500">
-                  <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No pending repairs</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pendingRepairs.map(renderRepairCard)}
+              <div className="lg:col-span-3">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                  </div>
+                ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "assigned").length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center text-slate-500">
+                      <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No pending repairs{hasActiveFilters ? " matching filters" : ""}</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredRepairs.filter(r => r.status === "pending" || r.status === "assigned").map(renderRepairCard)}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </TabsContent>
 
           <TabsContent value="in_progress" className="mt-4">
-            {inProgressRepairs.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-slate-500">
-                  <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No repairs in progress</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {inProgressRepairs.map(renderRepairCard)}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
               </div>
-            )}
+              <div className="lg:col-span-3">
+                {filteredRepairs.filter(r => r.status === "in_progress").length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center text-slate-500">
+                      <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No repairs in progress{hasActiveFilters ? " matching filters" : ""}</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredRepairs.filter(r => r.status === "in_progress").map(renderRepairCard)}
+                  </div>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4">
-            {completedRepairs.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-slate-500">
-                  <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No completed repairs</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <ScrollArea className="max-h-[600px]">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {completedRepairs.map(renderRepairCard)}
-                </div>
-              </ScrollArea>
-            )}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
+                {filteredRepairs.filter(r => r.status === "completed").length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center text-slate-500">
+                      <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No completed repairs{hasActiveFilters ? " matching filters" : ""}</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <ScrollArea className="max-h-[600px]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {filteredRepairs.filter(r => r.status === "completed").map(renderRepairCard)}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="estimates-log" className="mt-4">
@@ -736,6 +1143,46 @@ export default function RepairQueue() {
                 </div>
               </ScrollArea>
             )}
+          </TabsContent>
+
+          <TabsContent value="emergencies" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
+                {filteredEmergencies.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center text-slate-500">
+                      <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No emergencies{hasActiveFilters ? " matching filters" : ""}</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {filteredEmergencies.map(renderEmergencyRow)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="parts-ordered" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="lg:col-span-1">
+                <FiltersPanel />
+              </div>
+              <div className="lg:col-span-3">
+                <Card>
+                  <CardContent className="py-12 text-center text-slate-500">
+                    <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium text-lg mb-2">Parts Orders Coming Soon</p>
+                    <p className="text-sm">This feature will display all parts orders submitted from the Repair Tech App.</p>
+                    <p className="text-sm mt-2">Including: part name, property, requested by, order date, status, and processor.</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
