@@ -1382,38 +1382,163 @@ export default function RepairQueue() {
                               </TableRow>
                               {expandedRow === repair.id && (
                                 <TableRow>
-                                  <TableCell colSpan={8} className="bg-slate-50 p-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div>
-                                        <h4 className="font-semibold text-sm mb-2">Full Details</h4>
-                                        <div className="space-y-1 text-sm">
-                                          <p><span className="text-slate-500">Job Number:</span> {repair.jobNumber}</p>
-                                          <p><span className="text-slate-500">Address:</span> {repair.address || "—"}</p>
-                                          <p><span className="text-slate-500">Job Date:</span> {formatDate(repair.jobDate)}</p>
-                                          <p><span className="text-slate-500">Completed:</span> {formatDate(repair.updatedAt)}</p>
+                                  <TableCell colSpan={8} className="p-0">
+                                    <div className="flex flex-col">
+                                      {/* Section 1: Estimate Details - Light Blue Tint */}
+                                      <div className="p-4" style={{ backgroundColor: "#0078D41A" }}>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <FileText className="w-5 h-5 text-[#0078D4]" />
+                                          <h4 className="font-bold text-sm text-[#0078D4] uppercase tracking-wide">Estimate Details</h4>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Quote Description</p>
+                                            <p className="text-sm font-medium text-[#1E293B]">{repair.description || "—"}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Property & Customer</p>
+                                            <p className="text-sm font-medium text-[#1E293B]">{repair.propertyName || "—"}</p>
+                                            <p className="text-xs text-slate-500">{repair.customerName || "—"}</p>
+                                            <p className="text-xs text-slate-400">{repair.address || "—"}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Estimate Date</p>
+                                            <p className="text-sm text-[#1E293B]">{formatDate(repair.jobDate)}</p>
+                                            <p className="text-xs text-slate-500 mt-1">Created</p>
+                                            <p className="text-xs text-slate-400">{formatDateTime(repair.createdAt)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Service Tech (Reported)</p>
+                                            <p className="text-sm text-[#1E293B]">{repair.technicianName || "—"}</p>
+                                          </div>
+                                        </div>
+
+                                        {/* Line Items Table */}
+                                        {repair.items && repair.items.length > 0 && (
+                                          <div className="mb-4">
+                                            <p className="text-xs text-slate-500 mb-2 font-medium">Line Items</p>
+                                            <div className="bg-white rounded border overflow-hidden">
+                                              <table className="w-full text-xs">
+                                                <thead className="bg-slate-100">
+                                                  <tr>
+                                                    <th className="text-left px-2 py-1.5 font-medium">Product/Service</th>
+                                                    <th className="text-left px-2 py-1.5 font-medium">SKU</th>
+                                                    <th className="text-center px-2 py-1.5 font-medium">Qty</th>
+                                                    <th className="text-right px-2 py-1.5 font-medium">Rate</th>
+                                                    <th className="text-right px-2 py-1.5 font-medium">Amount</th>
+                                                    <th className="text-center px-2 py-1.5 font-medium">Tax</th>
+                                                  </tr>
+                                                </thead>
+                                                <tbody>
+                                                  {repair.items.map((item: any, idx: number) => (
+                                                    <tr key={idx} className="border-t">
+                                                      <td className="px-2 py-1.5">{item.productService || item.description || "—"}</td>
+                                                      <td className="px-2 py-1.5 text-slate-500">{item.sku || "—"}</td>
+                                                      <td className="px-2 py-1.5 text-center">{item.quantity || 1}</td>
+                                                      <td className="px-2 py-1.5 text-right">{formatCurrency(item.rate * 100)}</td>
+                                                      <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(item.amount * 100)}</td>
+                                                      <td className="px-2 py-1.5 text-center">{item.taxable ? "Yes" : "No"}</td>
+                                                    </tr>
+                                                  ))}
+                                                </tbody>
+                                              </table>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Totals */}
+                                        <div className="flex justify-end mb-4">
+                                          <div className="bg-white rounded border p-3 min-w-[220px]">
+                                            <div className="flex justify-between text-xs mb-1">
+                                              <span className="text-slate-500">Subtotal:</span>
+                                              <span className="font-medium">{formatCurrency((repair.partsAmount || 0) + (repair.laborAmount || 0))}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs mb-1">
+                                              <span className="text-slate-500">Tax (estimated):</span>
+                                              <span className="font-medium">{formatCurrency(Math.round(((repair.partsAmount || 0) + (repair.laborAmount || 0)) * 0.0875))}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs border-t pt-1 mt-1">
+                                              <span className="font-semibold">Total:</span>
+                                              <span className="font-bold text-[#22D69A]">{formatCurrency(repair.totalAmount)}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Job Photos */}
+                                        <div>
+                                          <p className="text-xs text-slate-500 mb-2 font-medium">Attached Photos</p>
+                                          {repair.photos && repair.photos.length > 0 ? (
+                                            <div className="flex gap-2 flex-wrap">
+                                              {repair.photos.map((photo, idx) => (
+                                                <img 
+                                                  key={idx} 
+                                                  src={photo} 
+                                                  alt={`Estimate Photo ${idx + 1}`}
+                                                  className="w-16 h-16 object-cover rounded border cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-[#0078D4]"
+                                                  onClick={(e) => { e.stopPropagation(); setPhotoPreviewUrl(photo); }}
+                                                />
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <p className="text-xs text-slate-400 italic">No photos attached</p>
+                                          )}
                                         </div>
                                       </div>
-                                      <div>
-                                        <h4 className="font-semibold text-sm mb-2">Notes</h4>
-                                        <p className="text-sm text-slate-600">{repair.notes || "No notes"}</p>
+
+                                      {/* Divider */}
+                                      <div className="h-1 bg-slate-300" />
+
+                                      {/* Section 2: Completion Details - Light Green Tint */}
+                                      <div className="p-4" style={{ backgroundColor: "#22D69A1A" }}>
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <CheckCircle className="w-5 h-5 text-[#22D69A]" />
+                                          <h4 className="font-bold text-sm text-[#22D69A] uppercase tracking-wide">Completion Details</h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Repair Tech(s)</p>
+                                            <p className="text-sm font-medium text-[#1E293B]">{repair.technicianName || "Not assigned"}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Date & Time Completed</p>
+                                            <p className="text-sm text-[#1E293B]">{formatDateTime(repair.updatedAt)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Time Spent</p>
+                                            <p className="text-sm text-slate-400 italic">Not recorded</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Lock-box Confirmed</p>
+                                            <p className="text-sm text-slate-400 italic">Not recorded</p>
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Technicians Present</p>
+                                            <p className="text-sm text-[#1E293B]">{repair.technicianName || "Not recorded"}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-slate-500 mb-1">Completion Notes</p>
+                                            <div className="bg-white/50 rounded p-2 border border-slate-200">
+                                              <p className="text-sm text-[#1E293B] whitespace-pre-wrap">{repair.notes || "No notes recorded"}</p>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Completion Photos */}
+                                        <div>
+                                          <p className="text-xs text-slate-500 mb-2 font-medium">Completion Photos (After Work)</p>
+                                          <div className="bg-white/50 rounded p-3 border border-slate-200 text-center">
+                                            <Camera className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                                            <p className="text-xs text-slate-400 italic">Completion photos not yet available</p>
+                                            <p className="text-xs text-slate-300 mt-1">Feature coming soon from Field Tech App</p>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
-                                    {repair.photos && repair.photos.length > 0 && (
-                                      <div className="mt-4">
-                                        <h4 className="font-semibold text-sm mb-2">Photos ({repair.photos.length})</h4>
-                                        <div className="flex gap-2 flex-wrap">
-                                          {repair.photos.map((photo, idx) => (
-                                            <img 
-                                              key={idx} 
-                                              src={photo} 
-                                              alt={`Photo ${idx + 1}`}
-                                              className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80"
-                                              onClick={(e) => { e.stopPropagation(); setPhotoPreviewUrl(photo); }}
-                                            />
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
                                   </TableCell>
                                 </TableRow>
                               )}
