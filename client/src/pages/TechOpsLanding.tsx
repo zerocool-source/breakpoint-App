@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Wrench, Droplets, AlertTriangle, CalendarIcon, AlertCircle,
-  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive, Building2
+  Filter, Clock, CheckCircle, XCircle, FileText, User, MapPin, Loader2, Wind, Archive, Building2, ExternalLink
 } from "lucide-react";
 import type { TechOpsEntry, Emergency } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -85,6 +86,7 @@ const filterTabs = [
 ];
 
 export default function TechOpsLanding() {
+  const [, setLocation] = useLocation();
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: subDays(new Date(), 30),
     to: new Date()
@@ -92,6 +94,31 @@ export default function TechOpsLanding() {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
   const [selectedTechs, setSelectedTechs] = useState<Set<string>>(new Set());
+
+  const navigateToEntry = (entry: UnifiedEntry) => {
+    const entryId = entry.id.replace(/^(alert-|emergency-)/, '');
+    
+    switch (entry.entryType) {
+      case 'repairs_needed':
+      case 'service_repairs':
+        setLocation(`/repairs?highlight=${entryId}&type=${entry.entryType}`);
+        break;
+      case 'chemical_order':
+      case 'chemicals_dropoff':
+      case 'chemical_alert':
+        setLocation(`/chemicals?highlight=${entryId}&type=${entry.entryType}`);
+        break;
+      case 'windy_day_cleanup':
+      case 'report_issue':
+        setLocation(`/service?highlight=${entryId}&type=${entry.entryType}`);
+        break;
+      case 'emergencies':
+        setLocation(`/repairs?highlight=${entryId}&type=emergency`);
+        break;
+      default:
+        setLocation(`/repairs?highlight=${entryId}`);
+    }
+  };
 
   // Fetch TechOps entries
   const { data: techOpsEntries = [], isLoading: techOpsLoading } = useQuery<TechOpsEntry[]>({
@@ -153,7 +180,7 @@ export default function TechOpsLanding() {
         technicianName: e.technicianName || "Unknown",
         description: e.description || "",
         status: e.status || "pending",
-        priority: e.priority,
+        priority: e.priority ?? undefined,
         createdAt: e.createdAt?.toString() || new Date().toISOString(),
         source: 'tech_ops',
       });
@@ -180,10 +207,10 @@ export default function TechOpsLanding() {
         id: `emergency-${e.id}`,
         entryType: "emergencies",
         propertyName: e.propertyName || "Unknown Property",
-        technicianName: e.submitterName || "Unknown",
+        technicianName: e.submittedByName || "Unknown",
         description: e.description || "",
         status: e.status || "pending_review",
-        priority: e.priority,
+        priority: e.priority ?? undefined,
         createdAt: e.createdAt?.toString() || new Date().toISOString(),
         source: 'emergency',
       });
@@ -288,7 +315,7 @@ export default function TechOpsLanding() {
               <Wrench className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900" data-testid="text-heading-techops">Tech Ops</h1>
+              <h1 className="text-2xl font-bold text-slate-900" data-testid="text-heading-techops">Tech Ops Alerts</h1>
               <p className="text-slate-500 text-sm">Unified feed of all field technician submissions</p>
             </div>
           </div>
@@ -500,7 +527,8 @@ export default function TechOpsLanding() {
                         return (
                           <div
                             key={entry.id}
-                            className="p-4 bg-white border border-slate-200 rounded-lg hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
+                            className="p-4 bg-white border border-slate-200 rounded-lg hover:shadow-md hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                            onClick={() => navigateToEntry(entry)}
                             data-testid={`entry-${entry.id}`}
                           >
                             <div className="flex items-start gap-4">
@@ -537,6 +565,7 @@ export default function TechOpsLanding() {
                                       {entry.priority.toLowerCase()}
                                     </Badge>
                                   )}
+                                  <ExternalLink className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                                 </div>
 
                                 <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">

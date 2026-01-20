@@ -271,7 +271,7 @@ export function Sidebar() {
       label: "Operations Hub", 
       children: [
         { label: "Supervisor Management", href: "/supervisor-management", section: "Supervisor Management" },
-        { label: "Tech Ops", href: "/tech-ops", section: "Tech Ops" },
+        { label: "Tech Ops Alerts", href: "/tech-ops", section: "Tech Ops" },
         { label: "Repairs", href: "/repairs", section: "Tech Ops" },
         { label: "Chemicals", href: "/chemicals", section: "Tech Ops" },
         { label: "Service", href: "/service", section: "Tech Ops" },
