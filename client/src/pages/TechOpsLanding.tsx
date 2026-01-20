@@ -287,7 +287,7 @@ export default function TechOpsLanding() {
                     <div className="space-y-3">
                       {entries.map((entry) => {
                         const typeConfig = entryTypeLabels[entry.entryType] || { label: entry.entryType, color: "bg-slate-100 text-slate-700", icon: FileText };
-                        const statConfig = statusConfig[entry.status || "pending"];
+                        const statConfig = statusConfig[entry.status || "pending"] || { label: entry.status || "Unknown", color: "bg-slate-100 text-slate-600", icon: FileText };
                         const TypeIcon = typeConfig.icon;
                         const StatusIcon = statConfig.icon;
 
