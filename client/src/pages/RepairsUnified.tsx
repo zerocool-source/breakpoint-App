@@ -31,7 +31,7 @@ import {
   Wrench, Loader2, AlertCircle, CheckCircle2, Clock, Search,
   RefreshCw, Building2, User, Calendar, DollarSign, Percent,
   FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff,
-  XCircle, FileCheck, Pencil, ImageIcon
+  XCircle, FileCheck, ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -660,12 +660,13 @@ export default function RepairsUnified() {
                               <div
                                 key={alert.alertId}
                                 className={cn(
-                                  "p-4 rounded-lg border transition-all",
+                                  "p-4 rounded-lg border transition-all cursor-pointer",
                                   isCompleted
                                     ? "bg-emerald-50 border-emerald-200 opacity-70"
-                                    : "bg-slate-50 border-slate-200 hover:border-slate-300"
+                                    : "bg-slate-50 border-slate-200 hover:border-blue-300 hover:shadow-sm"
                                 )}
                                 data-testid={`repair-card-${alert.alertId}`}
+                                onClick={() => setEditModal({ open: true, alert })}
                               >
                                 <div className="flex items-start gap-3">
                                   <Checkbox
@@ -674,6 +675,7 @@ export default function RepairsUnified() {
                                       markCompleteMutation.mutate({ alertId: String(alert.alertId), completed: !!checked });
                                     }}
                                     className="mt-1"
+                                    onClick={(e) => e.stopPropagation()}
                                     data-testid={`checkbox-${alert.alertId}`}
                                   />
                                   <div className="flex-1 min-w-0">
@@ -713,7 +715,7 @@ export default function RepairsUnified() {
                                           size="sm"
                                           variant="outline"
                                           className="gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-                                          onClick={() => handleConvertToEstimate(alert)}
+                                          onClick={(e) => { e.stopPropagation(); handleConvertToEstimate(alert); }}
                                           disabled={createEstimateMutation.isPending}
                                           data-testid={`btn-convert-estimate-${alert.alertId}`}
                                         >
@@ -724,21 +726,11 @@ export default function RepairsUnified() {
                                           size="sm"
                                           variant="outline"
                                           className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                                          onClick={() => setDeclineModal({ open: true, alert, reason: "" })}
+                                          onClick={(e) => { e.stopPropagation(); setDeclineModal({ open: true, alert, reason: "" }); }}
                                           data-testid={`btn-decline-${alert.alertId}`}
                                         >
                                           <XCircle className="w-3 h-3" />
                                           Decline
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="gap-1 text-slate-600 border-slate-200 hover:bg-slate-50"
-                                          onClick={() => setEditModal({ open: true, alert })}
-                                          data-testid={`btn-edit-${alert.alertId}`}
-                                        >
-                                          <Pencil className="w-3 h-3" />
-                                          Edit
                                         </Button>
                                       </div>
                                     )}
