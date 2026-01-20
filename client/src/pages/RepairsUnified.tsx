@@ -270,27 +270,49 @@ export default function RepairsUnified() {
       const firstRepair = selectedRepairs[0];
       const totalAmountCents = selectedRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
       
+      // Collect all photos from selected repairs
+      const allPhotos = selectedRepairs.flatMap(r => r.photos || []);
+      
+      // Build line items with full description including notes
+      const lineItems = selectedRepairs.map((repair, idx) => {
+        const fullDescription = [
+          repair.description || "Service repair work",
+          repair.notes ? `Notes: ${repair.notes}` : null,
+        ].filter(Boolean).join(" | ");
+        
+        return {
+          lineNumber: idx + 1,
+          productService: repair.description || "Service Repair",
+          description: fullDescription,
+          quantity: 1,
+          rate: repair.partsCost || 0,
+          amount: repair.partsCost || 0,
+          taxable: false,
+        };
+      });
+      
       const estimateData = {
         propertyId: firstRepair.propertyId,
         propertyName: firstRepair.propertyName || "Unknown Property",
+        address: firstRepair.propertyAddress || null,
         title: selectedRepairs.length === 1 
           ? `Service Repair - ${firstRepair.description || "Repair"}` 
           : `Service Repairs (${selectedRepairs.length} items)`,
-        description: selectedRepairs.map(r => r.description).filter(Boolean).join("\n"),
+        description: selectedRepairs.map(r => {
+          const parts = [r.description];
+          if (r.notes) parts.push(`Notes: ${r.notes}`);
+          return parts.join(" - ");
+        }).filter(Boolean).join("\n\n"),
         status: "draft",
         sourceType: "service_tech",
         serviceRepairCount: selectedRepairs.length,
         sourceServiceRepairIds: repairIds,
         totalAmount: totalAmountCents,
-        items: selectedRepairs.map((repair, idx) => ({
-          lineNumber: idx + 1,
-          productService: "Service Repair",
-          description: repair.description || "Service repair work",
-          quantity: 1,
-          rate: repair.partsCost || 0,
-          amount: repair.partsCost || 0,
-          taxable: false,
-        })),
+        items: lineItems,
+        photos: allPhotos.length > 0 ? allPhotos : null,
+        serviceTechId: firstRepair.technicianId || null,
+        serviceTechName: firstRepair.technicianName || null,
+        techNotes: selectedRepairs.map(r => r.notes).filter(Boolean).join("\n") || null,
       };
 
       const res = await fetch("/api/estimates", {
