@@ -29,7 +29,7 @@ import {
   Search, Plus, Users, Building2, User, MapPin, Phone, Mail,
   MoreVertical, X, ChevronLeft, ChevronRight, Tag, Edit, Trash2,
   Home, FileText, Check, Loader2, Calendar, Clock, Wrench, Droplets,
-  DollarSign, AlertTriangle
+  DollarSign, AlertTriangle, Sun, Snowflake
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -1102,6 +1102,9 @@ function CustomerDetailPanel({
   const [scheduleActive, setScheduleActive] = useState(false);
   const [customTagInput, setCustomTagInput] = useState("");
   const [visitDays, setVisitDays] = useState<string[]>([]);
+  const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
+  const [summerVisitDays, setSummerVisitDays] = useState<string[]>([]);
+  const [winterVisitDays, setWinterVisitDays] = useState<string[]>([]);
   const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "custom">("weekly");
   const [frequencyInterval, setFrequencyInterval] = useState(1);
   const [routeNotes, setRouteNotes] = useState("");
@@ -1221,12 +1224,19 @@ function CustomerDetailPanel({
     if (routeScheduleData?.schedule) {
       const s = routeScheduleData.schedule;
       setScheduleActive(s.isActive || false);
-      setVisitDays(s.visitDays || []);
+      const season = s.activeSeason || "summer";
+      setActiveSeason(season);
+      setSummerVisitDays(s.summerVisitDays || s.visitDays || []);
+      setWinterVisitDays(s.winterVisitDays || []);
+      setVisitDays(season === "summer" ? (s.summerVisitDays || s.visitDays || []) : (s.winterVisitDays || []));
       setFrequency(s.frequency || "weekly");
       setFrequencyInterval(s.frequencyInterval || 1);
       setRouteNotes(s.routeNotes || "");
     } else {
       setScheduleActive(false);
+      setActiveSeason("summer");
+      setSummerVisitDays([]);
+      setWinterVisitDays([]);
       setVisitDays([]);
       setFrequency("weekly");
       setFrequencyInterval(1);
@@ -1474,13 +1484,34 @@ function CustomerDetailPanel({
   });
 
   const handleSaveRouteSchedule = () => {
+    const updatedSummerDays = activeSeason === "summer" ? visitDays : summerVisitDays;
+    const updatedWinterDays = activeSeason === "winter" ? visitDays : winterVisitDays;
     saveRouteScheduleMutation.mutate({
       isActive: scheduleActive,
       visitDays,
+      summerVisitDays: updatedSummerDays,
+      winterVisitDays: updatedWinterDays,
+      activeSeason,
       frequency,
       frequencyInterval: frequency === "custom" ? frequencyInterval : (frequency === "biweekly" ? 2 : 1),
       routeNotes,
     });
+  };
+
+  const handleSeasonChange = (newSeason: "summer" | "winter") => {
+    if (newSeason === activeSeason) return;
+    
+    const currentVisitDays = visitDays;
+    const newSeasonVisitDays = newSeason === "summer" ? summerVisitDays : winterVisitDays;
+    
+    if (activeSeason === "summer") {
+      setSummerVisitDays(currentVisitDays);
+    } else {
+      setWinterVisitDays(currentVisitDays);
+    }
+    
+    setActiveSeason(newSeason);
+    setVisitDays(newSeasonVisitDays);
   };
 
   const toggleVisitDay = (day: string) => {
@@ -1820,8 +1851,46 @@ function CustomerDetailPanel({
             <div className="space-y-4">
               <Card className="bg-white">
                 <CardContent className="p-4">
-                  <h4 className="font-medium text-slate-700 mb-3">Visit Days</h4>
-                  <p className="text-xs text-slate-500 mb-3">Select days when this property should be serviced</p>
+                  <h4 className="font-medium text-slate-700 mb-3">Seasonal Schedule</h4>
+                  <p className="text-xs text-slate-500 mb-3">Toggle between summer and winter service schedules</p>
+                  <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-lg">
+                    <button
+                      onClick={() => handleSeasonChange("summer")}
+                      data-testid="season-toggle-summer"
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all",
+                        activeSeason === "summer"
+                          ? "bg-amber-500 text-white shadow-sm"
+                          : "text-slate-600 hover:bg-slate-200"
+                      )}
+                    >
+                      <Sun className="w-4 h-4" />
+                      Summer
+                    </button>
+                    <button
+                      onClick={() => handleSeasonChange("winter")}
+                      data-testid="season-toggle-winter"
+                      className={cn(
+                        "flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-medium transition-all",
+                        activeSeason === "winter"
+                          ? "bg-blue-500 text-white shadow-sm"
+                          : "text-slate-600 hover:bg-slate-200"
+                      )}
+                    >
+                      <Snowflake className="w-4 h-4" />
+                      Winter
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-2 text-center">
+                    Currently editing: <span className="font-medium capitalize">{activeSeason}</span> schedule
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h4 className="font-medium text-slate-700 mb-3">Visit Days ({activeSeason === "summer" ? "Summer" : "Winter"})</h4>
+                  <p className="text-xs text-slate-500 mb-3">Select days when this property should be serviced during {activeSeason}</p>
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { key: "monday", label: "Monday" },
@@ -2502,10 +2571,54 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [showSeasonSwitch, setShowSeasonSwitch] = useState(false);
+  const [pendingSeason, setPendingSeason] = useState<"summer" | "winter">("summer");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: customersData, isLoading } = useQuery<{ customers: Customer[] }>({
     queryKey: ["/api/customers"],
+  });
+
+  const { data: activeSeasonData } = useQuery<{ activeSeason: string }>({
+    queryKey: ["/api/settings/active-season"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/active-season");
+      if (!res.ok) return { activeSeason: "summer" };
+      return res.json();
+    },
+  });
+
+  const globalActiveSeason = activeSeasonData?.activeSeason || "summer";
+
+  const switchAllSeasonsMutation = useMutation({
+    mutationFn: async (season: string) => {
+      const res = await fetch("/api/settings/switch-all-season", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ season }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to switch season");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings/active-season"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      setShowSeasonSwitch(false);
+      toast({
+        title: "Season switched",
+        description: `All ${data.updatedSchedules} property schedules switched to ${data.activeSeason}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to switch season. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const customers = customersData?.customers || [];
@@ -2589,13 +2702,36 @@ export default function Customers() {
           <div className="p-4 border-b space-y-4">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-slate-900">Customers</h1>
-              <Button 
-                onClick={() => setShowAddCustomer(true)}
-                className="bg-[#0078D4] hover:bg-[#0078D4]"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Customer
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setPendingSeason(globalActiveSeason === "summer" ? "winter" : "summer");
+                    setShowSeasonSwitch(true);
+                  }}
+                  data-testid="button-switch-all-seasons"
+                  className="border-slate-300"
+                >
+                  {globalActiveSeason === "summer" ? (
+                    <>
+                      <Sun className="h-4 w-4 mr-2 text-amber-500" />
+                      Switch to Winter
+                    </>
+                  ) : (
+                    <>
+                      <Snowflake className="h-4 w-4 mr-2 text-blue-500" />
+                      Switch to Summer
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  onClick={() => setShowAddCustomer(true)}
+                  className="bg-[#0078D4] hover:bg-[#0078D4]"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Customer
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -2730,6 +2866,62 @@ export default function Customers() {
         }}
         customer={editingCustomer}
       />
+
+      <Dialog open={showSeasonSwitch} onOpenChange={setShowSeasonSwitch}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {pendingSeason === "winter" ? (
+                <Snowflake className="h-5 w-5 text-blue-500" />
+              ) : (
+                <Sun className="h-5 w-5 text-amber-500" />
+              )}
+              Switch All Properties to {pendingSeason === "summer" ? "Summer" : "Winter"} Schedule
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-slate-600">
+              This will update all property schedules to use their <strong>{pendingSeason}</strong> visit days. 
+              This change affects route generation for all properties.
+            </p>
+            <div className={cn(
+              "mt-4 p-3 rounded-lg border flex items-start gap-3",
+              pendingSeason === "winter" ? "bg-blue-50 border-blue-200" : "bg-amber-50 border-amber-200"
+            )}>
+              <AlertTriangle className={cn(
+                "h-5 w-5 mt-0.5 shrink-0",
+                pendingSeason === "winter" ? "text-blue-500" : "text-amber-500"
+              )} />
+              <div className="text-sm">
+                <p className="font-medium text-slate-700">Important</p>
+                <p className="text-slate-600">
+                  Properties without {pendingSeason} visit days configured will have no scheduled visits until updated.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSeasonSwitch(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => switchAllSeasonsMutation.mutate(pendingSeason)}
+              disabled={switchAllSeasonsMutation.isPending}
+              className={pendingSeason === "winter" ? "bg-blue-500 hover:bg-blue-600" : "bg-amber-500 hover:bg-amber-600"}
+              data-testid="button-confirm-switch-season"
+            >
+              {switchAllSeasonsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : pendingSeason === "winter" ? (
+                <Snowflake className="h-4 w-4 mr-2" />
+              ) : (
+                <Sun className="h-4 w-4 mr-2" />
+              )}
+              Switch to {pendingSeason === "summer" ? "Summer" : "Winter"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

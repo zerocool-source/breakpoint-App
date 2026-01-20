@@ -74,8 +74,14 @@ export function registerSchedulingRoutes(app: any) {
       // Delete existing unscheduled service occurrences for this schedule
       await storage.deleteServiceOccurrencesBySchedule(schedule.id);
       
+      // Determine active visit days based on activeSeason
+      const activeSeason = schedule.activeSeason || "summer";
+      const activeVisitDays = activeSeason === "summer" 
+        ? (schedule.summerVisitDays || schedule.visitDays || [])
+        : (schedule.winterVisitDays || []);
+      
       // If schedule is active and has visit days, generate service occurrences
-      if (schedule.isActive && schedule.visitDays && schedule.visitDays.length > 0) {
+      if (schedule.isActive && activeVisitDays && activeVisitDays.length > 0) {
         // Get property info for customer name
         const property = await storage.getCustomerAddress(propertyId);
         let customerName = "";
@@ -106,7 +112,7 @@ export function registerSchedulingRoutes(app: any) {
         weekStartMonday.setDate(today.getDate() - daysSinceMonday);
         weekStartMonday.setHours(0, 0, 0, 0);
         
-        const occurrencesToCreate = schedule.visitDays.map((dayName: string) => {
+        const occurrencesToCreate = activeVisitDays.map((dayName: string) => {
           const targetDay = dayNameToNumber[dayName] ?? 0; // 0=Monday, 1=Tuesday, etc.
           // Calculate the date for this day within the current week
           const occurrenceDate = new Date(weekStartMonday);
@@ -234,7 +240,13 @@ export function registerSchedulingRoutes(app: any) {
       
       // Generate occurrences for each active schedule
       for (const schedule of activeSchedules) {
-        if (!schedule.visitDays || schedule.visitDays.length === 0) continue;
+        // Determine active visit days based on activeSeason
+        const activeSeason = schedule.activeSeason || "summer";
+        const activeVisitDays = activeSeason === "summer" 
+          ? (schedule.summerVisitDays || schedule.visitDays || [])
+          : (schedule.winterVisitDays || []);
+        
+        if (!activeVisitDays || activeVisitDays.length === 0) continue;
         
         const existingOccurrences = await storage.getServiceOccurrencesByProperty(schedule.propertyId);
         const existingDates = new Set(existingOccurrences.map(o => o.date.toISOString().split("T")[0]));
@@ -247,7 +259,7 @@ export function registerSchedulingRoutes(app: any) {
           const dayIndex = current.getDay();
           const dayName = Object.keys(dayNameToIndex).find(k => dayNameToIndex[k] === dayIndex);
           
-          if (dayName && schedule.visitDays.includes(dayName)) {
+          if (dayName && activeVisitDays.includes(dayName)) {
             const dateStr = current.toISOString().split("T")[0];
             if (!existingDates.has(dateStr)) {
               occurrencesToCreate.push({
