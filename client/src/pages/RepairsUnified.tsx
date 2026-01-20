@@ -114,6 +114,7 @@ export default function RepairsUnified() {
     repair: null,
   });
   const [selectedServiceRepairs, setSelectedServiceRepairs] = useState<Set<string>>(new Set());
+  const [showConvertedModal, setShowConvertedModal] = useState(false);
 
   const { data: alertsData = { alerts: [] }, isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
     queryKey: ["enrichedAlerts"],
@@ -151,6 +152,16 @@ export default function RepairsUnified() {
     },
   });
   const techniciansData = techniciansResponse.technicians || [];
+
+  const { data: estimatesData = [] } = useQuery<Array<{ id: string; estimateNumber?: string; title: string; propertyName: string; totalAmount: number; status: string; sourceServiceRepairIds?: string[]; createdAt: string }>>({
+    queryKey: ["estimates-for-converted"],
+    queryFn: async () => {
+      const res = await fetch("/api/estimates?sourceType=service_tech");
+      if (!res.ok) throw new Error("Failed to fetch estimates");
+      const data = await res.json();
+      return data.estimates || data || [];
+    },
+  });
 
   const { data: photosData = { photos: [] }, isLoading: photosLoading } = useQuery<{ photos: Array<{ url: string; caption?: string }> }>({
     queryKey: ["alertPhotos", editModal.alert?.alertId],
@@ -271,6 +282,7 @@ export default function RepairsUnified() {
         status: "draft",
         sourceType: "service_tech",
         serviceRepairCount: selectedRepairs.length,
+        sourceServiceRepairIds: repairIds,
         items: selectedRepairs.map((repair, idx) => ({
           lineNumber: idx + 1,
           productService: "Service Repair",
@@ -291,6 +303,7 @@ export default function RepairsUnified() {
       });
       if (!res.ok) throw new Error("Failed to create estimate");
       const result = await res.json();
+      const estimateId = result.estimate?.id;
       
       const failedUpdates: string[] = [];
       for (const repairId of repairIds) {
@@ -298,7 +311,11 @@ export default function RepairsUnified() {
           const updateRes = await fetch(`/api/tech-ops/${repairId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: "converted" }),
+            body: JSON.stringify({ 
+              status: "converted",
+              convertedToEstimateId: estimateId,
+              convertedAt: new Date().toISOString(),
+            }),
           });
           if (!updateRes.ok) {
             failedUpdates.push(repairId);
@@ -391,8 +408,17 @@ export default function RepairsUnified() {
     });
   }, [techOpsData, techniciansData]);
 
+  // Split into active (non-converted) and converted service repairs
+  const activeServiceRepairs = useMemo(() => {
+    return serviceRepairsWithCommission.filter(r => r.status !== "converted");
+  }, [serviceRepairsWithCommission]);
+
+  const convertedServiceRepairs = useMemo(() => {
+    return serviceRepairsWithCommission.filter(r => r.status === "converted");
+  }, [serviceRepairsWithCommission]);
+
   const filteredServiceRepairs = useMemo(() => {
-    let filtered = serviceRepairsWithCommission;
+    let filtered = activeServiceRepairs; // Only show non-converted repairs
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
@@ -407,7 +433,7 @@ export default function RepairsUnified() {
       filtered = filtered.filter(r => r.technicianName === technicianFilter);
     }
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [serviceRepairsWithCommission, searchTerm, propertyFilter, technicianFilter]);
+  }, [activeServiceRepairs, searchTerm, propertyFilter, technicianFilter]);
 
   const uniqueProperties = useMemo(() => {
     const props = new Set<string>();
@@ -423,9 +449,44 @@ export default function RepairsUnified() {
     return Array.from(techs).sort();
   }, [repairAlerts, serviceRepairsWithCommission]);
 
-  const totalSubmissions = repairAlerts.length + serviceRepairsWithCommission.length;
+  const totalSubmissions = repairAlerts.length + activeServiceRepairs.length;
   const pendingCount = pendingRepairs.length;
-  const resolvedCount = resolvedRepairs.length + serviceRepairsWithCommission.filter(r => r.status === 'completed').length;
+  const resolvedCount = resolvedRepairs.length + activeServiceRepairs.filter(r => r.status === 'completed').length;
+  const convertedCount = convertedServiceRepairs.length;
+
+  // Group converted repairs by estimate
+  const convertedByEstimate = useMemo(() => {
+    const groups: Record<string, {
+      estimate: typeof estimatesData[0] | null;
+      repairs: typeof convertedServiceRepairs;
+    }> = {};
+    
+    // Create a map of repair ID to estimate
+    const repairToEstimate = new Map<string, typeof estimatesData[0]>();
+    estimatesData.forEach(estimate => {
+      if (estimate.sourceServiceRepairIds) {
+        estimate.sourceServiceRepairIds.forEach(repairId => {
+          repairToEstimate.set(repairId, estimate);
+        });
+      }
+    });
+    
+    // Group repairs by their estimate
+    convertedServiceRepairs.forEach(repair => {
+      const estimate = repairToEstimate.get(repair.id);
+      const key = estimate?.id || 'unlinked';
+      if (!groups[key]) {
+        groups[key] = { estimate: estimate || null, repairs: [] };
+      }
+      groups[key].repairs.push(repair);
+    });
+    
+    return Object.values(groups).sort((a, b) => {
+      if (!a.estimate) return 1;
+      if (!b.estimate) return -1;
+      return new Date(b.estimate.createdAt).getTime() - new Date(a.estimate.createdAt).getTime();
+    });
+  }, [convertedServiceRepairs, estimatesData]);
 
   const totalRepairRevenue = filteredServiceRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
   const totalCommissions = filteredServiceRepairs.reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
@@ -542,7 +603,7 @@ export default function RepairsUnified() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-white">
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -573,6 +634,21 @@ export default function RepairsUnified() {
               <div>
                 <p className="text-2xl font-bold text-slate-800">{resolvedCount}</p>
                 <p className="text-sm text-slate-500">Completed / Resolved</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card 
+            className="bg-white cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+            onClick={() => setShowConvertedModal(true)}
+            data-testid="card-converted-estimate"
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <FileCheck className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-800">{convertedCount}</p>
+                <p className="text-sm text-slate-500">Converted to Estimate</p>
               </div>
             </CardContent>
           </Card>
@@ -621,7 +697,7 @@ export default function RepairsUnified() {
                   Repairs Needed ({pendingRepairs.length})
                 </TabsTrigger>
                 <TabsTrigger value="service-repairs" data-testid="tab-service-repairs">
-                  Service Repairs ({serviceRepairsWithCommission.length})
+                  Service Repairs ({activeServiceRepairs.length})
                 </TabsTrigger>
               </TabsList>
             </CardHeader>
@@ -1177,6 +1253,115 @@ export default function RepairsUnified() {
                 {selectedServiceRepairs.has(serviceRepairModal.repair.id) ? "Remove from Selection" : "Add to Selection"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Converted Repairs Modal */}
+      <Dialog open={showConvertedModal} onOpenChange={setShowConvertedModal}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCheck className="w-5 h-5 text-indigo-600" />
+              Converted to Estimate ({convertedCount})
+            </DialogTitle>
+            <DialogDescription>
+              Service repairs that have been converted to estimates, grouped by estimate
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            {convertedByEstimate.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                <FileCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No converted repairs yet</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {convertedByEstimate.map((group, idx) => (
+                  <div key={group.estimate?.id || idx} className="border rounded-lg overflow-hidden">
+                    {/* Estimate Header */}
+                    <div 
+                      className="bg-indigo-50 p-4 border-b cursor-pointer hover:bg-indigo-100 transition-colors"
+                      onClick={() => group.estimate?.id && navigate(`/estimates/${group.estimate.id}`)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <FileCheck className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-slate-900">
+                              {group.estimate?.estimateNumber || group.estimate?.title || "Estimate"}
+                            </h3>
+                            <p className="text-sm text-slate-500">
+                              {group.estimate?.propertyName || "Unknown Property"} • {group.repairs.length} repair{group.repairs.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg text-indigo-600">
+                            {formatCurrency(group.estimate?.totalAmount || group.repairs.reduce((sum, r) => sum + (r.partsCost || 0), 0))}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {group.estimate?.status ? group.estimate.status.replace(/_/g, ' ').toUpperCase() : 'DRAFT'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Repairs in this estimate */}
+                    <div className="divide-y">
+                      {group.repairs.map((repair) => (
+                        <div 
+                          key={repair.id} 
+                          className="p-4 hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setServiceRepairModal({ open: true, repair })}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-800">{repair.description || "Service Repair"}</p>
+                              <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  {repair.technicianName}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {format(new Date(repair.createdAt), "MMM d, yyyy")}
+                                </span>
+                                {repair.photos && repair.photos.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <ImageIcon className="w-3 h-3" />
+                                    {repair.photos.length}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-emerald-600">{formatCurrency(repair.partsCost || 0)}</p>
+                              <p className="text-xs text-slate-500">{repair.commissionPercent}% comm</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowConvertedModal(false)}>
+              Close
+            </Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => {
+                setShowConvertedModal(false);
+                navigate("/estimates");
+              }}
+            >
+              View All Estimates
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
