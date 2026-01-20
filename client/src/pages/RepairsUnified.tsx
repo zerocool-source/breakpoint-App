@@ -31,7 +31,7 @@ import {
   Wrench, Loader2, AlertCircle, CheckCircle2, Clock, Search,
   RefreshCw, Building2, User, Calendar, DollarSign, Percent,
   FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff,
-  XCircle, FileCheck, Pencil
+  XCircle, FileCheck, Pencil, ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -143,6 +143,17 @@ export default function RepairsUnified() {
       if (!res.ok) throw new Error("Failed to fetch technicians");
       return res.json();
     },
+  });
+
+  const { data: photosData = { photos: [] }, isLoading: photosLoading } = useQuery<{ photos: Array<{ url: string; caption?: string }> }>({
+    queryKey: ["alertPhotos", editModal.alert?.alertId],
+    queryFn: async () => {
+      if (!editModal.alert?.alertId) return { photos: [] };
+      const res = await fetch(`/api/alerts/${editModal.alert.alertId}/photos`);
+      if (!res.ok) return { photos: [] };
+      return res.json();
+    },
+    enabled: editModal.open && !!editModal.alert?.alertId,
   });
 
   const completedIds = new Set<string>((completedData.completedIds || []).map(String));
@@ -1040,6 +1051,40 @@ export default function RepairsUnified() {
                   </p>
                 </div>
               )}
+              <div>
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  Attached Photos
+                </label>
+                {photosLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                  </div>
+                ) : photosData.photos && photosData.photos.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                    {photosData.photos.map((photo, idx) => (
+                      <a
+                        key={idx}
+                        href={photo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block aspect-square rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors"
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.caption || `Photo ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 bg-slate-50 rounded-lg mt-2">
+                    <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm text-slate-500">No photos attached</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
