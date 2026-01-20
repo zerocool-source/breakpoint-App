@@ -295,6 +295,8 @@ export const techOpsEntries = pgTable("tech_ops_entries", {
   partsCost: integer("parts_cost").default(0), // Parts cost in cents for service repairs/windy day cleanup (for commission calculation)
   commissionPercent: integer("commission_percent"), // Override commission % for this specific entry
   commissionAmount: integer("commission_amount"), // Override commission amount in cents for this specific entry
+  convertedToEstimateId: varchar("converted_to_estimate_id"), // Links to estimate when service repair is converted
+  convertedAt: timestamp("converted_at"), // When the service repair was converted to estimate
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -802,6 +804,7 @@ export const estimates = pgTable("estimates", {
   sourceRepairJobId: text("source_repair_job_id"), // Link to original service repair job if converted
   sourceEmergencyId: text("source_emergency_id"), // Link to original emergency if converted from emergency
   serviceRepairCount: integer("service_repair_count"), // Count of service repairs bundled into this estimate
+  sourceServiceRepairIds: text("source_service_repair_ids").array(), // Array of tech_ops_entry IDs that were converted to this estimate
   
   // Conversion tracking (who converted from emergency/service repair to estimate)
   convertedByUserId: text("converted_by_user_id"),
