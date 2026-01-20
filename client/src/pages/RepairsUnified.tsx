@@ -142,7 +142,7 @@ export default function RepairsUnified() {
     },
   });
 
-  const { data: techniciansData = [] } = useQuery<Technician[]>({
+  const { data: techniciansResponse = { technicians: [] } } = useQuery<{ technicians: Technician[] }>({
     queryKey: ["technicians"],
     queryFn: async () => {
       const res = await fetch("/api/technicians");
@@ -150,6 +150,7 @@ export default function RepairsUnified() {
       return res.json();
     },
   });
+  const techniciansData = techniciansResponse.technicians || [];
 
   const { data: photosData = { photos: [] }, isLoading: photosLoading } = useQuery<{ photos: Array<{ url: string; caption?: string }> }>({
     queryKey: ["alertPhotos", editModal.alert?.alertId],
