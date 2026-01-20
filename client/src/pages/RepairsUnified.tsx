@@ -31,7 +31,7 @@ import {
   Wrench, Loader2, AlertCircle, CheckCircle2, Clock, Search,
   RefreshCw, Building2, User, Calendar, DollarSign, Percent,
   FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff,
-  XCircle, FileCheck
+  XCircle, FileCheck, Pencil
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -102,6 +102,10 @@ export default function RepairsUnified() {
     open: false,
     alert: null,
     reason: "",
+  });
+  const [editModal, setEditModal] = useState<{ open: boolean; alert: EnrichedAlert | null }>({
+    open: false,
+    alert: null,
   });
   const [selectedServiceRepairs, setSelectedServiceRepairs] = useState<Set<string>>(new Set());
 
@@ -715,6 +719,16 @@ export default function RepairsUnified() {
                                           <XCircle className="w-3 h-3" />
                                           Decline
                                         </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 text-slate-600 border-slate-200 hover:bg-slate-50"
+                                          onClick={() => setEditModal({ open: true, alert })}
+                                          data-testid={`btn-edit-${alert.alertId}`}
+                                        >
+                                          <Pencil className="w-3 h-3" />
+                                          Edit
+                                        </Button>
                                       </div>
                                     )}
                                   </div>
@@ -958,6 +972,94 @@ export default function RepairsUnified() {
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : null}
               Decline Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editModal.open} onOpenChange={(open) => !open && setEditModal({ open: false, alert: null })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Review Repair Request</DialogTitle>
+            <DialogDescription>
+              Review the details of this repair request before taking action.
+            </DialogDescription>
+          </DialogHeader>
+          {editModal.alert && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Pool/Equipment</label>
+                  <p className="text-sm text-slate-900 mt-1">{editModal.alert.poolName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Property</label>
+                  <p className="text-sm text-slate-900 mt-1">{editModal.alert.customerName}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Severity</label>
+                  <Badge className={cn(
+                    "mt-1",
+                    editModal.alert.severity === "URGENT" && "bg-red-100 text-red-700",
+                    editModal.alert.severity === "HIGH" && "bg-orange-100 text-orange-700",
+                    editModal.alert.severity === "NORMAL" && "bg-blue-100 text-blue-700"
+                  )}>
+                    {editModal.alert.severity}
+                  </Badge>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Date Reported</label>
+                  <p className="text-sm text-slate-900 mt-1">
+                    {format(new Date(editModal.alert.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                  </p>
+                </div>
+                {editModal.alert.techName && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Reported By</label>
+                    <p className="text-sm text-slate-900 mt-1">{editModal.alert.techName}</p>
+                  </div>
+                )}
+                {editModal.alert.address && (
+                  <div>
+                    <label className="text-sm font-medium text-slate-700">Address</label>
+                    <p className="text-sm text-slate-900 mt-1">{editModal.alert.address}</p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">Description</label>
+                <p className="text-sm text-slate-900 mt-1 p-3 bg-slate-50 rounded-md">
+                  {editModal.alert.message}
+                </p>
+              </div>
+              {editModal.alert.notes && (
+                <div>
+                  <label className="text-sm font-medium text-slate-700">Additional Notes</label>
+                  <p className="text-sm text-slate-900 mt-1 p-3 bg-slate-50 rounded-md">
+                    {editModal.alert.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditModal({ open: false, alert: null })}
+            >
+              Close
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => {
+                if (editModal.alert) {
+                  handleConvertToEstimate(editModal.alert);
+                  setEditModal({ open: false, alert: null });
+                }
+              }}
+              disabled={createEstimateMutation.isPending}
+            >
+              Convert to Estimate
             </Button>
           </DialogFooter>
         </DialogContent>
