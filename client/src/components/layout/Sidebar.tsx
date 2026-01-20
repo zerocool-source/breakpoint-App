@@ -273,14 +273,7 @@ export function Sidebar() {
         { label: "Supervisor Management", href: "/supervisor-management", section: "Supervisor Management" },
         { label: "Tech Ops", href: "/tech-ops", section: "Tech Ops" },
         { label: "Repairs", href: "/repairs", section: "Tech Ops" },
-        { 
-          label: "Chemicals", 
-          section: "Tech Ops",
-          children: [
-            { label: "Chemical Orders", href: "/tech-ops/chemical-order" },
-            { label: "Chemicals Dropped-Off", href: "/tech-ops/chemicals-dropoff" },
-          ]
-        },
+        { label: "Chemicals", href: "/chemicals", section: "Tech Ops" },
         { 
           label: "Service", 
           section: "Tech Ops",
