@@ -14,6 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -23,7 +31,7 @@ import {
 import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
   User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
-  Download, X, AlertCircle, Package, Search, Filter
+  Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera
 } from "lucide-react";
 import type { ServiceRepairJob, Technician, Emergency } from "@shared/schema";
 
@@ -89,6 +97,15 @@ export default function RepairQueue() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [propertySearch, setPropertySearch] = useState<string>("");
+
+  // Table states for sorting and pagination
+  const [sortColumn, setSortColumn] = useState<string>("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [tableSearch, setTableSearch] = useState("");
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
 
   const { data: repairs = [], isLoading } = useQuery<ServiceRepairJob[]>({
     queryKey: ["service-repairs"],
@@ -253,13 +270,13 @@ export default function RepairQueue() {
     const rows = dataToExport.map(repair => [
       repair.description || repair.jobNumber || "",
       repair.propertyName || "",
-      repair.propertyAddress || "",
+      repair.address || "",
       repair.technicianName || "Unassigned",
-      repair.priority || "normal",
+      "normal",
       statusConfig[repair.status || "pending"]?.label || repair.status || "",
       formatDate(repair.jobDate || repair.createdAt),
       repair.status === "completed" ? formatDate(repair.updatedAt) : "",
-      (repair.techNotes || "").replace(/,/g, ";").replace(/\n/g, " ")
+      (repair.notes || "").replace(/,/g, ";").replace(/\n/g, " ")
     ]);
 
     const csvContent = [
@@ -326,6 +343,122 @@ export default function RepairQueue() {
     };
   }, [filteredRepairs, repairsByTech]);
 
+  // Sort toggle function
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  // Sort indicator component
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortColumn !== column) return <ChevronDown className="w-4 h-4 opacity-30" />;
+    return sortDirection === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+  };
+
+  // Sorted and paginated completed repairs with search
+  const sortedCompletedRepairs = useMemo(() => {
+    let sorted = completedRepairs.filter(r => {
+      if (!tableSearch) return true;
+      const search = tableSearch.toLowerCase();
+      return (r.propertyName?.toLowerCase().includes(search) ||
+              r.description?.toLowerCase().includes(search) ||
+              r.technicianName?.toLowerCase().includes(search) ||
+              r.notes?.toLowerCase().includes(search));
+    });
+
+    sorted.sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortColumn) {
+        case "date":
+          aVal = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          bVal = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          break;
+        case "property":
+          aVal = a.propertyName || "";
+          bVal = b.propertyName || "";
+          break;
+        case "tech":
+          aVal = a.technicianName || "";
+          bVal = b.technicianName || "";
+          break;
+        case "value":
+          aVal = a.totalAmount || 0;
+          bVal = b.totalAmount || 0;
+          break;
+        default:
+          aVal = a.updatedAt || a.createdAt || "";
+          bVal = b.updatedAt || b.createdAt || "";
+      }
+      if (typeof aVal === "string") {
+        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    });
+    return sorted;
+  }, [completedRepairs, tableSearch, sortColumn, sortDirection]);
+
+  const paginatedCompletedRepairs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedCompletedRepairs.slice(start, start + pageSize);
+  }, [sortedCompletedRepairs, currentPage, pageSize]);
+
+  const completedTotalPages = Math.ceil(sortedCompletedRepairs.length / pageSize);
+
+  // Sorted and paginated emergencies with search
+  const sortedEmergencies = useMemo(() => {
+    let sorted = filteredEmergencies.filter(e => {
+      if (!tableSearch) return true;
+      const search = tableSearch.toLowerCase();
+      return (e.propertyName?.toLowerCase().includes(search) ||
+              e.description?.toLowerCase().includes(search) ||
+              e.submittedByName?.toLowerCase().includes(search) ||
+              e.resolutionNotes?.toLowerCase().includes(search));
+    });
+
+    sorted.sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortColumn) {
+        case "date":
+          aVal = new Date(a.createdAt || 0).getTime();
+          bVal = new Date(b.createdAt || 0).getTime();
+          break;
+        case "property":
+          aVal = a.propertyName || "";
+          bVal = b.propertyName || "";
+          break;
+        case "priority":
+          const priorityOrder = { critical: 4, urgent: 3, high: 2, normal: 1, low: 0 };
+          aVal = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+          bVal = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+          break;
+        case "status":
+          aVal = a.status || "";
+          bVal = b.status || "";
+          break;
+        default:
+          aVal = a.createdAt || "";
+          bVal = b.createdAt || "";
+      }
+      if (typeof aVal === "string") {
+        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    });
+    return sorted;
+  }, [filteredEmergencies, tableSearch, sortColumn, sortDirection]);
+
+  const paginatedEmergencies = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedEmergencies.slice(start, start + pageSize);
+  }, [sortedEmergencies, currentPage, pageSize]);
+
+  const emergenciesTotalPages = Math.ceil(sortedEmergencies.length / pageSize);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const response = await fetch(`/api/service-repairs/${id}`, {
@@ -370,6 +503,125 @@ export default function RepairQueue() {
       .filter((e: any) => e.sourceServiceRepairId || e.repairTechName)
       .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [estimates]);
+
+  // Sorted and paginated estimates with search
+  const sortedEstimates = useMemo(() => {
+    let sorted = estimatesFromRepairs.filter((e: any) => {
+      if (!tableSearch) return true;
+      const search = tableSearch.toLowerCase();
+      return (e.propertyName?.toLowerCase().includes(search) ||
+              e.title?.toLowerCase().includes(search) ||
+              e.repairTechName?.toLowerCase().includes(search) ||
+              e.description?.toLowerCase().includes(search));
+    });
+
+    sorted.sort((a: any, b: any) => {
+      let aVal: any, bVal: any;
+      switch (sortColumn) {
+        case "date":
+          aVal = new Date(a.createdAt || 0).getTime();
+          bVal = new Date(b.createdAt || 0).getTime();
+          break;
+        case "property":
+          aVal = a.propertyName || "";
+          bVal = b.propertyName || "";
+          break;
+        case "value":
+          aVal = a.totalAmount || 0;
+          bVal = b.totalAmount || 0;
+          break;
+        case "status":
+          aVal = a.status || "";
+          bVal = b.status || "";
+          break;
+        default:
+          aVal = a.createdAt || "";
+          bVal = b.createdAt || "";
+      }
+      if (typeof aVal === "string") {
+        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+    });
+    return sorted;
+  }, [estimatesFromRepairs, tableSearch, sortColumn, sortDirection]);
+
+  const paginatedEstimates = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedEstimates.slice(start, start + pageSize);
+  }, [sortedEstimates, currentPage, pageSize]);
+
+  const estimatesTotalPages = Math.ceil(sortedEstimates.length / pageSize);
+
+  // Export functions for each tab
+  const exportCompletedToCSV = () => {
+    const headers = ["Date Completed", "Property Name", "Job Description", "Repair Tech", "Total Value", "Notes"];
+    const rows = sortedCompletedRepairs.map(r => [
+      formatDate(r.updatedAt),
+      r.propertyName || "",
+      r.description || "",
+      r.technicianName || "",
+      formatCurrency(r.totalAmount),
+      (r.notes || "").replace(/,/g, ";").replace(/\n/g, " ")
+    ]);
+    downloadCSV("completed_jobs", headers, rows);
+  };
+
+  const exportEmergenciesToCSV = () => {
+    const headers = ["Date Submitted", "Property Name", "Description", "Submitted By", "Role", "Priority", "Status", "Resolution Notes", "Resolved By", "Date Resolved"];
+    const rows = sortedEmergencies.map(e => [
+      formatDate(e.createdAt),
+      e.propertyName || "",
+      (e.description || "").replace(/,/g, ";").replace(/\n/g, " "),
+      e.submittedByName || "",
+      e.submitterRole || "",
+      e.priority || "normal",
+      e.status || "",
+      (e.resolutionNotes || "").replace(/,/g, ";").replace(/\n/g, " "),
+      e.resolvedByName || "",
+      formatDate(e.resolvedAt)
+    ]);
+    downloadCSV("emergencies", headers, rows);
+  };
+
+  const exportEstimatesToCSV = () => {
+    const headers = ["Date Submitted", "Property Name", "Title", "Submitted By", "Line Items", "Total Amount", "Status", "Source"];
+    const rows = sortedEstimates.map((e: any) => [
+      formatDate(e.createdAt),
+      e.propertyName || "",
+      e.title || "",
+      e.repairTechName || e.createdByTechName || "",
+      (e.items?.length || 0).toString(),
+      formatCurrency(e.totalAmount),
+      e.status || "",
+      e.sourceType || "office_staff"
+    ]);
+    downloadCSV("estimates", headers, rows);
+  };
+
+  const downloadCSV = (filename: string, headers: string[], rows: string[][]) => {
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast({ title: "Export Complete", description: `Exported ${rows.length} records to CSV` });
+  };
+
+  // Reset state when tab changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
+    setTableSearch("");
+    setExpandedRow(null);
+    setSortColumn("date");
+    setSortDirection("desc");
+  };
 
   const reassignMutation = useMutation({
     mutationFn: async ({ repairId, estimateId, techId, techName }: { repairId: string; estimateId: string | null; techId: number; techName: string }) => {
@@ -910,7 +1162,7 @@ export default function RepairQueue() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="flex-wrap">
             <TabsTrigger value="by-tech" data-testid="tab-by-tech">
               <Users className="w-4 h-4 mr-2" /> By Technician
@@ -1031,161 +1283,660 @@ export default function RepairQueue() {
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
-                {filteredRepairs.filter(r => r.status === "completed").length === 0 ? (
-                  <Card>
-                    <CardContent className="py-12 text-center text-slate-500">
-                      <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No completed repairs{hasActiveFilters ? " matching filters" : ""}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <ScrollArea className="max-h-[600px]">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {filteredRepairs.filter(r => r.status === "completed").map(renderRepairCard)}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Completed Jobs Log</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search jobs..."
+                        value={tableSearch}
+                        onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
+                        className="pl-8 w-64"
+                        data-testid="input-completed-search"
+                      />
                     </div>
-                  </ScrollArea>
+                    <Button variant="outline" size="sm" onClick={exportCompletedToCSV} data-testid="button-export-completed">
+                      <Download className="w-4 h-4 mr-1" /> Export
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {sortedCompletedRepairs.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No completed repairs{tableSearch ? " matching search" : ""}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("date")}>
+                              <div className="flex items-center gap-1">Date Completed <SortIcon column="date" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("property")}>
+                              <div className="flex items-center gap-1">Property <SortIcon column="property" /></div>
+                            </TableHead>
+                            <TableHead>Job Description</TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("tech")}>
+                              <div className="flex items-center gap-1">Repair Tech <SortIcon column="tech" /></div>
+                            </TableHead>
+                            <TableHead>Notes</TableHead>
+                            <TableHead>Photos</TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleSort("value")}>
+                              <div className="flex items-center justify-end gap-1">Total Value <SortIcon column="value" /></div>
+                            </TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedCompletedRepairs.map((repair) => (
+                            <React.Fragment key={repair.id}>
+                              <TableRow 
+                                className="cursor-pointer hover:bg-slate-50" 
+                                onClick={() => setExpandedRow(expandedRow === repair.id ? null : repair.id)}
+                                data-testid={`row-completed-${repair.id}`}
+                              >
+                                <TableCell className="font-medium">{formatDate(repair.updatedAt)}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3 text-slate-400" />
+                                    <span className="truncate max-w-[150px]">{repair.propertyName || "—"}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="truncate max-w-[200px] block">{repair.description || "—"}</span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3 text-slate-400" />
+                                    {repair.technicianName || "—"}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="truncate max-w-[150px] block text-slate-500 text-xs">
+                                    {repair.notes ? repair.notes.substring(0, 50) + (repair.notes.length > 50 ? "..." : "") : "—"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  {repair.photos && repair.photos.length > 0 ? (
+                                    <div className="flex items-center gap-1">
+                                      <Camera className="w-4 h-4 text-slate-400" />
+                                      <span className="text-xs text-slate-500">{repair.photos.length}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-[#22D69A]">
+                                  {formatCurrency(repair.totalAmount)}
+                                </TableCell>
+                                <TableCell>
+                                  {expandedRow === repair.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </TableCell>
+                              </TableRow>
+                              {expandedRow === repair.id && (
+                                <TableRow>
+                                  <TableCell colSpan={8} className="bg-slate-50 p-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                        <h4 className="font-semibold text-sm mb-2">Full Details</h4>
+                                        <div className="space-y-1 text-sm">
+                                          <p><span className="text-slate-500">Job Number:</span> {repair.jobNumber}</p>
+                                          <p><span className="text-slate-500">Address:</span> {repair.address || "—"}</p>
+                                          <p><span className="text-slate-500">Job Date:</span> {formatDate(repair.jobDate)}</p>
+                                          <p><span className="text-slate-500">Completed:</span> {formatDate(repair.updatedAt)}</p>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <h4 className="font-semibold text-sm mb-2">Notes</h4>
+                                        <p className="text-sm text-slate-600">{repair.notes || "No notes"}</p>
+                                      </div>
+                                    </div>
+                                    {repair.photos && repair.photos.length > 0 && (
+                                      <div className="mt-4">
+                                        <h4 className="font-semibold text-sm mb-2">Photos ({repair.photos.length})</h4>
+                                        <div className="flex gap-2 flex-wrap">
+                                          {repair.photos.map((photo, idx) => (
+                                            <img 
+                                              key={idx} 
+                                              src={photo} 
+                                              alt={`Photo ${idx + 1}`}
+                                              className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80"
+                                              onClick={(e) => { e.stopPropagation(); setPhotoPreviewUrl(photo); }}
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {completedTotalPages > 1 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-sm text-slate-500">
+                          Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedCompletedRepairs.length)} of {sortedCompletedRepairs.length} results
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <span className="text-sm">Page {currentPage} of {completedTotalPages}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.min(completedTotalPages, p + 1))}
+                            disabled={currentPage === completedTotalPages}
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="estimates-log" className="mt-4">
-            {estimatesFromRepairs.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-slate-500">
-                  <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No estimates submitted by repair technicians</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <ScrollArea className="max-h-[600px]">
-                <div className="space-y-3">
-                  {estimatesFromRepairs.map((estimate: any) => {
-                    const statusColors: Record<string, string> = {
-                      draft: "bg-slate-100 text-slate-700",
-                      pending_approval: "bg-[#FF8000]1A text-[#D35400]",
-                      approved: "bg-[#22D69A]1A text-[#22D69A]",
-                      rejected: "bg-red-100 text-red-600",
-                      needs_scheduling: "bg-[#0078D4]1A text-[#0078D4]",
-                      scheduled: "bg-[#17BEBB]1A text-[#0D9488]",
-                      completed: "bg-[#22D69A]1A text-[#22D69A]",
-                      ready_to_invoice: "bg-amber-100 text-amber-700",
-                      invoiced: "bg-purple-100 text-purple-700",
-                    };
-                    const statusLabels: Record<string, string> = {
-                      draft: "Draft",
-                      pending_approval: "Pending Approval",
-                      approved: "Approved",
-                      rejected: "Rejected",
-                      needs_scheduling: "Needs Scheduling",
-                      scheduled: "Scheduled",
-                      completed: "Completed",
-                      ready_to_invoice: "Ready to Invoice",
-                      invoiced: "Invoiced",
-                    };
-
-                    return (
-                      <Card key={estimate.id} className="border border-slate-200 hover:shadow-sm transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-[#1E293B] truncate">
-                                  {estimate.title || "Untitled Estimate"}
-                                </span>
-                                <Badge className={`${statusColors[estimate.status] || "bg-slate-100 text-slate-600"} text-xs`}>
-                                  {statusLabels[estimate.status] || estimate.status}
-                                </Badge>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {estimate.propertyName || "Unknown Property"}
-                                </span>
-                                {estimate.repairTechName && (
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {estimate.repairTechName}
-                                  </span>
-                                )}
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  {formatDate(estimate.createdAt)}
-                                </span>
-                              </div>
-                              {estimate.description && (
-                                <p className="text-xs text-slate-600 mt-2 line-clamp-2">{estimate.description}</p>
-                              )}
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <div className="font-semibold text-[#1E293B]">
-                                {formatCurrency(estimate.totalAmount)}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs text-[#0078D4] hover:text-[#0078D4]/80 mt-1"
-                                onClick={() => window.location.href = `/estimates?id=${estimate.id}`}
-                              >
-                                <Eye className="w-3 h-3 mr-1" /> View
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Estimates Log</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search estimates..."
+                        value={tableSearch}
+                        onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
+                        className="pl-8 w-64"
+                        data-testid="input-estimates-search"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={exportEstimatesToCSV} data-testid="button-export-estimates">
+                      <Download className="w-4 h-4 mr-1" /> Export
+                    </Button>
+                  </div>
                 </div>
-              </ScrollArea>
-            )}
+              </CardHeader>
+              <CardContent>
+                {sortedEstimates.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No estimates{tableSearch ? " matching search" : " submitted by repair technicians"}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("date")}>
+                              <div className="flex items-center gap-1">Date Submitted <SortIcon column="date" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("property")}>
+                              <div className="flex items-center gap-1">Property <SortIcon column="property" /></div>
+                            </TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Submitted By</TableHead>
+                            <TableHead>Line Items</TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("status")}>
+                              <div className="flex items-center gap-1">Status <SortIcon column="status" /></div>
+                            </TableHead>
+                            <TableHead>Photos</TableHead>
+                            <TableHead>Source</TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleSort("value")}>
+                              <div className="flex items-center justify-end gap-1">Total <SortIcon column="value" /></div>
+                            </TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedEstimates.map((estimate: any) => {
+                            const statusColors: Record<string, string> = {
+                              draft: "bg-slate-100 text-slate-700",
+                              pending_approval: "bg-orange-100 text-orange-600",
+                              approved: "bg-green-100 text-green-600",
+                              rejected: "bg-red-100 text-red-600",
+                              needs_scheduling: "bg-blue-100 text-blue-600",
+                              scheduled: "bg-teal-100 text-teal-600",
+                              completed: "bg-green-100 text-green-600",
+                              ready_to_invoice: "bg-amber-100 text-amber-700",
+                              invoiced: "bg-purple-100 text-purple-700",
+                            };
+                            const statusLabels: Record<string, string> = {
+                              draft: "Draft",
+                              pending_approval: "Pending",
+                              approved: "Approved",
+                              rejected: "Rejected",
+                              needs_scheduling: "Needs Sched.",
+                              scheduled: "Scheduled",
+                              completed: "Completed",
+                              ready_to_invoice: "Ready Invoice",
+                              invoiced: "Invoiced",
+                            };
+                            const sourceLabels: Record<string, string> = {
+                              office_staff: "Office",
+                              repair_tech: "Repair Tech",
+                              service_tech: "Service Tech",
+                              emergency: "Emergency",
+                            };
+
+                            return (
+                              <React.Fragment key={estimate.id}>
+                                <TableRow 
+                                  className="cursor-pointer hover:bg-slate-50" 
+                                  onClick={() => setExpandedRow(expandedRow === estimate.id ? null : estimate.id)}
+                                  data-testid={`row-estimate-${estimate.id}`}
+                                >
+                                  <TableCell className="font-medium">{formatDate(estimate.createdAt)}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3 text-slate-400" />
+                                      <span className="truncate max-w-[120px]">{estimate.propertyName || "—"}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="truncate max-w-[150px] block">{estimate.title || "Untitled"}</span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <User className="w-3 h-3 text-slate-400" />
+                                      {estimate.repairTechName || estimate.createdByTechName || "—"}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="text-sm">{estimate.items?.length || 0}</span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={statusColors[estimate.status] || "bg-slate-100 text-slate-600"}>
+                                      {statusLabels[estimate.status] || estimate.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {estimate.photos && estimate.photos.length > 0 ? (
+                                      <div className="flex items-center gap-1">
+                                        <Camera className="w-4 h-4 text-slate-400" />
+                                        <span className="text-xs text-slate-500">{estimate.photos.length}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-slate-400">—</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="text-xs text-slate-500">{sourceLabels[estimate.sourceType] || "Office"}</span>
+                                  </TableCell>
+                                  <TableCell className="text-right font-semibold text-[#1E293B]">
+                                    {formatCurrency(estimate.totalAmount)}
+                                  </TableCell>
+                                  <TableCell>
+                                    {expandedRow === estimate.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  </TableCell>
+                                </TableRow>
+                                {expandedRow === estimate.id && (
+                                  <TableRow>
+                                    <TableCell colSpan={10} className="bg-slate-50 p-4">
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <h4 className="font-semibold text-sm mb-2">Estimate Details</h4>
+                                          <div className="space-y-1 text-sm">
+                                            <p><span className="text-slate-500">Estimate #:</span> {estimate.estimateNumber || "—"}</p>
+                                            <p><span className="text-slate-500">Customer:</span> {estimate.customerName || "—"}</p>
+                                            <p><span className="text-slate-500">Address:</span> {estimate.address || "—"}</p>
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h4 className="font-semibold text-sm mb-2">Description</h4>
+                                          <p className="text-sm text-slate-600">{estimate.description || "No description"}</p>
+                                        </div>
+                                      </div>
+                                      {estimate.photos && estimate.photos.length > 0 && (
+                                        <div className="mt-4">
+                                          <h4 className="font-semibold text-sm mb-2">Photos ({estimate.photos.length})</h4>
+                                          <div className="flex gap-2 flex-wrap">
+                                            {estimate.photos.map((photo: string, idx: number) => (
+                                              <img 
+                                                key={idx} 
+                                                src={photo} 
+                                                alt={`Photo ${idx + 1}`}
+                                                className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80"
+                                                onClick={(e) => { e.stopPropagation(); setPhotoPreviewUrl(photo); }}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      <div className="mt-4 flex justify-end">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => { e.stopPropagation(); window.location.href = `/estimates?id=${estimate.id}`; }}
+                                        >
+                                          <Eye className="w-4 h-4 mr-1" /> View Full Estimate
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {estimatesTotalPages > 1 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-sm text-slate-500">
+                          Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedEstimates.length)} of {sortedEstimates.length} results
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <span className="text-sm">Page {currentPage} of {estimatesTotalPages}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.min(estimatesTotalPages, p + 1))}
+                            disabled={currentPage === estimatesTotalPages}
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="emergencies" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
-                {filteredEmergencies.length === 0 ? (
-                  <Card>
-                    <CardContent className="py-12 text-center text-slate-500">
-                      <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No emergencies{hasActiveFilters ? " matching filters" : ""}</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {filteredEmergencies.map(renderEmergencyRow)}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Emergencies Log</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search emergencies..."
+                        value={tableSearch}
+                        onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
+                        className="pl-8 w-64"
+                        data-testid="input-emergencies-search"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={exportEmergenciesToCSV} data-testid="button-export-emergencies">
+                      <Download className="w-4 h-4 mr-1" /> Export
+                    </Button>
                   </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {sortedEmergencies.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No emergencies{tableSearch ? " matching search" : ""}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("date")}>
+                              <div className="flex items-center gap-1">Date Submitted <SortIcon column="date" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("property")}>
+                              <div className="flex items-center gap-1">Property <SortIcon column="property" /></div>
+                            </TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Submitted By</TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("priority")}>
+                              <div className="flex items-center gap-1">Priority <SortIcon column="priority" /></div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("status")}>
+                              <div className="flex items-center gap-1">Status <SortIcon column="status" /></div>
+                            </TableHead>
+                            <TableHead>Photos</TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedEmergencies.map((emergency) => {
+                            const priorityCfg = priorityConfig[emergency.priority || "normal"] || priorityConfig.normal;
+                            const emergencyStatusConfig: Record<string, { color: string; label: string }> = {
+                              pending_review: { color: "bg-orange-100 text-orange-600", label: "Pending Review" },
+                              in_progress: { color: "bg-blue-100 text-blue-600", label: "In Progress" },
+                              resolved: { color: "bg-green-100 text-green-600", label: "Resolved" },
+                            };
+                            const statusCfg = emergencyStatusConfig[emergency.status] || emergencyStatusConfig.pending_review;
+
+                            return (
+                              <React.Fragment key={emergency.id}>
+                                <TableRow 
+                                  className="cursor-pointer hover:bg-slate-50" 
+                                  onClick={() => setExpandedRow(expandedRow === emergency.id ? null : emergency.id)}
+                                  data-testid={`row-emergency-${emergency.id}`}
+                                >
+                                  <TableCell className="font-medium">{formatDate(emergency.createdAt)}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <MapPin className="w-3 h-3 text-slate-400" />
+                                      <span className="truncate max-w-[150px]">{emergency.propertyName || "—"}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <span className="truncate max-w-[200px] block">{emergency.description?.substring(0, 60) || "—"}{emergency.description && emergency.description.length > 60 ? "..." : ""}</span>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm">{emergency.submittedByName || "—"}</span>
+                                      <span className="text-xs text-slate-500 capitalize">{emergency.submitterRole?.replace(/_/g, " ") || "—"}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={priorityCfg.color}>{priorityCfg.label}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={statusCfg.color}>{statusCfg.label}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {emergency.photos && emergency.photos.length > 0 ? (
+                                      <div className="flex items-center gap-1">
+                                        <Camera className="w-4 h-4 text-slate-400" />
+                                        <span className="text-xs text-slate-500">{emergency.photos.length}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-slate-400">—</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {expandedRow === emergency.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  </TableCell>
+                                </TableRow>
+                                {expandedRow === emergency.id && (
+                                  <TableRow>
+                                    <TableCell colSpan={8} className="bg-slate-50 p-4">
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <h4 className="font-semibold text-sm mb-2">Full Details</h4>
+                                          <div className="space-y-1 text-sm">
+                                            <p><span className="text-slate-500">Address:</span> {emergency.propertyAddress || "—"}</p>
+                                            <p><span className="text-slate-500">Submitted:</span> {formatDateTime(emergency.createdAt)}</p>
+                                            <p><span className="text-slate-500">Total Amount:</span> {formatCurrency(emergency.totalAmount)}</p>
+                                            {emergency.status === "resolved" && (
+                                              <>
+                                                <p><span className="text-slate-500">Resolved By:</span> {emergency.resolvedByName || "—"}</p>
+                                                <p><span className="text-slate-500">Resolved At:</span> {formatDateTime(emergency.resolvedAt)}</p>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <h4 className="font-semibold text-sm mb-2">Description</h4>
+                                          <p className="text-sm text-slate-600 mb-3">{emergency.description || "No description"}</p>
+                                          {emergency.resolutionNotes && (
+                                            <>
+                                              <h4 className="font-semibold text-sm mb-2">Resolution Notes</h4>
+                                              <p className="text-sm text-slate-600">{emergency.resolutionNotes}</p>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {emergency.photos && emergency.photos.length > 0 && (
+                                        <div className="mt-4">
+                                          <h4 className="font-semibold text-sm mb-2">Photos ({emergency.photos.length})</h4>
+                                          <div className="flex gap-2 flex-wrap">
+                                            {emergency.photos.map((photo, idx) => (
+                                              <img 
+                                                key={idx} 
+                                                src={photo} 
+                                                alt={`Photo ${idx + 1}`}
+                                                className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80"
+                                                onClick={(e) => { e.stopPropagation(); setPhotoPreviewUrl(photo); }}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {emergenciesTotalPages > 1 && (
+                      <div className="flex items-center justify-between mt-4">
+                        <p className="text-sm text-slate-500">
+                          Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, sortedEmergencies.length)} of {sortedEmergencies.length} results
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <span className="text-sm">Page {currentPage} of {emergenciesTotalPages}</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(p => Math.min(emergenciesTotalPages, p + 1))}
+                            disabled={currentPage === emergenciesTotalPages}
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="parts-ordered" className="mt-4">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <FiltersPanel />
-              </div>
-              <div className="lg:col-span-3">
-                <Card>
-                  <CardContent className="py-12 text-center text-slate-500">
-                    <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="font-medium text-lg mb-2">Parts Orders Coming Soon</p>
-                    <p className="text-sm">This feature will display all parts orders submitted from the Repair Tech App.</p>
-                    <p className="text-sm mt-2">Including: part name, property, requested by, order date, status, and processor.</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Parts Orders Log</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                      <Input
+                        placeholder="Search parts..."
+                        className="pl-8 w-64"
+                        disabled
+                        data-testid="input-parts-search"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" disabled data-testid="button-export-parts">
+                      <Download className="w-4 h-4 mr-1" /> Export
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead>Date Requested</TableHead>
+                        <TableHead>Property Name</TableHead>
+                        <TableHead>Part Name/Description</TableHead>
+                        <TableHead>Qty</TableHead>
+                        <TableHead>Requested By</TableHead>
+                        <TableHead>Urgency</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Processed By</TableHead>
+                        <TableHead>Date Received</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell colSpan={9} className="py-12 text-center text-slate-500">
+                          <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                          <p className="font-medium text-lg mb-2">Parts Orders Coming Soon</p>
+                          <p className="text-sm">This feature will display all parts orders submitted from the Repair Tech App.</p>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      {photoPreviewUrl && (
+        <Dialog open={!!photoPreviewUrl} onOpenChange={() => setPhotoPreviewUrl(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Photo Preview</DialogTitle>
+            </DialogHeader>
+            <div className="flex justify-center">
+              <img 
+                src={photoPreviewUrl} 
+                alt="Full size preview" 
+                className="max-w-full max-h-[70vh] object-contain rounded"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPhotoPreviewUrl(null)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={reassignModalOpen} onOpenChange={setReassignModalOpen}>
         <DialogContent>
