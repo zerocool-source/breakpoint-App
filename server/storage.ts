@@ -60,7 +60,7 @@ import {
   chemicalVendors, invoiceTemplates
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, inArray, and, ilike, or, gte, lte } from "drizzle-orm";
+import { eq, desc, inArray, and, ilike, or, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Settings
@@ -230,6 +230,7 @@ export interface IStorage {
   getEstimate(id: string): Promise<Estimate | undefined>;
   getEstimateByApprovalToken(token: string): Promise<Estimate | undefined>;
   getEstimatesByProperty(propertyId: string): Promise<Estimate[]>;
+  generateEstimateNumber(): Promise<string>;
   createEstimate(estimate: InsertEstimate): Promise<Estimate>;
   updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined>;
   updateEstimateStatus(id: string, status: string, extras?: Record<string, any>): Promise<Estimate | undefined>;
@@ -1371,8 +1372,39 @@ export class DbStorage implements IStorage {
   }
 
   async createEstimate(estimate: InsertEstimate): Promise<Estimate> {
+    // Auto-generate estimate number if not provided
+    if (!estimate.estimateNumber) {
+      estimate.estimateNumber = await this.generateEstimateNumber();
+    }
     const result = await db.insert(estimates).values(estimate as any).returning();
     return result[0];
+  }
+
+  async generateEstimateNumber(): Promise<string> {
+    // Get the current year
+    const year = new Date().getFullYear();
+    const yearPrefix = year.toString().slice(-2);
+    const pattern = `${yearPrefix}-%`;
+    
+    // Use SQL to efficiently find the max number for this year
+    // Extract numeric suffix from format "YY-NNNNN" and find MAX
+    const result = await db.execute(sql`
+      SELECT COALESCE(MAX(
+        CASE 
+          WHEN estimate_number ~ ('^' || ${yearPrefix} || '-[0-9]+$')
+          THEN CAST(SUBSTRING(estimate_number FROM ('^' || ${yearPrefix} || '-([0-9]+)$')) AS INTEGER)
+          ELSE 0
+        END
+      ), 0) as max_num
+      FROM estimates
+      WHERE estimate_number LIKE ${pattern}
+    `);
+    
+    const maxNumber = Number((result as any).rows?.[0]?.max_num) || 0;
+    
+    // Generate next number with leading zeros (e.g., 26-00001)
+    const nextNumber = (maxNumber + 1).toString().padStart(5, '0');
+    return `${yearPrefix}-${nextNumber}`;
   }
 
   async updateEstimate(id: string, updates: Partial<InsertEstimate>): Promise<Estimate | undefined> {

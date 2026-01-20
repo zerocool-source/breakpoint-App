@@ -73,6 +73,7 @@ Routes are organized into domain-specific modules in `server/routes/`:
 - `properties.ts` - Property repair summaries
 - `estimates.ts` - Estimate management with enhanced workflow:
     - Workflow: Draft → Pending Approval → Approved → Needs Scheduling → Scheduled → Completed → Ready to Invoice → Invoiced
+    - Auto-generated estimate numbers in format `YY-NNNNN` (e.g., 26-00001 for year 2026)
     - Dedicated endpoints for each workflow transition: /approve, /reject, /schedule, /complete, /ready-to-invoice, /invoice
     - Metrics dashboard showing approval rate, values by status, average times
     - Scheduling modal for assigning jobs to repair technicians
