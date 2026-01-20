@@ -1943,6 +1943,12 @@ export default function Estimates() {
                               >
                                 {getSourceLabel(estimate)}
                               </button>
+                              {estimate.tags?.includes("urgent") && (
+                                <Badge className="bg-red-100 text-red-700 border-red-200 text-[12px] font-semibold px-3 py-1" data-testid={`badge-urgent-${estimate.id}`}>
+                                  <AlertCircle className="w-3 h-3 mr-1" />
+                                  Urgent
+                                </Badge>
+                              )}
                               {estimate.convertedByUserName ? (
                                 <span className="text-[13px] font-medium text-[#374151] bg-[#FF8000]1A px-2.5 py-1 rounded-md border border-[#FF8000]33" data-testid={`text-converted-by-${estimate.id}`}>
                                   Converted by: <span className="font-semibold text-[#D35400]">{estimate.convertedByUserName}</span>
@@ -2229,6 +2235,22 @@ export default function Estimates() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const currentTags = estimate.tags || [];
+                                  const hasUrgent = currentTags.includes("urgent");
+                                  const newTags = hasUrgent 
+                                    ? currentTags.filter(t => t !== "urgent")
+                                    : [...currentTags, "urgent"];
+                                  updateMutation.mutate({ id: estimate.id, data: { tags: newTags } });
+                                }}
+                                data-testid={`menu-urgent-${estimate.id}`}
+                              >
+                                <AlertCircle className="w-4 h-4 mr-2 text-red-600" />
+                                {estimate.tags?.includes("urgent") ? "Remove Urgent Tag" : "Mark as Urgent"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
                               {estimate.status !== "archived" && (
                                 <DropdownMenuItem
                                   onClick={(e) => {
