@@ -68,6 +68,10 @@ Routes are organized into domain-specific modules in `server/routes/`:
     - Metrics dashboard showing approval rate, values by status, average times
     - Scheduling modal for assigning jobs to repair technicians
 - `serviceRepairs.ts` - Service repair jobs management (sub-$500 jobs), batch-to-estimate workflow
+- `techOps.ts` - Technician operations: service repairs, windy day cleanups, with conversion tracking
+    - Service repairs can be converted to estimates via multi-select
+    - Converted repairs tracked with convertedToEstimateId and convertedAt fields
+    - Estimates store sourceServiceRepairIds array for bidirectional linking
 - `emergencies.ts` - Emergency tracking for urgent follow-up work:
     - Workflow: pending_review → in_progress → resolved
     - Convert to Estimate or Invoice Directly actions with atomic transactions
