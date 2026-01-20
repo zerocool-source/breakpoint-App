@@ -67,6 +67,9 @@ export default function Service() {
   
   // Confirm invoice dialog state
   const [invoiceConfirmEntry, setInvoiceConfirmEntry] = useState<TechOpsEntry | null>(null);
+  
+  // Emergency invoice confirmation state
+  const [emergencyInvoiceConfirm, setEmergencyInvoiceConfirm] = useState<Emergency | null>(null);
 
   // Fetch Windy Day Clean Up entries
   const { data: windyEntries = [], isLoading: windyLoading, refetch: refetchWindy } = useQuery({
@@ -129,6 +132,53 @@ export default function Service() {
       queryClient.invalidateQueries({ queryKey: ["emergencies"] });
       toast({ title: "Emergency status updated" });
       setSelectedEmergency(null);
+    },
+  });
+
+  const convertEmergencyToEstimateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/emergencies/${id}/convert-to-estimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to convert to estimate");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["emergencies"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      toast({ 
+        title: "Converted to Estimate", 
+        description: `Emergency has been converted to estimate ${data.estimate?.estimateNumber || ""}` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const invoiceEmergencyDirectlyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/emergencies/${id}/invoice-directly`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to send invoice");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emergencies"] });
+      toast({ title: "Invoice Sent", description: "Emergency has been marked as invoiced" });
+      setEmergencyInvoiceConfirm(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -620,9 +670,9 @@ export default function Service() {
                             onClick={() => setSelectedEmergency(emergency)}
                             data-testid={`card-emergency-${emergency.id}`}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                   <h3 className="font-semibold text-slate-900">{emergency.propertyName}</h3>
                                   <Badge className={cn("text-xs", statusInfo.color)}>
                                     {statusInfo.label}
@@ -632,7 +682,7 @@ export default function Service() {
                                   </Badge>
                                 </div>
                                 <p className="text-sm text-slate-600 mb-2">{emergency.description}</p>
-                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3" />
                                     {emergency.submittedByName}
@@ -649,9 +699,52 @@ export default function Service() {
                                   )}
                                 </div>
                               </div>
-                              {emergency.totalAmount && emergency.totalAmount > 0 && (
-                                <p className="font-bold text-red-600">{formatCurrency(emergency.totalAmount)}</p>
-                              )}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {emergency.totalAmount && emergency.totalAmount > 0 && (
+                                  <span className="font-bold text-red-600 mr-2">{formatCurrency(emergency.totalAmount)}</span>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    convertEmergencyToEstimateMutation.mutate(emergency.id);
+                                  }}
+                                  disabled={!!emergency.convertedToEstimateId || !!emergency.convertedToInvoiceId}
+                                  data-testid={`button-convert-estimate-${emergency.id}`}
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  Convert to Estimate
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-1 text-slate-600 border-slate-200 hover:bg-slate-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateEmergencyMutation.mutate({ id: emergency.id, status: "resolved" });
+                                  }}
+                                  data-testid={`button-dismiss-emergency-${emergency.id}`}
+                                >
+                                  <Archive className="w-3 h-3" />
+                                  Dismiss
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  className="gap-1 bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEmergencyInvoiceConfirm(emergency);
+                                  }}
+                                  disabled={!!emergency.convertedToInvoiceId || !!emergency.convertedToEstimateId}
+                                  data-testid={`button-invoice-emergency-${emergency.id}`}
+                                >
+                                  <DollarSign className="w-3 h-3" />
+                                  Send Invoice
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         );
@@ -1069,6 +1162,41 @@ export default function Service() {
             <AlertDialogCancel>No</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmSendAsInvoice}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              Yes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Emergency Invoice Confirmation Dialog */}
+      <AlertDialog open={!!emergencyInvoiceConfirm} onOpenChange={() => setEmergencyInvoiceConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Send Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to send an invoice for this emergency?
+              {emergencyInvoiceConfirm && (
+                <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                  <p><strong>Property:</strong> {emergencyInvoiceConfirm.propertyName}</p>
+                  <p><strong>Submitted By:</strong> {emergencyInvoiceConfirm.submittedByName}</p>
+                  <p className="text-sm text-slate-600 mt-2">{emergencyInvoiceConfirm.description}</p>
+                  {emergencyInvoiceConfirm.totalAmount && emergencyInvoiceConfirm.totalAmount > 0 && (
+                    <p className="mt-2"><strong>Amount:</strong> <span className="text-red-600 font-bold">{formatCurrency(emergencyInvoiceConfirm.totalAmount)}</span></p>
+                  )}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (emergencyInvoiceConfirm) {
+                  invoiceEmergencyDirectlyMutation.mutate(emergencyInvoiceConfirm.id);
+                }
+              }}
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               Yes
