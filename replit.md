@@ -37,6 +37,10 @@ Preferred communication style: Simple, everyday language.
   - **Fleet Management** (expandable nav):
     - Fleet Dashboard - Truck management, service records, maintenance tracking
     - Truck Inventory - Per-truck inventory management with low stock alerts, quantity controls, category filtering
+  - **Service Center** - Comprehensive service operations management with three tabs:
+    - Windy Day Clean Up - Property-grouped entries with filtering
+    - Report Issues - Table format with expandable rows, comprehensive filtering (property search, position type, technician, status, priority, issue type, date range), photo thumbnails, resolution tracking
+    - Emergencies - Priority-based emergency tracking with workflow actions
 
 **Rationale:** Page-based architecture provides clear separation of concerns. TanStack Query handles caching and real-time data synchronization automatically. The custom theme creates a distinctive brand identity for the pool management industry.
 
@@ -73,10 +77,13 @@ Routes are organized into domain-specific modules in `server/routes/`:
     - Metrics dashboard showing approval rate, values by status, average times
     - Scheduling modal for assigning jobs to repair technicians
 - `serviceRepairs.ts` - Service repair jobs management (sub-$500 jobs), batch-to-estimate workflow
-- `techOps.ts` - Technician operations: service repairs, windy day cleanups, with conversion tracking
+- `techOps.ts` - Technician operations: service repairs, windy day cleanups, report issues with conversion tracking
     - Service repairs can be converted to estimates via multi-select
     - Converted repairs tracked with convertedToEstimateId and convertedAt fields
     - Estimates store sourceServiceRepairIds array for bidirectional linking
+    - Report Issues tracked with positionType, issueTitle, and resolution fields
+    - Position types: service_technician, supervisor, repair_technician
+    - Issue types: equipment_problem, safety_concern, access_issue, customer_complaint, other
 - `emergencies.ts` - Emergency tracking for urgent follow-up work:
     - Workflow: pending_review → in_progress → resolved
     - Convert to Estimate or Invoice Directly actions with atomic transactions

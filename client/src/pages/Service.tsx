@@ -5,6 +5,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -14,7 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Wind, AlertTriangle, AlertCircle, Clock, CheckCircle, MapPin, User, Calendar,
   RefreshCw, Image as ImageIcon, PlayCircle, FileText, Building2, Eye, Archive, 
-  DollarSign, Download, ChevronLeft, ChevronRight, X, Percent
+  DollarSign, Download, ChevronLeft, ChevronRight, X, Percent, Search, ChevronDown,
+  ChevronUp, Shield, Wrench, Users, XCircle
 } from "lucide-react";
 import type { TechOpsEntry, Emergency } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -26,7 +29,22 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700 border-blue-200", icon: PlayCircle },
   completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
   resolved: { label: "Resolved", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle },
+  dismissed: { label: "Dismissed", color: "bg-slate-100 text-slate-600 border-slate-200", icon: XCircle },
   archived: { label: "Archived", color: "bg-slate-100 text-slate-600 border-slate-200", icon: FileText },
+};
+
+const positionTypeConfig: Record<string, { label: string; color: string; icon: any }> = {
+  service_technician: { label: "Service Tech", color: "bg-blue-100 text-blue-700", icon: User },
+  supervisor: { label: "Supervisor", color: "bg-purple-100 text-purple-700", icon: Shield },
+  repair_technician: { label: "Repair Tech", color: "bg-orange-100 text-orange-700", icon: Wrench },
+};
+
+const issueTypeConfig: Record<string, { label: string; color: string }> = {
+  equipment_problem: { label: "Equipment Problem", color: "bg-orange-100 text-orange-700" },
+  safety_concern: { label: "Safety Concern", color: "bg-red-100 text-red-700" },
+  access_issue: { label: "Access Issue", color: "bg-amber-100 text-amber-700" },
+  customer_complaint: { label: "Customer Complaint", color: "bg-purple-100 text-purple-700" },
+  other: { label: "Other", color: "bg-slate-100 text-slate-600" },
 };
 
 const priorityConfig: Record<string, { label: string; color: string }> = {
@@ -60,6 +78,30 @@ export default function Service() {
   // Windy Day filters
   const [windyPropertyFilter, setWindyPropertyFilter] = useState<string>("all");
   const [windyTechFilter, setWindyTechFilter] = useState<string>("all");
+  const [windyPositionFilter, setWindyPositionFilter] = useState<string>("all");
+  const [windyStatusFilter, setWindyStatusFilter] = useState<string>("all");
+  const [windyDateFrom, setWindyDateFrom] = useState<string>("");
+  const [windyDateTo, setWindyDateTo] = useState<string>("");
+  
+  // Report Issues filters
+  const [issuesPropertySearch, setIssuesPropertySearch] = useState<string>("");
+  const [issuesPositionFilter, setIssuesPositionFilter] = useState<string>("all");
+  const [issuesTechFilter, setIssuesTechFilter] = useState<string>("all");
+  const [issuesDateFrom, setIssuesDateFrom] = useState<string>("");
+  const [issuesDateTo, setIssuesDateTo] = useState<string>("");
+  const [issuesStatusFilter, setIssuesStatusFilter] = useState<string>("all");
+  const [issuesPriorityFilter, setIssuesPriorityFilter] = useState<string>("all");
+  const [issuesTypeFilter, setIssuesTypeFilter] = useState<string>("all");
+  const [expandedIssueId, setExpandedIssueId] = useState<string | null>(null);
+  
+  // Emergencies filters
+  const [emergenciesPropertySearch, setEmergenciesPropertySearch] = useState<string>("");
+  const [emergenciesPositionFilter, setEmergenciesPositionFilter] = useState<string>("all");
+  const [emergenciesTechFilter, setEmergenciesTechFilter] = useState<string>("all");
+  const [emergenciesDateFrom, setEmergenciesDateFrom] = useState<string>("");
+  const [emergenciesDateTo, setEmergenciesDateTo] = useState<string>("");
+  const [emergenciesStatusFilter, setEmergenciesStatusFilter] = useState<string>("all");
+  const [emergenciesPriorityFilter, setEmergenciesPriorityFilter] = useState<string>("all");
   
   // Review modal state
   const [reviewModalEntry, setReviewModalEntry] = useState<TechOpsEntry | null>(null);
@@ -198,6 +240,100 @@ export default function Service() {
     });
     return Array.from(techs).sort();
   }, [windyEntries]);
+
+  // Get unique technicians for issues filters
+  const uniqueIssueTechs = useMemo(() => {
+    const techs = new Set<string>();
+    (issueEntries as TechOpsEntry[]).forEach(entry => {
+      if (entry.technicianName) techs.add(entry.technicianName);
+    });
+    return Array.from(techs).sort();
+  }, [issueEntries]);
+
+  // Get unique technicians for emergencies filters
+  const uniqueEmergencyTechs = useMemo(() => {
+    const techs = new Set<string>();
+    emergencies.forEach(entry => {
+      if (entry.submittedByName) techs.add(entry.submittedByName);
+    });
+    return Array.from(techs).sort();
+  }, [emergencies]);
+
+  // Filter issues entries
+  const filteredIssueEntries = useMemo(() => {
+    let entries = issueEntries as TechOpsEntry[];
+    if (issuesPropertySearch.trim()) {
+      const search = issuesPropertySearch.toLowerCase();
+      entries = entries.filter(e => 
+        (e.propertyName || "").toLowerCase().includes(search) ||
+        (e.issueTitle || "").toLowerCase().includes(search)
+      );
+    }
+    if (issuesPositionFilter !== "all") {
+      entries = entries.filter(e => e.positionType === issuesPositionFilter);
+    }
+    if (issuesTechFilter !== "all") {
+      entries = entries.filter(e => e.technicianName === issuesTechFilter);
+    }
+    if (issuesStatusFilter !== "all") {
+      entries = entries.filter(e => e.status === issuesStatusFilter);
+    }
+    if (issuesPriorityFilter !== "all") {
+      entries = entries.filter(e => e.priority === issuesPriorityFilter);
+    }
+    if (issuesTypeFilter !== "all") {
+      entries = entries.filter(e => e.issueType === issuesTypeFilter);
+    }
+    if (issuesDateFrom) {
+      const fromDate = new Date(issuesDateFrom);
+      entries = entries.filter(e => e.createdAt && new Date(e.createdAt) >= fromDate);
+    }
+    if (issuesDateTo) {
+      const toDate = new Date(issuesDateTo);
+      toDate.setHours(23, 59, 59, 999);
+      entries = entries.filter(e => e.createdAt && new Date(e.createdAt) <= toDate);
+    }
+    return [...entries].sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }, [issueEntries, issuesPropertySearch, issuesPositionFilter, issuesTechFilter, 
+      issuesStatusFilter, issuesPriorityFilter, issuesTypeFilter, issuesDateFrom, issuesDateTo]);
+
+  // Filter emergencies
+  const filteredEmergencies = useMemo(() => {
+    let entries = emergencies;
+    if (emergenciesPropertySearch.trim()) {
+      const search = emergenciesPropertySearch.toLowerCase();
+      entries = entries.filter(e => 
+        (e.propertyName || "").toLowerCase().includes(search)
+      );
+    }
+    if (emergenciesPositionFilter !== "all") {
+      entries = entries.filter(e => e.submittedByRole === emergenciesPositionFilter);
+    }
+    if (emergenciesTechFilter !== "all") {
+      entries = entries.filter(e => e.submittedByName === emergenciesTechFilter);
+    }
+    if (emergenciesStatusFilter !== "all") {
+      entries = entries.filter(e => e.status === emergenciesStatusFilter);
+    }
+    if (emergenciesPriorityFilter !== "all") {
+      entries = entries.filter(e => e.priority === emergenciesPriorityFilter);
+    }
+    if (emergenciesDateFrom) {
+      const fromDate = new Date(emergenciesDateFrom);
+      entries = entries.filter(e => e.createdAt && new Date(e.createdAt) >= fromDate);
+    }
+    if (emergenciesDateTo) {
+      const toDate = new Date(emergenciesDateTo);
+      toDate.setHours(23, 59, 59, 999);
+      entries = entries.filter(e => e.createdAt && new Date(e.createdAt) <= toDate);
+    }
+    return [...entries].sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }, [emergencies, emergenciesPropertySearch, emergenciesPositionFilter, emergenciesTechFilter,
+      emergenciesStatusFilter, emergenciesPriorityFilter, emergenciesDateFrom, emergenciesDateTo]);
 
   // Filter and group windy entries
   const filteredWindyEntries = useMemo(() => {
@@ -566,67 +702,352 @@ export default function Service() {
           <TabsContent value="issues" className="mt-4">
             <Card className="bg-white">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-purple-600" />
-                  Report Issues
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-purple-600" />
+                    Report Issues
+                    <Badge variant="secondary" className="ml-2">{filteredIssueEntries.length}</Badge>
+                  </CardTitle>
+                </div>
+                {/* Filter Bar */}
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Search property or issue title..."
+                        value={issuesPropertySearch}
+                        onChange={(e) => setIssuesPropertySearch(e.target.value)}
+                        className="pl-9"
+                        data-testid="input-issues-search"
+                      />
+                    </div>
+                    <Select value={issuesPositionFilter} onValueChange={setIssuesPositionFilter}>
+                      <SelectTrigger className="w-[160px]" data-testid="select-issues-position">
+                        <Users className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="Position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Positions</SelectItem>
+                        <SelectItem value="service_technician">Service Tech</SelectItem>
+                        <SelectItem value="supervisor">Supervisor</SelectItem>
+                        <SelectItem value="repair_technician">Repair Tech</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={issuesTechFilter} onValueChange={setIssuesTechFilter}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-issues-tech">
+                        <User className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="Technician" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Technicians</SelectItem>
+                        {uniqueIssueTechs.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={issuesStatusFilter} onValueChange={setIssuesStatusFilter}>
+                      <SelectTrigger className="w-[140px]" data-testid="select-issues-status">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                        <SelectItem value="dismissed">Dismissed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={issuesPriorityFilter} onValueChange={setIssuesPriorityFilter}>
+                      <SelectTrigger className="w-[130px]" data-testid="select-issues-priority">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={issuesTypeFilter} onValueChange={setIssuesTypeFilter}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-issues-type">
+                        <SelectValue placeholder="Issue Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="equipment_problem">Equipment Problem</SelectItem>
+                        <SelectItem value="safety_concern">Safety Concern</SelectItem>
+                        <SelectItem value="access_issue">Access Issue</SelectItem>
+                        <SelectItem value="customer_complaint">Customer Complaint</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <Input
+                        type="date"
+                        value={issuesDateFrom}
+                        onChange={(e) => setIssuesDateFrom(e.target.value)}
+                        className="w-[140px]"
+                        placeholder="From"
+                        data-testid="input-issues-date-from"
+                      />
+                      <span className="text-slate-400">to</span>
+                      <Input
+                        type="date"
+                        value={issuesDateTo}
+                        onChange={(e) => setIssuesDateTo(e.target.value)}
+                        className="w-[140px]"
+                        placeholder="To"
+                        data-testid="input-issues-date-to"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIssuesPropertySearch("");
+                        setIssuesPositionFilter("all");
+                        setIssuesTechFilter("all");
+                        setIssuesStatusFilter("all");
+                        setIssuesPriorityFilter("all");
+                        setIssuesTypeFilter("all");
+                        setIssuesDateFrom("");
+                        setIssuesDateTo("");
+                      }}
+                      data-testid="button-issues-clear-filters"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {issuesLoading ? (
                   <div className="flex items-center justify-center h-40">
                     <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
                   </div>
-                ) : (issueEntries as TechOpsEntry[]).length === 0 ? (
+                ) : filteredIssueEntries.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-40 text-slate-500">
                     <AlertTriangle className="w-12 h-12 mb-3 opacity-50" />
                     <p>No reported issues found</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[calc(100vh-400px)]">
-                    <div className="space-y-3 pr-4">
-                      {(issueEntries as TechOpsEntry[]).map(entry => {
-                        const statusInfo = statusConfig[entry.status || "pending"] || statusConfig.pending;
-                        return (
-                          <div
-                            key={entry.id}
-                            className="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border-l-4 border-l-purple-500"
-                            onClick={() => { setSelectedEntry(entry); setPhotoIndex(0); }}
-                            data-testid={`card-issue-${entry.id}`}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-semibold text-slate-900">{entry.propertyName || "Unknown Property"}</h3>
+                  <ScrollArea className="h-[calc(100vh-500px)]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[40px]"></TableHead>
+                          <TableHead>Property / Issue</TableHead>
+                          <TableHead>Reported By</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredIssueEntries.map(entry => {
+                          const statusInfo = statusConfig[entry.status || "pending"] || statusConfig.pending;
+                          const prioInfo = priorityConfig[entry.priority || "normal"] || priorityConfig.normal;
+                          const posInfo = positionTypeConfig[entry.positionType || "service_technician"] || positionTypeConfig.service_technician;
+                          const typeInfo = issueTypeConfig[entry.issueType || "other"] || issueTypeConfig.other;
+                          const isExpanded = expandedIssueId === entry.id;
+                          
+                          return (
+                            <React.Fragment key={entry.id}>
+                              <TableRow 
+                                className="cursor-pointer hover:bg-slate-50"
+                                onClick={() => setExpandedIssueId(isExpanded ? null : entry.id)}
+                                data-testid={`row-issue-${entry.id}`}
+                              >
+                                <TableCell>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{entry.propertyName || "Unknown Property"}</div>
+                                  <div className="text-sm text-slate-500 truncate max-w-[200px]">
+                                    {entry.issueTitle || entry.description?.substring(0, 50) || "No description"}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={cn("text-xs", posInfo.color)}>
+                                      {posInfo.label}
+                                    </Badge>
+                                    <span className="text-sm">{entry.technicianName}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
                                   <Badge className={cn("text-xs", statusInfo.color)}>
                                     {statusInfo.label}
                                   </Badge>
-                                  {entry.issueType && (
-                                    <Badge variant="outline" className="text-xs">{entry.issueType}</Badge>
-                                  )}
-                                </div>
-                                <p className="text-sm text-slate-600 mb-2">{entry.description || "Issue reported"}</p>
-                                <div className="flex items-center gap-4 text-xs text-slate-500">
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {entry.technicianName}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {formatDate(entry.createdAt)}
-                                  </span>
-                                  {entry.photos && entry.photos.length > 0 && (
-                                    <span className="flex items-center gap-1">
-                                      <ImageIcon className="w-3 h-3" />
-                                      {entry.photos.length}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={cn("text-xs", prioInfo.color)}>
+                                    {prioInfo.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">
+                                    {typeInfo.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm text-slate-500">
+                                  {format(new Date(entry.createdAt || new Date()), "MMM d, yyyy")}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    {entry.photos && entry.photos.length > 0 && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        <ImageIcon className="w-3 h-3 mr-1" />
+                                        {entry.photos.length}
+                                      </Badge>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedEntry(entry);
+                                        setPhotoIndex(0);
+                                      }}
+                                      data-testid={`button-view-issue-${entry.id}`}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              {isExpanded && (
+                                <TableRow className="bg-slate-50">
+                                  <TableCell colSpan={8} className="p-4">
+                                    <div className="space-y-4">
+                                      {/* Full Description */}
+                                      <div>
+                                        <h4 className="font-medium text-sm text-slate-700 mb-1">Description</h4>
+                                        <p className="text-sm text-slate-600 bg-white p-3 rounded border">
+                                          {entry.description || "No description provided"}
+                                        </p>
+                                      </div>
+                                      
+                                      {/* Photos */}
+                                      {entry.photos && entry.photos.length > 0 && (
+                                        <div>
+                                          <h4 className="font-medium text-sm text-slate-700 mb-2">Photos ({entry.photos.length})</h4>
+                                          <div className="flex gap-2 flex-wrap">
+                                            {entry.photos.map((photo, idx) => (
+                                              <img
+                                                key={idx}
+                                                src={photo}
+                                                alt={`Issue photo ${idx + 1}`}
+                                                className="w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                                data-testid={`img-issue-photo-${entry.id}-${idx}`}
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedEntry(entry);
+                                                  setPhotoIndex(idx);
+                                                }}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Resolution Info */}
+                                      {(entry.resolvedBy || entry.resolutionNotes) && (
+                                        <div className="bg-emerald-50 p-3 rounded border border-emerald-200">
+                                          <h4 className="font-medium text-sm text-emerald-700 mb-1">Resolution</h4>
+                                          {entry.resolvedBy && (
+                                            <p className="text-sm text-emerald-600">
+                                              <span className="font-medium">Resolved by:</span> {entry.resolvedBy}
+                                              {entry.resolvedAt && ` on ${format(new Date(entry.resolvedAt), "MMM d, yyyy 'at' h:mm a")}`}
+                                            </p>
+                                          )}
+                                          {entry.resolutionNotes && (
+                                            <p className="text-sm text-emerald-600 mt-1">{entry.resolutionNotes}</p>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {/* Action Buttons */}
+                                      <div className="flex gap-2 pt-2 border-t">
+                                        {entry.status !== "resolved" && entry.status !== "dismissed" && (
+                                          <>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="gap-1"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                updateTechOpsMutation.mutate({ id: entry.id, status: "in_progress" });
+                                              }}
+                                              data-testid={`button-start-issue-${entry.id}`}
+                                            >
+                                              <PlayCircle className="w-3 h-3" />
+                                              Start Working
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="default"
+                                              className="gap-1 bg-emerald-600 hover:bg-emerald-700"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                updateTechOpsMutation.mutate({ id: entry.id, status: "resolved" });
+                                              }}
+                                              data-testid={`button-resolve-issue-${entry.id}`}
+                                            >
+                                              <CheckCircle className="w-3 h-3" />
+                                              Mark Resolved
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="gap-1 text-slate-600"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                updateTechOpsMutation.mutate({ id: entry.id, status: "dismissed" });
+                                              }}
+                                              data-testid={`button-dismiss-issue-${entry.id}`}
+                                            >
+                                              <XCircle className="w-3 h-3" />
+                                              Dismiss
+                                            </Button>
+                                          </>
+                                        )}
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedEntry(entry);
+                                            setPhotoIndex(0);
+                                          }}
+                                          data-testid={`button-full-details-${entry.id}`}
+                                        >
+                                          <Eye className="w-3 h-3 mr-1" />
+                                          Full Details
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </ScrollArea>
                 )}
               </CardContent>

@@ -273,20 +273,25 @@ export const techOpsEntries = pgTable("tech_ops_entries", {
   entryType: text("entry_type").notNull(), // "repairs_needed", "service_repairs", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "supervisor_concerns", "add_notes"
   technicianName: text("technician_name").notNull(),
   technicianId: varchar("technician_id"), // Link to technician record
+  positionType: text("position_type"), // "service_technician", "supervisor", "repair_technician" - position of the person reporting
   propertyId: varchar("property_id"),
   propertyName: text("property_name"),
   propertyAddress: text("property_address"), // Full property address
+  issueTitle: text("issue_title"), // Title for report issues
   description: text("description"),
   notes: text("notes"), // Additional notes field
   priority: text("priority").default("normal"), // "low", "normal", "high", "urgent"
-  status: text("status").default("pending"), // "pending", "reviewed", "completed", "cancelled"
+  status: text("status").default("pending"), // "pending", "in_progress", "resolved", "dismissed"
   isRead: boolean("is_read").default(false), // For tracking new/unread submissions
   chemicals: text("chemicals"), // For chemical orders/dropoffs - list of chemicals
   quantity: text("quantity"), // Quantity details for orders
-  issueType: text("issue_type"), // For report issue - type of issue
+  issueType: text("issue_type"), // For report issue - "equipment_problem", "safety_concern", "access_issue", "customer_complaint", "other"
   photos: text("photos").array(), // Array of photo URLs
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
+  resolvedBy: text("resolved_by"), // Name of person who resolved the issue
+  resolvedAt: timestamp("resolved_at"), // When the issue was resolved
+  resolutionNotes: text("resolution_notes"), // Notes about how the issue was resolved
   vendorId: varchar("vendor_id"), // For chemical orders - assigned vendor
   vendorName: text("vendor_name"), // Denormalized vendor name for display
   orderStatus: text("order_status").default("pending"), // "pending", "sent_to_vendor", "confirmed", "delivered"
