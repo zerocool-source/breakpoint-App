@@ -22,7 +22,7 @@ import {
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind, Phone
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -290,6 +290,7 @@ export default function Estimates() {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [valueFilter, setValueFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
@@ -615,8 +616,23 @@ export default function Estimates() {
       result = result.filter((e: Estimate) => (e.totalAmount || 0) >= 50000);
     }
 
+    // Apply search filter (estimate number, service repair ID, property name, title)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((e: Estimate) => {
+        const estimateNumber = (e.estimateNumber || "").toLowerCase();
+        const sourceRepairId = (e.sourceRepairJobId || "").toLowerCase();
+        const propertyName = (e.propertyName || "").toLowerCase();
+        const title = (e.title || "").toLowerCase();
+        return estimateNumber.includes(query) || 
+               sourceRepairId.includes(query) || 
+               propertyName.includes(query) ||
+               title.includes(query);
+      });
+    }
+
     return result;
-  }, [estimates, activeTab, customerFilter, sourceFilter, dateFrom, dateTo, valueFilter]);
+  }, [estimates, activeTab, customerFilter, sourceFilter, dateFrom, dateTo, valueFilter, searchQuery]);
 
   const statusCounts = {
     all: estimates.filter(e => e.status !== "archived").length,
@@ -1703,6 +1719,16 @@ export default function Estimates() {
           {/* QuickBooks-style Filter Bar */}
           <div className="px-5 py-4 border-b border-gray-200">
             <div className="flex items-center gap-4 flex-wrap" data-testid="estimate-filters">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search estimate # or SR #..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-[220px] border-gray-300 text-sm"
+                  data-testid="input-search-estimates"
+                />
+              </div>
               <Select value={customerFilter} onValueChange={setCustomerFilter}>
                 <SelectTrigger className="w-[180px] border-gray-300 bg-white text-sm" data-testid="filter-customer">
                   <SelectValue placeholder="All Customers" />
@@ -1751,7 +1777,7 @@ export default function Estimates() {
                 </PopoverContent>
               </Popover>
 
-              {(customerFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo || valueFilter !== "all") && (
+              {(customerFilter !== "all" || sourceFilter !== "all" || dateFrom || dateTo || valueFilter !== "all" || searchQuery) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1761,6 +1787,7 @@ export default function Estimates() {
                     setDateFrom(undefined);
                     setDateTo(undefined);
                     setValueFilter("all");
+                    setSearchQuery("");
                   }}
                   className="text-[#6B7280] hover:text-[#1E293B] text-sm"
                   data-testid="button-clear-filters"
