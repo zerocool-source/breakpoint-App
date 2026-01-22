@@ -221,6 +221,16 @@ export function InvoicePreviewModal({
   
   // Error state
   const [createError, setCreateError] = useState<string | null>(null);
+  
+  // Customer full info state
+  const [customerFullInfo, setCustomerFullInfo] = useState<{
+    customer: { id: string; name: string; email: string | null; phone: string | null; routeStopEmail: string | null };
+    addresses: { id: string; type: string; label: string; addressLine1: string; addressLine2?: string; city: string; state: string; zip: string; careOf: string | null }[];
+    bodiesOfWater: { id: string; name: string; type: string; displayType: string; serviceLevel: string | null; waterType: string | null; gallons: number | null }[];
+    waterBodySummary: Record<string, number>;
+    tags: string[];
+  } | null>(null);
+  const [loadingCustomerInfo, setLoadingCustomerInfo] = useState(false);
 
   // Reset state when modal opens with new estimate
   useEffect(() => {
@@ -269,6 +279,46 @@ export function InvoicePreviewModal({
     };
     setDueDate(addDays(invoiceDate, daysMap[terms] || 30));
   }, [terms, invoiceDate]);
+
+  // Fetch customer full info when modal opens
+  useEffect(() => {
+    async function fetchCustomerFullInfo() {
+      if (!estimate?.propertyId || !open) return;
+      
+      // Try to get customer ID from property - typically the property is the customer
+      const customerId = estimate.propertyId;
+      
+      setLoadingCustomerInfo(true);
+      try {
+        const response = await fetch(`/api/customers/${customerId}/full-info`);
+        if (response.ok) {
+          const data = await response.json();
+          setCustomerFullInfo(data);
+          
+          // Update Bill To address dropdown with actual addresses
+          if (data.addresses && data.addresses.length > 0) {
+            const billingAddr = data.addresses.find((a: any) => a.type === "BILLING");
+            const primaryAddr = data.addresses.find((a: any) => a.type === "PRIMARY");
+            
+            if (billingAddr) {
+              setBillToAddress(`${billingAddr.addressLine1}, ${billingAddr.city} ${billingAddr.state} ${billingAddr.zip}`);
+              if (billingAddr.careOf) {
+                setBillToCO(billingAddr.careOf);
+              }
+            } else if (primaryAddr) {
+              setBillToAddress(`${primaryAddr.addressLine1}, ${primaryAddr.city} ${primaryAddr.state} ${primaryAddr.zip}`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch customer full info:", error);
+      } finally {
+        setLoadingCustomerInfo(false);
+      }
+    }
+    
+    fetchCustomerFullInfo();
+  }, [estimate?.propertyId, open]);
 
   if (!estimate) return null;
 
@@ -378,6 +428,143 @@ export function InvoicePreviewModal({
                 </div>
               </div>
 
+              {/* Customer & Property Info */}
+              <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-[#1E293B] flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Customer & Property Info
+                  </h3>
+                  {loadingCustomerInfo && (
+                    <Loader2 className="w-4 h-4 animate-spin text-[#64748B]" />
+                  )}
+                </div>
+                
+                {customerFullInfo ? (
+                  <div className="grid grid-cols-3 gap-6">
+                    {/* Customer Details */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-[#94A3B8] uppercase tracking-wider">Customer</p>
+                      <p className="font-medium text-[#1E293B]">{customerFullInfo.customer.name}</p>
+                      {customerFullInfo.customer.email && (
+                        <div className="flex items-center gap-1 text-sm text-[#64748B]">
+                          <Mail className="w-3 h-3" />
+                          {customerFullInfo.customer.email}
+                        </div>
+                      )}
+                      {customerFullInfo.customer.phone && (
+                        <div className="flex items-center gap-1 text-sm text-[#64748B]">
+                          <Phone className="w-3 h-3" />
+                          {customerFullInfo.customer.phone}
+                        </div>
+                      )}
+                      {customerFullInfo.customer.routeStopEmail && (
+                        <div className="text-xs text-[#94A3B8] mt-2">
+                          Route Stop Email: {customerFullInfo.customer.routeStopEmail}
+                        </div>
+                      )}
+                      {customerFullInfo.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {customerFullInfo.tags.map((tag, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Addresses */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-[#94A3B8] uppercase tracking-wider">
+                        Addresses ({customerFullInfo.addresses.length})
+                      </p>
+                      {customerFullInfo.addresses.length > 0 ? (
+                        <div className="space-y-3">
+                          {customerFullInfo.addresses.map((addr, i) => (
+                            <div key={addr.id} className="text-sm">
+                              <Badge 
+                                variant="outline" 
+                                className={addr.type === "BILLING" 
+                                  ? "text-xs bg-purple-50 text-purple-700 border-purple-200 mb-1" 
+                                  : "text-xs bg-green-50 text-green-700 border-green-200 mb-1"
+                                }
+                              >
+                                {addr.type}
+                              </Badge>
+                              {addr.careOf && (
+                                <p className="text-xs text-[#94A3B8]">C/O: {addr.careOf}</p>
+                              )}
+                              <p className="text-[#1E293B]">{addr.addressLine1}</p>
+                              <p className="text-[#64748B]">{addr.city} {addr.state} {addr.zip}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[#94A3B8] italic">No addresses on file</p>
+                      )}
+                    </div>
+                    
+                    {/* Bodies of Water */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-[#94A3B8] uppercase tracking-wider">
+                        Bodies of Water ({customerFullInfo.bodiesOfWater.length})
+                      </p>
+                      {Object.keys(customerFullInfo.waterBodySummary).length > 0 ? (
+                        <div className="space-y-2">
+                          {/* Summary badges */}
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(customerFullInfo.waterBodySummary).map(([type, count]) => (
+                              <Badge 
+                                key={type} 
+                                variant="outline" 
+                                className={
+                                  type === "pool" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                  type === "spa" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                                  type === "fountain" ? "bg-cyan-50 text-cyan-700 border-cyan-200" :
+                                  type === "beach_pool" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                  "bg-gray-50 text-gray-700 border-gray-200"
+                                }
+                              >
+                                {count} {type.replace("_", " ")}
+                                {count > 1 ? "s" : ""}
+                              </Badge>
+                            ))}
+                          </div>
+                          {/* Water body list */}
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {customerFullInfo.bodiesOfWater.map((body) => (
+                              <div key={body.id} className="flex items-center gap-2 text-sm">
+                                <span className={`w-2 h-2 rounded-full ${
+                                  body.type === "pool" ? "bg-blue-500" :
+                                  body.type === "spa" ? "bg-orange-500" :
+                                  body.type === "fountain" ? "bg-cyan-500" :
+                                  body.type === "beach_pool" ? "bg-yellow-500" :
+                                  "bg-gray-500"
+                                }`} />
+                                <span className="text-[#1E293B]">{body.name}</span>
+                                <span className="text-xs text-[#94A3B8]">({body.displayType})</span>
+                                {body.gallons && (
+                                  <span className="text-xs text-[#64748B]">
+                                    {body.gallons.toLocaleString()} gal
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-[#94A3B8] italic">No bodies of water on file</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-sm text-[#94A3B8]">
+                    {loadingCustomerInfo ? "Loading customer info..." : "Customer info not available from Pool Brain API"}
+                  </div>
+                )}
+              </div>
+
               {/* Bill To / Ship To */}
               <div className="grid grid-cols-2 gap-6">
                 <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
@@ -393,6 +580,13 @@ export function InvoicePreviewModal({
                           setSelectedBillToAddress(v);
                           if (v === "custom") {
                             setBillToAddress("");
+                            setBillToCO("");
+                          } else if (v.startsWith("addr-") && customerFullInfo) {
+                            const addr = customerFullInfo.addresses.find(a => a.id === v.replace("addr-", ""));
+                            if (addr) {
+                              setBillToAddress(`${addr.addressLine1}, ${addr.city} ${addr.state} ${addr.zip}`);
+                              setBillToCO(addr.careOf || "");
+                            }
                           } else {
                             setBillToAddress(estimate.address || "");
                           }
@@ -401,8 +595,26 @@ export function InvoicePreviewModal({
                             <SelectValue placeholder="Select billing address" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="default">Default - {estimate.address || "No address"}</SelectItem>
-                            <SelectItem value="custom">Enter custom address...</SelectItem>
+                            {customerFullInfo?.addresses && customerFullInfo.addresses.length > 0 ? (
+                              <>
+                                {customerFullInfo.addresses.map((addr) => (
+                                  <SelectItem key={addr.id} value={`addr-${addr.id}`}>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className={addr.type === "BILLING" ? "bg-purple-50 text-purple-700" : "bg-green-50 text-green-700"}>
+                                        {addr.type}
+                                      </Badge>
+                                      <span>{addr.careOf ? `C/O: ${addr.careOf} - ` : ""}{addr.addressLine1}, {addr.city} {addr.state}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="custom">Enter custom address...</SelectItem>
+                              </>
+                            ) : (
+                              <>
+                                <SelectItem value="default">Default - {estimate.address || "No address"}</SelectItem>
+                                <SelectItem value="custom">Enter custom address...</SelectItem>
+                              </>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>

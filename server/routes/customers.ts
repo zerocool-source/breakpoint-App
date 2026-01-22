@@ -518,6 +518,168 @@ export function registerCustomerRoutes(app: any) {
     }
   });
 
+  // Get comprehensive customer info with all bodies of water for invoice modal
+  app.get("/api/customers/:customerId/full-info", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const settings = await storage.getSettings();
+      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
+      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      }
+
+      const client = new PoolBrainClient({
+        apiKey,
+        companyId: companyId || undefined,
+      });
+
+      // Fetch customer details, pools, and notes in parallel
+      const [customerData, poolsData, notesData] = await Promise.all([
+        client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
+        client.getCustomerPoolDetails({ limit: 2000 }).catch(() => ({ data: [] })),
+        client.getCustomerNotes({ limit: 2000 }).catch(() => ({ data: [] })),
+      ]);
+
+      // Find the customer
+      const customer = (customerData.data || []).find((c: any) => 
+        String(c.RecordID || c.CustomerID) === customerId
+      );
+
+      if (!customer) {
+        // Fallback to local database if not found in API
+        const localCustomer = await storage.getCustomer(customerId);
+        if (!localCustomer) {
+          return res.status(404).json({ error: "Customer not found" });
+        }
+        return res.json({
+          customer: {
+            id: localCustomer.id,
+            name: localCustomer.name,
+            email: localCustomer.email,
+            phone: localCustomer.phone,
+          },
+          addresses: [],
+          bodiesOfWater: [],
+          waterBodySummary: {},
+          tags: [],
+        });
+      }
+
+      // Build addresses list
+      const addresses: any[] = [];
+      
+      // Primary address
+      if (customer.Address || customer.Street) {
+        addresses.push({
+          id: `primary-${customerId}`,
+          type: "PRIMARY",
+          label: "Primary",
+          addressLine1: customer.Address || customer.Street || "",
+          addressLine2: customer.Address2 || "",
+          city: customer.City || "",
+          state: customer.State || "",
+          zip: customer.Zip || customer.ZipCode || "",
+          careOf: null,
+        });
+      }
+
+      // Billing address
+      if (customer.BillingAddress || customer.BillingStreet) {
+        const billingCareOf = customer.BillingCareOf || customer.BillingCoName || null;
+        addresses.push({
+          id: `billing-${customerId}`,
+          type: "BILLING",
+          label: billingCareOf ? `C/O: ${billingCareOf}` : "Billing",
+          addressLine1: customer.BillingAddress || customer.BillingStreet || "",
+          addressLine2: customer.BillingAddress2 || "",
+          city: customer.BillingCity || customer.City || "",
+          state: customer.BillingState || customer.State || "",
+          zip: customer.BillingZip || customer.BillingZipCode || customer.Zip || "",
+          careOf: billingCareOf,
+        });
+      }
+
+      // Get pools/bodies of water for this customer
+      const allPools = poolsData.data || [];
+      const customerPools = allPools.filter((p: any) => 
+        String(p.CustomerID || p.customerId) === customerId
+      );
+
+      // Map bodies of water with type categorization
+      const bodiesOfWater = customerPools.map((p: any) => {
+        const poolType = (p.PoolType || p.Type || "Pool").toLowerCase();
+        let waterBodyType = "pool";
+        
+        if (poolType.includes("spa") || poolType.includes("hot tub") || poolType.includes("jacuzzi")) {
+          waterBodyType = "spa";
+        } else if (poolType.includes("fountain")) {
+          waterBodyType = "fountain";
+        } else if (poolType.includes("pond")) {
+          waterBodyType = "pond";
+        } else if (poolType.includes("lake")) {
+          waterBodyType = "lake";
+        } else if (poolType.includes("beach")) {
+          waterBodyType = "beach_pool";
+        }
+
+        return {
+          id: p.RecordID || p.PoolID,
+          name: p.PoolName || p.Name || "Pool",
+          type: waterBodyType,
+          displayType: p.PoolType || p.Type || "Pool",
+          serviceLevel: p.ServiceLevel || p.ServiceType || null,
+          waterType: p.WaterType || null,
+          gallons: p.Gallons || p.Volume || null,
+          address: p.Address || p.PoolAddress || null,
+          city: p.City || null,
+          state: p.State || null,
+          zip: p.Zip || p.ZipCode || null,
+        };
+      });
+
+      // Calculate summary of water body types
+      const waterBodySummary: Record<string, number> = {};
+      bodiesOfWater.forEach((body: any) => {
+        const type = body.type;
+        waterBodySummary[type] = (waterBodySummary[type] || 0) + 1;
+      });
+
+      // Get route stop email and tags if available
+      const routeStopEmail = customer.RouteStopEmail || customer.RouteEmail || null;
+      const tags: string[] = [];
+      if (customer.Tags && Array.isArray(customer.Tags)) {
+        customer.Tags.forEach((t: any) => tags.push(t.Name || t.TagName || String(t)));
+      }
+      if (customer.SummerDays) {
+        tags.push(`Summer- ${customer.SummerDays} Days`);
+      }
+      if (customer.WinterDays) {
+        tags.push(`Winter - ${customer.WinterDays} Days`);
+      }
+
+      res.json({
+        customer: {
+          id: customerId,
+          externalId: customer.RecordID || customer.CustomerID,
+          name: customer.Name || customer.CustomerName || `${customer.FirstName || ''} ${customer.LastName || ''}`.trim(),
+          email: customer.Email || null,
+          phone: customer.Phone || customer.PhoneNumber || null,
+          routeStopEmail: routeStopEmail,
+          notes: customer.Notes || null,
+        },
+        addresses,
+        bodiesOfWater,
+        waterBodySummary,
+        tags,
+      });
+    } catch (error: any) {
+      console.error("Error fetching customer full info:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch customer info" });
+    }
+  });
+
   // ==================== POOLS ====================
 
   // Get pools for a customer from local storage
