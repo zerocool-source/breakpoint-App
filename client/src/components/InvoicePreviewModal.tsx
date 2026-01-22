@@ -311,11 +311,11 @@ export function InvoicePreviewModal({
       <Dialog open={open && !showConfirmation} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
           <DialogHeader className="bg-[#1E3A5F] text-white px-6 py-4">
-            <DialogTitle className="flex items-center gap-2 text-xl">
+            <DialogTitle className="flex items-center gap-2 text-xl text-white">
               <Receipt className="w-6 h-6" />
               Review Invoice Before Sending to QuickBooks
             </DialogTitle>
-            <DialogDescription className="text-blue-200">
+            <DialogDescription className="text-white/80">
               Please verify all information is correct before creating the invoice
             </DialogDescription>
           </DialogHeader>
