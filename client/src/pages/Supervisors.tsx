@@ -1070,13 +1070,6 @@ export default function Supervisors() {
               Supervisor Concerns
             </TabsTrigger>
             <TabsTrigger 
-              value="activity"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Activity Log
-            </TabsTrigger>
-            <TabsTrigger 
               value="inspections"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
             >
@@ -1099,16 +1092,6 @@ export default function Supervisors() {
               </div>
               <p className="text-slate-600 font-medium">No supervisor concerns reported</p>
               <p className="text-sm text-slate-500 mt-1">Concerns from supervisors will appear here</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="activity" className="p-6">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-slate-400" />
-              </div>
-              <p className="text-slate-600 font-medium">No activity recorded</p>
-              <p className="text-sm text-slate-500 mt-1">Activity log entries will appear here</p>
             </div>
           </TabsContent>
 
