@@ -266,12 +266,32 @@ export function InvoicePreviewModal({
       setShipToAddress(estimate.address || "");
       setSelectedShipToAddress("default");
       
+      // Reset attachment selections
+      setSelectedAttachments(new Set());
+      setSelectAllAttachments(false);
+      
+      // Reset customer selection - try to match by name
+      setSelectedCustomerId("");
+      
       // Auto-select first billing contact if available
       if (billingContacts.length > 0) {
         setSelectedEmail(billingContacts[0].email);
       }
     }
   }, [estimate, open, billingContacts]);
+  
+  // Auto-select customer when customers are loaded and we have an estimate
+  useEffect(() => {
+    if (estimate && customers.length > 0 && !selectedCustomerId) {
+      // Try to find matching customer by name
+      const matchingCustomer = customers.find(
+        (c) => c.name.toLowerCase() === (estimate.customerName || estimate.propertyName).toLowerCase()
+      );
+      if (matchingCustomer) {
+        setSelectedCustomerId(matchingCustomer.id);
+      }
+    }
+  }, [estimate, customers, selectedCustomerId]);
 
   // Update due date when terms change
   useEffect(() => {
