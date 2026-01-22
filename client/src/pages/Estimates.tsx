@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ObjectUploader } from "@/components/ObjectUploader";
+import { InvoicePreviewModal } from "@/components/InvoicePreviewModal";
 import { ImageIcon, Upload } from "lucide-react";
 
 interface EstimateLineItem {
@@ -1294,7 +1295,18 @@ export default function Estimates() {
     openInvoiceDialog(estimate);
   };
   
-  const handleCreateInvoice = async () => {
+  const handleCreateInvoice = async (invoiceData: {
+    email: string;
+    ccEmails?: string[];
+    bccEmails?: string[];
+    invoiceNumber: string;
+    invoiceDate: Date;
+    dueDate: Date;
+    terms: string;
+    customerNote: string;
+    memoOnStatement: string;
+    internalNotes: string;
+  }) => {
     if (!selectedEstimate) return;
     
     setIsCreatingInvoice(true);
@@ -1304,16 +1316,27 @@ export default function Estimates() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: selectedEstimate.propertyName,
-          customerEmail: selectedInvoiceEmail,
+          customerEmail: invoiceData.email,
+          ccEmails: invoiceData.ccEmails,
+          bccEmails: invoiceData.bccEmails,
           lineItems: selectedEstimate.items || [],
           memo: `EST#${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
+          invoiceNumber: invoiceData.invoiceNumber,
+          invoiceDate: invoiceData.invoiceDate.toISOString(),
+          dueDate: invoiceData.dueDate.toISOString(),
+          terms: invoiceData.terms,
+          customerNote: invoiceData.customerNote,
+          memoOnStatement: invoiceData.memoOnStatement,
+          internalNotes: invoiceData.internalNotes,
+          photos: selectedEstimate.photos || [],
+          attachments: selectedEstimate.attachments || [],
         }),
       });
 
-      let invoiceData = null;
+      let qbInvoiceData = null;
       let invoiceError = null;
       if (invoiceResponse.ok) {
-        invoiceData = await invoiceResponse.json();
+        qbInvoiceData = await invoiceResponse.json();
       } else {
         const errorData = await invoiceResponse.json().catch(() => ({}));
         invoiceError = errorData.error || "Failed to create QuickBooks invoice";
@@ -1324,16 +1347,16 @@ export default function Estimates() {
         id: selectedEstimate.id,
         status: "invoiced",
         extras: {
-          invoiceId: invoiceData?.invoiceId || `INV-${Date.now()}`,
-          qbInvoiceNumber: invoiceData?.invoiceNumber || null,
-          invoicedEmail: selectedInvoiceEmail,
+          invoiceId: qbInvoiceData?.invoiceId || invoiceData.invoiceNumber,
+          qbInvoiceNumber: qbInvoiceData?.invoiceNumber || null,
+          invoicedEmail: invoiceData.email,
         },
       }, {
         onSuccess: () => {
-          if (invoiceData?.invoiceNumber) {
+          if (qbInvoiceData?.invoiceNumber) {
             toast({ 
-              title: "Invoice Created", 
-              description: `QuickBooks Invoice #${invoiceData.invoiceNumber} created and sent to ${selectedInvoiceEmail}.` 
+              title: "Invoice Created Successfully", 
+              description: `QuickBooks Invoice #${qbInvoiceData.invoiceNumber} created and sent to ${invoiceData.email}.` 
             });
           } else if (invoiceError) {
             toast({ 
@@ -1343,8 +1366,8 @@ export default function Estimates() {
             });
           } else {
             toast({ 
-              title: "Invoice Created", 
-              description: `Invoice sent to ${selectedInvoiceEmail}.` 
+              title: "Invoice Created Successfully", 
+              description: `Invoice ${invoiceData.invoiceNumber} sent to ${invoiceData.email}.` 
             });
           }
         }
@@ -3409,114 +3432,15 @@ export default function Estimates() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showInvoiceDialog} onOpenChange={setShowInvoiceDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-[#0078D4]" />
-                Create Invoice
-              </DialogTitle>
-              <DialogDescription>
-                Select a billing contact to send the invoice to.
-              </DialogDescription>
-            </DialogHeader>
-            {selectedEstimate && (
-              <div className="space-y-4">
-                <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
-                  <h4 className="font-semibold text-[#1E293B]">{selectedEstimate.title}</h4>
-                  <p className="text-sm text-[#64748B]">{selectedEstimate.propertyName}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <p className="text-lg font-bold text-[#0078D4]">
-                      {formatCurrency(selectedEstimate.totalAmount)}
-                    </p>
-                    {selectedEstimate.workType && (
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {selectedEstimate.workType}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                {autoSelectedByWorkType && selectedEstimate.workType && (
-                  <div className="p-3 bg-[#22D69A]1A border border-[#22D69A]33 rounded-lg">
-                    <p className="text-sm text-[#22D69A] flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Auto-selected {selectedEstimate.workType} billing contact
-                    </p>
-                  </div>
-                )}
-                
-                <div>
-                  <Label className="text-sm font-medium text-[#1E293B]">Send invoice to:</Label>
-                  {loadingBillingContacts ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
-                      <span className="ml-2 text-sm text-[#64748B]">Loading billing contacts...</span>
-                    </div>
-                  ) : billingContacts.length > 0 ? (
-                    <Select value={selectedInvoiceEmail} onValueChange={(email) => {
-                      setSelectedInvoiceEmail(email);
-                      setAutoSelectedByWorkType(false);
-                    }}>
-                      <SelectTrigger className="mt-2" data-testid="select-invoice-email">
-                        <SelectValue placeholder="Select billing email..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {billingContacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.email}>
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-3 h-3 text-[#64748B]" />
-                              <span>{contact.name}</span>
-                              <span className="text-[#94A3B8]">({contact.email})</span>
-                              <Badge variant="outline" className="text-xs ml-1 capitalize">
-                                {contact.contactType}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="mt-2 p-3 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
-                      <p className="text-sm text-[#D97706]">No billing contacts found for this property.</p>
-                      <Input
-                        type="email"
-                        placeholder="Enter billing email manually..."
-                        value={selectedInvoiceEmail}
-                        onChange={(e) => setSelectedInvoiceEmail(e.target.value)}
-                        className="mt-2"
-                        data-testid="input-manual-invoice-email"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setShowInvoiceDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateInvoice}
-                disabled={!selectedInvoiceEmail || isCreatingInvoice}
-                className="bg-[#0078D4] hover:bg-[#0078D4]/90"
-                data-testid="button-create-invoice"
-              >
-                {isCreatingInvoice ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Receipt className="w-4 h-4 mr-2" />
-                    Create Invoice
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <InvoicePreviewModal
+          open={showInvoiceDialog}
+          onClose={() => setShowInvoiceDialog(false)}
+          estimate={selectedEstimate}
+          billingContacts={billingContacts}
+          loadingBillingContacts={loadingBillingContacts}
+          onCreateInvoice={handleCreateInvoice}
+          isCreating={isCreatingInvoice}
+        />
 
         <Dialog open={showSchedulingModal} onOpenChange={setShowSchedulingModal}>
           <DialogContent className="max-w-2xl">
