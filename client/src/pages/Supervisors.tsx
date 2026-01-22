@@ -41,8 +41,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { 
   Search, ChevronDown, Plus, Trash2, Users, UserCheck, ClipboardCheck, 
-  CalendarIcon, AlertTriangle, FileText, ChevronRight, RefreshCw,
-  Filter, Building2
+  CalendarIcon, AlertTriangle, FileText, ChevronRight, ChevronLeft, RefreshCw,
+  Filter, Building2, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +66,26 @@ interface Technician {
   supervisorId: string | null;
   active: boolean;
   role: string;
+}
+
+interface QcInspection {
+  id: string;
+  supervisorId: string;
+  supervisorName: string | null;
+  propertyId: string | null;
+  propertyName: string;
+  propertyAddress: string | null;
+  title: string | null;
+  notes: string | null;
+  photos: string[] | null;
+  status: string;
+  assignedById: string | null;
+  assignedByName: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  completionNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 function getInitials(firstName: string, lastName: string): string {
@@ -581,6 +601,9 @@ export default function Supervisors() {
   const [filterProperty, setFilterProperty] = useState("all");
   const [filterSupervisor, setFilterSupervisor] = useState("all");
   const [filterTechnician, setFilterTechnician] = useState("all");
+  const [expandedSupervisors, setExpandedSupervisors] = useState<Set<string>>(new Set());
+  const [photoGallery, setPhotoGallery] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
+  const [inspectionPropertyFilter, setInspectionPropertyFilter] = useState("all");
   const queryClient = useQueryClient();
 
   const { data: supervisorsData, isLoading: loadingSupervisors } = useQuery<{ technicians: Supervisor[] }>({
@@ -601,8 +624,56 @@ export default function Supervisors() {
     },
   });
 
+  const { data: qcInspectionsData, isLoading: loadingInspections } = useQuery<{ inspections: QcInspection[] }>({
+    queryKey: ["qc-inspections"],
+    queryFn: async () => {
+      const res = await fetch("/api/qc-inspections");
+      if (!res.ok) throw new Error("Failed to fetch QC inspections");
+      return res.json();
+    },
+  });
+
   const supervisors = supervisorsData?.technicians || [];
   const technicians = techniciansData?.technicians || [];
+  const qcInspections = qcInspectionsData?.inspections || [];
+
+  // Get unique properties from inspections for filter
+  const inspectionProperties = Array.from(new Set(qcInspections.map(i => i.propertyName))).sort();
+
+  // Filter inspections by property
+  const filteredInspections = inspectionPropertyFilter === "all" 
+    ? qcInspections 
+    : qcInspections.filter(i => i.propertyName === inspectionPropertyFilter);
+
+  // Group inspections by supervisor
+  const inspectionsBySupervisor = filteredInspections.reduce((acc, inspection) => {
+    const key = inspection.supervisorId;
+    if (!acc[key]) {
+      acc[key] = {
+        supervisorId: inspection.supervisorId,
+        supervisorName: inspection.supervisorName || "Unknown Supervisor",
+        inspections: []
+      };
+    }
+    acc[key].inspections.push(inspection);
+    return acc;
+  }, {} as Record<string, { supervisorId: string; supervisorName: string; inspections: QcInspection[] }>);
+
+  const toggleSupervisorExpanded = (supervisorId: string) => {
+    setExpandedSupervisors(prev => {
+      const next = new Set(prev);
+      if (next.has(supervisorId)) {
+        next.delete(supervisorId);
+      } else {
+        next.add(supervisorId);
+      }
+      return next;
+    });
+  };
+
+  const openPhotoGallery = (photos: string[], index: number) => {
+    setPhotoGallery({ open: true, photos, index });
+  };
   const unassignedTechnicians = technicians.filter(t => !t.supervisorId && t.active);
   const totalTechnicians = technicians.filter(t => t.active).length;
 
@@ -1042,13 +1113,159 @@ export default function Supervisors() {
           </TabsContent>
 
           <TabsContent value="inspections" className="p-6">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <ClipboardCheck className="w-8 h-8 text-slate-400" />
+            {/* Property Filter */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <span className="text-sm font-medium text-slate-700">Filter by Property:</span>
               </div>
-              <p className="text-slate-600 font-medium">No QC inspections scheduled</p>
-              <p className="text-sm text-slate-500 mt-1">Scheduled inspections will appear here</p>
+              <Select value={inspectionPropertyFilter} onValueChange={setInspectionPropertyFilter}>
+                <SelectTrigger className="w-[280px]" data-testid="filter-inspection-property">
+                  <SelectValue placeholder="All Properties" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Properties</SelectItem>
+                  {inspectionProperties.map(prop => (
+                    <SelectItem key={prop} value={prop}>{prop}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Badge variant="outline" className="ml-auto">
+                {filteredInspections.length} inspection{filteredInspections.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
+
+            {/* Inspections grouped by supervisor */}
+            {loadingInspections ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : Object.keys(inspectionsBySupervisor).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                  <ClipboardCheck className="w-8 h-8 text-slate-400" />
+                </div>
+                <p className="text-slate-600 font-medium">No QC inspections found</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {inspectionPropertyFilter !== "all" 
+                    ? "No inspections for this property. Try a different filter." 
+                    : "Assign inspections using the form above"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {Object.values(inspectionsBySupervisor).map(group => {
+                  const isExpanded = expandedSupervisors.has(group.supervisorId);
+                  const initials = getInitials(group.supervisorName.split(' ')[0] || '', group.supervisorName.split(' ')[1] || '');
+                  const avatarColor = getAvatarColor(group.supervisorName);
+                  
+                  return (
+                    <div key={group.supervisorId} className="border rounded-lg overflow-hidden">
+                      {/* Collapsible Supervisor Header */}
+                      <button
+                        onClick={() => toggleSupervisorExpanded(group.supervisorId)}
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                        data-testid={`supervisor-header-${group.supervisorId}`}
+                      >
+                        <ChevronRight className={cn(
+                          "w-5 h-5 text-slate-500 transition-transform",
+                          isExpanded && "rotate-90"
+                        )} />
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold",
+                          avatarColor
+                        )}>
+                          {initials}
+                        </div>
+                        <span className="font-semibold text-slate-900">{group.supervisorName}</span>
+                        <Badge variant="outline" className="ml-2">
+                          {group.inspections.length} inspection{group.inspections.length !== 1 ? 's' : ''}
+                        </Badge>
+                        <div className="ml-auto flex items-center gap-2 text-sm text-slate-500">
+                          <span>{group.inspections.filter(i => i.status === 'completed').length} completed</span>
+                          <span>•</span>
+                          <span>{group.inspections.filter(i => i.status !== 'completed').length} pending</span>
+                        </div>
+                      </button>
+
+                      {/* Inspection Entries */}
+                      {isExpanded && (
+                        <div className="divide-y">
+                          {group.inspections.map(inspection => (
+                            <div key={inspection.id} className="p-4 bg-white" data-testid={`inspection-${inspection.id}`}>
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-slate-400" />
+                                  <span className="font-medium text-slate-900">{inspection.propertyName}</span>
+                                  {inspection.title && (
+                                    <span className="text-slate-500">- {inspection.title}</span>
+                                  )}
+                                </div>
+                                <Badge 
+                                  variant={inspection.status === 'completed' ? 'default' : 'outline'}
+                                  className={cn(
+                                    inspection.status === 'completed' && "bg-green-100 text-green-800 border-green-200",
+                                    inspection.status === 'assigned' && "bg-blue-100 text-blue-800 border-blue-200",
+                                    inspection.status === 'in_progress' && "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                  )}
+                                >
+                                  {inspection.status === 'completed' ? 'Completed' : 
+                                   inspection.status === 'in_progress' ? 'In Progress' : 'Scheduled'}
+                                </Badge>
+                              </div>
+                              
+                              {/* Date info */}
+                              <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
+                                {inspection.dueDate && (
+                                  <span className="flex items-center gap-1">
+                                    <CalendarIcon className="w-3.5 h-3.5" />
+                                    Due: {format(new Date(inspection.dueDate), "MMM d, yyyy")}
+                                  </span>
+                                )}
+                                {inspection.completedAt && (
+                                  <span className="flex items-center gap-1 text-green-600">
+                                    <UserCheck className="w-3.5 h-3.5" />
+                                    Completed: {format(new Date(inspection.completedAt), "MMM d, yyyy 'at' h:mm a")}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Notes */}
+                              {(inspection.notes || inspection.completionNotes) && (
+                                <div className="bg-slate-50 rounded-md p-3 mb-3 text-sm text-slate-700">
+                                  {inspection.notes && <p className="mb-1"><strong>Notes:</strong> {inspection.notes}</p>}
+                                  {inspection.completionNotes && <p><strong>Completion Notes:</strong> {inspection.completionNotes}</p>}
+                                </div>
+                              )}
+
+                              {/* Photo Thumbnails */}
+                              {inspection.photos && inspection.photos.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                  {inspection.photos.map((photo, idx) => (
+                                    <button
+                                      key={idx}
+                                      onClick={() => openPhotoGallery(inspection.photos!, idx)}
+                                      className="relative w-16 h-16 rounded-md overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors"
+                                      data-testid={`photo-thumb-${inspection.id}-${idx}`}
+                                    >
+                                      <img 
+                                        src={photo} 
+                                        alt={`Inspection photo ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 
@@ -1073,6 +1290,59 @@ export default function Supervisors() {
           onAssign={(techId, supervisorId) => assignTechnicianMutation.mutate({ techId, supervisorId })}
           onUnassign={(techId) => assignTechnicianMutation.mutate({ techId, supervisorId: null })}
         />
+
+        {/* Photo Gallery Modal */}
+        <Dialog open={photoGallery.open} onOpenChange={(open) => !open && setPhotoGallery({ ...photoGallery, open: false })}>
+          <DialogContent className="max-w-4xl p-0 bg-black/95">
+            <div className="relative">
+              <button
+                onClick={() => setPhotoGallery({ ...photoGallery, open: false })}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              {photoGallery.photos.length > 0 && (
+                <>
+                  <img 
+                    src={photoGallery.photos[photoGallery.index]}
+                    alt={`Photo ${photoGallery.index + 1}`}
+                    className="w-full max-h-[80vh] object-contain"
+                  />
+                  
+                  {/* Navigation arrows */}
+                  {photoGallery.photos.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setPhotoGallery(prev => ({ 
+                          ...prev, 
+                          index: prev.index === 0 ? prev.photos.length - 1 : prev.index - 1 
+                        }))}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={() => setPhotoGallery(prev => ({ 
+                          ...prev, 
+                          index: prev.index === prev.photos.length - 1 ? 0 : prev.index + 1 
+                        }))}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* Photo counter */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/10 rounded-full text-white text-sm">
+                    {photoGallery.index + 1} / {photoGallery.photos.length}
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
