@@ -206,6 +206,9 @@ export function InvoicePreviewModal({
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [newCcEmail, setNewCcEmail] = useState("");
   const [newBccEmail, setNewBccEmail] = useState("");
+  
+  // Error state
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Reset state when modal opens with new estimate
   useEffect(() => {
@@ -247,8 +250,6 @@ export function InvoicePreviewModal({
 
   const finalEmail = selectedEmail || manualEmail;
   const items = estimate.items || [];
-
-  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
     setCreateError(null);
