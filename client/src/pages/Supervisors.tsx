@@ -1083,7 +1083,7 @@ export default function Supervisors() {
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
             >
               <AlertTriangle className="w-4 h-4 mr-2" />
-              Supervisor Concerns
+              Report Issue
             </TabsTrigger>
             <TabsTrigger 
               value="inspections"
@@ -1098,7 +1098,7 @@ export default function Supervisors() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-orange-500" />
-                <h3 className="font-semibold text-slate-900">Supervisor Concerns</h3>
+                <h3 className="font-semibold text-slate-900">Report Issue</h3>
                 <Badge variant="outline" className="text-orange-600 border-orange-300">0 Issues</Badge>
               </div>
             </div>
@@ -1106,8 +1106,8 @@ export default function Supervisors() {
               <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
                 <AlertTriangle className="w-8 h-8 text-slate-400" />
               </div>
-              <p className="text-slate-600 font-medium">No supervisor concerns reported</p>
-              <p className="text-sm text-slate-500 mt-1">Concerns from supervisors will appear here</p>
+              <p className="text-slate-600 font-medium">No issues reported</p>
+              <p className="text-sm text-slate-500 mt-1">Reported issues will appear here</p>
             </div>
           </TabsContent>
 

@@ -64,10 +64,10 @@ const entryTypeConfig: Record<string, { label: string; icon: any; color: string;
     description: "Report any issue or concern at a property"
   },
   supervisor_concerns: { 
-    label: "Supervisor Concerns", 
+    label: "Report Issue", 
     icon: User, 
     color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33",
-    description: "Concerns or issues escalated to supervisors"
+    description: "Report issues that need attention"
   },
 };
 

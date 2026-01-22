@@ -977,7 +977,7 @@ export default function SupervisorTeams() {
           <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="concerns" className="gap-2" data-testid="tab-concerns">
               <AlertTriangle className="w-4 h-4" />
-              Supervisor Concerns
+              Report Issue
               {filteredConcerns.length > 0 && (
                 <Badge className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0">{filteredConcerns.length}</Badge>
               )}
@@ -1002,7 +1002,7 @@ export default function SupervisorTeams() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
-                  Supervisor Concerns
+                  Report Issue
                   <Badge className="ml-2 bg-red-100 text-red-700">
                     {filteredConcerns.length} Issues
                   </Badge>
@@ -1012,8 +1012,8 @@ export default function SupervisorTeams() {
                 {filteredConcerns.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
                     <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No supervisor concerns reported</p>
-                    <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Concerns from supervisors will appear here"}</p>
+                    <p>No issues reported</p>
+                    <p className="text-sm mt-1">{hasActiveFilters ? "Try adjusting your filters" : "Reported issues will appear here"}</p>
                   </div>
                 ) : (
                   <ScrollArea className="max-h-[400px]">
