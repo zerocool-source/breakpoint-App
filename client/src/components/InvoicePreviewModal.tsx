@@ -228,6 +228,11 @@ export function InvoicePreviewModal({
   const [selectedAttachments, setSelectedAttachments] = useState<Set<number>>(new Set());
   const [selectAllAttachments, setSelectAllAttachments] = useState(false);
   
+  // Locally added attachments
+  const [localAttachments, setLocalAttachments] = useState<{ name: string; url: string; size: number }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
   // Error state
   const [createError, setCreateError] = useState<string | null>(null);
   
@@ -270,6 +275,7 @@ export function InvoicePreviewModal({
       // Reset attachment selections
       setSelectedAttachments(new Set());
       setSelectAllAttachments(false);
+      setLocalAttachments([]);
       
       // Reset customer selection - try to match by name
       setSelectedCustomerId("");
@@ -305,6 +311,84 @@ export function InvoicePreviewModal({
     };
     setDueDate(addDays(invoiceDate, daysMap[terms] || 30));
   }, [terms, invoiceDate]);
+
+  // Handle file upload using presigned URL flow
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    const file = files[0];
+    
+    // Check file size (20 MB max)
+    if (file.size > 20 * 1024 * 1024) {
+      alert("File size exceeds 20 MB limit");
+      return;
+    }
+    
+    setIsUploading(true);
+    
+    try {
+      // Step 1: Request presigned upload URL
+      const urlResponse = await fetch("/api/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type || "application/octet-stream",
+        }),
+      });
+      
+      if (!urlResponse.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+      
+      const { uploadURL, objectPath } = await urlResponse.json();
+      
+      // Step 2: Upload file directly to presigned URL
+      const uploadResponse = await fetch(uploadURL, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload file");
+      }
+      
+      // Step 3: Confirm upload and make public
+      const confirmResponse = await fetch("/api/uploads/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath }),
+      });
+      
+      if (!confirmResponse.ok) {
+        throw new Error("Failed to confirm upload");
+      }
+      
+      // Add to local attachments with the object path as URL
+      setLocalAttachments((prev) => [
+        ...prev,
+        {
+          name: file.name,
+          url: objectPath,
+          size: file.size,
+        },
+      ]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload file. Please try again.");
+    } finally {
+      setIsUploading(false);
+      // Reset the input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   if (!estimate) return null;
 
@@ -922,13 +1006,21 @@ export function InvoicePreviewModal({
 
                 {/* Photos/Attachments */}
                 <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                  />
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm text-[#64748B]">
                       Completion Photos & Documents
                     </Label>
                     <div className="flex items-center gap-3">
                       {((estimate.photos && estimate.photos.length > 0) ||
-                        (estimate.attachments && estimate.attachments.length > 0)) && (
+                        (estimate.attachments && estimate.attachments.length > 0) ||
+                        localAttachments.length > 0) && (
                         <div className="flex items-center gap-2">
                           <Checkbox
                             id="select-all-attachments"
@@ -939,6 +1031,7 @@ export function InvoicePreviewModal({
                                 const allIndexes = new Set<number>();
                                 (estimate.photos || []).forEach((_, i) => allIndexes.add(i));
                                 (estimate.attachments || []).forEach((_, i) => allIndexes.add(i + (estimate.photos?.length || 0)));
+                                localAttachments.forEach((_, i) => allIndexes.add(i + (estimate.photos?.length || 0) + (estimate.attachments?.length || 0)));
                                 setSelectedAttachments(allIndexes);
                               } else {
                                 setSelectedAttachments(new Set());
@@ -951,22 +1044,32 @@ export function InvoicePreviewModal({
                           </Label>
                         </div>
                       )}
-                      {isEditing && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-[#0078D4] border-[#0078D4]"
-                          data-testid="button-add-attachment"
-                        >
-                          <Upload className="w-3 h-3 mr-1" />
-                          Add Attachment
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[#0078D4] border-[#0078D4]"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        data-testid="button-add-attachment"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3 h-3 mr-1" />
+                            Add Attachment
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
                   <p className="text-xs text-[#94A3B8] mb-2">Max file size: 20 MB. Check boxes to attach to email.</p>
                   {((estimate.photos && estimate.photos.length > 0) ||
-                    (estimate.attachments && estimate.attachments.length > 0)) ? (
+                    (estimate.attachments && estimate.attachments.length > 0) ||
+                    localAttachments.length > 0) ? (
                     <div className="space-y-2">
                       {estimate.photos?.map((photo, index) => (
                         <div
@@ -985,7 +1088,7 @@ export function InvoicePreviewModal({
                               }
                               setSelectedAttachments(newSet);
                               setSelectAllAttachments(
-                                newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0)
+                                newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + localAttachments.length
                               );
                             }}
                             data-testid={`checkbox-photo-${index}`}
@@ -1020,7 +1123,7 @@ export function InvoicePreviewModal({
                                 }
                                 setSelectedAttachments(newSet);
                                 setSelectAllAttachments(
-                                  newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0)
+                                  newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + localAttachments.length
                                 );
                               }}
                               data-testid={`checkbox-attachment-${index}`}
@@ -1028,6 +1131,59 @@ export function InvoicePreviewModal({
                             <FileText className="w-8 h-8 text-[#64748B]" />
                             <span className="text-sm text-[#1E293B]">{attachment.name}</span>
                             <span className="text-xs text-[#94A3B8]">Attach to email</span>
+                          </div>
+                        );
+                      })}
+                      {localAttachments.map((attachment, index) => {
+                        const globalIndex = (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + index;
+                        const isImage = attachment.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                        return (
+                          <div
+                            key={`local-${index}`}
+                            className="flex items-center gap-3 p-2 bg-[#F0FDF4] rounded-lg border border-[#86EFAC]"
+                          >
+                            <Checkbox
+                              id={`local-${index}`}
+                              checked={selectedAttachments.has(globalIndex)}
+                              onCheckedChange={(checked) => {
+                                const newSet = new Set(selectedAttachments);
+                                if (checked) {
+                                  newSet.add(globalIndex);
+                                } else {
+                                  newSet.delete(globalIndex);
+                                }
+                                setSelectedAttachments(newSet);
+                                setSelectAllAttachments(
+                                  newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + localAttachments.length
+                                );
+                              }}
+                              data-testid={`checkbox-local-${index}`}
+                            />
+                            {isImage ? (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E2E8F0]">
+                                <img
+                                  src={attachment.url}
+                                  alt={attachment.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <FileText className="w-8 h-8 text-[#22C55E]" />
+                            )}
+                            <div className="flex-1">
+                              <span className="text-sm text-[#1E293B]">{attachment.name}</span>
+                              <Badge variant="outline" className="ml-2 text-xs text-[#22C55E] border-[#22C55E]">
+                                New
+                              </Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-600 h-6 w-6 p-0"
+                              onClick={() => setLocalAttachments((prev) => prev.filter((_, i) => i !== index))}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
                           </div>
                         );
                       })}
