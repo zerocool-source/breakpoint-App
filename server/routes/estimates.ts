@@ -1296,33 +1296,54 @@ export function registerEstimateRoutes(app: any) {
       // Get base URL for photo links in email
       const photoBaseUrl = baseUrl;
       
-      // Fetch photos from object storage for attachments
+      // Fetch photos for attachments - handle both object storage and external URLs
       const objectStorageService = new ObjectStorageService();
-      const validPhotos = (existingEstimate.photos || []).filter((p: string) => p && typeof p === 'string' && p.startsWith('/objects/'));
+      const allPhotos = (existingEstimate.photos || []).filter((p: string) => p && typeof p === 'string');
       const photoAttachments: { name: string; contentType: string; contentBytes: string }[] = [];
       const photoUrls: string[] = [];
       
-      for (let i = 0; i < validPhotos.length; i++) {
+      let photoIndex = 0;
+      for (const photoPath of allPhotos) {
         try {
-          const photoPath = validPhotos[i];
-          const objectFile = await objectStorageService.getObjectEntityFile(photoPath);
-          const [metadata] = await objectFile.getMetadata();
-          const [buffer] = await objectFile.download();
+          let buffer: Buffer;
+          let contentType: string = 'image/jpeg';
           
-          const contentType = metadata.contentType || 'image/jpeg';
+          if (photoPath.startsWith('/objects/')) {
+            // Object storage path - download from object storage
+            const objectFile = await objectStorageService.getObjectEntityFile(photoPath);
+            const [metadata] = await objectFile.getMetadata();
+            const [downloadedBuffer] = await objectFile.download();
+            buffer = downloadedBuffer;
+            contentType = metadata.contentType || 'image/jpeg';
+            photoUrls.push(`${photoBaseUrl}${photoPath}`);
+          } else if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+            // External URL - fetch from the URL
+            const response = await fetch(photoPath);
+            if (!response.ok) {
+              console.error(`Failed to fetch external photo ${photoPath}: ${response.status}`);
+              continue;
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            buffer = Buffer.from(arrayBuffer);
+            contentType = response.headers.get('content-type') || 'image/jpeg';
+            photoUrls.push(photoPath);
+          } else {
+            // Unknown format, skip
+            console.warn(`Skipping unknown photo format: ${photoPath}`);
+            continue;
+          }
+          
+          photoIndex++;
           const extension = contentType.includes('png') ? 'png' : contentType.includes('gif') ? 'gif' : 'jpg';
-          const filename = `Photo-${i + 1}.${extension}`;
+          const filename = `Photo-${photoIndex}.${extension}`;
           
           photoAttachments.push({
             name: filename,
             contentType,
             contentBytes: buffer.toString('base64'),
           });
-          
-          // Build public URL for thumbnail in email
-          photoUrls.push(`${photoBaseUrl}${photoPath}`);
         } catch (error) {
-          console.error(`Failed to fetch photo ${validPhotos[i]}:`, error);
+          console.error(`Failed to fetch photo ${photoPath}:`, error);
         }
       }
       
