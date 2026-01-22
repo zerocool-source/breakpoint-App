@@ -232,10 +232,11 @@ export function InvoicePreviewModal({
   const [createError, setCreateError] = useState<string | null>(null);
   
   // Fetch customers for the customer/account dropdown
-  const { data: customers = [] } = useQuery<{ id: string; name: string; email: string | null }[]>({
+  const { data: customersData } = useQuery<{ customers: { id: string; name: string; email: string | null }[] }>({
     queryKey: ["/api/customers"],
     enabled: open,
   });
+  const customers = customersData?.customers || [];
 
   // Reset state when modal opens with new estimate
   useEffect(() => {
