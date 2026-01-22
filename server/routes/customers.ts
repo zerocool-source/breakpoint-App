@@ -624,77 +624,155 @@ export function registerCustomerRoutes(app: any) {
       // Use resolved customer ID for pool lookups
       const finalCustomerId = String(customer.RecordID || customer.CustomerID);
 
-      // Build addresses list
+      // Build addresses list from Pool Brain Addresses object
       const addresses: any[] = [];
+      const bodiesOfWater: any[] = [];
       
-      // Primary address
-      if (customer.Address || customer.Street) {
-        addresses.push({
-          id: `primary-${customerId}`,
-          type: "PRIMARY",
-          label: "Primary",
-          addressLine1: customer.Address || customer.Street || "",
-          addressLine2: customer.Address2 || "",
-          city: customer.City || "",
-          state: customer.State || "",
-          zip: customer.Zip || customer.ZipCode || "",
-          careOf: null,
+      // Pool Brain stores addresses in a nested "Addresses" object
+      if (customer.Addresses && typeof customer.Addresses === 'object') {
+        Object.entries(customer.Addresses).forEach(([addressId, addrData]: [string, any]) => {
+          // Extract primary address
+          if (addrData.PrimaryAddress) {
+            const existing = addresses.find(a => a.addressLine1 === addrData.PrimaryAddress && a.type === "PRIMARY");
+            if (!existing) {
+              addresses.push({
+                id: `primary-${addressId}`,
+                type: "PRIMARY",
+                label: "Primary",
+                addressLine1: addrData.PrimaryAddress || "",
+                addressLine2: "",
+                city: addrData.PrimaryCity || "",
+                state: addrData.PrimaryState || "",
+                zip: addrData.PrimaryZip || "",
+                careOf: null,
+              });
+            }
+          }
+          
+          // Extract billing address (only if different from primary)
+          if (addrData.BillingAddress && addrData.BillingAddress !== addrData.PrimaryAddress) {
+            const existing = addresses.find(a => a.addressLine1 === addrData.BillingAddress && a.type === "BILLING");
+            if (!existing) {
+              const careOf = addrData.BillingCareOf || addrData.CareOf || null;
+              addresses.push({
+                id: `billing-${addressId}`,
+                type: "BILLING",
+                label: careOf ? `C/O: ${careOf}` : "Billing",
+                addressLine1: addrData.BillingAddress || "",
+                addressLine2: "",
+                city: addrData.BillingCity || "",
+                state: addrData.BillingState || "",
+                zip: addrData.BillingZip || "",
+                careOf: careOf,
+              });
+            }
+          }
+          
+          // Extract water bodies from each address entry
+          if (addrData.WaterBodies && Array.isArray(addrData.WaterBodies)) {
+            addrData.WaterBodies.forEach((wb: any) => {
+              const bodyOfWater = (wb.BodyofWater || wb.BodyOfWater || "Pool").toLowerCase();
+              let waterBodyType = "pool";
+              
+              if (bodyOfWater.includes("spa") || bodyOfWater.includes("hot tub") || bodyOfWater.includes("jacuzzi")) {
+                waterBodyType = "spa";
+              } else if (bodyOfWater.includes("fountain")) {
+                waterBodyType = "fountain";
+              } else if (bodyOfWater.includes("pond")) {
+                waterBodyType = "pond";
+              } else if (bodyOfWater.includes("lake")) {
+                waterBodyType = "lake";
+              } else if (bodyOfWater.includes("beach")) {
+                waterBodyType = "beach_pool";
+              }
+              
+              bodiesOfWater.push({
+                id: wb.PoolID,
+                name: wb.BodyofWater || wb.BodyOfWater || "Pool",
+                type: waterBodyType,
+                displayType: wb.BodyofWater || wb.BodyOfWater || "Pool",
+                serviceLevel: addrData.ServiceLevel || null,
+                waterType: null,
+                gallons: null,
+                address: addrData.PrimaryAddress || null,
+                city: addrData.PrimaryCity || null,
+                state: addrData.PrimaryState || null,
+                zip: addrData.PrimaryZip || null,
+              });
+            });
+          }
         });
       }
-
-      // Billing address
-      if (customer.BillingAddress || customer.BillingStreet) {
-        const billingCareOf = customer.BillingCareOf || customer.BillingCoName || null;
-        addresses.push({
-          id: `billing-${customerId}`,
-          type: "BILLING",
-          label: billingCareOf ? `C/O: ${billingCareOf}` : "Billing",
-          addressLine1: customer.BillingAddress || customer.BillingStreet || "",
-          addressLine2: customer.BillingAddress2 || "",
-          city: customer.BillingCity || customer.City || "",
-          state: customer.BillingState || customer.State || "",
-          zip: customer.BillingZip || customer.BillingZipCode || customer.Zip || "",
-          careOf: billingCareOf,
-        });
-      }
-
-      // Get pools/bodies of water for this customer (using resolved customer ID)
-      const allPools = poolsData.data || [];
-      const customerPools = allPools.filter((p: any) => 
-        String(p.CustomerID || p.customerId) === finalCustomerId
-      );
-
-      // Map bodies of water with type categorization
-      const bodiesOfWater = customerPools.map((p: any) => {
-        const poolType = (p.PoolType || p.Type || "Pool").toLowerCase();
-        let waterBodyType = "pool";
-        
-        if (poolType.includes("spa") || poolType.includes("hot tub") || poolType.includes("jacuzzi")) {
-          waterBodyType = "spa";
-        } else if (poolType.includes("fountain")) {
-          waterBodyType = "fountain";
-        } else if (poolType.includes("pond")) {
-          waterBodyType = "pond";
-        } else if (poolType.includes("lake")) {
-          waterBodyType = "lake";
-        } else if (poolType.includes("beach")) {
-          waterBodyType = "beach_pool";
+      
+      // Fallback: Legacy flat address structure
+      if (addresses.length === 0) {
+        if (customer.Address || customer.Street) {
+          addresses.push({
+            id: `primary-${finalCustomerId}`,
+            type: "PRIMARY",
+            label: "Primary",
+            addressLine1: customer.Address || customer.Street || "",
+            addressLine2: customer.Address2 || "",
+            city: customer.City || "",
+            state: customer.State || "",
+            zip: customer.Zip || customer.ZipCode || "",
+            careOf: null,
+          });
         }
+        if (customer.BillingAddress || customer.BillingStreet) {
+          const billingCareOf = customer.BillingCareOf || customer.BillingCoName || null;
+          addresses.push({
+            id: `billing-${finalCustomerId}`,
+            type: "BILLING",
+            label: billingCareOf ? `C/O: ${billingCareOf}` : "Billing",
+            addressLine1: customer.BillingAddress || customer.BillingStreet || "",
+            addressLine2: customer.BillingAddress2 || "",
+            city: customer.BillingCity || customer.City || "",
+            state: customer.BillingState || customer.State || "",
+            zip: customer.BillingZip || customer.BillingZipCode || customer.Zip || "",
+            careOf: billingCareOf,
+          });
+        }
+      }
+      
+      // Fallback: Get pools from customer_pool_details if no water bodies found in Addresses
+      if (bodiesOfWater.length === 0) {
+        const allPools = poolsData.data || [];
+        const customerPools = allPools.filter((p: any) => 
+          String(p.CustomerID || p.customerId) === finalCustomerId
+        );
 
-        return {
-          id: p.RecordID || p.PoolID,
-          name: p.PoolName || p.Name || "Pool",
-          type: waterBodyType,
-          displayType: p.PoolType || p.Type || "Pool",
-          serviceLevel: p.ServiceLevel || p.ServiceType || null,
-          waterType: p.WaterType || null,
-          gallons: p.Gallons || p.Volume || null,
-          address: p.Address || p.PoolAddress || null,
-          city: p.City || null,
-          state: p.State || null,
-          zip: p.Zip || p.ZipCode || null,
-        };
-      });
+        customerPools.forEach((p: any) => {
+          const poolType = (p.PoolType || p.Type || "Pool").toLowerCase();
+          let waterBodyType = "pool";
+          
+          if (poolType.includes("spa") || poolType.includes("hot tub") || poolType.includes("jacuzzi")) {
+            waterBodyType = "spa";
+          } else if (poolType.includes("fountain")) {
+            waterBodyType = "fountain";
+          } else if (poolType.includes("pond")) {
+            waterBodyType = "pond";
+          } else if (poolType.includes("lake")) {
+            waterBodyType = "lake";
+          } else if (poolType.includes("beach")) {
+            waterBodyType = "beach_pool";
+          }
+
+          bodiesOfWater.push({
+            id: p.RecordID || p.PoolID,
+            name: p.PoolName || p.Name || "Pool",
+            type: waterBodyType,
+            displayType: p.PoolType || p.Type || "Pool",
+            serviceLevel: p.ServiceLevel || p.ServiceType || null,
+            waterType: p.WaterType || null,
+            gallons: p.Gallons || p.Volume || null,
+            address: p.Address || p.PoolAddress || null,
+            city: p.City || null,
+            state: p.State || null,
+            zip: p.Zip || p.ZipCode || null,
+          });
+        });
+      }
 
       // Calculate summary of water body types
       const waterBodySummary: Record<string, number> = {};
