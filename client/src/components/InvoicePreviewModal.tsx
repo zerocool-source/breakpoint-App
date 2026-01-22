@@ -1038,126 +1038,6 @@ export function InvoicePreviewModal({
                 </div>
               </div>
 
-              {/* Send Invoice To */}
-              <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
-                <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  Send Invoice To
-                </h3>
-                
-                {loadingBillingContacts ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
-                    <span className="ml-2 text-sm text-[#64748B]">Loading billing contacts...</span>
-                  </div>
-                ) : billingContacts.length > 0 ? (
-                  <Select value={selectedEmail} onValueChange={setSelectedEmail}>
-                    <SelectTrigger data-testid="select-billing-contact">
-                      <SelectValue placeholder="Select billing contact..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {billingContacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.email}>
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-3 h-3 text-[#64748B]" />
-                            <span>{contact.name}</span>
-                            <span className="text-[#94A3B8]">({contact.email})</span>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {contact.contactType}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="p-3 bg-[#FEF3C7] border border-[#FCD34D] rounded-lg">
-                    <p className="text-sm text-[#D97706]">
-                      No billing contacts found for this property.
-                    </p>
-                    <Input
-                      type="email"
-                      placeholder="Enter billing email manually..."
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
-                      className="mt-2"
-                      data-testid="input-manual-email"
-                    />
-                  </div>
-                )}
-
-                {/* CC/BCC Options */}
-                <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCcBcc(!showCcBcc)}
-                    className="text-sm text-[#0078D4] hover:underline"
-                  >
-                    {showCcBcc ? "Hide CC/BCC" : "Add CC/BCC"}
-                  </button>
-                  
-                  {showCcBcc && (
-                    <div className="mt-3 space-y-3">
-                      <div>
-                        <Label className="text-sm text-[#64748B]">CC</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            type="email"
-                            value={newCcEmail}
-                            onChange={(e) => setNewCcEmail(e.target.value)}
-                            placeholder="Add CC email..."
-                            onKeyDown={(e) => e.key === "Enter" && addCcEmail()}
-                          />
-                          <Button variant="outline" size="sm" onClick={addCcEmail}>
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        {ccEmails.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {ccEmails.map((email, index) => (
-                              <Badge key={index} variant="secondary" className="gap-1">
-                                {email}
-                                <X
-                                  className="w-3 h-3 cursor-pointer"
-                                  onClick={() => setCcEmails(ccEmails.filter((_, i) => i !== index))}
-                                />
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <Label className="text-sm text-[#64748B]">BCC</Label>
-                        <div className="flex gap-2 mt-1">
-                          <Input
-                            type="email"
-                            value={newBccEmail}
-                            onChange={(e) => setNewBccEmail(e.target.value)}
-                            placeholder="Add BCC email..."
-                            onKeyDown={(e) => e.key === "Enter" && addBccEmail()}
-                          />
-                          <Button variant="outline" size="sm" onClick={addBccEmail}>
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        {bccEmails.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {bccEmails.map((email, index) => (
-                              <Badge key={index} variant="secondary" className="gap-1">
-                                {email}
-                                <X
-                                  className="w-3 h-3 cursor-pointer"
-                                  onClick={() => setBccEmails(bccEmails.filter((_, i) => i !== index))}
-                                />
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </ScrollArea>
 
@@ -1174,7 +1054,7 @@ export function InvoicePreviewModal({
             </Button>
             <Button
               onClick={() => setShowConfirmation(true)}
-              disabled={!finalEmail || isCreating}
+              disabled={isCreating}
               className="bg-[#0078D4] hover:bg-[#0078D4]/90"
               data-testid="button-confirm-send"
             >
