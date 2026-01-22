@@ -286,6 +286,7 @@ export interface IStorage {
     byStatus: Record<string, number>;
   }>;
   getTechOpsEntry(id: string): Promise<TechOpsEntry | undefined>;
+  generateServiceRepairNumber(): Promise<string>;
   createTechOpsEntry(entry: InsertTechOpsEntry): Promise<TechOpsEntry>;
   updateTechOpsEntry(id: string, updates: Partial<InsertTechOpsEntry>): Promise<TechOpsEntry | undefined>;
   markTechOpsReviewed(id: string, reviewedBy: string): Promise<TechOpsEntry | undefined>;
@@ -1829,8 +1830,40 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async generateServiceRepairNumber(): Promise<string> {
+    // Get the current year
+    const year = new Date().getFullYear();
+    const yearPrefix = year.toString().slice(-2);
+    const pattern = `${yearPrefix}-%`;
+    
+    // Use SQL to efficiently find the max number for this year
+    // Extract numeric suffix from format "YY-NNNNN" and find MAX
+    const result = await db.execute(sql`
+      SELECT COALESCE(MAX(
+        CASE 
+          WHEN service_repair_number ~ ('^' || ${yearPrefix} || '-[0-9]+$')
+          THEN CAST(SUBSTRING(service_repair_number FROM ('^' || ${yearPrefix} || '-([0-9]+)$')) AS INTEGER)
+          ELSE 0
+        END
+      ), 0) as max_num
+      FROM tech_ops_entries
+      WHERE service_repair_number LIKE ${pattern}
+    `);
+    
+    const maxNumber = Number((result as any).rows?.[0]?.max_num) || 0;
+    
+    // Generate next number with leading zeros (e.g., 26-00001)
+    const nextNumber = (maxNumber + 1).toString().padStart(5, '0');
+    return `${yearPrefix}-${nextNumber}`;
+  }
+
   async createTechOpsEntry(entry: InsertTechOpsEntry): Promise<TechOpsEntry> {
-    const result = await db.insert(techOpsEntries).values(entry as any).returning();
+    // Auto-generate SR# for service_repairs entries
+    const entryWithSR = { ...entry } as any;
+    if (entry.entryType === 'service_repairs' && !entryWithSR.serviceRepairNumber) {
+      entryWithSR.serviceRepairNumber = await this.generateServiceRepairNumber();
+    }
+    const result = await db.insert(techOpsEntries).values(entryWithSR).returning();
     return result[0];
   }
 

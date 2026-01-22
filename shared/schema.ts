@@ -270,6 +270,7 @@ export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
 // Tech Ops Entries (field technician submissions)
 export const techOpsEntries = pgTable("tech_ops_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceRepairNumber: text("service_repair_number"), // Auto-generated SR# for service repairs (format: YY-NNNNN)
   entryType: text("entry_type").notNull(), // "repairs_needed", "service_repairs", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "supervisor_concerns", "add_notes"
   technicianName: text("technician_name").notNull(),
   technicianId: varchar("technician_id"), // Link to technician record

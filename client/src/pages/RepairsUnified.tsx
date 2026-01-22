@@ -58,6 +58,7 @@ interface EnrichedAlert {
 
 interface TechOpsEntry {
   id: string;
+  serviceRepairNumber?: string | null;
   entryType: string;
   propertyId: string;
   propertyName: string;
@@ -893,9 +894,16 @@ export default function RepairsUnified() {
                                       />
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">
-                                          <p className="text-sm font-medium text-slate-800 line-clamp-2">
-                                            {repair.description || "Service repair work"}
-                                          </p>
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-sm font-medium text-slate-800 line-clamp-2">
+                                              {repair.description || "Service repair work"}
+                                            </p>
+                                            {repair.serviceRepairNumber && (
+                                              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                                SR#{repair.serviceRepairNumber}
+                                              </span>
+                                            )}
+                                          </div>
                                           <span className="text-sm font-bold text-emerald-600 whitespace-nowrap">
                                             {formatCurrency(repair.partsCost || 0)}
                                           </span>
@@ -1160,6 +1168,9 @@ export default function RepairsUnified() {
             <DialogTitle>Service Repair Details</DialogTitle>
             <DialogDescription>
               Review the service repair submission details.
+              {serviceRepairModal.repair?.serviceRepairNumber && (
+                <span className="ml-2 font-semibold text-blue-600">SR#{serviceRepairModal.repair.serviceRepairNumber}</span>
+              )}
             </DialogDescription>
           </DialogHeader>
           {serviceRepairModal.repair && (
@@ -1335,7 +1346,14 @@ export default function RepairsUnified() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <p className="font-medium text-slate-800">{repair.description || "Service Repair"}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-slate-800">{repair.description || "Service Repair"}</p>
+                                {repair.serviceRepairNumber && (
+                                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                    SR#{repair.serviceRepairNumber}
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
                                 <span className="flex items-center gap-1">
                                   <User className="w-3 h-3" />
