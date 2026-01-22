@@ -309,7 +309,7 @@ export default function Service() {
       );
     }
     if (emergenciesPositionFilter !== "all") {
-      entries = entries.filter(e => e.submittedByRole === emergenciesPositionFilter);
+      entries = entries.filter(e => e.submitterRole === emergenciesPositionFilter);
     }
     if (emergenciesTechFilter !== "all") {
       entries = entries.filter(e => e.submittedByName === emergenciesTechFilter);
@@ -1058,25 +1058,130 @@ export default function Service() {
           <TabsContent value="emergencies" className="mt-4">
             <Card className="bg-white">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  Emergencies
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    Emergencies
+                    <Badge variant="secondary" className="ml-2">{filteredEmergencies.length}</Badge>
+                  </CardTitle>
+                </div>
+                {/* Filter Bar */}
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Search property..."
+                        value={emergenciesPropertySearch}
+                        onChange={(e) => setEmergenciesPropertySearch(e.target.value)}
+                        className="pl-9"
+                        data-testid="input-emergencies-search"
+                      />
+                    </div>
+                    <Select value={emergenciesPositionFilter} onValueChange={setEmergenciesPositionFilter}>
+                      <SelectTrigger className="w-[160px]" data-testid="select-emergencies-position">
+                        <Users className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="Position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Positions</SelectItem>
+                        <SelectItem value="service_technician">Service Tech</SelectItem>
+                        <SelectItem value="supervisor">Supervisor</SelectItem>
+                        <SelectItem value="repair_technician">Repair Tech</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={emergenciesTechFilter} onValueChange={setEmergenciesTechFilter}>
+                      <SelectTrigger className="w-[180px]" data-testid="select-emergencies-tech">
+                        <User className="w-4 h-4 mr-2 text-slate-400" />
+                        <SelectValue placeholder="Technician" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Technicians</SelectItem>
+                        {uniqueEmergencyTechs.map(t => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Select value={emergenciesStatusFilter} onValueChange={setEmergenciesStatusFilter}>
+                      <SelectTrigger className="w-[140px]" data-testid="select-emergencies-status">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="pending_review">Pending Review</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="resolved">Resolved</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={emergenciesPriorityFilter} onValueChange={setEmergenciesPriorityFilter}>
+                      <SelectTrigger className="w-[130px]" data-testid="select-emergencies-priority">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Priorities</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <Input
+                        type="date"
+                        value={emergenciesDateFrom}
+                        onChange={(e) => setEmergenciesDateFrom(e.target.value)}
+                        className="w-[140px]"
+                        placeholder="From"
+                        data-testid="input-emergencies-date-from"
+                      />
+                      <span className="text-slate-400">to</span>
+                      <Input
+                        type="date"
+                        value={emergenciesDateTo}
+                        onChange={(e) => setEmergenciesDateTo(e.target.value)}
+                        className="w-[140px]"
+                        placeholder="To"
+                        data-testid="input-emergencies-date-to"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEmergenciesPropertySearch("");
+                        setEmergenciesPositionFilter("all");
+                        setEmergenciesTechFilter("all");
+                        setEmergenciesStatusFilter("all");
+                        setEmergenciesPriorityFilter("all");
+                        setEmergenciesDateFrom("");
+                        setEmergenciesDateTo("");
+                      }}
+                      data-testid="button-emergencies-clear-filters"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {emergenciesLoading ? (
                   <div className="flex items-center justify-center h-40">
                     <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
                   </div>
-                ) : emergencies.length === 0 ? (
+                ) : filteredEmergencies.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-40 text-slate-500">
                     <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
                     <p>No emergencies found</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[calc(100vh-400px)]">
+                  <ScrollArea className="h-[calc(100vh-500px)]">
                     <div className="space-y-3 pr-4">
-                      {emergencies.map(emergency => {
+                      {filteredEmergencies.map(emergency => {
                         const statusInfo = statusConfig[emergency.status || "pending_review"] || statusConfig.pending_review;
                         const prioInfo = priorityConfig[emergency.priority || "normal"] || priorityConfig.normal;
                         return (
