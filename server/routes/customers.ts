@@ -542,15 +542,68 @@ export function registerCustomerRoutes(app: any) {
         client.getCustomerNotes({ limit: 2000 }).catch(() => ({ data: [] })),
       ]);
 
-      // Find the customer
-      const customer = (customerData.data || []).find((c: any) => 
+      // Find the customer - first try direct lookup
+      let customer = (customerData.data || []).find((c: any) => 
         String(c.RecordID || c.CustomerID) === customerId
       );
+      
+      // If not found directly, the customerId might be a property ID
+      // Try looking up by property name or external ID from local storage
+      let resolvedCustomerId = customerId;
+      if (!customer) {
+        // Try to get property from local storage and resolve to customer
+        const property = await storage.getProperty(customerId);
+        if (property?.customerId) {
+          resolvedCustomerId = property.customerId;
+          customer = (customerData.data || []).find((c: any) => 
+            String(c.RecordID || c.CustomerID) === resolvedCustomerId
+          );
+        }
+        
+        // Also try matching by name
+        if (!customer) {
+          const localCustomer = await storage.getCustomer(customerId);
+          if (localCustomer) {
+            // Try to find in Pool Brain by name
+            customer = (customerData.data || []).find((c: any) => {
+              const pbName = c.Name || c.CustomerName || `${c.FirstName || ''} ${c.LastName || ''}`.trim();
+              return pbName.toLowerCase() === localCustomer.name?.toLowerCase();
+            });
+          }
+        }
+      }
 
       if (!customer) {
         // Fallback to local database if not found in API
         const localCustomer = await storage.getCustomer(customerId);
         if (!localCustomer) {
+          // Try to get as property
+          const property = await storage.getProperty(customerId);
+          if (property) {
+            return res.json({
+              customer: {
+                id: property.id,
+                name: property.customerName || property.name,
+                email: null,
+                phone: null,
+                routeStopEmail: null,
+              },
+              addresses: property.address ? [{
+                id: `primary-${property.id}`,
+                type: "PRIMARY",
+                label: "Primary",
+                addressLine1: property.address,
+                addressLine2: "",
+                city: property.city || "",
+                state: property.state || "",
+                zip: property.zip || "",
+                careOf: null,
+              }] : [],
+              bodiesOfWater: [],
+              waterBodySummary: {},
+              tags: [],
+            });
+          }
           return res.status(404).json({ error: "Customer not found" });
         }
         return res.json({
@@ -559,6 +612,7 @@ export function registerCustomerRoutes(app: any) {
             name: localCustomer.name,
             email: localCustomer.email,
             phone: localCustomer.phone,
+            routeStopEmail: null,
           },
           addresses: [],
           bodiesOfWater: [],
@@ -566,6 +620,9 @@ export function registerCustomerRoutes(app: any) {
           tags: [],
         });
       }
+      
+      // Use resolved customer ID for pool lookups
+      const finalCustomerId = String(customer.RecordID || customer.CustomerID);
 
       // Build addresses list
       const addresses: any[] = [];
@@ -601,10 +658,10 @@ export function registerCustomerRoutes(app: any) {
         });
       }
 
-      // Get pools/bodies of water for this customer
+      // Get pools/bodies of water for this customer (using resolved customer ID)
       const allPools = poolsData.data || [];
       const customerPools = allPools.filter((p: any) => 
-        String(p.CustomerID || p.customerId) === customerId
+        String(p.CustomerID || p.customerId) === finalCustomerId
       );
 
       // Map bodies of water with type categorization
