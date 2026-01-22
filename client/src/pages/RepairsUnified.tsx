@@ -441,7 +441,8 @@ export default function RepairsUnified() {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
         r.propertyName.toLowerCase().includes(term) ||
-        (r.description?.toLowerCase().includes(term) ?? false)
+        (r.description?.toLowerCase().includes(term) ?? false) ||
+        (r.serviceRepairNumber?.toLowerCase().includes(term) ?? false)
       );
     }
     if (propertyFilter !== "all") {
@@ -676,7 +677,7 @@ export default function RepairsUnified() {
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Search repairs..."
+              placeholder="Search repairs or SR#..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
