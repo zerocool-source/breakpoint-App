@@ -604,6 +604,8 @@ export default function Supervisors() {
   const [expandedSupervisors, setExpandedSupervisors] = useState<Set<string>>(new Set());
   const [photoGallery, setPhotoGallery] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
   const [inspectionPropertyFilter, setInspectionPropertyFilter] = useState("all");
+  const [inspectionDateFrom, setInspectionDateFrom] = useState("");
+  const [inspectionDateTo, setInspectionDateTo] = useState("");
   const queryClient = useQueryClient();
 
   const { data: supervisorsData, isLoading: loadingSupervisors } = useQuery<{ technicians: Supervisor[] }>({
@@ -640,10 +642,24 @@ export default function Supervisors() {
   // Get unique properties from inspections for filter
   const inspectionProperties = Array.from(new Set(qcInspections.map(i => i.propertyName))).sort();
 
-  // Filter inspections by property
-  const filteredInspections = inspectionPropertyFilter === "all" 
-    ? qcInspections 
-    : qcInspections.filter(i => i.propertyName === inspectionPropertyFilter);
+  // Filter inspections by property and date
+  const filteredInspections = qcInspections.filter(i => {
+    if (inspectionPropertyFilter !== "all" && i.propertyName !== inspectionPropertyFilter) {
+      return false;
+    }
+    if (inspectionDateFrom) {
+      const fromDate = new Date(inspectionDateFrom);
+      const inspectionDate = i.dueDate ? new Date(i.dueDate) : new Date(i.createdAt);
+      if (inspectionDate < fromDate) return false;
+    }
+    if (inspectionDateTo) {
+      const toDate = new Date(inspectionDateTo);
+      toDate.setHours(23, 59, 59, 999);
+      const inspectionDate = i.dueDate ? new Date(i.dueDate) : new Date(i.createdAt);
+      if (inspectionDate > toDate) return false;
+    }
+    return true;
+  });
 
   // Group inspections by supervisor
   const inspectionsBySupervisor = filteredInspections.reduce((acc, inspection) => {
@@ -1096,14 +1112,14 @@ export default function Supervisors() {
           </TabsContent>
 
           <TabsContent value="inspections" className="p-6">
-            {/* Property Filter */}
-            <div className="flex items-center gap-4 mb-6">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-4 mb-6">
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">Filter by Property:</span>
+                <span className="text-sm font-medium text-slate-700">Filters:</span>
               </div>
               <Select value={inspectionPropertyFilter} onValueChange={setInspectionPropertyFilter}>
-                <SelectTrigger className="w-[280px]" data-testid="filter-inspection-property">
+                <SelectTrigger className="w-[200px]" data-testid="filter-inspection-property">
                   <SelectValue placeholder="All Properties" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1113,6 +1129,39 @@ export default function Supervisors() {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4 text-slate-400" />
+                <Input
+                  type="date"
+                  value={inspectionDateFrom}
+                  onChange={(e) => setInspectionDateFrom(e.target.value)}
+                  className="w-[140px]"
+                  data-testid="input-inspection-date-from"
+                />
+                <span className="text-slate-400">to</span>
+                <Input
+                  type="date"
+                  value={inspectionDateTo}
+                  onChange={(e) => setInspectionDateTo(e.target.value)}
+                  className="w-[140px]"
+                  data-testid="input-inspection-date-to"
+                />
+              </div>
+              {(inspectionPropertyFilter !== "all" || inspectionDateFrom || inspectionDateTo) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setInspectionPropertyFilter("all");
+                    setInspectionDateFrom("");
+                    setInspectionDateTo("");
+                  }}
+                  data-testid="button-clear-inspection-filters"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Clear
+                </Button>
+              )}
               <Badge variant="outline" className="ml-auto">
                 {filteredInspections.length} inspection{filteredInspections.length !== 1 ? 's' : ''}
               </Badge>
