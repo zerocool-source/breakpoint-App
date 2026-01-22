@@ -44,6 +44,7 @@ interface Technician {
   phone: string | null;
   email: string | null;
   truckNumber: string | null;
+  commissionPercent: number | null;
   active: boolean;
   role: string;
 }
@@ -181,7 +182,7 @@ function EditTechnicianModal({
   open: boolean; 
   onClose: () => void;
   technician: Technician | null;
-  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string }) => void;
+  onSave: (id: string, data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string; commissionPercent: number | null }) => void;
   onDelete: (id: string) => void;
 }) {
   const [firstName, setFirstName] = useState("");
@@ -189,6 +190,7 @@ function EditTechnicianModal({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [truckNumber, setTruckNumber] = useState("");
+  const [commissionPercent, setCommissionPercent] = useState<string>("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
@@ -198,12 +200,14 @@ function EditTechnicianModal({
       setPhone(technician.phone || "");
       setEmail(technician.email || "");
       setTruckNumber(technician.truckNumber || "");
+      setCommissionPercent(technician.commissionPercent !== null && technician.commissionPercent !== undefined ? String(technician.commissionPercent) : "");
     }
   }, [technician]);
 
   const handleSubmit = () => {
     if (!technician || !firstName.trim() || !lastName.trim()) return;
-    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email, truckNumber });
+    const commissionValue = commissionPercent.trim() ? parseInt(commissionPercent, 10) : null;
+    onSave(technician.id, { firstName: firstName.trim(), lastName: lastName.trim(), phone, email, truckNumber, commissionPercent: commissionValue });
     onClose();
   };
 
@@ -220,6 +224,7 @@ function EditTechnicianModal({
     setPhone("");
     setEmail("");
     setTruckNumber("");
+    setCommissionPercent("");
     onClose();
   };
 
@@ -293,6 +298,19 @@ function EditTechnicianModal({
                       onChange={(e) => setTruckNumber(e.target.value)}
                       className="bg-white"
                       data-testid="input-edit-truck-number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Commission %</label>
+                    <Input
+                      placeholder="Commission %"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={commissionPercent}
+                      onChange={(e) => setCommissionPercent(e.target.value)}
+                      className="bg-white"
+                      data-testid="input-edit-commission-percent"
                     />
                   </div>
                 </div>
@@ -702,7 +720,7 @@ export default function RepairTechs() {
   });
 
   const updateTechnicianMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string; commissionPercent: number | null } }) => {
       const res = await fetch(`/api/technicians/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -849,6 +867,9 @@ export default function RepairTechs() {
                   Truck #
                 </th>
                 <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Commission %
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="text-right px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -859,13 +880,13 @@ export default function RepairTechs() {
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     Loading technicians...
                   </td>
                 </tr>
               ) : filteredTechnicians.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                     {searchQuery ? "No technicians match your search" : "No repair technicians found. Click 'Add Repair Tech' to add one."}
                   </td>
                 </tr>
@@ -908,6 +929,15 @@ export default function RepairTechs() {
                         {tech.truckNumber ? (
                           <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium text-sm">
                             #{tech.truckNumber}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {tech.commissionPercent !== null && tech.commissionPercent !== undefined ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 font-medium text-sm">
+                            {tech.commissionPercent}%
                           </span>
                         ) : (
                           <span className="text-slate-400">-</span>
