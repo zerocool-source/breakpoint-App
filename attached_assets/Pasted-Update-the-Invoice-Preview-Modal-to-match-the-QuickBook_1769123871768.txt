@@ -1,0 +1,71 @@
+Update the Invoice Preview Modal to match the QuickBooks invoice layout and pull all customer/property data from our Customers database. The modal should allow editing before sending to QuickBooks.
+Customer/Account Selection (Top of Modal):
+At the top, show a dropdown to select the QuickBooks customer account (e.g., "REPAIRS- McSweeny Farms"). This should pull from our Customers list and match to the linked QuickBooks customer. Below that, show an email field that auto-populates from the customer profile but allows typing a different email or selecting from a dropdown of all emails associated with that customer. Include CC/BCC option.
+Bill To Section:
+Pull billing address from the customer profile in our database (from the Properties > Contacts section). Show as a card displaying customer name, C/O, ATTN, and full address. Include a dropdown to select from multiple billing addresses if the customer has more than one. Allow typing a custom address if needed. Add "Edit Client" link to modify.
+Ship To / Service Location Section:
+Pull the property address where the work was performed from our database. Show dropdown of all properties associated with this customer. Display the selected property address. Allow selecting a different property or typing a custom address.
+Ship From Section:
+Auto-fill with Breakpoint Commercial Pool Systems, 6236 River Crest Dr, Ste C, Riverside, CA 92507-0773.
+Invoice Details Section:
+Match QuickBooks layout with fields for:
+
+Invoice Number (auto-generated, editable)
+Terms dropdown (Net 30, Net 15, Due on Receipt, etc.)
+Invoice Date (date picker)
+Due Date (auto-calculated from terms, editable)
+Ship via (optional)
+Shipping date (optional)
+Tracking no. (optional)
+
+Assignment Info Section:
+Pull from completed job data with dropdowns for:
+
+Status (e.g., ">$500.00/Completed/Approved Per Contract w/Assoc.")
+Notes (text field)
+Repair Tech (dropdown from technicians)
+Field Supervisor (dropdown)
+Office Member (dropdown, e.g., "Audrey")
+Service Tech (dropdown, e.g., "Aaron P")
+Reported date
+Repair Foreman (dropdown)
+
+Tags and Location:
+
+Tags field (hidden) - allow typing to add tags
+Location dropdown (hidden)
+
+Line Items Table:
+Display table with columns: #, Service Date, Product/Service, SKU, Description, Qty, Rate, Amount, Class (hidden), Tax checkbox. Show all line items from the estimate/completed job. Include "Add product or service" button and "Clear all lines" option.
+Totals Section (Right Side):
+
+Subtotal
+Discount (% or $ toggle)
+Taxable subtotal
+Select sales tax rate dropdown (Automatic Calculation option)
+Sales tax amount with "See the math" link
+Invoice total
+"+ Charge a deposit" link
+"Edit totals" link
+
+Customer Payment Options Section:
+
+Text area: "Tell your customer how you want to get paid"
+Note to customer (visible on invoice, e.g., "Members California Association of Community Managers (CACM), and Community Associations Institute (CAI)")
+Internal customer notes (hidden) - pull from customer profile
+Memo on statement (hidden)
+
+Attachments Section:
+
+Show completion photos from the job
+"Attach to email" checkbox for each
+"Select All" checkbox
+"Add attachment" button (max 20 MB)
+
+Footer Buttons:
+
+Cancel
+Edit Details
+Confirm & Send to QuickBooks
+
+All data should be pulled from our Customers and Properties database, pre-populating fields but allowing manual edits or alternative selections via dropdowns before sending to QuickBooks.

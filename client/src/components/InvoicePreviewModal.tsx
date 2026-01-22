@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, addDays } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,7 @@ import {
   Upload,
   Image as ImageIcon,
   Paperclip,
+  Users,
 } from "lucide-react";
 
 interface EstimateLineItem {
@@ -187,6 +189,9 @@ export function InvoicePreviewModal({
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   
+  // Customer/Account selection
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  
   // Invoice details
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
@@ -219,8 +224,18 @@ export function InvoicePreviewModal({
   const [newCcEmail, setNewCcEmail] = useState("");
   const [newBccEmail, setNewBccEmail] = useState("");
   
+  // Attachment selections
+  const [selectedAttachments, setSelectedAttachments] = useState<Set<number>>(new Set());
+  const [selectAllAttachments, setSelectAllAttachments] = useState(false);
+  
   // Error state
   const [createError, setCreateError] = useState<string | null>(null);
+  
+  // Fetch customers for the customer/account dropdown
+  const { data: customers = [] } = useQuery<{ id: string; name: string; email: string | null }[]>({
+    queryKey: ["/api/customers"],
+    enabled: open,
+  });
 
   // Reset state when modal opens with new estimate
   useEffect(() => {
@@ -346,6 +361,48 @@ export function InvoicePreviewModal({
 
           <ScrollArea className="max-h-[calc(90vh-180px)]">
             <div className="p-6 space-y-6">
+              {/* Customer/Account Selection */}
+              <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
+                <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Customer / Account
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-[#64748B]">QuickBooks Customer Account</Label>
+                    <Select
+                      value={selectedCustomerId}
+                      onValueChange={setSelectedCustomerId}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger className="mt-1" data-testid="select-customer-account">
+                        <SelectValue placeholder="Select customer account..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            <span className="font-medium">{customer.name}</span>
+                            {customer.email && (
+                              <span className="text-[#94A3B8] ml-2">({customer.email})</span>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-[#94A3B8] mt-1">
+                      Links to the QuickBooks customer record for billing
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-[#64748B]">Current Property</p>
+                    <p className="font-medium text-[#1E293B] mt-1">{estimate.propertyName}</p>
+                    <p className="text-xs text-[#94A3B8]">
+                      {estimate.customerName || "No customer linked"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Invoice Summary */}
               <div className="bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] p-4">
                 <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
@@ -848,43 +905,111 @@ export function InvoicePreviewModal({
                     <Label className="text-sm text-[#64748B]">
                       Completion Photos & Documents
                     </Label>
-                    {isEditing && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[#0078D4] border-[#0078D4]"
-                        data-testid="button-add-attachment"
-                      >
-                        <Upload className="w-3 h-3 mr-1" />
-                        Add Attachment
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {((estimate.photos && estimate.photos.length > 0) ||
+                        (estimate.attachments && estimate.attachments.length > 0)) && (
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="select-all-attachments"
+                            checked={selectAllAttachments}
+                            onCheckedChange={(checked) => {
+                              setSelectAllAttachments(!!checked);
+                              if (checked) {
+                                const allIndexes = new Set<number>();
+                                (estimate.photos || []).forEach((_, i) => allIndexes.add(i));
+                                (estimate.attachments || []).forEach((_, i) => allIndexes.add(i + (estimate.photos?.length || 0)));
+                                setSelectedAttachments(allIndexes);
+                              } else {
+                                setSelectedAttachments(new Set());
+                              }
+                            }}
+                            data-testid="checkbox-select-all-attachments"
+                          />
+                          <Label htmlFor="select-all-attachments" className="text-xs text-[#64748B] cursor-pointer">
+                            Select All
+                          </Label>
+                        </div>
+                      )}
+                      {isEditing && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-[#0078D4] border-[#0078D4]"
+                          data-testid="button-add-attachment"
+                        >
+                          <Upload className="w-3 h-3 mr-1" />
+                          Add Attachment
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-[#94A3B8] mb-2">Max file size: 20 MB</p>
+                  <p className="text-xs text-[#94A3B8] mb-2">Max file size: 20 MB. Check boxes to attach to email.</p>
                   {((estimate.photos && estimate.photos.length > 0) ||
                     (estimate.attachments && estimate.attachments.length > 0)) ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="space-y-2">
                       {estimate.photos?.map((photo, index) => (
                         <div
                           key={`photo-${index}`}
-                          className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#E2E8F0]"
+                          className="flex items-center gap-3 p-2 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]"
                         >
-                          <img
-                            src={photo}
-                            alt={`Photo ${index + 1}`}
-                            className="w-full h-full object-cover"
+                          <Checkbox
+                            id={`photo-${index}`}
+                            checked={selectedAttachments.has(index)}
+                            onCheckedChange={(checked) => {
+                              const newSet = new Set(selectedAttachments);
+                              if (checked) {
+                                newSet.add(index);
+                              } else {
+                                newSet.delete(index);
+                              }
+                              setSelectedAttachments(newSet);
+                              setSelectAllAttachments(
+                                newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0)
+                              );
+                            }}
+                            data-testid={`checkbox-photo-${index}`}
                           />
+                          <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E2E8F0]">
+                            <img
+                              src={photo}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span className="text-sm text-[#1E293B]">Photo {index + 1}</span>
+                          <span className="text-xs text-[#94A3B8]">Attach to email</span>
                         </div>
                       ))}
-                      {estimate.attachments?.map((attachment, index) => (
-                        <div
-                          key={`attachment-${index}`}
-                          className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]"
-                        >
-                          <FileText className="w-4 h-4 text-[#64748B]" />
-                          <span className="text-sm text-[#1E293B]">{attachment.name}</span>
-                        </div>
-                      ))}
+                      {estimate.attachments?.map((attachment, index) => {
+                        const globalIndex = (estimate.photos?.length || 0) + index;
+                        return (
+                          <div
+                            key={`attachment-${index}`}
+                            className="flex items-center gap-3 p-2 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]"
+                          >
+                            <Checkbox
+                              id={`attachment-${index}`}
+                              checked={selectedAttachments.has(globalIndex)}
+                              onCheckedChange={(checked) => {
+                                const newSet = new Set(selectedAttachments);
+                                if (checked) {
+                                  newSet.add(globalIndex);
+                                } else {
+                                  newSet.delete(globalIndex);
+                                }
+                                setSelectedAttachments(newSet);
+                                setSelectAllAttachments(
+                                  newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0)
+                                );
+                              }}
+                              data-testid={`checkbox-attachment-${index}`}
+                            />
+                            <FileText className="w-8 h-8 text-[#64748B]" />
+                            <span className="text-sm text-[#1E293B]">{attachment.name}</span>
+                            <span className="text-xs text-[#94A3B8]">Attach to email</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-[#94A3B8] italic">No attachments</p>
