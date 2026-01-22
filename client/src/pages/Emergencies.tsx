@@ -127,7 +127,7 @@ export default function Emergencies() {
       setSelectedEmergency(null);
       toast({ 
         title: "Converted to Estimate", 
-        description: `Estimate ${data.estimate.estimateNumber} created successfully`
+        description: `EST#${data.estimate.estimateNumber} created successfully`
       });
     },
     onError: () => {

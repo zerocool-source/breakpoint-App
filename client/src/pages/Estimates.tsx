@@ -1002,7 +1002,7 @@ export default function Estimates() {
           body: JSON.stringify({
             customerName: selectedEstimate.propertyName,
             lineItems: selectedEstimate.items || [],
-            memo: `Estimate #${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
+            memo: `EST#${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
           }),
         });
 
@@ -1306,7 +1306,7 @@ export default function Estimates() {
           customerName: selectedEstimate.propertyName,
           customerEmail: selectedInvoiceEmail,
           lineItems: selectedEstimate.items || [],
-          memo: `Estimate #${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
+          memo: `EST#${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
         }),
       });
 
@@ -1944,7 +1944,7 @@ export default function Estimates() {
                             <div className="flex items-center gap-2 flex-wrap mt-1">
                               <span className="text-[14px] font-medium text-[#1E293B]">{getEstimateTitle(estimate)}</span>
                               {estimate.estimateNumber && (
-                                <span className="text-[13px] text-[#6B7280]">#{estimate.estimateNumber}</span>
+                                <span className="text-[13px] text-[#6B7280]">EST#{estimate.estimateNumber}</span>
                               )}
                               {estimate.items && estimate.items.length > 0 && inferSourceType(estimate) === "service_tech" && (
                                 <span className="text-[13px] text-[#6B7280]">- {estimate.items.length} items</span>
@@ -3638,7 +3638,7 @@ export default function Estimates() {
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">{selectedEstimate.title}</h3>
                       {selectedEstimate.estimateNumber && (
-                        <p className="text-sm text-gray-500">#{selectedEstimate.estimateNumber}</p>
+                        <p className="text-sm text-gray-500">EST#{selectedEstimate.estimateNumber}</p>
                       )}
                     </div>
                     <div className="text-right">

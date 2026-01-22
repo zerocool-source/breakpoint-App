@@ -435,7 +435,7 @@ export default function TechOps() {
       setMarkUrgent(false);
       toast({ 
         title: "Converted to Estimate", 
-        description: `Estimate #${data.estimateNumber || data.id} has been created`
+        description: `EST#${data.estimateNumber || data.id} has been created`
       });
     },
     onError: () => {

@@ -194,7 +194,7 @@ export default function Service() {
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
       toast({ 
         title: "Converted to Estimate", 
-        description: `Emergency has been converted to estimate ${data.estimate?.estimateNumber || ""}` 
+        description: `Emergency has been converted to EST#${data.estimate?.estimateNumber || ""}` 
       });
     },
     onError: (error: Error) => {

@@ -243,7 +243,7 @@ export default function EstimateApproval() {
                 <h2 style={{ color: "#1e3a5f", margin: 0, fontSize: "28px", fontWeight: "bold" }}>ESTIMATE</h2>
               </td>
               <td style={{ textAlign: "right" }}>
-                <p style={{ margin: 0, color: "#666" }}>Estimate #: <strong>{estimate.estimateNumber || "—"}</strong></p>
+                <p style={{ margin: 0, color: "#666" }}>EST#: <strong>{estimate.estimateNumber || "—"}</strong></p>
                 <p style={{ margin: 0, color: "#666" }}>Date: <strong>{formatDate(estimate.estimateDate || estimate.createdAt)}</strong></p>
                 {estimate.expirationDate && (
                   <p style={{ margin: 0, color: "#666" }}>Valid Until: <strong>{formatDate(estimate.expirationDate)}</strong></p>

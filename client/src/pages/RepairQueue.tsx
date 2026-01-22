@@ -1801,7 +1801,7 @@ export default function RepairQueue() {
                                         <div>
                                           <h4 className="font-semibold text-sm mb-2">Estimate Details</h4>
                                           <div className="space-y-1 text-sm">
-                                            <p><span className="text-slate-500">Estimate #:</span> {estimate.estimateNumber || "—"}</p>
+                                            <p><span className="text-slate-500">EST#:</span> {estimate.estimateNumber || "—"}</p>
                                             <p><span className="text-slate-500">Customer:</span> {estimate.customerName || "—"}</p>
                                             <p><span className="text-slate-500">Address:</span> {estimate.address || "—"}</p>
                                           </div>

@@ -1308,7 +1308,7 @@ export default function RepairsUnified() {
                           </div>
                           <div>
                             <h3 className="font-semibold text-slate-900">
-                              {group.estimate?.estimateNumber || group.estimate?.title || "Estimate"}
+                              EST#{group.estimate?.estimateNumber || group.estimate?.title || ""}
                             </h3>
                             <p className="text-sm text-slate-500">
                               {group.estimate?.propertyName || "Unknown Property"} • {group.repairs.length} repair{group.repairs.length !== 1 ? 's' : ''}
