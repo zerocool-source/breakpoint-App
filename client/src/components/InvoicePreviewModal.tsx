@@ -193,6 +193,18 @@ export function InvoicePreviewModal({
   const [dueDate, setDueDate] = useState<Date>(addDays(new Date(), 30));
   const [terms, setTerms] = useState("net_30");
   
+  // Bill To fields
+  const [billToName, setBillToName] = useState("");
+  const [billToCO, setBillToCO] = useState("");
+  const [billToATTN, setBillToATTN] = useState("");
+  const [billToAddress, setBillToAddress] = useState("");
+  const [selectedBillToAddress, setSelectedBillToAddress] = useState("default");
+  
+  // Ship To fields
+  const [shipToName, setShipToName] = useState("");
+  const [shipToAddress, setShipToAddress] = useState("");
+  const [selectedShipToAddress, setSelectedShipToAddress] = useState("default");
+  
   // Notes
   const [customerNote, setCustomerNote] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
@@ -226,6 +238,18 @@ export function InvoicePreviewModal({
       setBccEmails([]);
       setIsEditing(false);
       setShowConfirmation(false);
+      
+      // Initialize Bill To fields
+      setBillToName(estimate.customerName || estimate.propertyName);
+      setBillToCO("");
+      setBillToATTN("");
+      setBillToAddress(estimate.address || "");
+      setSelectedBillToAddress("default");
+      
+      // Initialize Ship To fields
+      setShipToName(estimate.propertyName);
+      setShipToAddress(estimate.address || "");
+      setSelectedShipToAddress("default");
       
       // Auto-select first billing contact if available
       if (billingContacts.length > 0) {
@@ -361,25 +385,92 @@ export function InvoicePreviewModal({
                     <Building2 className="w-4 h-4" />
                     Bill To
                   </h3>
-                  <div className="space-y-2 text-sm">
-                    <p className="font-medium">{estimate.customerName || estimate.propertyName}</p>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                  {isEditing ? (
+                    <div className="space-y-3">
                       <div>
-                        <span className="text-[#94A3B8]">C/O:</span>{" "}
-                        <span className="text-[#64748B]">—</span>
+                        <Label className="text-xs text-[#64748B]">Billing Address</Label>
+                        <Select value={selectedBillToAddress} onValueChange={(v) => {
+                          setSelectedBillToAddress(v);
+                          if (v === "custom") {
+                            setBillToAddress("");
+                          } else {
+                            setBillToAddress(estimate.address || "");
+                          }
+                        }}>
+                          <SelectTrigger className="mt-1" data-testid="select-bill-to-address">
+                            <SelectValue placeholder="Select billing address" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="default">Default - {estimate.address || "No address"}</SelectItem>
+                            <SelectItem value="custom">Enter custom address...</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
-                        <span className="text-[#94A3B8]">ATTN:</span>{" "}
-                        <span className="text-[#64748B]">—</span>
+                        <Label className="text-xs text-[#64748B]">Customer Name</Label>
+                        <Input
+                          value={billToName}
+                          onChange={(e) => setBillToName(e.target.value)}
+                          className="mt-1"
+                          data-testid="input-bill-to-name"
+                        />
                       </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-[#64748B]">C/O</Label>
+                          <Input
+                            value={billToCO}
+                            onChange={(e) => setBillToCO(e.target.value)}
+                            placeholder="Care of..."
+                            className="mt-1"
+                            data-testid="input-bill-to-co"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[#64748B]">ATTN</Label>
+                          <Input
+                            value={billToATTN}
+                            onChange={(e) => setBillToATTN(e.target.value)}
+                            placeholder="Attention..."
+                            className="mt-1"
+                            data-testid="input-bill-to-attn"
+                          />
+                        </div>
+                      </div>
+                      {selectedBillToAddress === "custom" && (
+                        <div>
+                          <Label className="text-xs text-[#64748B]">Address</Label>
+                          <Textarea
+                            value={billToAddress}
+                            onChange={(e) => setBillToAddress(e.target.value)}
+                            placeholder="Enter billing address..."
+                            className="mt-1 h-16"
+                            data-testid="textarea-bill-to-address"
+                          />
+                        </div>
+                      )}
                     </div>
-                    {estimate.customerEmail && (
-                      <p className="text-[#64748B]">Email: {estimate.customerEmail}</p>
-                    )}
-                    {estimate.address && (
-                      <p className="text-[#64748B]">{estimate.address}</p>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="space-y-2 text-sm">
+                      <p className="font-medium">{billToName}</p>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[#94A3B8]">C/O:</span>{" "}
+                          <span className="text-[#64748B]">{billToCO || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[#94A3B8]">ATTN:</span>{" "}
+                          <span className="text-[#64748B]">{billToATTN || "—"}</span>
+                        </div>
+                      </div>
+                      {estimate.customerEmail && (
+                        <p className="text-[#64748B]">Email: {estimate.customerEmail}</p>
+                      )}
+                      {billToAddress && (
+                        <p className="text-[#64748B]">{billToAddress}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
@@ -387,12 +478,59 @@ export function InvoicePreviewModal({
                     <MapPin className="w-4 h-4" />
                     Ship To / Service Location
                   </h3>
-                  <div className="space-y-2 text-sm">
-                    <p className="font-medium">{estimate.propertyName}</p>
-                    {estimate.address && (
-                      <p className="text-[#64748B]">{estimate.address}</p>
-                    )}
-                  </div>
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs text-[#64748B]">Service Location</Label>
+                        <Select value={selectedShipToAddress} onValueChange={(v) => {
+                          setSelectedShipToAddress(v);
+                          if (v === "custom") {
+                            setShipToAddress("");
+                          } else {
+                            setShipToAddress(estimate.address || "");
+                          }
+                        }}>
+                          <SelectTrigger className="mt-1" data-testid="select-ship-to-address">
+                            <SelectValue placeholder="Select service location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="default">{estimate.propertyName}</SelectItem>
+                            <SelectItem value="custom">Enter custom location...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {selectedShipToAddress === "custom" && (
+                        <>
+                          <div>
+                            <Label className="text-xs text-[#64748B]">Location Name</Label>
+                            <Input
+                              value={shipToName}
+                              onChange={(e) => setShipToName(e.target.value)}
+                              className="mt-1"
+                              data-testid="input-ship-to-name"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-[#64748B]">Address</Label>
+                            <Textarea
+                              value={shipToAddress}
+                              onChange={(e) => setShipToAddress(e.target.value)}
+                              placeholder="Enter service location address..."
+                              className="mt-1 h-16"
+                              data-testid="textarea-ship-to-address"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2 text-sm">
+                      <p className="font-medium">{shipToName}</p>
+                      {shipToAddress && (
+                        <p className="text-[#64748B]">{shipToAddress}</p>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-3 pt-3 border-t border-[#E2E8F0]">
                     <p className="text-xs text-[#94A3B8] mb-1">Ship From:</p>
                     <p className="text-sm text-[#64748B]">{COMPANY_INFO.name}</p>
@@ -535,7 +673,31 @@ export function InvoicePreviewModal({
 
               {/* Line Items */}
               <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
-                <h3 className="font-semibold text-[#1E293B] mb-3">Line Items</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-[#1E293B]">Line Items</h3>
+                  {isEditing && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[#0078D4] border-[#0078D4]"
+                        data-testid="button-add-line-item"
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add product or service
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        data-testid="button-clear-line-items"
+                      >
+                        <Trash2 className="w-3 h-3 mr-1" />
+                        Clear all lines
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -624,6 +786,20 @@ export function InvoicePreviewModal({
                 </div>
               </div>
 
+              {/* Customer Payment Options */}
+              <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
+                <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
+                  <Receipt className="w-4 h-4" />
+                  Customer Payment Options
+                </h3>
+                <Textarea
+                  placeholder="Enter payment instructions for the customer (e.g., ACH details, check mailing address, online payment link)..."
+                  className="h-20"
+                  disabled={!isEditing}
+                  data-testid="textarea-payment-instructions"
+                />
+              </div>
+
               {/* Customer Notes & Attachments */}
               <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
                 <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
@@ -667,12 +843,26 @@ export function InvoicePreviewModal({
                 </div>
 
                 {/* Photos/Attachments */}
-                {((estimate.photos && estimate.photos.length > 0) ||
-                  (estimate.attachments && estimate.attachments.length > 0)) && (
-                  <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
-                    <Label className="text-sm text-[#64748B] mb-2 block">
+                <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm text-[#64748B]">
                       Completion Photos & Documents
                     </Label>
+                    {isEditing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[#0078D4] border-[#0078D4]"
+                        data-testid="button-add-attachment"
+                      >
+                        <Upload className="w-3 h-3 mr-1" />
+                        Add Attachment
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#94A3B8] mb-2">Max file size: 20 MB</p>
+                  {((estimate.photos && estimate.photos.length > 0) ||
+                    (estimate.attachments && estimate.attachments.length > 0)) ? (
                     <div className="flex flex-wrap gap-2">
                       {estimate.photos?.map((photo, index) => (
                         <div
@@ -696,8 +886,10 @@ export function InvoicePreviewModal({
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-[#94A3B8] italic">No attachments</p>
+                  )}
+                </div>
               </div>
 
               {/* Send Invoice To */}
