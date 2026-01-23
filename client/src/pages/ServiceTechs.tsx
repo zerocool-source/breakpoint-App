@@ -36,7 +36,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Search, ChevronDown, ChevronRight, Plus, Image, Trash2, X, Clock, FileText, 
   MoreHorizontal, Sun, Snowflake, MapPin, Route, Users, CalendarDays, Edit2,
-  CheckCircle2, Calendar, GripVertical, Eye, Pencil, Building2
+  CheckCircle2, Calendar, GripVertical, Eye, Pencil, Building2, Droplets, Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -1114,6 +1114,225 @@ function ScheduleDayCircles({
   );
 }
 
+// Pool interface for body of water data
+interface Pool {
+  id: string;
+  customerId: string;
+  name: string;
+  poolType: string | null;
+  waterType: string | null;
+  gallons: number | null;
+}
+
+// Equipment interface
+interface EquipmentItem {
+  id: string;
+  customerId: string;
+  category: string;
+  equipmentType: string;
+  brand: string | null;
+  model: string | null;
+}
+
+// Property Card with pools and equipment
+function PropertyCard({
+  property,
+  globalSeason,
+  onToggleVisitDay,
+  onUpdateSeason,
+  onRemoveProperty,
+}: {
+  property: TechnicianPropertyWithSchedule;
+  globalSeason: "summer" | "winter";
+  onToggleVisitDay: (propertyId: string, day: string, isCurrentlyActive: boolean, season: "summer" | "winter") => void;
+  onUpdateSeason: (propertyId: string, activeSeason: "summer" | "winter") => void;
+  onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Fetch pools for this property/customer
+  const { data: poolsData } = useQuery<{ pools: Pool[] }>({
+    queryKey: [`/api/customers/${property.propertyId}/pools`],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${property.propertyId}/pools`);
+      if (!res.ok) return { pools: [] };
+      return res.json();
+    },
+    enabled: expanded,
+  });
+
+  // Fetch equipment for this property/customer
+  const { data: equipmentData } = useQuery<{ equipment: EquipmentItem[] }>({
+    queryKey: [`/api/customers/${property.propertyId}/equipment`],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${property.propertyId}/equipment`);
+      if (!res.ok) return { equipment: [] };
+      return res.json();
+    },
+    enabled: expanded,
+  });
+
+  const pools = poolsData?.pools || [];
+  const equipment = equipmentData?.equipment || [];
+
+  const visitDays = globalSeason === "summer" 
+    ? property.summerVisitDays 
+    : property.winterVisitDays;
+
+  // Pool type color mapping
+  const getPoolTypeColor = (poolType: string | null) => {
+    switch (poolType?.toLowerCase()) {
+      case "pool": return "bg-blue-100 text-blue-700 border-blue-200";
+      case "spa": return "bg-purple-100 text-purple-700 border-purple-200";
+      case "fountain": return "bg-cyan-100 text-cyan-700 border-cyan-200";
+      case "pond": return "bg-green-100 text-green-700 border-green-200";
+      default: return "bg-slate-100 text-slate-700 border-slate-200";
+    }
+  };
+
+  return (
+    <div 
+      className="bg-white border border-slate-200 rounded-lg overflow-hidden"
+      data-testid={`card-property-${property.id}`}
+    >
+      {/* Property Header */}
+      <div className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setExpanded(!expanded)}
+                className="text-slate-500 hover:text-slate-700"
+              >
+                {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              </button>
+              <h4 className="font-medium text-slate-900">{property.propertyName || "Unknown Property"}</h4>
+              <span className={cn(
+                "px-2 py-0.5 text-xs font-medium rounded",
+                property.activeSeason === "summer" 
+                  ? "bg-amber-50 text-amber-700" 
+                  : "bg-blue-50 text-blue-700"
+              )}>
+                {property.activeSeason === "summer" ? "Summer" : "Winter"}
+              </span>
+            </div>
+            
+            {/* Schedule Days */}
+            <div className="flex items-center gap-1 mt-3 ml-6">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                const isActive = visitDays?.includes(day);
+                return (
+                  <button
+                    key={day}
+                    onClick={() => onToggleVisitDay(
+                      property.propertyId,
+                      day,
+                      isActive || false,
+                      globalSeason
+                    )}
+                    className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                      isActive 
+                        ? "bg-orange-500 text-white hover:bg-orange-600" 
+                        : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                    )}
+                  >
+                    {day.charAt(0)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                onUpdateSeason(
+                  property.propertyId,
+                  property.activeSeason === "summer" ? "winter" : "summer"
+                );
+              }}>
+                Switch to {property.activeSeason === "summer" ? "Winter" : "Summer"}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onRemoveProperty(property)}
+                className="text-red-600 focus:text-red-600"
+              >
+                Remove Property
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Expanded Content - Pools & Equipment */}
+      {expanded && (
+        <div className="border-t border-slate-100 bg-slate-50 p-4 space-y-4">
+          {/* Bodies of Water Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Droplets className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium text-slate-700">Bodies of Water</span>
+            </div>
+            {pools.length === 0 ? (
+              <p className="text-sm text-slate-400 ml-6">No pools found</p>
+            ) : (
+              <div className="flex flex-wrap gap-2 ml-6">
+                {pools.map((pool) => (
+                  <button
+                    key={pool.id}
+                    className={cn(
+                      "px-3 py-1.5 text-sm font-medium rounded-full border transition-colors hover:opacity-80",
+                      getPoolTypeColor(pool.poolType)
+                    )}
+                    data-testid={`tag-pool-${pool.id}`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Droplets className="w-3 h-3" />
+                      {pool.name} {pool.poolType && `(${pool.poolType})`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Equipment Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Wrench className="w-4 h-4 text-orange-500" />
+              <span className="text-sm font-medium text-slate-700">Equipment</span>
+            </div>
+            {equipment.length === 0 ? (
+              <p className="text-sm text-slate-400 ml-6">No equipment found</p>
+            ) : (
+              <div className="ml-6 space-y-1">
+                {equipment.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="flex items-center gap-2 text-sm text-slate-600"
+                    data-testid={`equipment-${item.id}`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-orange-400" />
+                    <span className="font-medium">{item.category}:</span>
+                    <span>{item.equipmentType}</span>
+                    {item.brand && <span className="text-slate-400">({item.brand})</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Properties Tab Content Component
 function PropertiesTabContent({
   technician,
@@ -1205,85 +1424,20 @@ function PropertiesTabContent({
         </div>
       ) : (
         <div className="space-y-3">
-          {properties.map((property) => {
-            const visitDays = globalSeason === "summer" 
-              ? property.summerVisitDays 
-              : property.winterVisitDays;
-
-            return (
-              <div 
-                key={property.id} 
-                className="bg-white border border-slate-200 rounded-lg p-4"
-                data-testid={`card-property-${property.id}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-slate-900">{property.propertyName || "Unknown Property"}</h4>
-                      <span className={cn(
-                        "px-2 py-0.5 text-xs font-medium rounded",
-                        property.activeSeason === "summer" 
-                          ? "bg-amber-50 text-amber-700" 
-                          : "bg-blue-50 text-blue-700"
-                      )}>
-                        {property.activeSeason === "summer" ? "Summer" : "Winter"}
-                      </span>
-                    </div>
-                    
-                    {/* Schedule Days */}
-                    <div className="flex items-center gap-1 mt-3">
-                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
-                        const isActive = visitDays?.includes(day);
-                        return (
-                          <button
-                            key={day}
-                            onClick={() => toggleVisitDayMutation.mutate({
-                              propertyId: property.propertyId,
-                              day,
-                              isCurrentlyActive: isActive || false,
-                              season: globalSeason
-                            })}
-                            className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                              isActive 
-                                ? "bg-orange-500 text-white hover:bg-orange-600" 
-                                : "bg-slate-100 text-slate-400 hover:bg-slate-200"
-                            )}
-                          >
-                            {day.charAt(0)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {
-                        updatePropertySeasonMutation.mutate({
-                          propertyId: property.propertyId,
-                          activeSeason: property.activeSeason === "summer" ? "winter" : "summer"
-                        });
-                      }}>
-                        Switch to {property.activeSeason === "summer" ? "Winter" : "Summer"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => onRemoveProperty(property)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        Remove Property
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            );
-          })}
+          {properties.map((property) => (
+            <PropertyCard
+              key={property.id}
+              property={property}
+              globalSeason={globalSeason}
+              onToggleVisitDay={(propertyId, day, isCurrentlyActive, season) => {
+                toggleVisitDayMutation.mutate({ propertyId, day, isCurrentlyActive, season });
+              }}
+              onUpdateSeason={(propertyId, activeSeason) => {
+                updatePropertySeasonMutation.mutate({ propertyId, activeSeason });
+              }}
+              onRemoveProperty={onRemoveProperty}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -1291,11 +1445,104 @@ function PropertiesTabContent({
 }
 
 // Notes Tab Content Component
+interface TechnicianNote {
+  id: string;
+  technicianId: string;
+  content: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 function NotesTabContent({ technician }: { technician: Technician }) {
   const [newNote, setNewNote] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
   const queryClient = useQueryClient();
   
-  // For now, use technician's notes field or show placeholder
+  const { data: notesData, isLoading } = useQuery<{ notes: TechnicianNote[] }>({
+    queryKey: [`/api/technicians/${technician.id}/notes`],
+    queryFn: async () => {
+      const res = await fetch(`/api/technicians/${technician.id}/notes`);
+      if (!res.ok) throw new Error("Failed to fetch notes");
+      return res.json();
+    },
+  });
+
+  const notes = notesData?.notes || [];
+
+  const createNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(`/api/technicians/${technician.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to create note");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technician.id}/notes`] });
+      setNewNote("");
+    },
+  });
+
+  const updateNoteMutation = useMutation({
+    mutationFn: async ({ noteId, content }: { noteId: string; content: string }) => {
+      const res = await fetch(`/api/technician-notes/${noteId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to update note");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technician.id}/notes`] });
+      setEditingNoteId(null);
+      setEditingContent("");
+    },
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const res = await fetch(`/api/technician-notes/${noteId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete note");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technicians/${technician.id}/notes`] });
+    },
+  });
+
+  const handleAddNote = () => {
+    if (newNote.trim()) {
+      createNoteMutation.mutate(newNote.trim());
+    }
+  };
+
+  const handleStartEdit = (note: TechnicianNote) => {
+    setEditingNoteId(note.id);
+    setEditingContent(note.content);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingNoteId && editingContent.trim()) {
+      updateNoteMutation.mutate({ noteId: editingNoteId, content: editingContent.trim() });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
+        <p className="text-sm text-slate-500 mt-2">Loading notes...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -1303,12 +1550,14 @@ function NotesTabContent({ technician }: { technician: Technician }) {
           placeholder="Add a note..."
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
           className="flex-1"
           data-testid="input-new-note"
         />
         <Button 
           size="sm" 
-          disabled={!newNote.trim()}
+          disabled={!newNote.trim() || createNoteMutation.isPending}
+          onClick={handleAddNote}
           className="bg-blue-600 hover:bg-blue-700"
           data-testid="button-add-note"
         >
@@ -1316,11 +1565,79 @@ function NotesTabContent({ technician }: { technician: Technician }) {
         </Button>
       </div>
 
-      <div className="text-center py-12">
-        <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p className="text-slate-500">No notes yet</p>
-        <p className="text-sm text-slate-400 mt-1">Add internal notes about this technician</p>
-      </div>
+      {notes.length === 0 ? (
+        <div className="text-center py-12">
+          <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">No notes yet</p>
+          <p className="text-sm text-slate-400 mt-1">Add internal notes about this technician</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notes.map((note) => (
+            <div 
+              key={note.id} 
+              className="bg-white border border-slate-200 rounded-lg p-3"
+              data-testid={`card-note-${note.id}`}
+            >
+              {editingNoteId === note.id ? (
+                <div className="space-y-2">
+                  <Input
+                    value={editingContent}
+                    onChange={(e) => setEditingContent(e.target.value)}
+                    className="w-full"
+                    autoFocus
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => setEditingNoteId(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={handleSaveEdit}
+                      disabled={updateNoteMutation.isPending}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="text-slate-700">{note.content}</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {format(new Date(note.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStartEdit(note)}
+                      className="h-7 w-7 p-0 text-slate-400 hover:text-blue-600"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteNoteMutation.mutate(note.id)}
+                      disabled={deleteNoteMutation.isPending}
+                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
