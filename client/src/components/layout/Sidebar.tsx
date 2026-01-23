@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import BLogo from "@/assets/b-logo.png";
 
 interface NavSubItem {
   label: string;
@@ -269,10 +270,12 @@ export function Sidebar() {
   return (
     <>
       <aside className="w-[68px] h-screen bg-[#1e3a5f] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
-        <div className="py-4 border-b border-white/10 flex items-center justify-center">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-lg">B</span>
-          </div>
+        <div className="py-3 border-b border-white/10 flex items-center justify-center">
+          <img 
+            src={BLogo} 
+            alt="Breakpoint" 
+            className="w-11 h-11 object-contain"
+          />
         </div>
         
         <nav className="flex-1 py-2 overflow-y-auto scrollbar-thin">
