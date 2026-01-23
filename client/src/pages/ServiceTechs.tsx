@@ -269,8 +269,8 @@ function EditTechnicianModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-slate-900 border-slate-700">
-          <DialogHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg">
+        <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-white border-slate-200">
+          <DialogHeader className="bg-blue-600 text-white px-6 py-4 rounded-t-lg flex flex-row items-center justify-between">
             <DialogTitle className="text-lg font-semibold flex items-center gap-2">
               <Edit2 className="w-5 h-5" />
               Edit Technician
@@ -288,20 +288,20 @@ function EditTechnicianModal({
               <div className="flex-1 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">First Name</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">First Name</label>
                     <Input
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-white border-slate-300 text-slate-900"
                       data-testid="input-edit-first-name"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Last Name</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Last Name</label>
                     <Input
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-white border-slate-300 text-slate-900"
                       data-testid="input-edit-last-name"
                     />
                   </div>
@@ -311,20 +311,20 @@ function EditTechnicianModal({
             
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Phone</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Phone</label>
                 <Input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                   data-testid="input-edit-phone"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Email</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
                 <Input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                   data-testid="input-edit-email"
                 />
               </div>
@@ -332,33 +332,33 @@ function EditTechnicianModal({
             
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Truck #</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Truck #</label>
                 <Input
                   value={truckNumber}
                   onChange={(e) => setTruckNumber(e.target.value)}
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                   data-testid="input-edit-truck-number"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Commission %</label>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Commission %</label>
                 <Input
                   type="number"
                   min={0}
                   max={100}
                   value={commissionPercent}
                   onChange={(e) => setCommissionPercent(parseInt(e.target.value) || 0)}
-                  className="bg-slate-800 border-slate-600 text-white"
+                  className="bg-white border-slate-300 text-slate-900"
                   data-testid="input-edit-commission"
                 />
               </div>
             </div>
             
-            <div className="flex justify-between pt-4 border-t border-slate-700">
+            <div className="flex justify-between pt-4 border-t border-slate-200">
               <Button 
                 variant="ghost"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="text-red-400 hover:text-red-300 hover:bg-red-900/30 gap-2"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-2"
                 data-testid="button-delete-tech"
               >
                 <Trash2 className="w-4 h-4" />
@@ -368,7 +368,7 @@ function EditTechnicianModal({
                 <Button 
                   variant="ghost" 
                   onClick={onClose}
-                  className="text-slate-300 hover:text-white hover:bg-slate-700"
+                  className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 >
                   Cancel
                 </Button>
@@ -387,18 +387,18 @@ function EditTechnicianModal({
       </Dialog>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="bg-slate-900 border-slate-700">
+        <AlertDialogContent className="bg-white border-slate-200">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete Technician</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
+            <AlertDialogTitle className="text-slate-900">Delete Technician</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600">
               Are you sure you want to delete {fullName}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-700 text-white hover:bg-slate-600 border-slate-600">
+            <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -469,13 +469,14 @@ function ScheduledStopsPanel({
       <SheetContent 
         side="right" 
         className="w-[420px] sm:w-[480px] p-0 bg-white border-slate-200"
+        hideCloseButton={true}
       >
         <div className="h-full flex flex-col">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
+          <div className="bg-blue-600 px-6 py-4">
             <div className="flex items-center gap-4">
               <div className={cn(
-                "w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg",
+                "w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold",
                 avatarColor
               )}>
                 {initials}
@@ -486,7 +487,7 @@ function ScheduledStopsPanel({
               </div>
               <button 
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                className="p-2 rounded-lg hover:bg-white/20 transition-colors"
                 data-testid="button-close-stops-panel"
               >
                 <X className="w-5 h-5 text-white" />
