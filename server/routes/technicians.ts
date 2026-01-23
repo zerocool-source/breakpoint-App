@@ -188,4 +188,51 @@ export function registerTechnicianRoutes(app: any) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Technician Notes CRUD
+  app.get('/api/technicians/:id/notes', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const notes = await storage.getTechnicianNotes(id);
+      res.json({ notes });
+    } catch (error: any) {
+      console.error('Error fetching technician notes:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/technicians/:id/notes', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { content, createdBy } = req.body;
+      const note = await storage.createTechnicianNote({ technicianId: id, content, createdBy });
+      res.json({ note });
+    } catch (error: any) {
+      console.error('Error creating technician note:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put('/api/technician-notes/:noteId', async (req: Request, res: Response) => {
+    try {
+      const { noteId } = req.params;
+      const { content } = req.body;
+      const note = await storage.updateTechnicianNote(noteId, content);
+      res.json({ note });
+    } catch (error: any) {
+      console.error('Error updating technician note:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/technician-notes/:noteId', async (req: Request, res: Response) => {
+    try {
+      const { noteId } = req.params;
+      await storage.deleteTechnicianNote(noteId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting technician note:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 }

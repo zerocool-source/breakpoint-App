@@ -3,6 +3,7 @@ import {
   type Alert, type InsertAlert,
   type Workflow, type InsertWorkflow,
   type Technician, type InsertTechnician,
+  type TechnicianNote, type InsertTechnicianNote,
   type Customer, type InsertCustomer,
   type CustomerAddress, type InsertCustomerAddress,
   type Pool, type InsertPool,
@@ -48,7 +49,7 @@ import {
   type SupervisorActivity, type InsertSupervisorActivity,
   type ChemicalVendor, type InsertChemicalVendor,
   type InvoiceTemplate, type InsertInvoiceTemplate,
-  settings, alerts, workflows, technicians, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
+  settings, alerts, workflows, technicians, technicianNotes, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
@@ -86,6 +87,12 @@ export interface IStorage {
   deleteTechnician(id: string): Promise<void>;
   upsertTechnician(externalId: string, technician: InsertTechnician): Promise<Technician>;
   clearAllTechnicians(): Promise<void>;
+
+  // Technician Notes
+  getTechnicianNotes(technicianId: string): Promise<TechnicianNote[]>;
+  createTechnicianNote(note: InsertTechnicianNote): Promise<TechnicianNote>;
+  updateTechnicianNote(id: string, content: string): Promise<TechnicianNote | undefined>;
+  deleteTechnicianNote(id: string): Promise<void>;
 
   // Customers
   getCustomers(): Promise<Customer[]>;
@@ -560,6 +567,25 @@ export class DbStorage implements IStorage {
 
   async clearAllTechnicians(): Promise<void> {
     await db.delete(technicians);
+  }
+
+  // Technician Notes
+  async getTechnicianNotes(technicianId: string): Promise<TechnicianNote[]> {
+    return db.select().from(technicianNotes).where(eq(technicianNotes.technicianId, technicianId)).orderBy(desc(technicianNotes.createdAt));
+  }
+
+  async createTechnicianNote(note: InsertTechnicianNote): Promise<TechnicianNote> {
+    const result = await db.insert(technicianNotes).values(note).returning();
+    return result[0];
+  }
+
+  async updateTechnicianNote(id: string, content: string): Promise<TechnicianNote | undefined> {
+    const result = await db.update(technicianNotes).set({ content, updatedAt: new Date() }).where(eq(technicianNotes.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteTechnicianNote(id: string): Promise<void> {
+    await db.delete(technicianNotes).where(eq(technicianNotes.id, id));
   }
 
   // Customers

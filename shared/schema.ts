@@ -64,6 +64,25 @@ export const insertTechnicianSchema = createInsertSchema(technicians).omit({
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
 export type Technician = typeof technicians.$inferSelect;
 
+// Technician Notes (internal notes about technicians)
+export const technicianNotes = pgTable("technician_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  technicianId: varchar("technician_id").notNull(),
+  content: text("content").notNull(),
+  createdBy: text("created_by"), // User who created the note
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTechnicianNoteSchema = createInsertSchema(technicianNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTechnicianNote = z.infer<typeof insertTechnicianNoteSchema>;
+export type TechnicianNote = typeof technicianNotes.$inferSelect;
+
 // Customers / HOAs (from Pool Brain or manual entry)
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
