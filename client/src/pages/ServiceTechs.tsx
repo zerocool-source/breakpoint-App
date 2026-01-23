@@ -483,7 +483,8 @@ function AddPropertyModal({
     queryFn: async () => {
       const res = await fetch(`/api/technician-properties/${technician?.id}`);
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      return data.properties || [];
     },
     enabled: !!technician && open,
   });
@@ -2484,15 +2485,6 @@ export default function ServiceTechs() {
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setStopsPanelTech(tech)}
-                            className="h-8 w-8 p-0 text-slate-500 hover:text-blue-600"
-                            data-testid={`button-view-stops-${tech.id}`}
-                          >
-                            <Route className="w-4 h-4" />
-                          </Button>
                           <Switch 
                             checked={tech.active} 
                             onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
