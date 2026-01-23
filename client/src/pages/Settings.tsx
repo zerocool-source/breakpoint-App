@@ -338,26 +338,24 @@ export default function Settings() {
                 )}
 
                 <div className="flex items-center gap-3">
-                  {!qbStatus.accessTokenValid && (
-                    <Button
-                      onClick={handleConnectQuickBooks}
-                      disabled={qbConnecting}
-                      className="bg-[#2CA01C] hover:bg-[#2CA01C]/80 text-white font-bold"
-                      data-testid="button-reconnect-quickbooks"
-                    >
-                      {qbConnecting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Reconnecting...
-                        </>
-                      ) : (
-                        <>
-                          <Link2 className="w-4 h-4 mr-2" />
-                          Reconnect to QuickBooks
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    onClick={handleConnectQuickBooks}
+                    disabled={qbConnecting}
+                    className="bg-[#2CA01C] hover:bg-[#2CA01C]/80 text-white font-bold"
+                    data-testid="button-reconnect-quickbooks"
+                  >
+                    {qbConnecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Reconnecting...
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-4 h-4 mr-2" />
+                        Reconnect to QuickBooks
+                      </>
+                    )}
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={handleDisconnectQuickBooks}
