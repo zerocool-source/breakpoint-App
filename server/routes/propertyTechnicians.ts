@@ -671,4 +671,79 @@ export function registerPropertyTechnicianRoutes(app: any) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Toggle a specific visit day for a property schedule
+  app.patch("/api/property-schedule/by-property/:propertyId/toggle-day", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const { day, isCurrentlyActive, season } = req.body;
+      
+      // Map short day names to full day names for storage
+      const dayMapping: Record<string, string> = {
+        "Mon": "monday", "Tue": "tuesday", "Wed": "wednesday", 
+        "Thu": "thursday", "Fri": "friday", "Sat": "saturday", "Sun": "sunday"
+      };
+      const fullDayName = dayMapping[day] || day.toLowerCase();
+      
+      // Get the current schedule
+      const existing = await db
+        .select()
+        .from(routeSchedules)
+        .where(eq(routeSchedules.propertyId, propertyId))
+        .limit(1);
+      
+      let currentDays: string[] = [];
+      let scheduleId: string | null = null;
+      
+      if (existing.length > 0) {
+        scheduleId = existing[0].id;
+        currentDays = season === "summer" 
+          ? (existing[0].summerVisitDays || []) 
+          : (existing[0].winterVisitDays || []);
+      }
+      
+      // Toggle the day
+      let newDays: string[];
+      if (isCurrentlyActive) {
+        // Remove the day
+        newDays = currentDays.filter(d => d.toLowerCase() !== fullDayName && d !== day);
+      } else {
+        // Add the day
+        newDays = [...currentDays, fullDayName];
+      }
+      
+      const updateData: any = { updatedAt: new Date() };
+      if (season === "summer") {
+        updateData.summerVisitDays = newDays;
+      } else {
+        updateData.winterVisitDays = newDays;
+      }
+      
+      if (!scheduleId) {
+        // Create a new schedule
+        const [created] = await db
+          .insert(routeSchedules)
+          .values({
+            propertyId,
+            activeSeason: season || "summer",
+            summerVisitDays: season === "summer" ? newDays : [],
+            winterVisitDays: season === "winter" ? newDays : [],
+            isActive: true,
+          })
+          .returning();
+        return res.json(created);
+      }
+      
+      const [updated] = await db
+        .update(routeSchedules)
+        .set(updateData)
+        .where(eq(routeSchedules.propertyId, propertyId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error toggling visit day:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 }

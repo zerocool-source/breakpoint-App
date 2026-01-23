@@ -716,11 +716,13 @@ const ITEMS_PER_PAGE = 11;
 function ScheduleDayCircles({ 
   days, 
   activeDays, 
-  label 
+  label,
+  onToggleDay,
 }: { 
   days: string[]; 
   activeDays: string[];
   label?: string;
+  onToggleDay?: (day: string, isCurrentlyActive: boolean) => void;
 }) {
   const normalizedActiveDays = activeDays.map(d => DAY_MAPPING[d.toLowerCase()] || DAY_MAPPING[d] || d);
   
@@ -731,18 +733,21 @@ function ScheduleDayCircles({
         {days.map((day) => {
           const isActive = normalizedActiveDays.includes(day);
           return (
-            <div
+            <button
               key={day}
+              type="button"
+              onClick={() => onToggleDay?.(day, isActive)}
               className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium border transition-colors",
+                "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium border transition-colors cursor-pointer hover:scale-110",
                 isActive 
-                  ? "bg-orange-500 text-white border-orange-500" 
-                  : "bg-slate-100 text-slate-400 border-slate-200"
+                  ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600" 
+                  : "bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200 hover:border-slate-300"
               )}
-              title={day}
+              title={`${isActive ? "Remove" : "Add"} ${day}`}
+              data-testid={`button-day-${day.toLowerCase()}`}
             >
               {day.charAt(0)}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1005,6 +1010,7 @@ function TechnicianExpandableRow({
   onRemoveProperty,
   onUpdateSeason,
   onAddStop,
+  onToggleVisitDay,
 }: {
   tech: Technician;
   fullName: string;
@@ -1020,6 +1026,7 @@ function TechnicianExpandableRow({
   onRemoveProperty: (id: string) => void;
   onUpdateSeason: (propertyId: string, season: string) => void;
   onAddStop: (property: TechnicianPropertyWithSchedule) => void;
+  onToggleVisitDay: (propertyId: string, day: string, isCurrentlyActive: boolean, activeSeason: string) => void;
 }) {
   const { data: properties, isLoading: propertiesLoading } = useQuery<TechnicianPropertyWithSchedule[]>({
     queryKey: ["/api/technician-properties", tech.id],
@@ -1170,7 +1177,11 @@ function TechnicianExpandableRow({
                               </div>
                             </div>
                             <div className="col-span-4">
-                              <ScheduleDayCircles days={ALL_DAYS} activeDays={visitDays} />
+                              <ScheduleDayCircles 
+                                days={ALL_DAYS} 
+                                activeDays={visitDays} 
+                                onToggleDay={(day, isActive) => onToggleVisitDay(property.propertyId, day, isActive, activeSeason)}
+                              />
                             </div>
                             <div className="col-span-2">
                               <div className="flex items-center gap-2">
@@ -1349,6 +1360,21 @@ export default function ServiceTechs() {
         body: JSON.stringify({ activeSeason }),
       });
       if (!res.ok) throw new Error("Failed to update schedule");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
+    },
+  });
+
+  const toggleVisitDayMutation = useMutation({
+    mutationFn: async ({ propertyId, day, isCurrentlyActive, season }: { propertyId: string; day: string; isCurrentlyActive: boolean; season: string }) => {
+      const res = await fetch(`/api/property-schedule/by-property/${propertyId}/toggle-day`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ day, isCurrentlyActive, season }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle visit day");
       return res.json();
     },
     onSuccess: () => {
@@ -1579,6 +1605,9 @@ export default function ServiceTechs() {
                       onRemoveProperty={(id) => removePropertyMutation.mutate(id)}
                       onUpdateSeason={(propertyId, season) => updatePropertySeasonMutation.mutate({ propertyId, activeSeason: season })}
                       onAddStop={(property) => handleOpenAddStopModal(tech, property)}
+                      onToggleVisitDay={(propertyId, day, isCurrentlyActive, season) => 
+                        toggleVisitDayMutation.mutate({ propertyId, day, isCurrentlyActive, season })
+                      }
                     />
                   );
                 })
