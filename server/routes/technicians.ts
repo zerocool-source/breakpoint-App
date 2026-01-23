@@ -205,7 +205,16 @@ export function registerTechnicianRoutes(app: any) {
     try {
       const { id } = req.params;
       const { content, createdBy } = req.body;
-      const note = await storage.createTechnicianNote({ technicianId: id, content, createdBy });
+      
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: "Note content is required and cannot be empty" });
+      }
+      
+      const note = await storage.createTechnicianNote({ 
+        technicianId: id, 
+        content: content.trim(), 
+        createdBy: createdBy || null 
+      });
       res.json({ note });
     } catch (error: any) {
       console.error('Error creating technician note:', error);
@@ -217,7 +226,12 @@ export function registerTechnicianRoutes(app: any) {
     try {
       const { noteId } = req.params;
       const { content } = req.body;
-      const note = await storage.updateTechnicianNote(noteId, content);
+      
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: "Note content is required and cannot be empty" });
+      }
+      
+      const note = await storage.updateTechnicianNote(noteId, content.trim());
       res.json({ note });
     } catch (error: any) {
       console.error('Error updating technician note:', error);

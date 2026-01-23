@@ -1458,6 +1458,7 @@ function NotesTabContent({ technician }: { technician: Technician }) {
   const [newNote, setNewNote] = useState("");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
   const { data: notesData, isLoading } = useQuery<{ notes: TechnicianNote[] }>({
@@ -1619,15 +1620,17 @@ function NotesTabContent({ technician }: { technician: Technician }) {
                       size="sm"
                       onClick={() => handleStartEdit(note)}
                       className="h-7 w-7 p-0 text-slate-400 hover:text-blue-600"
+                      data-testid={`button-edit-note-${note.id}`}
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteNoteMutation.mutate(note.id)}
+                      onClick={() => setNoteToDelete(note.id)}
                       disabled={deleteNoteMutation.isPending}
                       className="h-7 w-7 p-0 text-slate-400 hover:text-red-600"
+                      data-testid={`button-delete-note-${note.id}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -1638,6 +1641,35 @@ function NotesTabContent({ technician }: { technician: Technician }) {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!noteToDelete} onOpenChange={(open) => !open && setNoteToDelete(null)}>
+        <AlertDialogContent className="bg-white border-slate-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-900">Delete Note</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600">
+              Are you sure you want to delete this note? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (noteToDelete) {
+                  deleteNoteMutation.mutate(noteToDelete);
+                  setNoteToDelete(null);
+                }
+              }} 
+              className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="button-confirm-delete-note"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
