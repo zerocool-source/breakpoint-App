@@ -22,7 +22,8 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 
 **Component Structure:**
-- **Layout System:** Fixed sidebar navigation with main content area, background image overlay with blur effect
+- **Layout System:** Collapsed icon-bar sidebar (68px) with hover flyout panels, QuickBooks-style navigation. Main content area uses full page width.
+- **Sidebar Navigation:** Dark navy (#1e3a5f) icon bar with white icons. Hover to reveal flyout panels with section names and sub-items. Active icon highlighted with orange left border.
 - **Page-Based Routing:** Using wouter for client-side routing
 - **Design System:** ClickUp-inspired modern UI with Royal Blue (#1E3A8A) primary, Orange (#F97316) secondary, Baby Blue (#60A5FA) accent colors. Inter font family, clean white cards with subtle shadows, rounded-lg borders, and smooth 200ms transitions
 - **State Management:** TanStack Query (React Query) for server state, local React state for UI interactions
