@@ -355,18 +355,15 @@ export function Sidebar() {
 
   return (
     <aside className="w-60 h-screen bg-[#0078D4] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
-      <div className="p-4 border-b border-white/10 text-[#ede4e4] bg-[#f0e6e6]">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-20 w-20 bg-white rounded-xl p-2 shadow-sm">
+      <div className="p-4 border-b border-white/10 bg-white">
+        <div className="flex flex-col items-center">
+          <div className="h-28 w-28">
             <img 
               src={BreakpointLogo} 
               alt="Breakpoint Intelligence" 
               className="h-full w-full object-contain"
             />
           </div>
-          <span className="px-3 py-1 text-[10px] font-semibold bg-[#FF8000] text-white rounded-full uppercase tracking-wide">
-            Beta
-          </span>
         </div>
       </div>
       <div className="px-3 py-3">
