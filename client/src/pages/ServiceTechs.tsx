@@ -33,10 +33,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ChevronDown, ChevronRight, Plus, Image, Trash2, X, Clock, FileText, MoreHorizontal, Sun, Snowflake, MapPin, Route, Users, CalendarDays } from "lucide-react";
+import { 
+  Search, ChevronDown, ChevronRight, Plus, Image, Trash2, X, Clock, FileText, 
+  MoreHorizontal, Sun, Snowflake, MapPin, Route, Users, CalendarDays, Edit2,
+  CheckCircle2, Calendar, GripVertical, Eye, Pencil, Building2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -76,20 +79,33 @@ interface Technician {
   role: string;
 }
 
+interface RouteStop {
+  id: string;
+  propertyName: string;
+  propertyId: string;
+  address?: string;
+  waterBodyType?: string;
+  scheduledDate?: string;
+  notes?: string;
+  status: string;
+  isCoverage?: boolean;
+  technicianName?: string;
+}
+
 function getInitials(firstName: string, lastName: string): string {
   return `${(firstName || "").charAt(0)}${(lastName || "").charAt(0)}`.toUpperCase();
 }
 
 function getAvatarColor(name: string): string {
   const colors = [
-    "bg-[#0078D4]",
-    "bg-[#22D69A]", 
-    "bg-[#17BEBB]",
-    "bg-[#FF8000]",
-    "bg-pink-600",
-    "bg-[#17BEBB]",
-    "bg-[#0078D4]",
-    "bg-[#17BEBB]",
+    "bg-gradient-to-br from-blue-500 to-blue-700",
+    "bg-gradient-to-br from-emerald-500 to-emerald-700", 
+    "bg-gradient-to-br from-cyan-500 to-cyan-700",
+    "bg-gradient-to-br from-orange-500 to-orange-700",
+    "bg-gradient-to-br from-pink-500 to-pink-700",
+    "bg-gradient-to-br from-purple-500 to-purple-700",
+    "bg-gradient-to-br from-indigo-500 to-indigo-700",
+    "bg-gradient-to-br from-teal-500 to-teal-700",
   ];
   const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
@@ -129,68 +145,68 @@ function AddTechnicianModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] p-0 gap-0">
-        <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
-          <DialogTitle className="text-lg font-semibold">Add Technician</DialogTitle>
+      <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-slate-900 border-slate-700">
+        <DialogHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add Service Technician
+          </DialogTitle>
         </DialogHeader>
         
-        <div className="p-6 bg-slate-100">
-          <div className="flex items-start gap-6">
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300">
-                <Image className="w-8 h-8 text-slate-400" />
-              </div>
-              <button className="text-[#0078D4] text-sm font-medium hover:underline">
-                Add Photo
-              </button>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-slate-700 rounded-xl flex items-center justify-center border-2 border-dashed border-slate-500">
+              <Image className="w-8 h-8 text-slate-400" />
             </div>
-            
-            <div className="flex-1 grid grid-cols-3 gap-4">
-              <div className="space-y-3">
+            <div className="flex-1 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Input
                   placeholder="First Name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="bg-white"
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                   data-testid="input-first-name"
                 />
                 <Input
                   placeholder="Last Name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="bg-white"
+                  className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                   data-testid="input-last-name"
-                />
-              </div>
-              <div>
-                <Input
-                  placeholder="Phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="bg-white"
-                  data-testid="input-phone"
-                />
-              </div>
-              <div>
-                <Input
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white"
-                  data-testid="input-email"
                 />
               </div>
             </div>
           </div>
+          <Input
+            placeholder="Phone Number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+            data-testid="input-phone"
+          />
+          <Input
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+            data-testid="input-email"
+          />
           
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end gap-3 pt-2">
+            <Button 
+              variant="ghost" 
+              onClick={handleClose}
+              className="text-slate-300 hover:text-white hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
             <Button 
               onClick={handleSubmit}
               disabled={!firstName.trim() || !lastName.trim()}
-              className="bg-[#0078D4] hover:bg-[#0078D4] text-white px-8"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-add-tech-submit"
             >
-              ADD TECH
+              Add Technician
             </Button>
           </div>
         </div>
@@ -244,16 +260,6 @@ function EditTechnicianModal({
     onClose();
   };
 
-  const handleClose = () => {
-    setFirstName("");
-    setLastName("");
-    setPhone("");
-    setEmail("");
-    setTruckNumber("");
-    setCommissionPercent(0);
-    onClose();
-  };
-
   if (!technician) return null;
 
   const fullName = `${technician.firstName} ${technician.lastName}`.trim();
@@ -262,133 +268,136 @@ function EditTechnicianModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-[700px] p-0 gap-0">
-          <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
-            <DialogTitle className="text-lg font-semibold">Edit Technician</DialogTitle>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-slate-900 border-slate-700">
+          <DialogHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg">
+            <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+              <Edit2 className="w-5 h-5" />
+              Edit Technician
+            </DialogTitle>
           </DialogHeader>
           
-          <div className="p-6 bg-slate-100">
-            <div className="flex items-start gap-6">
-              <div className="flex flex-col items-center gap-2">
-                <div className={cn(
-                  "w-16 h-16 rounded-lg flex items-center justify-center text-white text-xl font-semibold",
-                  avatarColor
-                )}>
-                  {initials}
-                </div>
-                <button className="text-[#0078D4] text-sm font-medium hover:underline">
-                  Change Photo
-                </button>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "w-16 h-16 rounded-xl flex items-center justify-center text-white text-xl font-semibold shadow-lg",
+                avatarColor
+              )}>
+                {initials}
               </div>
-              
-              <div className="flex-1 grid grid-cols-3 gap-4">
-                <div className="space-y-3">
+              <div className="flex-1 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">First Name</label>
                     <Input
-                      placeholder="First Name"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="bg-white"
+                      className="bg-slate-800 border-slate-600 text-white"
                       data-testid="input-edit-first-name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                    <label className="block text-xs font-medium text-slate-400 mb-1">Last Name</label>
                     <Input
-                      placeholder="Last Name"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="bg-white"
+                      className="bg-slate-800 border-slate-600 text-white"
                       data-testid="input-edit-last-name"
                     />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-                    <Input
-                      placeholder="Phone"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="bg-white"
-                      data-testid="input-edit-phone"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Truck #</label>
-                    <Input
-                      placeholder="Truck Number"
-                      value={truckNumber}
-                      onChange={(e) => setTruckNumber(e.target.value)}
-                      className="bg-white"
-                      data-testid="input-edit-truck-number"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <Input
-                      placeholder="Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-white"
-                      data-testid="input-edit-email"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Commission %</label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      min={0}
-                      max={100}
-                      value={commissionPercent}
-                      onChange={(e) => setCommissionPercent(parseInt(e.target.value) || 0)}
-                      className="bg-white"
-                      data-testid="input-edit-commission"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Parts commission on service repairs</p>
                   </div>
                 </div>
               </div>
             </div>
             
-            <div className="flex justify-between mt-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Phone</label>
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="bg-slate-800 border-slate-600 text-white"
+                  data-testid="input-edit-phone"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Email</label>
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-slate-800 border-slate-600 text-white"
+                  data-testid="input-edit-email"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Truck #</label>
+                <Input
+                  value={truckNumber}
+                  onChange={(e) => setTruckNumber(e.target.value)}
+                  className="bg-slate-800 border-slate-600 text-white"
+                  data-testid="input-edit-truck-number"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Commission %</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={commissionPercent}
+                  onChange={(e) => setCommissionPercent(parseInt(e.target.value) || 0)}
+                  className="bg-slate-800 border-slate-600 text-white"
+                  data-testid="input-edit-commission"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-between pt-4 border-t border-slate-700">
               <Button 
-                variant="destructive"
+                variant="ghost"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="gap-2"
+                className="text-red-400 hover:text-red-300 hover:bg-red-900/30 gap-2"
                 data-testid="button-delete-tech"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
               </Button>
-              <Button 
-                onClick={handleSubmit}
-                disabled={!firstName.trim() || !lastName.trim()}
-                className="bg-[#0078D4] hover:bg-[#0078D4] text-white px-8"
-                data-testid="button-save-tech"
-              >
-                SAVE CHANGES
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  onClick={onClose}
+                  className="text-slate-300 hover:text-white hover:bg-slate-700"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={!firstName.trim() || !lastName.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  data-testid="button-save-tech"
+                >
+                  Save Changes
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-slate-900 border-slate-700">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Technician</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-white">Delete Technician</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
               Are you sure you want to delete {fullName}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="bg-slate-700 text-white hover:bg-slate-600 border-slate-600">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
@@ -399,61 +408,260 @@ function EditTechnicianModal({
   );
 }
 
-interface FieldEntry {
-  id: string;
-  technicianId: string | null;
-  technicianName: string | null;
-  entryType: string;
-  payload: string | null;
-  submittedAt: string;
-}
-
-interface TechnicianProperty {
-  id: string;
-  technicianId: string;
-  propertyId: string;
-  propertyName: string | null;
-  customerName: string | null;
-  address: string | null;
-  assignedAt: string;
-}
-
 interface Customer {
   id: string;
   name: string;
   address: string | null;
 }
 
-function ServiceLogSidebar({
+// Scheduled Stops Side Panel
+function ScheduledStopsPanel({
   technician,
+  open,
   onClose,
 }: {
   technician: Technician | null;
+  open: boolean;
   onClose: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"log" | "properties">("properties");
-  const [propertySearch, setPropertySearch] = useState("");
   const queryClient = useQueryClient();
-
-  const { data, isLoading } = useQuery<{ entries: FieldEntry[] }>({
-    queryKey: ["/api/technicians", technician?.id, "entries"],
+  
+  const { data: stops, isLoading } = useQuery<RouteStop[]>({
+    queryKey: ["/api/technician-stops", technician?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/technicians/${technician?.id}/entries`);
-      if (!res.ok) throw new Error("Failed to fetch entries");
-      return res.json();
-    },
-    enabled: !!technician && activeTab === "log",
-  });
-
-  const { data: propertiesData, isLoading: propertiesLoading } = useQuery<TechnicianProperty[]>({
-    queryKey: ["/api/technician-properties", technician?.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/technician-properties/${technician?.id}`);
+      const res = await fetch(`/api/technician-stops/${technician?.id}`);
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: !!technician,
+    enabled: !!technician && open,
   });
+
+  const updateStopMutation = useMutation({
+    mutationFn: async ({ stopId, status }: { stopId: string; status: string }) => {
+      const res = await fetch(`/api/route-stops/${stopId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update stop");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-stops", technician?.id] });
+    },
+  });
+
+  if (!technician) return null;
+
+  const fullName = `${technician.firstName} ${technician.lastName}`.trim();
+  const initials = getInitials(technician.firstName, technician.lastName);
+  const avatarColor = getAvatarColor(fullName);
+
+  const sortedStops = [...(stops || [])].sort((a, b) => {
+    if (!a.scheduledDate && !b.scheduledDate) return 0;
+    if (!a.scheduledDate) return 1;
+    if (!b.scheduledDate) return -1;
+    return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
+  });
+
+  return (
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent 
+        side="right" 
+        className="w-[420px] sm:w-[480px] p-0 bg-slate-900 border-slate-700"
+      >
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg",
+                avatarColor
+              )}>
+                {initials}
+              </div>
+              <div className="flex-1">
+                <h2 className="text-white text-lg font-semibold">{fullName}</h2>
+                <p className="text-blue-200 text-sm">Scheduled Stops</p>
+              </div>
+              <button 
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </div>
+
+          {/* Stats Bar */}
+          <div className="px-6 py-3 bg-slate-800/50 border-b border-slate-700 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Route className="w-4 h-4 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Total Stops</p>
+                <p className="text-sm font-semibold text-white">{sortedStops.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Completed</p>
+                <p className="text-sm font-semibold text-white">
+                  {sortedStops.filter(s => s.status === "completed").length}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <Users className="w-4 h-4 text-orange-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400">Coverage</p>
+                <p className="text-sm font-semibold text-white">
+                  {sortedStops.filter(s => s.isCoverage).length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stops List */}
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-3">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+                </div>
+              ) : sortedStops.length === 0 ? (
+                <div className="text-center py-12">
+                  <Route className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400 font-medium">No scheduled stops</p>
+                  <p className="text-slate-500 text-sm mt-1">Stops will appear here when scheduled</p>
+                </div>
+              ) : (
+                sortedStops.map((stop, index) => (
+                  <div 
+                    key={stop.id}
+                    className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:bg-slate-800 transition-all group"
+                    data-testid={`panel-stop-${stop.id}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Drag Handle */}
+                      <div className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab">
+                        <GripVertical className="w-4 h-4 text-slate-500" />
+                      </div>
+                      
+                      {/* Stop Number */}
+                      <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                        {index + 1}
+                      </div>
+                      
+                      {/* Stop Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-medium text-white truncate">{stop.propertyName}</h4>
+                          {stop.waterBodyType && (
+                            <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-medium rounded-full">
+                              {stop.waterBodyType}
+                            </span>
+                          )}
+                          {stop.isCoverage && (
+                            <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded-full flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              Coverage
+                            </span>
+                          )}
+                        </div>
+                        
+                        {stop.address && (
+                          <p className="text-sm text-slate-400 mt-1 truncate flex items-center gap-1">
+                            <MapPin className="w-3 h-3 flex-shrink-0" />
+                            {stop.address}
+                          </p>
+                        )}
+                        
+                        {stop.notes && (
+                          <p className="text-sm text-slate-300 mt-2 italic bg-slate-700/50 p-2 rounded-lg">
+                            "{stop.notes}"
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-3">
+                          {stop.scheduledDate && (
+                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {format(new Date(stop.scheduledDate), "MMM d, yyyy")}
+                            </span>
+                          )}
+                          <span className={cn(
+                            "px-2 py-0.5 text-xs font-medium rounded-full",
+                            stop.status === "completed" ? "bg-green-500/20 text-green-400" :
+                            stop.status === "in_progress" ? "bg-yellow-500/20 text-yellow-400" :
+                            "bg-slate-600/50 text-slate-300"
+                          )}>
+                            {stop.status === "not_started" ? "Pending" : 
+                             stop.status === "in_progress" ? "In Progress" : 
+                             stop.status === "completed" ? "Completed" : stop.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-2 rounded-lg hover:bg-slate-700 transition-colors opacity-0 group-hover:opacity-100">
+                            <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700">
+                          <DropdownMenuItem 
+                            onClick={() => updateStopMutation.mutate({ stopId: stop.id, status: "completed" })}
+                            className="text-green-400 focus:bg-green-500/20 focus:text-green-400"
+                          >
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Mark Complete
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-slate-300 focus:bg-slate-700">
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit Notes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-slate-300 focus:bg-slate-700">
+                            <Calendar className="w-4 h-4 mr-2" />
+                            Reschedule
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// Add Property Modal
+function AddPropertyModal({
+  open,
+  onClose,
+  technician,
+  onAddProperty,
+}: {
+  open: boolean;
+  onClose: () => void;
+  technician: Technician | null;
+  onAddProperty: (customerId: string, visitDays: string[], season: string) => void;
+}) {
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+  const [propertySearch, setPropertySearch] = useState("");
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [season, setSeason] = useState<"summer" | "winter">("summer");
 
   const { data: customersData } = useQuery<{ customers: Customer[] }>({
     queryKey: ["/api/customers"],
@@ -462,369 +670,237 @@ function ServiceLogSidebar({
       if (!res.ok) return { customers: [] };
       return res.json();
     },
+    enabled: open,
   });
 
-  const assignedProperties = propertiesData || [];
+  const { data: assignedProperties } = useQuery<TechnicianPropertyWithSchedule[]>({
+    queryKey: ["/api/technician-properties", technician?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-properties/${technician?.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!technician && open,
+  });
+
   const customers = customersData?.customers || [];
-  const assignedPropertyIds = new Set(assignedProperties.map(p => p.propertyId));
+  const assignedPropertyIds = new Set((assignedProperties || []).map(p => p.propertyId));
   
   const filteredCustomers = customers.filter(c => 
     !assignedPropertyIds.has(c.id) &&
     c.name.toLowerCase().includes(propertySearch.toLowerCase())
   );
 
-  const addPropertyMutation = useMutation({
-    mutationFn: async (customerId: string) => {
-      const customer = customers.find(c => c.id === customerId);
-      const res = await fetch("/api/technician-properties", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          technicianId: technician?.id,
-          propertyId: customerId,
-          propertyName: customer?.name,
-          customerName: customer?.name,
-          address: customer?.address,
-          assignedByName: "Office Staff",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to assign property");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties", technician?.id] });
-      setPropertySearch("");
-    },
-  });
-
-  const removePropertyMutation = useMutation({
-    mutationFn: async (assignmentId: string) => {
-      const res = await fetch(`/api/technician-properties/${assignmentId}`, {
-        method: "DELETE",
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties", technician?.id] });
-    },
-  });
-
-  const entries = data?.entries || [];
-
-  const parsePayload = (payload: string | null) => {
-    if (!payload) return {};
-    try {
-      return JSON.parse(payload);
-    } catch (_e) {
-      return { raw: payload };
-    }
+  const handleSubmit = () => {
+    if (!selectedPropertyId) return;
+    onAddProperty(selectedPropertyId, selectedDays, season);
+    setSelectedPropertyId("");
+    setPropertySearch("");
+    setSelectedDays([]);
+    setSeason("summer");
+    onClose();
   };
 
-  const fullName = technician
-    ? `${technician.firstName} ${technician.lastName}`.trim()
-    : "";
-  const initials = technician
-    ? getInitials(technician.firstName, technician.lastName)
-    : "";
-  const avatarColor = getAvatarColor(fullName);
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
+  const selectedCustomer = customers.find(c => c.id === selectedPropertyId);
+
+  if (!technician) return null;
 
   return (
-    <Sheet open={!!technician} onOpenChange={() => onClose()}>
-      <SheetContent className="w-[450px] sm:w-[500px] p-0">
-        <SheetHeader className="bg-[#0078D4] text-white px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold",
-                avatarColor
-              )}
-            >
-              {initials}
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-slate-900 border-slate-700">
+        <DialogHeader className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-4 rounded-t-lg">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            Add Property to {technician.firstName}
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="p-6 space-y-4">
+          {/* Property Search */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-2">Search Properties</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                placeholder="Search by property name..."
+                value={propertySearch}
+                onChange={(e) => setPropertySearch(e.target.value)}
+                className="pl-9 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                data-testid="input-search-property-add"
+              />
             </div>
-            <div>
-              <SheetTitle className="text-white text-lg">{fullName}</SheetTitle>
-              <p className="text-blue-200 text-sm">Service Technician</p>
-            </div>
-          </div>
-        </SheetHeader>
-
-        <div className="border-b">
-          <div className="flex">
-            <button
-              onClick={() => setActiveTab("properties")}
-              className={cn(
-                "flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors",
-                activeTab === "properties"
-                  ? "border-[#0078D4] text-[#0078D4]"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              )}
-            >
-              Assigned Properties
-            </button>
-            <button
-              onClick={() => setActiveTab("log")}
-              className={cn(
-                "flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors",
-                activeTab === "log"
-                  ? "border-[#0078D4] text-[#0078D4]"
-                  : "border-transparent text-slate-500 hover:text-slate-700"
-              )}
-            >
-              Service Log
-            </button>
-          </div>
-        </div>
-
-        <ScrollArea className="h-[calc(100vh-180px)]">
-          {activeTab === "properties" ? (
-            <div className="p-4 space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search properties to add..."
-                  value={propertySearch}
-                  onChange={(e) => setPropertySearch(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search-properties"
-                />
-              </div>
-              
-              {propertySearch && filteredCustomers.length > 0 && (
-                <div className="border rounded-lg bg-white shadow-sm max-h-48 overflow-y-auto">
-                  {filteredCustomers.slice(0, 10).map(customer => (
+            
+            {propertySearch && !selectedPropertyId && (
+              <div className="mt-2 max-h-40 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg">
+                {filteredCustomers.length === 0 ? (
+                  <p className="p-3 text-sm text-slate-400 text-center">No properties found</p>
+                ) : (
+                  filteredCustomers.slice(0, 8).map(customer => (
                     <button
                       key={customer.id}
-                      onClick={() => addPropertyMutation.mutate(customer.id)}
-                      className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b last:border-b-0"
-                      data-testid={`add-property-${customer.id}`}
+                      onClick={() => {
+                        setSelectedPropertyId(customer.id);
+                        setPropertySearch(customer.name);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-slate-700 border-b border-slate-700 last:border-b-0 transition-colors"
+                      data-testid={`select-property-${customer.id}`}
                     >
-                      <p className="font-medium text-sm text-slate-700">{customer.name}</p>
+                      <p className="font-medium text-sm text-white">{customer.name}</p>
                       {customer.address && (
-                        <p className="text-xs text-slate-500">{customer.address}</p>
+                        <p className="text-xs text-slate-400">{customer.address}</p>
                       )}
                     </button>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
+            )}
+          </div>
 
-              {propertiesLoading ? (
-                <div className="text-center py-8 text-slate-500">Loading properties...</div>
-              ) : assignedProperties.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  <FileText className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No properties assigned</p>
-                  <p className="text-xs mt-1">Search above to add properties</p>
+          {/* Selected Property */}
+          {selectedCustomer && (
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-600">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-white">{selectedCustomer.name}</p>
+                  {selectedCustomer.address && (
+                    <p className="text-sm text-slate-400">{selectedCustomer.address}</p>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {assignedProperties.map((prop) => (
-                    <div
-                      key={prop.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-slate-50"
-                      data-testid={`assigned-property-${prop.id}`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm text-slate-700 truncate">
-                          {prop.propertyName || prop.customerName || "Unknown"}
-                        </p>
-                        {prop.address && (
-                          <p className="text-xs text-slate-500 truncate">{prop.address}</p>
-                        )}
-                        <p className="text-xs text-slate-400">
-                          Assigned {new Date(prop.assignedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
-                        onClick={() => removePropertyMutation.mutate(prop.id)}
-                        data-testid={`remove-property-${prop.id}`}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-6 space-y-4">
-              {isLoading ? (
-                <div className="text-center py-12 text-slate-500">
-                  Loading service entries...
-                </div>
-              ) : entries.length === 0 ? (
-                <div className="text-center py-12 text-slate-500">
-                  <FileText className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                  <p>No service entries found</p>
-                  <p className="text-sm mt-1">
-                    Entries will appear here when synced from the field app
-                  </p>
-                </div>
-              ) : (
-                entries.map((entry) => {
-                  const payload = parsePayload(entry.payload);
-                  const submittedDate = new Date(entry.submittedAt);
-
-                  return (
-                    <div
-                      key={entry.id}
-                      className="bg-slate-50 border border-slate-200 rounded-lg p-4"
-                      data-testid={`entry-${entry.id}`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                          {entry.entryType}
-                        </span>
-                        <div className="flex items-center gap-1 text-xs text-slate-500">
-                          <Clock className="w-3 h-3" />
-                          {format(submittedDate, "MMM d, yyyy h:mm a")}
-                        </div>
-                      </div>
-                      {payload.notes && (
-                        <p className="text-sm text-slate-700 mt-2">
-                          {payload.notes}
-                        </p>
-                      )}
-                      {payload.raw && (
-                        <p className="text-sm text-slate-700 mt-2">
-                          {payload.raw}
-                        </p>
-                      )}
-                      {Object.keys(payload).length > 0 &&
-                        !payload.notes &&
-                        !payload.raw && (
-                          <pre className="text-xs text-slate-600 mt-2 bg-white p-2 rounded border overflow-auto">
-                            {JSON.stringify(payload, null, 2)}
-                          </pre>
-                        )}
-                    </div>
-                  );
-                })
-              )}
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setSelectedPropertyId("");
+                    setPropertySearch("");
+                  }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           )}
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
-  );
-}
 
-const ITEMS_PER_PAGE = 11;
+          {/* Season Selection */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-2">Season</label>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSeason("summer")}
+                className={cn(
+                  "flex-1 gap-2",
+                  season === "summer" 
+                    ? "bg-amber-500/20 border-amber-500 text-amber-400" 
+                    : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"
+                )}
+              >
+                <Sun className="w-4 h-4" />
+                Summer
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setSeason("winter")}
+                className={cn(
+                  "flex-1 gap-2",
+                  season === "winter" 
+                    ? "bg-blue-500/20 border-blue-500 text-blue-400" 
+                    : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"
+                )}
+              >
+                <Snowflake className="w-4 h-4" />
+                Winter
+              </Button>
+            </div>
+          </div>
 
-function ScheduleDayCircles({ 
-  days, 
-  activeDays, 
-  label,
-  onToggleDay,
-}: { 
-  days: string[]; 
-  activeDays: string[];
-  label?: string;
-  onToggleDay?: (day: string, isCurrentlyActive: boolean) => void;
-}) {
-  const normalizedActiveDays = activeDays.map(d => DAY_MAPPING[d.toLowerCase()] || DAY_MAPPING[d] || d);
-  
-  return (
-    <div className="flex items-center gap-1">
-      {label && <span className="text-xs text-slate-500 w-16">{label}:</span>}
-      <div className="flex gap-1">
-        {days.map((day) => {
-          const isActive = normalizedActiveDays.includes(day);
-          return (
-            <button
-              key={day}
-              type="button"
-              onClick={() => onToggleDay?.(day, isActive)}
-              className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium border transition-colors cursor-pointer hover:scale-110",
-                isActive 
-                  ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600" 
-                  : "bg-slate-100 text-slate-400 border-slate-200 hover:bg-slate-200 hover:border-slate-300"
-              )}
-              title={`${isActive ? "Remove" : "Add"} ${day}`}
-              data-testid={`button-day-${day.toLowerCase()}`}
+          {/* Visit Days */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-2">Visit Days</label>
+            <div className="flex gap-2">
+              {ALL_DAYS.map(day => (
+                <button
+                  key={day}
+                  onClick={() => toggleDay(day)}
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border transition-all",
+                    selectedDays.includes(day)
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : "bg-slate-800 text-slate-400 border-slate-600 hover:bg-slate-700"
+                  )}
+                  data-testid={`toggle-day-${day.toLowerCase()}`}
+                >
+                  {day.charAt(0)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+            <Button 
+              variant="ghost" 
+              onClick={onClose}
+              className="text-slate-300 hover:text-white hover:bg-slate-700"
             >
-              {day.charAt(0)}
-            </button>
-          );
-        })}
-      </div>
-    </div>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={!selectedPropertyId}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              data-testid="button-confirm-add-property"
+            >
+              Add Property
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function PropertyActionMenu({
+// Remove Property Confirmation
+function RemovePropertyDialog({
+  open,
+  onClose,
   property,
-  onRemove,
-  onExtendedCover,
-  onSplitRoute,
-  onGenerateStops,
-  onAddStop,
+  onConfirm,
 }: {
-  property: TechnicianPropertyWithSchedule;
-  onRemove: () => void;
-  onExtendedCover: () => void;
-  onSplitRoute: () => void;
-  onGenerateStops: () => void;
-  onAddStop: () => void;
+  open: boolean;
+  onClose: () => void;
+  property: TechnicianPropertyWithSchedule | null;
+  onConfirm: () => void;
 }) {
+  if (!property) return null;
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-8 w-8 p-0"
-          data-testid={`button-property-actions-${property.id}`}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem 
-          onClick={onAddStop} 
-          className="gap-2"
-          data-testid={`menu-item-add-stop-${property.id}`}
-        >
-          <Plus className="w-4 h-4" />
-          Add Stop with Notes
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onExtendedCover} 
-          className="gap-2"
-          data-testid={`menu-item-extended-cover-${property.id}`}
-        >
-          <CalendarDays className="w-4 h-4" />
-          Extended Cover
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onSplitRoute} 
-          className="gap-2"
-          data-testid={`menu-item-split-route-${property.id}`}
-        >
-          <Users className="w-4 h-4" />
-          Split Route
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onGenerateStops} 
-          className="gap-2"
-          data-testid={`menu-item-generate-stops-${property.id}`}
-        >
-          <Route className="w-4 h-4" />
-          Generate Stops from Assignments
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onRemove} 
-          className="gap-2 text-red-600 focus:text-red-600"
-          data-testid={`menu-item-remove-property-${property.id}`}
-        >
-          <Trash2 className="w-4 h-4" />
-          Remove Property
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <AlertDialog open={open} onOpenChange={onClose}>
+      <AlertDialogContent className="bg-slate-900 border-slate-700">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-white flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-red-400" />
+            Remove Property
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-slate-400">
+            Are you sure you want to remove <span className="font-medium text-white">{property.propertyName || "this property"}</span> from this technician? This will unassign the property and remove all scheduled stops.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="bg-slate-700 text-white hover:bg-slate-600 border-slate-600">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="bg-red-600 hover:bg-red-700">
+            Remove Property
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -900,90 +976,100 @@ function AddStopModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Stop</DialogTitle>
+      <DialogContent className="max-w-md p-0 bg-slate-900 border-slate-700">
+        <DialogHeader className="bg-gradient-to-r from-cyan-600 to-cyan-700 text-white px-6 py-4 rounded-t-lg">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
+            <Route className="w-5 h-5" />
+            Add Stop
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div>
-            <p className="text-sm text-slate-600 mb-1">Property</p>
-            <p className="font-medium">{property.propertyName || "Unknown Property"}</p>
+        
+        <div className="p-6 space-y-4">
+          <div className="bg-slate-800 rounded-lg p-3 border border-slate-600">
+            <p className="text-sm text-slate-400">Property</p>
+            <p className="font-medium text-white">{property.propertyName || "Unknown Property"}</p>
             {property.address && (
-              <p className="text-sm text-slate-500">{property.address}</p>
+              <p className="text-sm text-slate-400">{property.address}</p>
             )}
           </div>
+          
           <div>
-            <p className="text-sm text-slate-600 mb-1">Technician</p>
-            <p className="font-medium">{technicianName}</p>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1">
+            <label className="text-xs font-medium text-slate-400 block mb-2">
               Body of Water
             </label>
             <Select value={waterBodyType} onValueChange={(val) => setWaterBodyType(val as WaterBodyType)}>
-              <SelectTrigger className="w-full" data-testid="select-water-body-type">
+              <SelectTrigger className="w-full bg-slate-800 border-slate-600 text-white" data-testid="select-water-body-type">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-800 border-slate-600">
                 {WATER_BODY_TYPES.map((type) => (
-                  <SelectItem key={type} value={type} data-testid={`option-water-${type.toLowerCase().replace(" ", "-")}`}>
+                  <SelectItem key={type} value={type} className="text-white hover:bg-slate-700" data-testid={`option-water-${type.toLowerCase().replace(" ", "-")}`}>
                     {type}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+          
           <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1">
+            <label className="text-xs font-medium text-slate-400 block mb-2">
               Scheduled Date
             </label>
             <input
               type="date"
               value={scheduledDate}
               onChange={(e) => setScheduledDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
               data-testid="input-scheduled-date"
             />
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg border border-slate-600">
             <input
               type="checkbox"
               id="coverage-toggle"
               checked={isCoverage}
               onChange={(e) => setIsCoverage(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 rounded border-slate-500 bg-slate-700 text-orange-500 focus:ring-orange-500"
               data-testid="checkbox-coverage"
             />
-            <label htmlFor="coverage-toggle" className="text-sm font-medium text-slate-700">
+            <label htmlFor="coverage-toggle" className="text-sm font-medium text-slate-300 flex-1">
               Coverage Stop
             </label>
             {isCoverage && (
-              <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+              <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded-full">
                 Coverage
               </span>
             )}
           </div>
+          
           <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1">
-              Notes for this stop
+            <label className="text-xs font-medium text-slate-400 block mb-2">
+              Notes
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Enter any notes for this stop..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
               rows={3}
               data-testid="input-stop-notes"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={handleClose} data-testid="button-cancel-add-stop">
+        
+        <div className="px-6 pb-6 flex justify-end gap-3">
+          <Button 
+            variant="ghost" 
+            onClick={handleClose} 
+            className="text-slate-300 hover:text-white hover:bg-slate-700"
+            data-testid="button-cancel-add-stop"
+          >
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit} 
-            className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
             disabled={!scheduledDate}
             data-testid="button-confirm-add-stop"
           >
@@ -995,344 +1081,71 @@ function AddStopModal({
   );
 }
 
-function TechnicianExpandableRow({
-  tech,
-  fullName,
-  initials,
-  avatarColor,
-  isExpanded,
-  propertyCount,
-  globalSeason,
-  onToggleExpand,
-  onViewTech,
-  onEditTech,
-  onToggleStatus,
-  onRemoveProperty,
-  onUpdateSeason,
-  onAddStop,
-  onToggleVisitDay,
-}: {
-  tech: Technician;
-  fullName: string;
-  initials: string;
-  avatarColor: string;
-  isExpanded: boolean;
-  propertyCount: number;
-  globalSeason: "summer" | "winter";
-  onToggleExpand: () => void;
-  onViewTech: () => void;
-  onEditTech: () => void;
-  onToggleStatus: (checked: boolean) => void;
-  onRemoveProperty: (id: string) => void;
-  onUpdateSeason: (propertyId: string, season: string) => void;
-  onAddStop: (property: TechnicianPropertyWithSchedule) => void;
-  onToggleVisitDay: (propertyId: string, day: string, isCurrentlyActive: boolean, activeSeason: string) => void;
+function ScheduleDayCircles({ 
+  days, 
+  activeDays, 
+  onToggleDay,
+}: { 
+  days: string[]; 
+  activeDays: string[];
+  onToggleDay?: (day: string, isCurrentlyActive: boolean) => void;
 }) {
-  const { data: properties, isLoading: propertiesLoading } = useQuery<TechnicianPropertyWithSchedule[]>({
-    queryKey: ["/api/technician-properties", tech.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/technician-properties/${tech.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: isExpanded,
-  });
-
-  // Fetch scheduled stops for this technician
-  const { data: stops, isLoading: stopsLoading } = useQuery<any[]>({
-    queryKey: ["/api/technician-stops", tech.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/technician-stops/${tech.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: isExpanded,
-  });
-
+  const normalizedActiveDays = activeDays.map(d => DAY_MAPPING[d.toLowerCase()] || DAY_MAPPING[d] || d);
+  
   return (
-    <>
-      <tr 
-        className={cn(
-          "hover:bg-slate-50 transition-colors cursor-pointer",
-          isExpanded && "bg-slate-50"
-        )}
-        data-testid={`row-technician-${tech.id}`}
-      >
-        <td className="px-6 py-4">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={onToggleExpand}
-              className="p-1 hover:bg-slate-200 rounded transition-colors"
-              data-testid={`button-expand-${tech.id}`}
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-slate-500" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              )}
-            </button>
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm",
-              avatarColor
-            )}>
-              {initials}
-            </div>
-            <span 
-              className="font-medium text-[#0078D4] hover:underline cursor-pointer"
-              onClick={(e) => { e.stopPropagation(); onViewTech(); }}
-              data-testid={`link-tech-name-${tech.id}`}
-            >
-              {fullName || "Unknown"}
-            </span>
-          </div>
-        </td>
-        <td className="px-6 py-4 text-slate-600">
-          {tech.phone || "-"}
-        </td>
-        <td className="px-6 py-4 text-slate-600">
-          {tech.email || "-"}
-        </td>
-        <td className="px-6 py-4 text-slate-600">
-          {tech.truckNumber ? (
-            <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium text-sm">
-              #{tech.truckNumber}
-            </span>
-          ) : (
-            <span className="text-slate-400">-</span>
-          )}
-        </td>
-        <td className="px-6 py-4 text-center">
-          {tech.commissionPercent ? (
-            <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 font-medium text-sm">
-              {tech.commissionPercent}%
-            </span>
-          ) : (
-            <span className="text-slate-400">0%</span>
-          )}
-        </td>
-        <td className="px-6 py-4 text-center">
-          {propertyCount > 0 ? (
-            <span 
-              className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 font-medium text-sm cursor-pointer hover:bg-green-200"
-              onClick={onToggleExpand}
-              data-testid={`badge-property-count-${tech.id}`}
-            >
-              {propertyCount}
-            </span>
-          ) : (
-            <span className="text-slate-400" data-testid={`text-no-properties-${tech.id}`}>0</span>
-          )}
-        </td>
-        <td className="px-6 py-4">
-          <div className="flex justify-center">
-            <Switch 
-              checked={tech.active} 
-              onCheckedChange={onToggleStatus}
-              className="data-[state=checked]:bg-[#0078D4]"
-              data-testid={`switch-status-${tech.id}`}
-            />
-          </div>
-        </td>
-        <td className="px-6 py-4 text-right">
-          <Button 
-            variant="link" 
-            className="text-[#0078D4] hover:text-blue-800 p-0 h-auto"
-            onClick={onEditTech}
-            data-testid={`button-edit-${tech.id}`}
+    <div className="flex gap-1">
+      {days.map((day) => {
+        const isActive = normalizedActiveDays.includes(day);
+        return (
+          <button
+            key={day}
+            type="button"
+            onClick={() => onToggleDay?.(day, isActive)}
+            className={cn(
+              "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all cursor-pointer",
+              isActive 
+                ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600" 
+                : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+            )}
+            title={`${isActive ? "Remove" : "Add"} ${day}`}
+            data-testid={`button-day-${day.toLowerCase()}`}
           >
-            Edit
-          </Button>
-        </td>
-      </tr>
-      {isExpanded && (
-        <tr className="bg-slate-50/50">
-          <td colSpan={8} className="px-6 py-3">
-            <div className="ml-12 space-y-4">
-              {/* Scheduled Stops Section */}
-              {stopsLoading ? (
-                <div className="text-sm text-slate-500 py-2">Loading stops...</div>
-              ) : stops && stops.length > 0 ? (
-                <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
-                  <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
-                    <div className="flex items-center gap-2">
-                      <Route className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-semibold text-blue-800">Scheduled Stops ({stops.length})</span>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-blue-100">
-                    {stops.map((stop: any) => (
-                      <div 
-                        key={stop.id} 
-                        className="px-4 py-3 hover:bg-blue-50/50"
-                        data-testid={`row-stop-${stop.id}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm text-slate-900">{stop.propertyName}</span>
-                                {stop.waterBodyType && (
-                                  <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-medium rounded-full">
-                                    {stop.waterBodyType}
-                                  </span>
-                                )}
-                                {stop.isCoverage && (
-                                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
-                                    Coverage
-                                  </span>
-                                )}
-                              </div>
-                              {stop.address && (
-                                <p className="text-xs text-slate-500">{stop.address}</p>
-                              )}
-                              {stop.notes && (
-                                <p className="text-xs text-slate-600 mt-1 italic">"{stop.notes}"</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {stop.scheduledDate && (
-                              <span className="text-xs text-slate-600 flex items-center gap-1">
-                                <CalendarDays className="w-3 h-3" />
-                                {new Date(stop.scheduledDate).toLocaleDateString()}
-                              </span>
-                            )}
-                            <span className={cn(
-                              "px-2 py-0.5 text-xs font-medium rounded-full",
-                              stop.status === "completed" ? "bg-green-100 text-green-700" :
-                              stop.status === "in_progress" ? "bg-yellow-100 text-yellow-700" :
-                              "bg-slate-100 text-slate-600"
-                            )}>
-                              {stop.status === "not_started" ? "Pending" : stop.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Properties Section */}
-              {propertiesLoading ? (
-                <div className="text-sm text-slate-500 py-2">Loading properties...</div>
-              ) : !properties || properties.length === 0 ? (
-                <div className="text-sm text-slate-500 py-2">No properties assigned</div>
-              ) : (
-                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                  <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
-                    <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-600 uppercase">
-                      <div className="col-span-4">Property</div>
-                      <div className="col-span-4">Schedule</div>
-                      <div className="col-span-2">Season</div>
-                      <div className="col-span-2 text-right">Actions</div>
-                    </div>
-                  </div>
-                  <div className="divide-y divide-slate-100">
-                    {properties.map((property) => {
-                      const activeSeason = property.activeSeason || globalSeason;
-                      const visitDays = activeSeason === "summer" 
-                        ? (property.summerVisitDays || []) 
-                        : (property.winterVisitDays || []);
-                      
-                      return (
-                        <div 
-                          key={property.id} 
-                          className="px-4 py-3 hover:bg-slate-50"
-                          data-testid={`row-property-${property.id}`}
-                        >
-                          <div className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-4">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-slate-400" />
-                                <div>
-                                  <p className="font-medium text-sm text-slate-900">{property.propertyName || "Unnamed Property"}</p>
-                                  {property.address && (
-                                    <p className="text-xs text-slate-500 truncate max-w-[200px]">{property.address}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="col-span-4">
-                              <ScheduleDayCircles 
-                                days={ALL_DAYS} 
-                                activeDays={visitDays} 
-                                onToggleDay={(day, isActive) => onToggleVisitDay(property.propertyId, day, isActive, activeSeason)}
-                              />
-                            </div>
-                            <div className="col-span-2">
-                              <div className="flex items-center gap-2">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        onClick={() => onUpdateSeason(property.propertyId, activeSeason === "summer" ? "winter" : "summer")}
-                                        className={cn(
-                                          "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors",
-                                          activeSeason === "summer" 
-                                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200" 
-                                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                        )}
-                                        data-testid={`button-toggle-season-${property.id}`}
-                                      >
-                                        {activeSeason === "summer" ? (
-                                          <>
-                                            <Sun className="w-3 h-3" />
-                                            Summer
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Snowflake className="w-3 h-3" />
-                                            Winter
-                                          </>
-                                        )}
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Click to switch to {activeSeason === "summer" ? "winter" : "summer"} schedule</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            </div>
-                            <div className="col-span-2 flex justify-end">
-                              <PropertyActionMenu
-                                property={property}
-                                onRemove={() => onRemoveProperty(property.id)}
-                                onExtendedCover={() => console.log("Extended Cover", property)}
-                                onSplitRoute={() => console.log("Split Route", property)}
-                                onGenerateStops={() => console.log("Generate Stops", property)}
-                                onAddStop={() => onAddStop(property)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
+            {day.charAt(0)}
+          </button>
+        );
+      })}
+    </div>
   );
 }
+
+const ITEMS_PER_PAGE = 10;
 
 export default function ServiceTechs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTech, setEditingTech] = useState<Technician | null>(null);
-  const [viewingTech, setViewingTech] = useState<Technician | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedTechs, setExpandedTechs] = useState<Set<string>>(new Set());
   const [globalSeason, setGlobalSeason] = useState<"summer" | "winter">("summer");
+  
+  // Stop modal state
   const [showAddStopModal, setShowAddStopModal] = useState(false);
   const [addStopProperty, setAddStopProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
   const [addStopTechnicianId, setAddStopTechnicianId] = useState<string>("");
   const [addStopTechnicianName, setAddStopTechnicianName] = useState<string>("");
+  
+  // Stops panel state
+  const [stopsPanelTech, setStopsPanelTech] = useState<Technician | null>(null);
+  
+  // Add property modal state
+  const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
+  const [addPropertyTech, setAddPropertyTech] = useState<Technician | null>(null);
+  
+  // Remove property state
+  const [showRemovePropertyDialog, setShowRemovePropertyDialog] = useState(false);
+  const [propertyToRemove, setPropertyToRemove] = useState<TechnicianPropertyWithSchedule | null>(null);
+  
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
@@ -1373,7 +1186,7 @@ export default function ServiceTechs() {
   });
 
   const updateTechnicianMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const res = await fetch(`/api/technicians/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1417,10 +1230,54 @@ export default function ServiceTechs() {
 
   const removePropertyMutation = useMutation({
     mutationFn: async (propertyAssignmentId: string) => {
-      const res = await fetch(`/api/property-technicians/${propertyAssignmentId}`, {
+      const res = await fetch(`/api/technician-properties/${propertyAssignmentId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to remove property");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties/counts"] });
+      setShowRemovePropertyDialog(false);
+      setPropertyToRemove(null);
+    },
+  });
+
+  const addPropertyMutation = useMutation({
+    mutationFn: async ({ technicianId, customerId, visitDays, season }: { technicianId: string; customerId: string; visitDays: string[]; season: string }) => {
+      const customersRes = await fetch("/api/customers");
+      const customersData = await customersRes.json();
+      const customer = customersData.customers?.find((c: Customer) => c.id === customerId);
+      
+      // Step 1: Assign property to technician
+      const res = await fetch("/api/technician-properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          technicianId,
+          propertyId: customerId,
+          propertyName: customer?.name,
+          customerName: customer?.name,
+          address: customer?.address,
+          assignedByName: "Office Staff",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to assign property");
+      
+      // Step 2: Set up schedule if visit days selected
+      if (visitDays.length > 0) {
+        const scheduleData = season === "summer" 
+          ? { summerVisitDays: visitDays, activeSeason: "summer" }
+          : { winterVisitDays: visitDays, activeSeason: "winter" };
+          
+        await fetch(`/api/property-schedule/by-property/${customerId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(scheduleData),
+        });
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -1519,22 +1376,6 @@ export default function ServiceTechs() {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedTechnicians = filteredTechnicians.slice(startIndex, endIndex);
 
-  const getPageNumbers = () => {
-    const pages: (number | string)[] = [];
-    if (totalPages <= 5) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      if (currentPage <= 3) {
-        pages.push(1, 2, 3, 4, "...", totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
-      } else {
-        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
-      }
-    }
-    return pages;
-  };
-
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filterStatus]);
@@ -1542,22 +1383,46 @@ export default function ServiceTechs() {
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Service Technicians</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Service Technicians</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage your service team and property assignments</p>
+          </div>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2 shadow-lg shadow-blue-500/20" 
+            onClick={() => setShowAddModal(true)}
+            data-testid="button-add-technician"
+          >
+            <Plus className="w-4 h-4" />
+            Add Technician
+          </Button>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Filters Bar */}
+        <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search by name, phone, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-slate-50 border-slate-200"
+              data-testid="input-search-techs"
+            />
+          </div>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" className="bg-[#0078D4] hover:bg-[#0078D4]" data-testid="dropdown-filter-status">
-                Filter: {filterStatus === "all" ? "All" : filterStatus === "active" ? "Active" : "Inactive"}
-                <ChevronDown className="w-4 h-4 ml-2" />
+              <Button variant="outline" className="gap-2 border-slate-200" data-testid="dropdown-filter-status">
+                {filterStatus === "all" ? "All Status" : filterStatus === "active" ? "Active Only" : "Inactive Only"}
+                <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setFilterStatus("all")}>All</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("active")}>Active</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("inactive")}>Inactive</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("all")}>All Status</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("active")}>Active Only</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("inactive")}>Inactive Only</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -1578,195 +1443,129 @@ export default function ServiceTechs() {
                   {globalSeason === "summer" ? (
                     <>
                       <Sun className="w-4 h-4" />
-                      Summer Schedule
+                      Summer
                     </>
                   ) : (
                     <>
                       <Snowflake className="w-4 h-4" />
-                      Winter Schedule
+                      Winter
                     </>
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Toggle between summer and winter schedule view</p>
+                <p>Toggle between summer and winter schedule</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="tech name, phone #, email"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-search-techs"
-            />
-          </div>
-
-          <Button 
-            className="bg-[#0078D4] hover:bg-[#0078D4] ml-auto" 
-            onClick={() => setShowAddModal(true)}
-            data-testid="button-add-technician"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Tech
-          </Button>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-100 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Technicians
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Phone
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Truck #
-                </th>
-                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Commission %
-                </th>
-                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Properties
-                </th>
-                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
-                    Loading technicians...
-                  </td>
-                </tr>
-              ) : filteredTechnicians.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
-                    {searchQuery ? "No technicians match your search" : "No service technicians found. Click 'Add Tech' to add one."}
-                  </td>
-                </tr>
-              ) : (
-                paginatedTechnicians.map((tech) => {
-                  const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.trim();
-                  const initials = getInitials(tech.firstName, tech.lastName);
-                  const avatarColor = getAvatarColor(fullName);
-                  const isExpanded = expandedTechs.has(tech.id);
-                  const propertyCount = propertyCounts[tech.id] || 0;
-                  
-                  return (
-                    <TechnicianExpandableRow
-                      key={tech.id}
-                      tech={tech}
-                      fullName={fullName}
-                      initials={initials}
-                      avatarColor={avatarColor}
-                      isExpanded={isExpanded}
-                      propertyCount={propertyCount}
-                      globalSeason={globalSeason}
-                      onToggleExpand={() => toggleTechExpanded(tech.id)}
-                      onViewTech={() => setViewingTech(tech)}
-                      onEditTech={() => setEditingTech(tech)}
-                      onToggleStatus={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
-                      onRemoveProperty={(id) => removePropertyMutation.mutate(id)}
-                      onUpdateSeason={(propertyId, season) => updatePropertySeasonMutation.mutate({ propertyId, activeSeason: season })}
-                      onAddStop={(property) => handleOpenAddStopModal(tech, property)}
-                      onToggleVisitDay={(propertyId, day, isCurrentlyActive, season) => 
-                        toggleVisitDayMutation.mutate({ propertyId, day, isCurrentlyActive, season })
-                      }
-                    />
-                  );
-                })
+        {/* Technicians List */}
+        <div className="space-y-3">
+          {isLoading ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
+              <p className="text-slate-500 mt-3">Loading technicians...</p>
+            </div>
+          ) : filteredTechnicians.length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+              <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500">
+                {searchQuery ? "No technicians match your search" : "No service technicians found"}
+              </p>
+              {!searchQuery && (
+                <Button 
+                  className="mt-4 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setShowAddModal(true)}
+                >
+                  Add Your First Technician
+                </Button>
               )}
-            </tbody>
-          </table>
+            </div>
+          ) : (
+            paginatedTechnicians.map((tech) => (
+              <TechnicianCard
+                key={tech.id}
+                tech={tech}
+                isExpanded={expandedTechs.has(tech.id)}
+                propertyCount={propertyCounts[tech.id] || 0}
+                globalSeason={globalSeason}
+                onToggleExpand={() => toggleTechExpanded(tech.id)}
+                onEdit={() => setEditingTech(tech)}
+                onToggleStatus={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
+                onViewStops={() => setStopsPanelTech(tech)}
+                onAddProperty={() => {
+                  setAddPropertyTech(tech);
+                  setShowAddPropertyModal(true);
+                }}
+                onRemoveProperty={(property) => {
+                  setPropertyToRemove(property);
+                  setShowRemovePropertyDialog(true);
+                }}
+                onUpdateSeason={(propertyId, season) => updatePropertySeasonMutation.mutate({ propertyId, activeSeason: season })}
+                onAddStop={(property) => handleOpenAddStopModal(tech, property)}
+                onToggleVisitDay={(propertyId, day, isActive, season) => 
+                  toggleVisitDayMutation.mutate({ propertyId, day, isCurrentlyActive: isActive, season })
+                }
+              />
+            ))
+          )}
         </div>
 
-        <div className="flex items-center justify-between bg-slate-50 px-4 py-3 border border-slate-200 rounded-lg">
-          <div className="text-sm text-slate-600">
-            Showing {filteredTechnicians.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length} technicians
-          </div>
-          
-          {totalPages > 1 && (
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between bg-white px-4 py-3 border border-slate-200 rounded-xl">
+            <div className="text-sm text-slate-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length}
+            </div>
             <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="h-8 px-3"
-                data-testid="button-first-page"
-              >
-                First
-              </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-3"
-                data-testid="button-prev-page"
+                className="h-8"
               >
-                Prev
+                Previous
               </Button>
-              
-              {getPageNumbers().map((page, idx) => (
-                typeof page === "number" ? (
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let page;
+                if (totalPages <= 5) {
+                  page = i + 1;
+                } else if (currentPage <= 3) {
+                  page = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  page = totalPages - 4 + i;
+                } else {
+                  page = currentPage - 2 + i;
+                }
+                return (
                   <Button
-                    key={idx}
+                    key={page}
                     variant={currentPage === page ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={cn(
-                      "h-8 w-8",
-                      currentPage === page && "bg-[#0078D4] hover:bg-[#0078D4]"
-                    )}
-                    data-testid={`button-page-${page}`}
+                    className={cn("h-8 w-8", currentPage === page && "bg-blue-600 hover:bg-blue-700")}
                   >
                     {page}
                   </Button>
-                ) : (
-                  <span key={idx} className="px-2 text-slate-400">...</span>
-                )
-              ))}
-              
+                );
+              })}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-3"
-                data-testid="button-next-page"
+                className="h-8"
               >
                 Next
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="h-8 px-3"
-                data-testid="button-last-page"
-              >
-                Last
-              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
+      {/* Modals */}
       <AddTechnicianModal 
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -1781,9 +1580,43 @@ export default function ServiceTechs() {
         onDelete={(id) => deleteTechnicianMutation.mutate(id)}
       />
 
-      <ServiceLogSidebar
-        technician={viewingTech}
-        onClose={() => setViewingTech(null)}
+      <ScheduledStopsPanel
+        technician={stopsPanelTech}
+        open={!!stopsPanelTech}
+        onClose={() => setStopsPanelTech(null)}
+      />
+
+      <AddPropertyModal
+        open={showAddPropertyModal}
+        onClose={() => {
+          setShowAddPropertyModal(false);
+          setAddPropertyTech(null);
+        }}
+        technician={addPropertyTech}
+        onAddProperty={(customerId, visitDays, season) => {
+          if (addPropertyTech) {
+            addPropertyMutation.mutate({
+              technicianId: addPropertyTech.id,
+              customerId,
+              visitDays,
+              season,
+            });
+          }
+        }}
+      />
+
+      <RemovePropertyDialog
+        open={showRemovePropertyDialog}
+        onClose={() => {
+          setShowRemovePropertyDialog(false);
+          setPropertyToRemove(null);
+        }}
+        property={propertyToRemove}
+        onConfirm={() => {
+          if (propertyToRemove) {
+            removePropertyMutation.mutate(propertyToRemove.id);
+          }
+        }}
       />
 
       <AddStopModal
@@ -1798,5 +1631,306 @@ export default function ServiceTechs() {
         onAddStop={(data) => createRouteStopMutation.mutate(data)}
       />
     </AppLayout>
+  );
+}
+
+// Technician Card Component
+function TechnicianCard({
+  tech,
+  isExpanded,
+  propertyCount,
+  globalSeason,
+  onToggleExpand,
+  onEdit,
+  onToggleStatus,
+  onViewStops,
+  onAddProperty,
+  onRemoveProperty,
+  onUpdateSeason,
+  onAddStop,
+  onToggleVisitDay,
+}: {
+  tech: Technician;
+  isExpanded: boolean;
+  propertyCount: number;
+  globalSeason: "summer" | "winter";
+  onToggleExpand: () => void;
+  onEdit: () => void;
+  onToggleStatus: (checked: boolean) => void;
+  onViewStops: () => void;
+  onAddProperty: () => void;
+  onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
+  onUpdateSeason: (propertyId: string, season: string) => void;
+  onAddStop: (property: TechnicianPropertyWithSchedule) => void;
+  onToggleVisitDay: (propertyId: string, day: string, isActive: boolean, season: string) => void;
+}) {
+  const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.trim();
+  const initials = getInitials(tech.firstName, tech.lastName);
+  const avatarColor = getAvatarColor(fullName);
+
+  const { data: properties, isLoading: propertiesLoading } = useQuery<TechnicianPropertyWithSchedule[]>({
+    queryKey: ["/api/technician-properties", tech.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-properties/${tech.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isExpanded,
+  });
+
+  // Check if tech has coverage stops
+  const { data: stops } = useQuery<RouteStop[]>({
+    queryKey: ["/api/technician-stops", tech.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-stops/${tech.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const hasCoverage = stops?.some(s => s.isCoverage) || false;
+
+  return (
+    <div 
+      className={cn(
+        "bg-white rounded-xl border transition-all",
+        isExpanded ? "border-blue-300 shadow-lg shadow-blue-500/10" : "border-slate-200 hover:border-slate-300"
+      )}
+      data-testid={`card-technician-${tech.id}`}
+    >
+      {/* Main Row */}
+      <div 
+        className="flex items-center gap-4 p-4 cursor-pointer"
+        onClick={onToggleExpand}
+      >
+        {/* Expand Arrow */}
+        <button 
+          className={cn(
+            "p-1.5 rounded-lg transition-colors",
+            isExpanded ? "bg-blue-100 text-blue-600" : "hover:bg-slate-100 text-slate-400"
+          )}
+          data-testid={`button-expand-${tech.id}`}
+        >
+          {isExpanded ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+        </button>
+
+        {/* Avatar */}
+        <div className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg",
+          avatarColor
+        )}>
+          {initials}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900" data-testid={`text-tech-name-${tech.id}`}>
+              {fullName || "Unknown"}
+            </span>
+            {hasCoverage && (
+              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                Coverage
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
+            {tech.phone && <span>{tech.phone}</span>}
+            {tech.email && <span className="truncate max-w-[200px]">{tech.email}</span>}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex items-center gap-6">
+          {tech.truckNumber && (
+            <div className="text-center">
+              <p className="text-xs text-slate-400 uppercase">Truck</p>
+              <span className="inline-flex items-center px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold text-sm">
+                #{tech.truckNumber}
+              </span>
+            </div>
+          )}
+          <div className="text-center">
+            <p className="text-xs text-slate-400 uppercase">Commission</p>
+            <span className="inline-flex items-center px-2 py-1 rounded-lg bg-amber-50 text-amber-700 font-semibold text-sm">
+              {tech.commissionPercent || 0}%
+            </span>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-slate-400 uppercase">Properties</p>
+            <span 
+              className="inline-flex items-center px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-sm cursor-pointer hover:bg-emerald-100"
+              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+              data-testid={`badge-property-count-${tech.id}`}
+            >
+              {propertyCount}
+            </span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onViewStops}
+                  className="gap-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50"
+                  data-testid={`button-view-stops-${tech.id}`}
+                >
+                  <Route className="w-4 h-4" />
+                  <span className="hidden lg:inline">Stops</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>View Scheduled Stops</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Switch 
+            checked={tech.active} 
+            onCheckedChange={onToggleStatus}
+            className="data-[state=checked]:bg-emerald-500"
+            data-testid={`switch-status-${tech.id}`}
+          />
+
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={onEdit}
+            data-testid={`button-edit-${tech.id}`}
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="border-t border-slate-100 bg-slate-50/50 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-semibold text-slate-700 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-slate-400" />
+              Assigned Properties ({properties?.length || 0})
+            </h4>
+            <Button
+              size="sm"
+              onClick={onAddProperty}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              data-testid={`button-add-property-${tech.id}`}
+            >
+              <Plus className="w-4 h-4" />
+              Add Property
+            </Button>
+          </div>
+
+          {propertiesLoading ? (
+            <div className="text-center py-6">
+              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
+            </div>
+          ) : !properties || properties.length === 0 ? (
+            <div className="text-center py-6 text-slate-400">
+              <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No properties assigned</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {properties.map((property) => {
+                const activeSeason = property.activeSeason || globalSeason;
+                const visitDays = activeSeason === "summer" 
+                  ? (property.summerVisitDays || []) 
+                  : (property.winterVisitDays || []);
+                
+                return (
+                  <div 
+                    key={property.id}
+                    className="bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 transition-colors"
+                    data-testid={`row-property-${property.id}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <MapPin className="w-5 h-5 text-slate-400 flex-shrink-0" />
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate">
+                          {property.propertyName || "Unnamed Property"}
+                        </p>
+                        {property.address && (
+                          <p className="text-sm text-slate-500 truncate">{property.address}</p>
+                        )}
+                      </div>
+
+                      <ScheduleDayCircles 
+                        days={ALL_DAYS} 
+                        activeDays={visitDays} 
+                        onToggleDay={(day, isActive) => onToggleVisitDay(property.propertyId, day, isActive, activeSeason)}
+                      />
+
+                      <button
+                        onClick={() => onUpdateSeason(property.propertyId, activeSeason === "summer" ? "winter" : "summer")}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
+                          activeSeason === "summer" 
+                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200" 
+                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        )}
+                        data-testid={`button-toggle-season-${property.id}`}
+                      >
+                        {activeSeason === "summer" ? (
+                          <>
+                            <Sun className="w-3.5 h-3.5" />
+                            Summer
+                          </>
+                        ) : (
+                          <>
+                            <Snowflake className="w-3.5 h-3.5" />
+                            Winter
+                          </>
+                        )}
+                      </button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            data-testid={`button-property-actions-${property.id}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => onAddStop(property)}
+                            className="gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Stop
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => onRemoveProperty(property)}
+                            className="gap-2 text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remove Property
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

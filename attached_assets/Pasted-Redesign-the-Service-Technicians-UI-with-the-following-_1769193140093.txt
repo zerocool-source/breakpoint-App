@@ -1,0 +1,61 @@
+Redesign the Service Technicians UI with the following requirements:
+Keep existing functionality:
+
+Technician list with expandable rows
+Filter by Active/Inactive status
+Filter by Season (Summer/Winter)
+Search by tech name, phone, or email
+Display technician info: name, phone, email, truck #, commission %, properties count, status toggle
+Property assignment table with schedule days (M T W T F S S) and season tags
+Add Tech button
+Edit action per technician
+
+New features to add:
+
+Add Property to Technician
+
+Button to assign a new property to a technician
+Modal/dropdown to select from available properties
+Ability to set schedule days and season when adding
+
+
+Remove Property from Technician
+
+Button or action to unassign a property from a technician
+Confirmation before removing
+
+
+Coverage Tag
+
+When a technician is covering another technician's route, display a visible "Coverage" tag/badge on their row
+Tag should be clearly visible and distinguishable (different color, icon, etc.)
+Coverage status should be toggleable or automatically detected
+
+
+Scheduled Stops - Side Panel View
+
+Instead of expanding stops below the technician row, display scheduled stops in a slide-out side panel
+Panel appears on the right side of the screen when clicking on a technician or "View Stops" button
+Easy-to-use interface with:
+
+Technician name and avatar at the top of the panel
+List of stops in a clean, card-based layout
+Each stop card shows: property name, type tag (Pool), notes, date, and status badge
+Drag-and-drop reordering capability (optional)
+Quick actions: mark complete, edit notes, reschedule
+Close button to collapse panel
+
+
+Panel should feel lightweight and not block the main technician list
+Smooth slide-in/slide-out animation
+
+
+
+Design direction:
+
+Modern, clean UI with good visual hierarchy
+Dark theme with glass-morphism effects preferred
+Smooth micro-interactions and transitions
+Clear status indicators and color-coded tags
+Mobile-responsive (panel becomes full-screen on mobile)
+User-friendly and intuitive—minimal clicks to complete actions
