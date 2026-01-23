@@ -736,7 +736,7 @@ function ScheduleDayCircles({
               className={cn(
                 "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium border transition-colors",
                 isActive 
-                  ? "bg-[#0078D4] text-white border-[#0078D4]" 
+                  ? "bg-orange-500 text-white border-orange-500" 
                   : "bg-slate-100 text-slate-400 border-slate-200"
               )}
               title={day}
