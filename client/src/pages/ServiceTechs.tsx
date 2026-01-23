@@ -1144,9 +1144,9 @@ export default function ServiceTechs() {
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
-    queryKey: ["/api/technicians/stored", "service"],
+    queryKey: ["/api/technicians/stored"],
     queryFn: async () => {
-      const res = await fetch("/api/technicians/stored?role=service");
+      const res = await fetch("/api/technicians/stored");
       if (!res.ok) throw new Error("Failed to fetch technicians");
       return res.json();
     },
@@ -1176,7 +1176,7 @@ export default function ServiceTechs() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "service"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
     },
   });
 
@@ -1191,7 +1191,7 @@ export default function ServiceTechs() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "service"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
     },
   });
 
@@ -1204,7 +1204,7 @@ export default function ServiceTechs() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "service"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
     },
   });
 
@@ -1219,7 +1219,7 @@ export default function ServiceTechs() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "service"] });
+      queryClient.refetchQueries({ queryKey: ["/api/technicians/stored"] });
     },
   });
 
