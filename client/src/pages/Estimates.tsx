@@ -1346,12 +1346,27 @@ export default function Estimates() {
 
       let qbInvoiceData = null;
       let invoiceError = null;
+      let isQbNotConnected = false;
+      
       if (invoiceResponse.ok) {
         qbInvoiceData = await invoiceResponse.json();
       } else {
         const errorData = await invoiceResponse.json().catch(() => ({}));
-        invoiceError = errorData.error || "Failed to create QuickBooks invoice";
-        console.warn("QuickBooks invoice creation failed:", invoiceError);
+        invoiceError = errorData.message || errorData.error || "Failed to create QuickBooks invoice";
+        isQbNotConnected = errorData.code === "QB_NOT_CONNECTED" || invoiceResponse.status === 401;
+        console.warn("QuickBooks invoice creation failed:", invoiceError, errorData);
+        
+        // If QB is not connected, show a specific error and don't proceed
+        if (isQbNotConnected) {
+          toast({
+            title: "QuickBooks Not Connected",
+            description: "Please connect to QuickBooks in Settings before sending invoices. Your authorization may have expired.",
+            variant: "destructive",
+          });
+          setShowInvoiceDialog(false);
+          setIsCreatingInvoice(false);
+          return;
+        }
       }
 
       updateStatusMutation.mutate({
@@ -1375,7 +1390,7 @@ export default function Estimates() {
           } else if (invoiceError) {
             toast({ 
               title: "Invoiced (QB Failed)", 
-              description: `Status updated to invoiced, but QuickBooks invoice creation failed: ${invoiceError}`,
+              description: `Status updated to invoiced, but QuickBooks failed: ${invoiceError}`,
               variant: "destructive"
             });
           } else {

@@ -1,0 +1,200 @@
+Update the UI of the Overview page using the following design specifications:
+
+Design Direction
+Visual Style:
+
+Dark mode with diagonal gradient background (Ocean Blue → Teal → Deep Navy)
+Glassmorphism cards with subtle frosted glass effect and soft borders
+Orange (#ff8c00) as primary accent for CTAs, active states, and key metrics
+Teal/cyan (#0f4a5c → #1a6b5c) for secondary accents
+Clean, minimal typography with strong hierarchy
+Generous whitespace and padding
+Rounded corners (12-16px) throughout
+Subtle depth through layered shadows
+
+Background Gradient:
+cssbackground: linear-gradient(135deg, #0d2847 0%, #0f4a5c 50%, #0a1628 100%);
+This creates a diagonal sweep from ocean blue (top-left) through teal (center) to deep navy (bottom-right), similar to premium crypto wallet apps.
+Color System:
+RoleColorBackground Gradient#0d2847 → #0f4a5c → #0a1628Sidebar/Header#0a1628 (Deep Navy solid)Card Backgroundrgba(255,255,255,0.05) with blurBorderrgba(255,255,255,0.1)Primary Action#ff8c00 (Orange)Primary Hover#ffa940 (Orange Light)Primary Pressed#e67700 (Orange Dark)Positive/Success#1a6b5c (Teal)Warning#f7b955 (Amber)Critical/Alert#ff6b6b (Coral)Text Primary#ffffffText Secondary#8b95a5
+
+Layout Structure
+Header Bar:
+
+Background: #0a1628 (solid Deep Navy for contrast against gradient)
+Left: Logo + "BETA" badge in orange
+Center: Global search bar with glassmorphism style, placeholder "Search properties, alerts, customers..."
+Right: Date/time display, notification bell with orange badge, user avatar
+"Sync Pool Brain" button in orange with subtle glow
+
+Sidebar Navigation:
+
+Background: #0a1628 (Deep Navy solid)
+Orange left border indicator for active item
+Icon + label for each nav item
+Hover state: subtle orange glow + background lighten
+
+Main Content Area:
+
+Background: diagonal gradient (linear-gradient(135deg, #0d2847 0%, #0f4a5c 50%, #0a1628 100%))
+Fixed/attached gradient so it doesn't scroll with content
+Content scrolls over the gradient background
+
+
+Dashboard Content Sections
+1. KPI Stat Cards (Top Row — 4 cards)
+Glassmorphism cards in a horizontal row:
+
+Pending Approvals — Large number, dollar value below, clock icon (orange)
+Needs Scheduling — Large number, "Approved jobs awaiting" subtext, calendar icon (amber)
+Ready to Invoice — Large number, dollar value, dollar icon (teal)
+Active Repairs — Large number, "Service repairs in progress" subtext, wrench icon (coral)
+
+Card styling:
+
+Background: rgba(255,255,255,0.05) with backdrop-filter: blur(12px)
+Border: 1px solid rgba(255,255,255,0.1)
+Left accent border (4px) in respective status color
+Icons in matching status color with soft glow
+Numbers in white, large font weight (700)
+Subtext in muted gray (#8b95a5)
+Hover: lift + border glow in status color
+
+
+2. Open Emergencies Section
+
+Background card: rgba(255,255,255,0.03) with glassmorphism
+Section header with warning triangle icon (coral), title "Open Emergencies", count badge in coral
+"View All →" link in orange on right
+Card grid (3 columns) showing emergency items:
+
+Property name + severity badge (Critical = coral bg, High = amber bg)
+Issue description (truncated 2 lines)
+Assigned technician icon + name + role
+Days open counter with color coding (8+ days = coral, 5-7 = amber, <5 = gray)
+
+
+Individual emergency cards with subtle coral/amber left border based on severity
+
+
+3. Estimate Pipeline + Financial Summary (Two-column layout)
+Left: Estimate Pipeline
+
+Glassmorphism card container
+Section header with document icon (orange), "Job estimates by status" subtitle
+"View All →" link in orange
+Vertical list with status dots:
+
+Draft (gray dot #8b95a5) — count badge
+Pending Approval (amber dot #f7b955) — count
+Approved (teal dot #1a6b5c) — count
+Scheduled (blue dot #3b82f6) — count
+Ready to Invoice (orange dot #ff8c00) — count
+
+
+Hover state: row background lightens, slight indent animation
+
+Right: Financial Summary
+
+Glassmorphism card container
+Section header with trending-up icon (teal), "Values across pipeline stages" subtitle
+Large "Total Pipeline Value" label in muted gray
+Big dollar amount in orange (#ff8c00), bold
+Three-column breakdown below with subtle dividers:
+
+Pending Approval — amber text dollar value
+Scheduled — white text dollar value
+Ready to Invoice — teal text dollar value
+
+
+
+
+4. Recent Activity + Urgent Items (Two-column layout)
+Left: Recent Activity
+
+Glassmorphism card container
+Section header with activity/pulse icon, "Latest estimates and service repairs" subtitle
+Scrollable list of activity items:
+
+Left icon (wrench for repairs, document for estimates) in circle bg
+Title + property name
+Status badge pill (completed = teal, invoiced = orange, pending = amber)
+Timestamp in muted gray, right-aligned
+
+
+Subtle divider lines between items (rgba(255,255,255,0.05))
+
+Right: Urgent Items
+
+Glassmorphism card container with faint coral tint
+Section header with alert triangle (coral), "Requires immediate attention" subtitle
+Compact list of urgent emergencies
+Each item: coral left border (4px), property name bold, brief issue description truncated
+Coral glow effect on hover
+
+
+Interactive Elements
+Buttons:
+
+Primary: #ff8c00 background, white text, box-shadow: 0 0 20px rgba(255,140,0,0.3) on hover
+Secondary: Transparent with #ff8c00 border, orange text
+Ghost: Orange text only, underline on hover
+
+Badges:
+
+Critical: #ff6b6b background, white text
+High/Warning: #f7b955 background, dark text
+Success: #1a6b5c background, white text
+Neutral: rgba(255,255,255,0.1) background, white text
+
+Hover States:
+
+Cards: transform: translateY(-2px) + increased box-shadow glow
+Nav items: Orange left border fade in + background: rgba(255,140,0,0.1)
+Links: Orange color + underline slide-in animation
+
+
+Typography
+ElementSizeWeightColorPage Title28px600#ffffffPage Subtitle14px400#8b95a5Card Title18px600#ffffffKPI Number36px700#ffffffKPI Label12px500#8b95a5KPI Subvalue14px600status colorBody Text14px400#ffffff / #8b95a5Badge Text11px600#ffffffLink Text14px500#ff8c00
+Font Family: Inter, SF Pro Display, or system-ui
+
+Micro-interactions
+
+KPI numbers count up animation on page load (0 → value)
+Cards fade in with stagger animation (50ms delay each)
+Status dots pulse subtly for critical/urgent items
+Notification bell shakes + badge bounces on new alerts
+Search bar expands on focus with orange border glow
+
+
+CSS Variables to Use
+css:root {
+  /* Backgrounds */
+  --bg-gradient: linear-gradient(135deg, #0d2847 0%, #0f4a5c 50%, #0a1628 100%);
+  --bg-solid: #0a1628;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.1);
+  
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #8b95a5;
+  
+  /* Accents */
+  --accent-orange: #ff8c00;
+  --accent-orange-light: #ffa940;
+  --accent-orange-dark: #e67700;
+  --accent-teal: #1a6b5c;
+  --accent-amber: #f7b955;
+  --accent-coral: #ff6b6b;
+  
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  
+  /* Effects */
+  --shadow-glow: 0 0 20px rgba(255, 140, 0, 0.2);
+  --blur: blur(12px);
+}
+
+Keep all existing functionality and data connections intact. Only update the visual styling to match these specifications.

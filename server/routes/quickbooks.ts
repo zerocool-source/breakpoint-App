@@ -242,7 +242,11 @@ export function registerQuickbooksRoutes(app: Express) {
 
       const auth = await getQuickBooksAccessToken();
       if (!auth) {
-        return res.status(401).json({ error: "QuickBooks not connected or token expired" });
+        return res.status(401).json({ 
+          error: "QuickBooks not connected or token expired",
+          code: "QB_NOT_CONNECTED",
+          message: "Please connect to QuickBooks in Settings before sending invoices. Your authorization may have expired and needs to be renewed."
+        });
       }
 
       const { accessToken, realmId } = auth;
@@ -464,6 +468,26 @@ async function findOrCreateCustomer(baseUrl: string, accessToken: string, custom
   if (!createResponse.ok) {
     const errorData = await createResponse.text();
     console.error("Failed to create customer:", errorData);
+    
+    // Parse the error for more details
+    try {
+      const parsedError = JSON.parse(errorData);
+      const qbError = parsedError?.fault?.error?.[0];
+      if (qbError) {
+        const errorMessage = qbError.message || "Unknown QuickBooks error";
+        const errorCode = qbError.code || "UNKNOWN";
+        
+        // Check for authorization errors
+        if (errorMessage.includes("ApplicationAuthorizationFailed") || errorCode === "3100") {
+          throw new Error(`QuickBooks authorization expired. Please reconnect in Settings. (Code: ${errorCode})`);
+        }
+        throw new Error(`QuickBooks error: ${errorMessage} (Code: ${errorCode})`);
+      }
+    } catch (parseError) {
+      if (parseError instanceof Error && parseError.message.includes("QuickBooks")) {
+        throw parseError;
+      }
+    }
     throw new Error("Failed to create customer in QuickBooks");
   }
 
