@@ -1,0 +1,73 @@
+Redesign the Service Technicians page using a master-detail split-pane layout:
+Left Panel - Technician List:
+
+Scrollable list of all technicians
+Each row displays:
+
+Avatar with initials (colored)
+Name (bold)
+Phone number
+Email (truncated if long)
+Truck #
+Commission %
+Properties count
+"Stops" icon/button
+Status toggle (active/inactive)
+Edit icon
+
+
+Show "Coverage" tag/badge on row if technician is covering another route
+Search bar at top (search by name, phone, email)
+Filters: Active Only dropdown, Season toggle (Summer/Winter)
+"+ Add Technician" button in header
+Pagination at bottom if needed
+
+Right Panel - Technician Details (appears when row is clicked):
+
+Header section:
+
+Technician name (large)
+Status badge (Active/Inactive)
+Quick stats (X properties, X stops today)
+Edit button
+Delete button
+Close (X) button to collapse panel
+
+
+Tabbed navigation:
+
+Scheduled Stops - List of today's stops as cards (property name, type tag, notes, date, status badge)
+Properties - Assigned properties with schedule days and season tags, "+ Add Property" button, remove option per property
+Route - Route/map view (optional)
+Notes - Internal notes about the technician
+
+
+Properties Tab Details:
+
+Each property shown as a card
+Card shows: Property name, address, schedule days (M T W T F S S with active days highlighted), season tag
+Three-dot menu (⋮) on each card with options: Edit Schedule, Remove Property
+"+ Add Property" button opens modal to select property, set days, set season
+
+
+Scheduled Stops Tab Details:
+
+Each stop shown as a card
+Card shows: Property name, Pool/Spa tag, notes (italic), date, status (Pending/Completed badge)
+Quick actions: Mark Complete, Edit Notes
+
+
+
+New Features:
+
+Add/Remove Properties - Within the Properties tab
+Coverage Tag - Visible badge on technician row when covering another route
+Smooth transitions - Panel slides in from right when selecting a technician
+
+Design direction:
+
+Clean, light theme matching the screenshots (white background, subtle borders)
+Consistent with existing app styling (green Active badges, orange season tags, colored avatars)
+Card-based sub-items with subtle shadows
+Tabbed navigation for organized content
+Mobile responsive (panel becomes full-screen overlay on mobile
