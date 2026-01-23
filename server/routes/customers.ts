@@ -579,6 +579,32 @@ export function registerCustomerRoutes(app: any) {
     }
   });
 
+  // ==================== CUSTOMER ADDRESSES ====================
+
+  // Get addresses for a customer (optionally filtered by type)
+  app.get("/api/customers/:customerId/addresses", async (req: Request, res: Response) => {
+    try {
+      const { customerId } = req.params;
+      const { type } = req.query; // "primary", "service", "billing", or "primary,service" comma-separated
+      
+      const allAddresses = await storage.getCustomerAddresses(customerId);
+      
+      // Filter by address type if specified
+      let filteredAddresses = allAddresses;
+      if (type && typeof type === "string") {
+        const allowedTypes = type.toLowerCase().split(",").map(t => t.trim());
+        filteredAddresses = allAddresses.filter(addr => 
+          allowedTypes.includes((addr.addressType || "primary").toLowerCase())
+        );
+      }
+      
+      res.json({ addresses: filteredAddresses });
+    } catch (error: any) {
+      console.error("Error fetching customer addresses:", error);
+      res.status(500).json({ error: "Failed to fetch addresses" });
+    }
+  });
+
   // ==================== CUSTOMER IMPORT ====================
 
   // Import customers from Pool Brain to local storage

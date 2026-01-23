@@ -57,6 +57,17 @@ interface TechnicianPropertyWithSchedule {
   activeSeason: string | null;
 }
 
+interface CustomerAddress {
+  id: string;
+  customerId: string;
+  addressType: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+}
+
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 const WEEKEND_DAYS = ["Sat", "Sun"];
 const ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -1149,8 +1160,9 @@ function PropertyCard({
   onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
-  // Fetch pools for this property/customer
+  // Fetch pools for this property/customer (always fetch for count display)
   const { data: poolsData } = useQuery<{ pools: Pool[] }>({
     queryKey: [`/api/customers/${property.propertyId}/pools`],
     queryFn: async () => {
@@ -1158,7 +1170,16 @@ function PropertyCard({
       if (!res.ok) return { pools: [] };
       return res.json();
     },
-    enabled: expanded,
+  });
+
+  // Fetch addresses for this property/customer (service and primary only)
+  const { data: addressesData } = useQuery<{ addresses: CustomerAddress[] }>({
+    queryKey: [`/api/customers/${property.propertyId}/addresses`, "primary,service"],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${property.propertyId}/addresses?type=primary,service`);
+      if (!res.ok) return { addresses: [] };
+      return res.json();
+    },
   });
 
   // Fetch equipment for this property/customer
@@ -1173,7 +1194,44 @@ function PropertyCard({
   });
 
   const pools = poolsData?.pools || [];
+  const addresses = addressesData?.addresses || [];
   const equipment = equipmentData?.equipment || [];
+
+  // Get the selected address or first available
+  const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
+  
+  // Format address for display
+  const formatAddress = (addr: CustomerAddress | undefined) => {
+    if (!addr) return null;
+    const parts = [addr.addressLine1, addr.city, addr.state, addr.zip].filter(Boolean);
+    return parts.join(", ");
+  };
+
+  // Generate bodies of water summary
+  const getPoolsSummary = () => {
+    if (pools.length === 0) return null;
+    
+    const counts: Record<string, number> = {};
+    pools.forEach(pool => {
+      const type = (pool.poolType || "Pool").toLowerCase();
+      counts[type] = (counts[type] || 0) + 1;
+    });
+    
+    const parts: string[] = [];
+    if (counts.pool) parts.push(`${counts.pool} pool${counts.pool > 1 ? "s" : ""}`);
+    if (counts.spa) parts.push(`${counts.spa} spa${counts.spa > 1 ? "s" : ""}`);
+    if (counts.fountain) parts.push(`${counts.fountain} fountain${counts.fountain > 1 ? "s" : ""}`);
+    if (counts.pond) parts.push(`${counts.pond} pond${counts.pond > 1 ? "s" : ""}`);
+    
+    // Handle any other types
+    Object.keys(counts).forEach(type => {
+      if (!["pool", "spa", "fountain", "pond"].includes(type)) {
+        parts.push(`${counts[type]} ${type}${counts[type] > 1 ? "s" : ""}`);
+      }
+    });
+    
+    return parts.join(", ");
+  };
 
   const visitDays = globalSeason === "summer" 
     ? property.summerVisitDays 
@@ -1190,13 +1248,15 @@ function PropertyCard({
     }
   };
 
+  const poolsSummary = getPoolsSummary();
+
   return (
     <div 
-      className="bg-white border border-slate-200 rounded-lg overflow-hidden"
+      className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
       data-testid={`card-property-${property.id}`}
     >
       {/* Property Header */}
-      <div className="p-4">
+      <div className="p-5">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2">
@@ -1206,7 +1266,7 @@ function PropertyCard({
               >
                 {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </button>
-              <h4 className="font-medium text-slate-900">{property.propertyName || "Unknown Property"}</h4>
+              <h4 className="font-semibold text-slate-900">{property.propertyName || "Unknown Property"}</h4>
               <span className={cn(
                 "px-2 py-0.5 text-xs font-medium rounded",
                 property.activeSeason === "summer" 
@@ -1216,6 +1276,53 @@ function PropertyCard({
                 {property.activeSeason === "summer" ? "Summer" : "Winter"}
               </span>
             </div>
+            
+            {/* Address Display */}
+            <div className="ml-6 mt-2">
+              {addresses.length === 0 ? (
+                <p className="text-sm text-slate-400 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  No service address
+                </p>
+              ) : addresses.length === 1 ? (
+                <p className="text-sm text-slate-600 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  {formatAddress(addresses[0])}
+                  {addresses[0].addressType && (
+                    <span className="text-xs text-slate-400 capitalize">({addresses[0].addressType})</span>
+                  )}
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                  <Select 
+                    value={selectedAddressId || addresses[0]?.id} 
+                    onValueChange={setSelectedAddressId}
+                  >
+                    <SelectTrigger className="h-7 text-sm w-auto min-w-[200px] bg-slate-50">
+                      <SelectValue placeholder="Select address" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {addresses.map((addr) => (
+                        <SelectItem key={addr.id} value={addr.id}>
+                          {formatAddress(addr)} ({addr.addressType || "primary"})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            
+            {/* Bodies of Water Summary */}
+            {poolsSummary && (
+              <div className="ml-6 mt-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
+                  <Droplets className="w-3.5 h-3.5" />
+                  {poolsSummary}
+                </span>
+              </div>
+            )}
             
             {/* Schedule Days */}
             <div className="flex items-center gap-1 mt-3 ml-6">
@@ -1272,7 +1379,7 @@ function PropertyCard({
 
       {/* Expanded Content - Pools & Equipment */}
       {expanded && (
-        <div className="border-t border-slate-100 bg-slate-50 p-4 space-y-4">
+        <div className="border-t border-slate-100 bg-slate-50 p-5 space-y-4">
           {/* Bodies of Water Section */}
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -1423,7 +1530,7 @@ function PropertiesTabContent({
           <p className="text-slate-500">No properties assigned</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {properties.map((property) => (
             <PropertyCard
               key={property.id}
