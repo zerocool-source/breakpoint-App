@@ -4,12 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Database, Key, Lock, Server, Cpu, AlertCircle, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { CheckCircle2, Database, Key, Lock, Server, Cpu, AlertCircle, ArrowLeft, Link2, Loader2, XCircle } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface QuickBooksStatus {
+  connected: boolean;
+  realmId?: string;
+  accessTokenValid?: boolean;
+  refreshTokenValid?: boolean;
+  accessTokenExpiresAt?: string;
+  refreshTokenExpiresAt?: string;
+}
 
 export default function Settings() {
   const [apiKey, setApiKey] = useState("");
@@ -17,14 +26,104 @@ export default function Settings() {
   const [defaultModel, setDefaultModel] = useState("goss-20b");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [qbStatus, setQbStatus] = useState<QuickBooksStatus | null>(null);
+  const [qbLoading, setQbLoading] = useState(true);
+  const [qbConnecting, setQbConnecting] = useState(false);
+  const [qbDisconnecting, setQbDisconnecting] = useState(false);
   const { toast } = useToast();
+  const [location] = useLocation();
 
   // Check if environment variables are being used
   const usingEnvVars = import.meta.env.POOLBRAIN_ACCESS_KEY !== undefined;
 
   useEffect(() => {
     fetchSettings();
+    fetchQbStatus();
+    
+    // Check for OAuth callback results
+    const urlParams = new URLSearchParams(window.location.search);
+    const qbSuccess = urlParams.get('qb_success');
+    const qbError = urlParams.get('qb_error');
+    
+    if (qbSuccess === 'true') {
+      toast({
+        title: "Connected to QuickBooks",
+        description: "Your QuickBooks account has been successfully connected.",
+      });
+      // Clear the URL params
+      window.history.replaceState({}, '', '/settings');
+      fetchQbStatus();
+    } else if (qbError) {
+      const errorMessages: Record<string, string> = {
+        'missing_params': 'Missing parameters from QuickBooks callback',
+        'missing_credentials': 'QuickBooks credentials not configured',
+        'token_exchange_failed': 'Failed to exchange authorization code',
+        'unknown': 'An unknown error occurred',
+      };
+      toast({
+        title: "QuickBooks Connection Failed",
+        description: errorMessages[qbError] || qbError,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/settings');
+    }
   }, []);
+
+  const fetchQbStatus = async () => {
+    try {
+      const res = await fetch("/api/quickbooks/status");
+      const data = await res.json();
+      setQbStatus(data);
+    } catch (error) {
+      console.error("Failed to fetch QuickBooks status:", error);
+      setQbStatus({ connected: false });
+    } finally {
+      setQbLoading(false);
+    }
+  };
+
+  const handleConnectQuickBooks = async () => {
+    setQbConnecting(true);
+    try {
+      const res = await fetch("/api/quickbooks/auth");
+      const data = await res.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error("No auth URL returned");
+      }
+    } catch (error) {
+      console.error("Failed to start QuickBooks auth:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start QuickBooks connection. Please try again.",
+        variant: "destructive",
+      });
+      setQbConnecting(false);
+    }
+  };
+
+  const handleDisconnectQuickBooks = async () => {
+    setQbDisconnecting(true);
+    try {
+      const res = await fetch("/api/quickbooks/disconnect", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to disconnect");
+      setQbStatus({ connected: false });
+      toast({
+        title: "Disconnected",
+        description: "Your QuickBooks account has been disconnected.",
+      });
+    } catch (error) {
+      console.error("Failed to disconnect QuickBooks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect QuickBooks. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setQbDisconnecting(false);
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -189,6 +288,104 @@ export default function Settings() {
                 {isSaving ? "Saving..." : "Save Configuration"}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* QuickBooks Integration */}
+        <Card className="glass-card border-white/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-green-500" />
+              QuickBooks Integration
+            </CardTitle>
+            <CardDescription>
+              Connect your QuickBooks Online account to sync invoices and customers.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {qbLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking connection status...
+              </div>
+            ) : qbStatus?.connected ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                  <CheckCircle2 className="w-6 h-6 text-green-500" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-green-400">Connected to QuickBooks</p>
+                    <p className="text-sm text-muted-foreground">
+                      Company ID: {qbStatus.realmId}
+                    </p>
+                    {qbStatus.accessTokenExpiresAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Token expires: {new Date(qbStatus.accessTokenExpiresAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10">
+                    {qbStatus.accessTokenValid ? "Active" : "Needs Refresh"}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleDisconnectQuickBooks}
+                    disabled={qbDisconnecting}
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    data-testid="button-disconnect-quickbooks"
+                  >
+                    {qbDisconnecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Disconnecting...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Disconnect QuickBooks
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-white/5 border border-white/10">
+                  <XCircle className="w-6 h-6 text-muted-foreground" />
+                  <div>
+                    <p className="font-semibold text-foreground">Not Connected</p>
+                    <p className="text-sm text-muted-foreground">
+                      Connect your QuickBooks account to create invoices directly.
+                    </p>
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={handleConnectQuickBooks}
+                  disabled={qbConnecting}
+                  className="bg-[#2CA01C] hover:bg-[#2CA01C]/80 text-white font-bold"
+                  data-testid="button-connect-quickbooks"
+                >
+                  {qbConnecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Connect to QuickBooks
+                    </>
+                  )}
+                </Button>
+                
+                <p className="text-xs text-muted-foreground">
+                  You'll be redirected to Intuit to authorize access to your QuickBooks account.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
