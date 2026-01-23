@@ -1586,6 +1586,60 @@ export const insertQuickbooksTokenSchema = createInsertSchema(quickbooksTokens).
 export type InsertQuickbooksToken = z.infer<typeof insertQuickbooksTokenSchema>;
 export type QuickbooksToken = typeof quickbooksTokens.$inferSelect;
 
+// Invoices (synced with QuickBooks)
+export const invoiceStatusEnum = ["draft", "sent", "paid", "overdue", "voided", "partial"] as const;
+export type InvoiceStatus = typeof invoiceStatusEnum[number];
+
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceNumber: text("invoice_number").notNull(), // Format: INV-YY-NNNNN
+  customerId: varchar("customer_id"),
+  customerName: text("customer_name").notNull(),
+  propertyId: varchar("property_id"),
+  propertyName: text("property_name"),
+  propertyAddress: text("property_address"),
+  estimateId: varchar("estimate_id"), // Link to source estimate if applicable
+  estimateNumber: text("estimate_number"),
+  emergencyId: varchar("emergency_id"), // Link to source emergency if applicable
+  lineItems: json("line_items").$type<{
+    description: string;
+    quantity: number;
+    rate: number; // in cents
+    amount: number; // in cents
+  }[]>(),
+  subtotal: integer("subtotal").default(0), // in cents
+  taxRate: real("tax_rate").default(0),
+  taxAmount: integer("tax_amount").default(0), // in cents
+  totalAmount: integer("total_amount").default(0), // in cents
+  amountPaid: integer("amount_paid").default(0), // in cents
+  amountDue: integer("amount_due").default(0), // in cents
+  status: text("status").notNull().default("draft"), // draft, sent, paid, overdue, voided, partial
+  dueDate: timestamp("due_date"),
+  paidDate: timestamp("paid_date"),
+  quickbooksInvoiceId: text("quickbooks_invoice_id"), // QB invoice ID
+  quickbooksDocNumber: text("quickbooks_doc_number"), // QB document number
+  quickbooksSyncedAt: timestamp("quickbooks_synced_at"),
+  quickbooksSyncStatus: text("quickbooks_sync_status").default("pending"), // pending, synced, failed
+  quickbooksSyncError: text("quickbooks_sync_error"),
+  notes: text("notes"),
+  internalNotes: text("internal_notes"),
+  attachments: text("attachments").array(),
+  sentAt: timestamp("sent_at"),
+  sentByUserId: varchar("sent_by_user_id"),
+  createdByUserId: varchar("created_by_user_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
 // Emergencies (Completed but not completed - needs follow-up)
 export const emergencies = pgTable("emergencies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

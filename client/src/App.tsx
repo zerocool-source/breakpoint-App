@@ -45,6 +45,7 @@ import SupervisorTeams from "@/pages/SupervisorTeams";
 import RouteHistory from "@/pages/RouteHistory";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import Reports from "@/pages/Reports";
+import Invoices from "@/pages/Invoices";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/approve/:token" component={EstimateApproval} />
       <Route path="/api-test" component={ApiSmokeTest} />
       <Route path="/reports" component={Reports} />
+      <Route path="/invoices" component={Invoices} />
       <Route component={NotFound} />
     </Switch>
   );

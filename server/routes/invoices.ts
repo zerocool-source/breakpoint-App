@@ -1,0 +1,115 @@
+import { Request, Response, Express } from "express";
+import { db } from "../db";
+import { invoices } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
+
+export function registerInvoiceRoutes(app: Express) {
+  app.get("/api/invoices", async (_req: Request, res: Response) => {
+    try {
+      const allInvoices = await db.select().from(invoices).orderBy(desc(invoices.createdAt));
+      res.json({ invoices: allInvoices });
+    } catch (error: any) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ error: "Failed to fetch invoices", message: error.message });
+    }
+  });
+
+  app.get("/api/invoices/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+      
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      res.json({ invoice });
+    } catch (error: any) {
+      console.error("Error fetching invoice:", error);
+      res.status(500).json({ error: "Failed to fetch invoice", message: error.message });
+    }
+  });
+
+  app.post("/api/invoices", async (req: Request, res: Response) => {
+    try {
+      const invoiceData = req.body;
+      
+      if (!invoiceData.invoiceNumber) {
+        const year = new Date().getFullYear().toString().slice(-2);
+        const count = await db.select().from(invoices);
+        const nextNum = (count.length + 1).toString().padStart(5, '0');
+        invoiceData.invoiceNumber = `INV-${year}-${nextNum}`;
+      }
+      
+      const [newInvoice] = await db.insert(invoices).values(invoiceData).returning();
+      res.json({ success: true, invoice: newInvoice });
+    } catch (error: any) {
+      console.error("Error creating invoice:", error);
+      res.status(500).json({ error: "Failed to create invoice", message: error.message });
+    }
+  });
+
+  app.patch("/api/invoices/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const [updated] = await db
+        .update(invoices)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(invoices.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      res.json({ success: true, invoice: updated });
+    } catch (error: any) {
+      console.error("Error updating invoice:", error);
+      res.status(500).json({ error: "Failed to update invoice", message: error.message });
+    }
+  });
+
+  app.patch("/api/invoices/:id/status", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const updateData: any = { status, updatedAt: new Date() };
+      
+      if (status === "paid") {
+        updateData.paidDate = new Date();
+      } else if (status === "sent") {
+        updateData.sentAt = new Date();
+      }
+      
+      const [updated] = await db
+        .update(invoices)
+        .set(updateData)
+        .where(eq(invoices.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      res.json({ success: true, invoice: updated });
+    } catch (error: any) {
+      console.error("Error updating invoice status:", error);
+      res.status(500).json({ error: "Failed to update invoice status", message: error.message });
+    }
+  });
+
+  app.get("/api/invoices/next-number", async (_req: Request, res: Response) => {
+    try {
+      const year = new Date().getFullYear().toString().slice(-2);
+      const allInvoices = await db.select().from(invoices);
+      const nextNum = (allInvoices.length + 1).toString().padStart(5, '0');
+      res.json({ nextNumber: `INV-${year}-${nextNum}` });
+    } catch (error: any) {
+      console.error("Error generating invoice number:", error);
+      res.status(500).json({ error: "Failed to generate invoice number" });
+    }
+  });
+}

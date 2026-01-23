@@ -318,12 +318,13 @@ export function Sidebar() {
       href: "/reports"
     },
     { 
-      key: "estimates",
+      key: "billing",
       icon: FileText, 
-      label: "Estimates", 
+      label: "Billing", 
       children: [
         { label: "All Estimates", href: "/estimates" },
         { label: "History Log", href: "/estimate-history" },
+        { label: "Invoices", href: "/invoices" },
       ]
     },
     { 

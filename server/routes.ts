@@ -25,6 +25,7 @@ import { registerSupervisorActivityRoutes } from "./routes/supervisorActivity";
 import { registerQcInspectionRoutes } from "./routes/qcInspections";
 import { registerPropertyTechnicianRoutes } from "./routes/propertyTechnicians";
 import { registerVendorRoutes } from "./routes/vendors";
+import { registerInvoiceRoutes } from "./routes/invoices";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -59,4 +60,5 @@ function setupRoutes(app: any) {
   registerQcInspectionRoutes(app);
   registerPropertyTechnicianRoutes(app);
   registerVendorRoutes(app);
+  registerInvoiceRoutes(app);
 }
