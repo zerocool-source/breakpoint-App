@@ -142,7 +142,7 @@ export function registerPropertyTechnicianRoutes(app: any) {
         .leftJoin(routeSchedules, eq(propertyTechnicians.propertyId, routeSchedules.propertyId))
         .where(eq(propertyTechnicians.technicianId, technicianId))
         .orderBy(desc(propertyTechnicians.assignedAt));
-      res.json(assignments);
+      res.json({ properties: assignments });
     } catch (error: any) {
       console.error("Error fetching technician properties:", error);
       res.status(500).json({ error: error.message });
