@@ -1348,9 +1348,9 @@ function PropertiesTabContent({
   const queryClient = useQueryClient();
   
   const { data: propertiesData, isLoading } = useQuery<{ properties: TechnicianPropertyWithSchedule[] }>({
-    queryKey: [`/api/technician-properties/technician/${technician.id}`],
+    queryKey: [`/api/technician-properties/${technician.id}`],
     queryFn: async () => {
-      const res = await fetch(`/api/technician-properties/technician/${technician.id}`);
+      const res = await fetch(`/api/technician-properties/${technician.id}`);
       if (!res.ok) throw new Error("Failed to fetch properties");
       return res.json();
     },
@@ -1369,7 +1369,7 @@ function PropertiesTabContent({
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/technician/${technician.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/${technician.id}`] });
     },
   });
 
@@ -1389,7 +1389,7 @@ function PropertiesTabContent({
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/technician/${technician.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/${technician.id}`] });
     },
   });
 
