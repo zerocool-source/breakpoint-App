@@ -1,0 +1,30 @@
+Redesign the sidebar navigation to be a collapsed icon-only bar (similar to QuickBooks) that expands on hover to show sub-items. Also update the main content area to use the full page width.
+Sidebar Structure (Icon Bar - Always Visible):
+Use Lucide React icons. The sidebar should be narrow (about 60-70px wide) showing only icons vertically. When hovering over an icon, a flyout panel appears to the right showing the section name and sub-items.
+SectionLucide IconSub-items on HoverOverviewLayoutDashboard(no sub-items, direct link)CustomersBuilding2All Customers, VisitsOperations HubWrenchSupervisor Management, Tech Ops Alerts, Repairs, Chemicals, Service, Repair QueueTechniciansUsersRepair Tech, Service Techs, SupervisorsSchedulingCalendarCalendar, Route HistoryReportsBarChart3(no sub-items, direct link)BillingReceiptAll Estimates, History Log, InvoicesChats HubMessageSquareChannelsFleetTruckFleet Dashboard, Truck InventoryAutomationsZap(no sub-items, direct link) - keep Beta badgeSettingsSettings(pin to bottom of sidebar)
+Remove from sidebar: Jobs (not keeping), and the separate "Customers" at the bottom since it's now combined with Properties.
+Hover Behavior:
+
+When hovering over an icon, show a flyout panel to the right with the section title as a header and sub-items as clickable links below
+The flyout should have a white background with subtle shadow
+Keep the flyout open while the mouse is over either the icon or the flyout panel
+Show a tooltip with the section name if user hovers briefly without triggering the full flyout
+
+Icon Bar Styling:
+
+Dark navy/blue background (match current sidebar color)
+White icons
+Active/selected icon highlighted with a lighter background or left border accent in orange
+Icons should be centered vertically in their row with consistent spacing
+
+Main Content Area - Full Width:
+
+Expand the main content area to use the full available page width now that the sidebar is narrower
+Remove any excessive white space/gaps on the sides
+Cards and sections should stretch to fill the available width (like QuickBooks does)
+The Overview dashboard cards, Estimate Pipeline, Financial Summary, Recent Activity, and Urgent Items sections should all expand to use more horizontal space
+Reduce unnecessary padding/margins so the content fills the page better
+
+Logo:
+
+Keep the Breakpoint Intelligence logo at the top of the icon bar, but make it smaller to fit the narrow width (just the "B" icon, not the full text)
