@@ -1114,6 +1114,307 @@ function ScheduleDayCircles({
   );
 }
 
+// Stops Tab Content Component
+function StopsTabContent({ 
+  technician, 
+  onMarkComplete 
+}: { 
+  technician: Technician; 
+  onMarkComplete: (stopId: string) => void;
+}) {
+  const today = format(new Date(), "yyyy-MM-dd");
+  
+  const { data: stopsData, isLoading } = useQuery<{ stops: RouteStop[] }>({
+    queryKey: [`/api/scheduling/stops/technician/${technician.id}`, today],
+    queryFn: async () => {
+      const res = await fetch(`/api/scheduling/stops/technician/${technician.id}?date=${today}`);
+      if (!res.ok) throw new Error("Failed to fetch stops");
+      return res.json();
+    },
+  });
+
+  const stops = stopsData?.stops || [];
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
+        <p className="text-sm text-slate-500 mt-2">Loading stops...</p>
+      </div>
+    );
+  }
+
+  if (stops.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Route className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-500">No scheduled stops for today</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {stops.map((stop) => (
+        <div 
+          key={stop.id} 
+          className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+          data-testid={`card-stop-${stop.id}`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium text-slate-900">{stop.propertyName || "Unknown Property"}</h4>
+                <span className={cn(
+                  "px-2 py-0.5 text-xs font-medium rounded",
+                  stop.stopType === "Pool" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"
+                )}>
+                  {stop.stopType || "Service"}
+                </span>
+              </div>
+              {stop.notes && (
+                <p className="text-sm text-slate-500 mt-1 italic">{stop.notes}</p>
+              )}
+              <p className="text-xs text-slate-400 mt-2">{format(new Date(stop.scheduledDate), "MMM d, yyyy")}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "px-2 py-1 text-xs font-medium rounded-full",
+                stop.status === "completed" 
+                  ? "bg-green-100 text-green-700" 
+                  : "bg-amber-100 text-amber-700"
+              )}>
+                {stop.status === "completed" ? "Completed" : "Pending"}
+              </span>
+              {stop.status !== "completed" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onMarkComplete(stop.id)}
+                  className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Properties Tab Content Component
+function PropertiesTabContent({
+  technician,
+  globalSeason,
+  onAddProperty,
+  onRemoveProperty,
+}: {
+  technician: Technician;
+  globalSeason: "summer" | "winter";
+  onAddProperty: () => void;
+  onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
+}) {
+  const queryClient = useQueryClient();
+  
+  const { data: propertiesData, isLoading } = useQuery<{ properties: TechnicianPropertyWithSchedule[] }>({
+    queryKey: [`/api/technician-properties/technician/${technician.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-properties/technician/${technician.id}`);
+      if (!res.ok) throw new Error("Failed to fetch properties");
+      return res.json();
+    },
+  });
+
+  const properties = propertiesData?.properties || [];
+
+  const updatePropertySeasonMutation = useMutation({
+    mutationFn: async ({ propertyId, activeSeason }: { propertyId: string; activeSeason: "summer" | "winter" }) => {
+      const res = await fetch(`/api/scheduling/property/${propertyId}/season`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activeSeason }),
+      });
+      if (!res.ok) throw new Error("Failed to update season");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/technician/${technician.id}`] });
+    },
+  });
+
+  const toggleVisitDayMutation = useMutation({
+    mutationFn: async ({ propertyId, day, isCurrentlyActive, season }: { 
+      propertyId: string; 
+      day: string; 
+      isCurrentlyActive: boolean; 
+      season: "summer" | "winter";
+    }) => {
+      const res = await fetch(`/api/scheduling/property/${propertyId}/visit-day`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ day, isCurrentlyActive, season }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle visit day");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/technician/${technician.id}`] });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
+        <p className="text-sm text-slate-500 mt-2">Loading properties...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-500">{properties.length} assigned properties</span>
+        <Button 
+          size="sm" 
+          onClick={onAddProperty}
+          className="bg-blue-600 hover:bg-blue-700 gap-2"
+          data-testid="button-add-property"
+        >
+          <Plus className="w-4 h-4" />
+          Add Property
+        </Button>
+      </div>
+
+      {properties.length === 0 ? (
+        <div className="text-center py-12">
+          <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500">No properties assigned</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {properties.map((property) => {
+            const visitDays = globalSeason === "summer" 
+              ? property.summerVisitDays 
+              : property.winterVisitDays;
+
+            return (
+              <div 
+                key={property.id} 
+                className="bg-white border border-slate-200 rounded-lg p-4"
+                data-testid={`card-property-${property.id}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-slate-900">{property.propertyName || "Unknown Property"}</h4>
+                      <span className={cn(
+                        "px-2 py-0.5 text-xs font-medium rounded",
+                        property.activeSeason === "summer" 
+                          ? "bg-amber-50 text-amber-700" 
+                          : "bg-blue-50 text-blue-700"
+                      )}>
+                        {property.activeSeason === "summer" ? "Summer" : "Winter"}
+                      </span>
+                    </div>
+                    
+                    {/* Schedule Days */}
+                    <div className="flex items-center gap-1 mt-3">
+                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                        const isActive = visitDays?.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => toggleVisitDayMutation.mutate({
+                              propertyId: property.propertyId,
+                              day,
+                              isCurrentlyActive: isActive || false,
+                              season: globalSeason
+                            })}
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                              isActive 
+                                ? "bg-orange-500 text-white hover:bg-orange-600" 
+                                : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                            )}
+                          >
+                            {day.charAt(0)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => {
+                        updatePropertySeasonMutation.mutate({
+                          propertyId: property.propertyId,
+                          activeSeason: property.activeSeason === "summer" ? "winter" : "summer"
+                        });
+                      }}>
+                        Switch to {property.activeSeason === "summer" ? "Winter" : "Summer"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => onRemoveProperty(property)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        Remove Property
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Notes Tab Content Component
+function NotesTabContent({ technician }: { technician: Technician }) {
+  const [newNote, setNewNote] = useState("");
+  const queryClient = useQueryClient();
+  
+  // For now, use technician's notes field or show placeholder
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <Input
+          placeholder="Add a note..."
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          className="flex-1"
+          data-testid="input-new-note"
+        />
+        <Button 
+          size="sm" 
+          disabled={!newNote.trim()}
+          className="bg-blue-600 hover:bg-blue-700"
+          data-testid="button-add-note"
+        >
+          Add
+        </Button>
+      </div>
+
+      <div className="text-center py-12">
+        <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-500">No notes yet</p>
+        <p className="text-sm text-slate-400 mt-1">Add internal notes about this technician</p>
+      </div>
+    </div>
+  );
+}
+
 const ITEMS_PER_PAGE = 10;
 
 export default function ServiceTechs() {
@@ -1125,13 +1426,17 @@ export default function ServiceTechs() {
   const [expandedTechs, setExpandedTechs] = useState<Set<string>>(new Set());
   const [globalSeason, setGlobalSeason] = useState<"summer" | "winter">("summer");
   
+  // Selected technician for detail panel
+  const [selectedTech, setSelectedTech] = useState<Technician | null>(null);
+  const [activeTab, setActiveTab] = useState<"stops" | "properties" | "notes">("stops");
+  
   // Stop modal state
   const [showAddStopModal, setShowAddStopModal] = useState(false);
   const [addStopProperty, setAddStopProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
   const [addStopTechnicianId, setAddStopTechnicianId] = useState<string>("");
   const [addStopTechnicianName, setAddStopTechnicianName] = useState<string>("");
   
-  // Stops panel state
+  // Stops panel state (legacy - keeping for compatibility)
   const [stopsPanelTech, setStopsPanelTech] = useState<Technician | null>(null);
   
   // Add property modal state
@@ -1376,11 +1681,17 @@ export default function ServiceTechs() {
     setCurrentPage(1);
   }, [searchQuery, filterStatus]);
 
+  // Handle technician selection
+  const handleSelectTech = (tech: Technician) => {
+    setSelectedTech(tech);
+    setActiveTab("stops");
+  };
+
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="h-[calc(100vh-4rem)] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Service Technicians</h1>
             <p className="text-sm text-slate-500 mt-1">Manage your service team and property assignments</p>
@@ -1395,170 +1706,284 @@ export default function ServiceTechs() {
           </Button>
         </div>
 
-        {/* Filters Bar */}
-        <div className="flex items-center gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search by name, phone, or email..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-slate-50 border-slate-200"
-              data-testid="input-search-techs"
-            />
+        {/* Split Pane Layout */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Panel - Technician List */}
+          <div className={cn(
+            "flex flex-col border-r border-slate-200 bg-slate-50 transition-all duration-300",
+            selectedTech ? "w-1/2 lg:w-2/5" : "w-full"
+          )}>
+            {/* Filters Bar */}
+            <div className="flex items-center gap-3 p-4 border-b border-slate-200 bg-white">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search by name, phone, or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-slate-50 border-slate-200"
+                  data-testid="input-search-techs"
+                />
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 border-slate-200" data-testid="dropdown-filter-status">
+                    {filterStatus === "all" ? "All" : filterStatus === "active" ? "Active" : "Inactive"}
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => setFilterStatus("all")}>All Status</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("active")}>Active Only</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("inactive")}>Inactive Only</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "gap-1 transition-colors",
+                  globalSeason === "summer" 
+                    ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100" 
+                    : "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                )}
+                onClick={() => setGlobalSeason(globalSeason === "summer" ? "winter" : "summer")}
+                data-testid="button-toggle-season"
+              >
+                {globalSeason === "summer" ? <Sun className="w-3 h-3" /> : <Snowflake className="w-3 h-3" />}
+                {globalSeason === "summer" ? "Summer" : "Winter"}
+              </Button>
+            </div>
+
+            {/* Technician List */}
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-2">
+                {isLoading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
+                    <p className="text-slate-500 mt-3">Loading technicians...</p>
+                  </div>
+                ) : filteredTechnicians.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500">
+                      {searchQuery ? "No technicians match your search" : "No technicians found"}
+                    </p>
+                  </div>
+                ) : (
+                  filteredTechnicians.map((tech) => {
+                    const fullName = `${tech.firstName} ${tech.lastName}`.trim();
+                    const initials = getInitials(tech.firstName, tech.lastName);
+                    const avatarColor = getAvatarColor(fullName);
+                    const isSelected = selectedTech?.id === tech.id;
+                    
+                    return (
+                      <div
+                        key={tech.id}
+                        onClick={() => handleSelectTech(tech)}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all",
+                          isSelected 
+                            ? "bg-blue-50 border border-blue-200 shadow-sm" 
+                            : "bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                        )}
+                        data-testid={`row-technician-${tech.id}`}
+                      >
+                        {/* Avatar */}
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold text-sm flex-shrink-0",
+                          avatarColor
+                        )}>
+                          {initials}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900 truncate">{fullName || "Unknown"}</span>
+                            {tech.truckNumber && (
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                #{tech.truckNumber}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500">
+                            {tech.phone && <span>{tech.phone}</span>}
+                            {tech.email && <span className="truncate">{tech.email}</span>}
+                          </div>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="flex items-center gap-2 text-xs flex-shrink-0">
+                          <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded font-medium">
+                            {tech.commissionPercent || 0}%
+                          </span>
+                          <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded font-medium">
+                            {propertyCounts[tech.id] || 0}
+                          </span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setStopsPanelTech(tech)}
+                            className="h-8 w-8 p-0 text-slate-500 hover:text-blue-600"
+                            data-testid={`button-view-stops-${tech.id}`}
+                          >
+                            <Route className="w-4 h-4" />
+                          </Button>
+                          <Switch 
+                            checked={tech.active} 
+                            onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
+                            className="data-[state=checked]:bg-emerald-500"
+                            data-testid={`switch-status-${tech.id}`}
+                          />
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0 text-slate-500 hover:text-blue-600"
+                            onClick={() => setEditingTech(tech)}
+                            data-testid={`button-edit-${tech.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </ScrollArea>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 border-slate-200" data-testid="dropdown-filter-status">
-                {filterStatus === "all" ? "All Status" : filterStatus === "active" ? "Active Only" : "Inactive Only"}
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setFilterStatus("all")}>All Status</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("active")}>Active Only</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("inactive")}>Inactive Only</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Right Panel - Technician Details */}
+          {selectedTech && (
+            <div className="flex-1 flex flex-col bg-white overflow-hidden">
+              {/* Detail Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold",
+                    getAvatarColor(`${selectedTech.firstName} ${selectedTech.lastName}`)
+                  )}>
+                    {getInitials(selectedTech.firstName, selectedTech.lastName)}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      {selectedTech.firstName} {selectedTech.lastName}
+                    </h2>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={cn(
+                        "px-2 py-0.5 text-xs font-medium rounded-full",
+                        selectedTech.active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"
+                      )}>
+                        {selectedTech.active ? "Active" : "Inactive"}
+                      </span>
+                      <span className="text-sm text-slate-500">
+                        {propertyCounts[selectedTech.id] || 0} properties
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setEditingTech(selectedTech)}
+                    className="gap-2"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setSelectedTech(null)}
+                    className="h-8 w-8 p-0"
+                    data-testid="button-close-detail-panel"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
+              {/* Tab Navigation */}
+              <div className="flex border-b border-slate-200 px-6">
+                <button
+                  onClick={() => setActiveTab("stops")}
                   className={cn(
-                    "gap-2 transition-colors",
-                    globalSeason === "summer" 
-                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100" 
-                      : "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                    activeTab === "stops" 
+                      ? "border-blue-600 text-blue-600" 
+                      : "border-transparent text-slate-500 hover:text-slate-700"
                   )}
-                  onClick={() => setGlobalSeason(globalSeason === "summer" ? "winter" : "summer")}
-                  data-testid="button-toggle-season"
+                  data-testid="tab-stops"
                 >
-                  {globalSeason === "summer" ? (
-                    <>
-                      <Sun className="w-4 h-4" />
-                      Summer
-                    </>
-                  ) : (
-                    <>
-                      <Snowflake className="w-4 h-4" />
-                      Winter
-                    </>
+                  Scheduled Stops
+                </button>
+                <button
+                  onClick={() => setActiveTab("properties")}
+                  className={cn(
+                    "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                    activeTab === "properties" 
+                      ? "border-blue-600 text-blue-600" 
+                      : "border-transparent text-slate-500 hover:text-slate-700"
                   )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Toggle between summer and winter schedule</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
+                  data-testid="tab-properties"
+                >
+                  Properties
+                </button>
+                <button
+                  onClick={() => setActiveTab("notes")}
+                  className={cn(
+                    "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+                    activeTab === "notes" 
+                      ? "border-blue-600 text-blue-600" 
+                      : "border-transparent text-slate-500 hover:text-slate-700"
+                  )}
+                  data-testid="tab-notes"
+                >
+                  Notes
+                </button>
+              </div>
 
-        {/* Technicians List */}
-        <div className="space-y-3">
-          {isLoading ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
-              <p className="text-slate-500 mt-3">Loading technicians...</p>
+              {/* Tab Content */}
+              <ScrollArea className="flex-1">
+                <div className="p-6">
+                  {activeTab === "stops" && (
+                    <StopsTabContent 
+                      technician={selectedTech} 
+                      onMarkComplete={(stopId) => {
+                        // Will implement stop completion
+                      }}
+                    />
+                  )}
+                  {activeTab === "properties" && (
+                    <PropertiesTabContent
+                      technician={selectedTech}
+                      globalSeason={globalSeason}
+                      onAddProperty={() => {
+                        setAddPropertyTech(selectedTech);
+                        setShowAddPropertyModal(true);
+                      }}
+                      onRemoveProperty={(property) => {
+                        setPropertyToRemove(property);
+                        setShowRemovePropertyDialog(true);
+                      }}
+                    />
+                  )}
+                  {activeTab === "notes" && (
+                    <NotesTabContent technician={selectedTech} />
+                  )}
+                </div>
+              </ScrollArea>
             </div>
-          ) : filteredTechnicians.length === 0 ? (
-            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-              <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">
-                {searchQuery ? "No technicians match your search" : "No service technicians found"}
-              </p>
-              {!searchQuery && (
-                <Button 
-                  className="mt-4 bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setShowAddModal(true)}
-                >
-                  Add Your First Technician
-                </Button>
-              )}
-            </div>
-          ) : (
-            paginatedTechnicians.map((tech) => (
-              <TechnicianCard
-                key={tech.id}
-                tech={tech}
-                isExpanded={expandedTechs.has(tech.id)}
-                propertyCount={propertyCounts[tech.id] || 0}
-                globalSeason={globalSeason}
-                onToggleExpand={() => toggleTechExpanded(tech.id)}
-                onEdit={() => setEditingTech(tech)}
-                onToggleStatus={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
-                onViewStops={() => setStopsPanelTech(tech)}
-                onAddProperty={() => {
-                  setAddPropertyTech(tech);
-                  setShowAddPropertyModal(true);
-                }}
-                onRemoveProperty={(property) => {
-                  setPropertyToRemove(property);
-                  setShowRemovePropertyDialog(true);
-                }}
-                onUpdateSeason={(propertyId, season) => updatePropertySeasonMutation.mutate({ propertyId, activeSeason: season })}
-                onAddStop={(property) => handleOpenAddStopModal(tech, property)}
-                onToggleVisitDay={(propertyId, day, isActive, season) => 
-                  toggleVisitDayMutation.mutate({ propertyId, day, isCurrentlyActive: isActive, season })
-                }
-              />
-            ))
           )}
         </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white px-4 py-3 border border-slate-200 rounded-xl">
-            <div className="text-sm text-slate-600">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length}
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="h-8"
-              >
-                Previous
-              </Button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let page;
-                if (totalPages <= 5) {
-                  page = i + 1;
-                } else if (currentPage <= 3) {
-                  page = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  page = totalPages - 4 + i;
-                } else {
-                  page = currentPage - 2 + i;
-                }
-                return (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className={cn("h-8 w-8", currentPage === page && "bg-blue-600 hover:bg-blue-700")}
-                  >
-                    {page}
-                  </Button>
-                );
-              })}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="h-8"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modals */}
@@ -1627,306 +2052,5 @@ export default function ServiceTechs() {
         onAddStop={(data) => createRouteStopMutation.mutate(data)}
       />
     </AppLayout>
-  );
-}
-
-// Technician Card Component
-function TechnicianCard({
-  tech,
-  isExpanded,
-  propertyCount,
-  globalSeason,
-  onToggleExpand,
-  onEdit,
-  onToggleStatus,
-  onViewStops,
-  onAddProperty,
-  onRemoveProperty,
-  onUpdateSeason,
-  onAddStop,
-  onToggleVisitDay,
-}: {
-  tech: Technician;
-  isExpanded: boolean;
-  propertyCount: number;
-  globalSeason: "summer" | "winter";
-  onToggleExpand: () => void;
-  onEdit: () => void;
-  onToggleStatus: (checked: boolean) => void;
-  onViewStops: () => void;
-  onAddProperty: () => void;
-  onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
-  onUpdateSeason: (propertyId: string, season: string) => void;
-  onAddStop: (property: TechnicianPropertyWithSchedule) => void;
-  onToggleVisitDay: (propertyId: string, day: string, isActive: boolean, season: string) => void;
-}) {
-  const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.trim();
-  const initials = getInitials(tech.firstName, tech.lastName);
-  const avatarColor = getAvatarColor(fullName);
-
-  const { data: properties, isLoading: propertiesLoading } = useQuery<TechnicianPropertyWithSchedule[]>({
-    queryKey: ["/api/technician-properties", tech.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/technician-properties/${tech.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: isExpanded,
-  });
-
-  // Check if tech has coverage stops
-  const { data: stops } = useQuery<RouteStop[]>({
-    queryKey: ["/api/technician-stops", tech.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/technician-stops/${tech.id}`);
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
-
-  const hasCoverage = stops?.some(s => s.isCoverage) || false;
-
-  return (
-    <div 
-      className={cn(
-        "bg-white rounded-xl border transition-all",
-        isExpanded ? "border-blue-300 shadow-lg shadow-blue-500/10" : "border-slate-200 hover:border-slate-300"
-      )}
-      data-testid={`card-technician-${tech.id}`}
-    >
-      {/* Main Row */}
-      <div 
-        className="flex items-center gap-4 p-4 cursor-pointer"
-        onClick={onToggleExpand}
-      >
-        {/* Expand Arrow */}
-        <button 
-          className={cn(
-            "p-1.5 rounded-lg transition-colors",
-            isExpanded ? "bg-blue-100 text-blue-600" : "hover:bg-slate-100 text-slate-400"
-          )}
-          data-testid={`button-expand-${tech.id}`}
-        >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
-        </button>
-
-        {/* Avatar */}
-        <div className={cn(
-          "w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg",
-          avatarColor
-        )}>
-          {initials}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-900" data-testid={`text-tech-name-${tech.id}`}>
-              {fullName || "Unknown"}
-            </span>
-            {hasCoverage && (
-              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                Coverage
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
-            {tech.phone && <span>{tech.phone}</span>}
-            {tech.email && <span className="truncate max-w-[200px]">{tech.email}</span>}
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="flex items-center gap-6">
-          {tech.truckNumber && (
-            <div className="text-center">
-              <p className="text-xs text-slate-400 uppercase">Truck</p>
-              <span className="inline-flex items-center px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-semibold text-sm">
-                #{tech.truckNumber}
-              </span>
-            </div>
-          )}
-          <div className="text-center">
-            <p className="text-xs text-slate-400 uppercase">Commission</p>
-            <span className="inline-flex items-center px-2 py-1 rounded-lg bg-amber-50 text-amber-700 font-semibold text-sm">
-              {tech.commissionPercent || 0}%
-            </span>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-slate-400 uppercase">Properties</p>
-            <span 
-              className="inline-flex items-center px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-sm cursor-pointer hover:bg-emerald-100"
-              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-              data-testid={`badge-property-count-${tech.id}`}
-            >
-              {propertyCount}
-            </span>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onViewStops}
-                  className="gap-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50"
-                  data-testid={`button-view-stops-${tech.id}`}
-                >
-                  <Route className="w-4 h-4" />
-                  <span className="hidden lg:inline">Stops</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>View Scheduled Stops</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <Switch 
-            checked={tech.active} 
-            onCheckedChange={onToggleStatus}
-            className="data-[state=checked]:bg-emerald-500"
-            data-testid={`switch-status-${tech.id}`}
-          />
-
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            onClick={onEdit}
-            data-testid={`button-edit-${tech.id}`}
-          >
-            <Edit2 className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Expanded Content */}
-      {isExpanded && (
-        <div className="border-t border-slate-100 bg-slate-50/50 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-slate-700 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-slate-400" />
-              Assigned Properties ({properties?.length || 0})
-            </h4>
-            <Button
-              size="sm"
-              onClick={onAddProperty}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
-              data-testid={`button-add-property-${tech.id}`}
-            >
-              <Plus className="w-4 h-4" />
-              Add Property
-            </Button>
-          </div>
-
-          {propertiesLoading ? (
-            <div className="text-center py-6">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
-            </div>
-          ) : !properties || properties.length === 0 ? (
-            <div className="text-center py-6 text-slate-400">
-              <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No properties assigned</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {properties.map((property) => {
-                const activeSeason = property.activeSeason || globalSeason;
-                const visitDays = activeSeason === "summer" 
-                  ? (property.summerVisitDays || []) 
-                  : (property.winterVisitDays || []);
-                
-                return (
-                  <div 
-                    key={property.id}
-                    className="bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 transition-colors"
-                    data-testid={`row-property-${property.id}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <MapPin className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">
-                          {property.propertyName || "Unnamed Property"}
-                        </p>
-                        {property.address && (
-                          <p className="text-sm text-slate-500 truncate">{property.address}</p>
-                        )}
-                      </div>
-
-                      <ScheduleDayCircles 
-                        days={ALL_DAYS} 
-                        activeDays={visitDays} 
-                        onToggleDay={(day, isActive) => onToggleVisitDay(property.propertyId, day, isActive, activeSeason)}
-                      />
-
-                      <button
-                        onClick={() => onUpdateSeason(property.propertyId, activeSeason === "summer" ? "winter" : "summer")}
-                        className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors",
-                          activeSeason === "summer" 
-                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200" 
-                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                        )}
-                        data-testid={`button-toggle-season-${property.id}`}
-                      >
-                        {activeSeason === "summer" ? (
-                          <>
-                            <Sun className="w-3.5 h-3.5" />
-                            Summer
-                          </>
-                        ) : (
-                          <>
-                            <Snowflake className="w-3.5 h-3.5" />
-                            Winter
-                          </>
-                        )}
-                      </button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0"
-                            data-testid={`button-property-actions-${property.id}`}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => onAddStop(property)}
-                            className="gap-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add Stop
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => onRemoveProperty(property)}
-                            className="gap-2 text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Remove Property
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
   );
 }
