@@ -36,12 +36,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Search, ChevronDown, ChevronRight, Plus, Image, Trash2, X, Clock, FileText, 
   MoreHorizontal, Sun, Snowflake, MapPin, Route, Users, CalendarDays, Edit2,
-  CheckCircle2, Calendar, GripVertical, Eye, Pencil, Building2, Droplets, Wrench
+  CheckCircle2, Calendar, GripVertical, Eye, Pencil, Building2, Droplets, Wrench,
+  Shield, Split, AlertCircle, Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TechnicianPropertyWithSchedule {
   id: string;
@@ -102,6 +106,27 @@ interface RouteStop {
   isCoverage?: boolean;
   technicianName?: string;
 }
+
+interface RouteOverride {
+  id: string;
+  date: string;
+  startDate: string | null;
+  endDate: string | null;
+  coverageType: string;
+  propertyId: string;
+  propertyName: string | null;
+  originalTechnicianId: string | null;
+  originalTechnicianName: string | null;
+  coveringTechnicianId: string | null;
+  coveringTechnicianName: string | null;
+  overrideType: string;
+  reason: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+const COVERAGE_REASONS = ["Vacation", "Sick", "Training", "Other"];
 
 function getInitials(firstName: string, lastName: string): string {
   return `${(firstName || "").charAt(0)}${(lastName || "").charAt(0)}`.toUpperCase();
@@ -872,6 +897,366 @@ function AddPropertyModal({
   );
 }
 
+// Extended Cover Modal Component - Single Property Version
+function ExtendedCoverModal({
+  open,
+  onClose,
+  property,
+  originalTechnician,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  property: TechnicianPropertyWithSchedule;
+  originalTechnician: Technician;
+  onConfirm: (data: {
+    startDate: string;
+    endDate: string;
+    coveringTechnicianId: string;
+    notes: string;
+  }) => void;
+}) {
+  const [startDate, setStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(() => format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+  const [coveringTechId, setCoveringTechId] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Fetch technicians for covering tech selection
+  const { data: techniciansData } = useQuery<{ technicians: Technician[] }>({
+    queryKey: ["/api/technicians/stored"],
+  });
+
+  const allTechnicians = techniciansData?.technicians || [];
+
+  useEffect(() => {
+    if (open) {
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
+      setEndDate(format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+      setCoveringTechId("");
+      setNotes("");
+    }
+  }, [open]);
+
+  const handleSubmit = () => {
+    if (!startDate || !endDate || !coveringTechId) return;
+    onConfirm({
+      startDate,
+      endDate,
+      coveringTechnicianId: coveringTechId,
+      notes,
+    });
+    onClose();
+  };
+
+  if (!property) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-md bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
+            <Shield className="w-5 h-5 text-blue-600" />
+            Extended Cover
+          </DialogTitle>
+          <DialogDescription className="text-slate-500">
+            Assign another technician to cover this property during the specified dates.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Property Info */}
+          <div className="bg-slate-50 p-3 rounded-lg">
+            <p className="text-sm font-medium text-slate-700">Property</p>
+            <p className="text-base font-semibold text-slate-900">{property.propertyName || "Unknown Property"}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Original Tech: {originalTechnician.firstName} {originalTechnician.lastName}
+            </p>
+          </div>
+
+          {/* Info Message */}
+          <div className="flex gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-blue-700">
+              The covering technician will handle this property during the selected date range. Coverage automatically ends after the end date.
+            </p>
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-slate-700">Start Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1"
+                data-testid="input-start-date"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-700">End Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1"
+                data-testid="input-end-date"
+              />
+            </div>
+          </div>
+
+          {/* Covering Technician */}
+          <div>
+            <Label className="text-slate-700">Covering Technician</Label>
+            <Select value={coveringTechId} onValueChange={setCoveringTechId}>
+              <SelectTrigger className="mt-1" data-testid="select-covering-tech">
+                <SelectValue placeholder="Select technician..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allTechnicians
+                  .filter(t => t.id !== originalTechnician.id && t.active)
+                  .map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label className="text-slate-700">Notes (optional)</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes..."
+              className="mt-1"
+              rows={2}
+              data-testid="input-notes"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={!startDate || !endDate || !coveringTechId}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+              data-testid="button-confirm-override"
+            >
+              Confirm Coverage
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Split Route Modal Component - Single Property Version
+const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function SplitRouteModal({
+  open,
+  onClose,
+  property,
+  originalTechnician,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  property: TechnicianPropertyWithSchedule;
+  originalTechnician: Technician;
+  onConfirm: (data: {
+    startDate: string;
+    endDate: string;
+    splitTechnicianId: string;
+    daysForSplitTechnician: string[];
+    notes: string;
+  }) => void;
+}) {
+  const [startDate, setStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(() => format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+  const [splitTechId, setSplitTechId] = useState("");
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [notes, setNotes] = useState("");
+
+  // Fetch technicians for split tech selection
+  const { data: techniciansData } = useQuery<{ technicians: Technician[] }>({
+    queryKey: ["/api/technicians/stored"],
+  });
+
+  const allTechnicians = techniciansData?.technicians || [];
+
+  useEffect(() => {
+    if (open) {
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
+      setEndDate(format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+      setSplitTechId("");
+      setSelectedDays([]);
+      setNotes("");
+    }
+  }, [open]);
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
+
+  const handleSubmit = () => {
+    if (!startDate || !endDate || !splitTechId || selectedDays.length === 0) return;
+    onConfirm({
+      startDate,
+      endDate,
+      splitTechnicianId: splitTechId,
+      daysForSplitTechnician: selectedDays,
+      notes,
+    });
+    onClose();
+  };
+
+  if (!property) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-md bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
+            <Split className="w-5 h-5 text-purple-600" />
+            Split Route
+          </DialogTitle>
+          <DialogDescription className="text-slate-500">
+            Split this property's visits between the original technician and a second technician by day of week.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Property Info */}
+          <div className="bg-slate-50 p-3 rounded-lg">
+            <p className="text-sm font-medium text-slate-700">Property</p>
+            <p className="text-base font-semibold text-slate-900">{property.propertyName || "Unknown Property"}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Original Tech: {originalTechnician.firstName} {originalTechnician.lastName}
+            </p>
+          </div>
+
+          {/* Info Message */}
+          <div className="flex gap-2 p-3 bg-purple-50 rounded-lg border border-purple-100">
+            <Info className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-purple-700">
+              Select which days of the week the split technician will handle. The original technician will handle the remaining days.
+            </p>
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-slate-700">Start Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1"
+                data-testid="input-split-start-date"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-700">End Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1"
+                data-testid="input-split-end-date"
+              />
+            </div>
+          </div>
+
+          {/* Split Technician */}
+          <div>
+            <Label className="text-slate-700">Split Technician</Label>
+            <Select value={splitTechId} onValueChange={setSplitTechId}>
+              <SelectTrigger className="mt-1" data-testid="select-split-tech">
+                <SelectValue placeholder="Select technician..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allTechnicians
+                  .filter(t => t.id !== originalTechnician.id && t.active)
+                  .map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Days Selection */}
+          <div>
+            <Label className="text-slate-700 mb-2 block">Days for Split Technician</Label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS_OF_WEEK.map(day => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors",
+                    selectedDays.includes(day)
+                      ? "bg-purple-100 text-purple-700 border-purple-300"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  )}
+                  data-testid={`button-day-${day.toLowerCase()}`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+            {selectedDays.length > 0 && (
+              <p className="text-sm text-slate-600 mt-2">
+                Split tech handles: {selectedDays.join(", ")}
+              </p>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div>
+            <Label className="text-slate-700">Notes (optional)</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any additional notes..."
+              className="mt-1"
+              rows={2}
+              data-testid="input-split-notes"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={!startDate || !endDate || !splitTechId || selectedDays.length === 0}
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+              data-testid="button-confirm-split"
+            >
+              Confirm Split
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Remove Property Confirmation
 function RemovePropertyDialog({
   open,
@@ -1152,12 +1537,18 @@ function PropertyCard({
   onToggleVisitDay,
   onUpdateSeason,
   onRemoveProperty,
+  onExtendedCover,
+  onSplitRoute,
+  activeCoverage,
 }: {
   property: TechnicianPropertyWithSchedule;
   globalSeason: "summer" | "winter";
   onToggleVisitDay: (propertyId: string, day: string, isCurrentlyActive: boolean, season: "summer" | "winter") => void;
   onUpdateSeason: (propertyId: string, activeSeason: "summer" | "winter") => void;
   onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
+  onExtendedCover: () => void;
+  onSplitRoute: () => void;
+  activeCoverage?: RouteOverride | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -1275,6 +1666,17 @@ function PropertyCard({
               )}>
                 {property.activeSeason === "summer" ? "Summer" : "Winter"}
               </span>
+              {activeCoverage && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  {activeCoverage.coverageType === "extended_cover" ? "Covering" : "Split"}
+                  {activeCoverage.startDate && activeCoverage.endDate && (
+                    <span className="text-green-600">
+                      ({format(new Date(activeCoverage.startDate), "M/d")} - {format(new Date(activeCoverage.endDate), "M/d")})
+                    </span>
+                  )}
+                </span>
+              )}
             </div>
             
             {/* Address Display */}
@@ -1365,6 +1767,20 @@ function PropertyCard({
                 );
               }}>
                 Switch to {property.activeSeason === "summer" ? "Winter" : "Summer"}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={onExtendedCover}
+                className="text-blue-600 focus:text-blue-600"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Extended Cover
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={onSplitRoute}
+                className="text-purple-600 focus:text-purple-600"
+              >
+                <Split className="w-4 h-4 mr-2" />
+                Split Route
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => onRemoveProperty(property)}
@@ -1500,6 +1916,60 @@ function PropertiesTabContent({
     },
   });
 
+  // State for Extended Cover and Split Route modals
+  const [extendedCoverProperty, setExtendedCoverProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
+  const [splitRouteProperty, setSplitRouteProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
+
+  // Fetch route overrides for this technician's properties
+  const { data: routeOverridesData } = useQuery<{ routeOverrides: RouteOverride[] }>({
+    queryKey: [`/api/route-overrides/technician/${technician.id}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/route-overrides/technician/${technician.id}`);
+      if (!res.ok) return { routeOverrides: [] };
+      return res.json();
+    },
+  });
+
+  const routeOverrides = routeOverridesData?.routeOverrides || [];
+
+  // Get active coverage for a specific property
+  const getActiveCoverage = (propertyId: string): RouteOverride | null => {
+    const today = new Date();
+    return routeOverrides.find(override => 
+      override.propertyId === propertyId &&
+      override.startDate && override.endDate &&
+      new Date(override.startDate) <= today &&
+      new Date(override.endDate) >= today
+    ) || null;
+  };
+
+  // Mutation to create route override (coverage)
+  const createRouteOverrideMutation = useMutation({
+    mutationFn: async (data: {
+      originalTechnicianId: string;
+      coveringTechnicianId: string;
+      originalPropertyId: string;
+      coverageType: "extended_cover" | "split_route";
+      startDate: string;
+      endDate: string;
+      splitDays?: string[];
+      notes?: string;
+    }) => {
+      const res = await fetch('/api/route-overrides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to create coverage');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/route-overrides/technician/${technician.id}`] });
+      setExtendedCoverProperty(null);
+      setSplitRouteProperty(null);
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="text-center py-12">
@@ -1543,9 +2013,55 @@ function PropertiesTabContent({
                 updatePropertySeasonMutation.mutate({ propertyId, activeSeason });
               }}
               onRemoveProperty={onRemoveProperty}
+              onExtendedCover={() => setExtendedCoverProperty(property)}
+              onSplitRoute={() => setSplitRouteProperty(property)}
+              activeCoverage={getActiveCoverage(property.propertyId)}
             />
           ))}
         </div>
+      )}
+
+      {/* Extended Cover Modal */}
+      {extendedCoverProperty && (
+        <ExtendedCoverModal
+          open={!!extendedCoverProperty}
+          onClose={() => setExtendedCoverProperty(null)}
+          property={extendedCoverProperty}
+          originalTechnician={technician}
+          onConfirm={(data) => {
+            createRouteOverrideMutation.mutate({
+              originalTechnicianId: technician.id,
+              coveringTechnicianId: data.coveringTechnicianId,
+              originalPropertyId: extendedCoverProperty.propertyId,
+              coverageType: "extended_cover",
+              startDate: data.startDate,
+              endDate: data.endDate,
+              notes: data.notes,
+            });
+          }}
+        />
+      )}
+
+      {/* Split Route Modal */}
+      {splitRouteProperty && (
+        <SplitRouteModal
+          open={!!splitRouteProperty}
+          onClose={() => setSplitRouteProperty(null)}
+          property={splitRouteProperty}
+          originalTechnician={technician}
+          onConfirm={(data) => {
+            createRouteOverrideMutation.mutate({
+              originalTechnicianId: technician.id,
+              coveringTechnicianId: data.splitTechnicianId,
+              originalPropertyId: splitRouteProperty.propertyId,
+              coverageType: "split_route",
+              startDate: data.startDate,
+              endDate: data.endDate,
+              splitDays: data.daysForSplitTechnician,
+              notes: data.notes,
+            });
+          }}
+        />
       )}
     </div>
   );

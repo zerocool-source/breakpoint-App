@@ -266,7 +266,11 @@ export function registerPropertyTechnicianRoutes(app: any) {
     try {
       const {
         date,
+        startDate,
+        endDate,
+        coverageType,
         propertyId,
+        originalPropertyId, // alias for propertyId in extended cover/split route
         propertyName,
         originalTechnicianId,
         originalTechnicianName,
@@ -275,21 +279,35 @@ export function registerPropertyTechnicianRoutes(app: any) {
         overrideType,
         reason,
         notes,
+        splitDays, // for split_route: array of days the covering tech handles
         createdByUserId,
         createdByName,
       } = req.body;
 
+      // Use originalPropertyId if provided (from extended cover/split route modals)
+      const finalPropertyId = originalPropertyId || propertyId;
+      
+      // For extended_cover or split_route, default the date to startDate
+      const finalDate = date ? new Date(date) : (startDate ? new Date(startDate) : new Date());
+      
+      // Default overrideType for coverage types
+      const finalOverrideType = overrideType || (coverageType === "extended_cover" ? "reassign" : (coverageType === "split_route" ? "split" : "reassign"));
+
       const [override] = await db
         .insert(routeOverrides)
         .values({
-          date: new Date(date),
-          propertyId,
+          date: finalDate,
+          startDate: startDate ? new Date(startDate) : null,
+          endDate: endDate ? new Date(endDate) : null,
+          coverageType: coverageType || "single_day",
+          splitDays: splitDays || null, // Days the covering/split tech handles (for split_route)
+          propertyId: finalPropertyId,
           propertyName,
           originalTechnicianId,
           originalTechnicianName,
           coveringTechnicianId,
           coveringTechnicianName,
-          overrideType,
+          overrideType: finalOverrideType,
           reason,
           notes,
           createdByUserId,
@@ -332,6 +350,26 @@ export function registerPropertyTechnicianRoutes(app: any) {
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating route override:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get route overrides for a specific technician (as original or covering tech)
+  app.get("/api/route-overrides/technician/:technicianId", async (req: any, res: any) => {
+    try {
+      const { technicianId } = req.params;
+      
+      const overrides = await db
+        .select()
+        .from(routeOverrides)
+        .where(
+          sql`(${routeOverrides.originalTechnicianId} = ${technicianId} OR ${routeOverrides.coveringTechnicianId} = ${technicianId})`
+        )
+        .orderBy(desc(routeOverrides.createdAt));
+      
+      res.json({ routeOverrides: overrides });
+    } catch (error: any) {
+      console.error("Error fetching route overrides for technician:", error);
       res.status(500).json({ error: error.message });
     }
   });

@@ -1789,6 +1789,7 @@ export const routeOverrides = pgTable("route_overrides", {
   startDate: timestamp("start_date"), // Start of coverage range (for extended_cover)
   endDate: timestamp("end_date"), // End of coverage range (for extended_cover)
   coverageType: text("coverage_type").notNull().default("single_day"), // single_day, extended_cover, split_route
+  splitDays: text("split_days").array(), // For split_route: days the covering tech handles (e.g., ["Mon", "Wed", "Fri"])
   propertyId: varchar("property_id").notNull(), // FK to customers (property)
   propertyName: text("property_name"),
   originalTechnicianId: varchar("original_technician_id"), // FK to technicians
