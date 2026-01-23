@@ -1797,7 +1797,9 @@ export default function ServiceTechs() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
+      if (selectedTech) {
+        queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/${selectedTech.id}`] });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/technician-properties/counts"] });
       setShowRemovePropertyDialog(false);
       setPropertyToRemove(null);
@@ -1840,9 +1842,11 @@ export default function ServiceTechs() {
       
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/${variables.technicianId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/technician-properties/counts"] });
+      setShowAddPropertyModal(false);
+      setAddPropertyTech(null);
     },
   });
 
