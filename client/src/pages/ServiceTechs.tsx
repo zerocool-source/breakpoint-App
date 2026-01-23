@@ -33,9 +33,35 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ChevronDown, Plus, Image, Trash2, X, Clock, FileText } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Plus, Image, Trash2, X, Clock, FileText, MoreHorizontal, Sun, Snowflake, MapPin, Route, Users, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface TechnicianPropertyWithSchedule {
+  id: string;
+  technicianId: string;
+  propertyId: string;
+  propertyName: string | null;
+  customerName: string | null;
+  address: string | null;
+  assignedAt: string;
+  scheduleId: string | null;
+  summerVisitDays: string[] | null;
+  winterVisitDays: string[] | null;
+  activeSeason: string | null;
+}
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const WEEKEND_DAYS = ["Sat", "Sun"];
+const ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_MAPPING: Record<string, string> = {
+  "monday": "Mon", "tuesday": "Tue", "wednesday": "Wed", "thursday": "Thu", 
+  "friday": "Fri", "saturday": "Sat", "sunday": "Sun",
+  "Mon": "Mon", "Tue": "Tue", "Wed": "Wed", "Thu": "Thu", 
+  "Fri": "Fri", "Sat": "Sat", "Sun": "Sun"
+};
 
 interface Technician {
   id: string;
@@ -686,6 +712,349 @@ function ServiceLogSidebar({
 
 const ITEMS_PER_PAGE = 11;
 
+function ScheduleDayCircles({ 
+  days, 
+  activeDays, 
+  label 
+}: { 
+  days: string[]; 
+  activeDays: string[];
+  label: string;
+}) {
+  const normalizedActiveDays = activeDays.map(d => DAY_MAPPING[d.toLowerCase()] || DAY_MAPPING[d] || d);
+  
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs text-slate-500 w-16">{label}:</span>
+      <div className="flex gap-1">
+        {days.map((day) => {
+          const isActive = normalizedActiveDays.includes(day);
+          return (
+            <div
+              key={day}
+              className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium border transition-colors",
+                isActive 
+                  ? "bg-[#0078D4] text-white border-[#0078D4]" 
+                  : "bg-slate-100 text-slate-400 border-slate-200"
+              )}
+              title={day}
+            >
+              {day.charAt(0)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PropertyActionMenu({
+  property,
+  onRemove,
+  onExtendedCover,
+  onSplitRoute,
+  onGenerateStops,
+}: {
+  property: TechnicianPropertyWithSchedule;
+  onRemove: () => void;
+  onExtendedCover: () => void;
+  onSplitRoute: () => void;
+  onGenerateStops: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0"
+          data-testid={`button-property-actions-${property.id}`}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem 
+          onClick={onExtendedCover} 
+          className="gap-2"
+          data-testid={`menu-item-extended-cover-${property.id}`}
+        >
+          <CalendarDays className="w-4 h-4" />
+          Extended Cover
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={onSplitRoute} 
+          className="gap-2"
+          data-testid={`menu-item-split-route-${property.id}`}
+        >
+          <Users className="w-4 h-4" />
+          Split Route
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={onGenerateStops} 
+          className="gap-2"
+          data-testid={`menu-item-generate-stops-${property.id}`}
+        >
+          <Route className="w-4 h-4" />
+          Generate Stops from Assignments
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={onRemove} 
+          className="gap-2 text-red-600 focus:text-red-600"
+          data-testid={`menu-item-remove-property-${property.id}`}
+        >
+          <Trash2 className="w-4 h-4" />
+          Remove Property
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function TechnicianExpandableRow({
+  tech,
+  fullName,
+  initials,
+  avatarColor,
+  isExpanded,
+  propertyCount,
+  globalSeason,
+  onToggleExpand,
+  onViewTech,
+  onEditTech,
+  onToggleStatus,
+  onRemoveProperty,
+  onUpdateSeason,
+}: {
+  tech: Technician;
+  fullName: string;
+  initials: string;
+  avatarColor: string;
+  isExpanded: boolean;
+  propertyCount: number;
+  globalSeason: "summer" | "winter";
+  onToggleExpand: () => void;
+  onViewTech: () => void;
+  onEditTech: () => void;
+  onToggleStatus: (checked: boolean) => void;
+  onRemoveProperty: (id: string) => void;
+  onUpdateSeason: (propertyId: string, season: string) => void;
+}) {
+  const { data: properties, isLoading: propertiesLoading } = useQuery<TechnicianPropertyWithSchedule[]>({
+    queryKey: ["/api/technician-properties", tech.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-properties/${tech.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isExpanded,
+  });
+
+  return (
+    <>
+      <tr 
+        className={cn(
+          "hover:bg-slate-50 transition-colors cursor-pointer",
+          isExpanded && "bg-slate-50"
+        )}
+        data-testid={`row-technician-${tech.id}`}
+      >
+        <td className="px-6 py-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={onToggleExpand}
+              className="p-1 hover:bg-slate-200 rounded transition-colors"
+              data-testid={`button-expand-${tech.id}`}
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-slate-500" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm",
+              avatarColor
+            )}>
+              {initials}
+            </div>
+            <span 
+              className="font-medium text-[#0078D4] hover:underline cursor-pointer"
+              onClick={(e) => { e.stopPropagation(); onViewTech(); }}
+              data-testid={`link-tech-name-${tech.id}`}
+            >
+              {fullName || "Unknown"}
+            </span>
+          </div>
+        </td>
+        <td className="px-6 py-4 text-slate-600">
+          {tech.phone || "-"}
+        </td>
+        <td className="px-6 py-4 text-slate-600">
+          {tech.email || "-"}
+        </td>
+        <td className="px-6 py-4 text-slate-600">
+          {tech.truckNumber ? (
+            <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium text-sm">
+              #{tech.truckNumber}
+            </span>
+          ) : (
+            <span className="text-slate-400">-</span>
+          )}
+        </td>
+        <td className="px-6 py-4 text-center">
+          {tech.commissionPercent ? (
+            <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 font-medium text-sm">
+              {tech.commissionPercent}%
+            </span>
+          ) : (
+            <span className="text-slate-400">0%</span>
+          )}
+        </td>
+        <td className="px-6 py-4 text-center">
+          {propertyCount > 0 ? (
+            <span 
+              className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 font-medium text-sm cursor-pointer hover:bg-green-200"
+              onClick={onToggleExpand}
+              data-testid={`badge-property-count-${tech.id}`}
+            >
+              {propertyCount}
+            </span>
+          ) : (
+            <span className="text-slate-400" data-testid={`text-no-properties-${tech.id}`}>0</span>
+          )}
+        </td>
+        <td className="px-6 py-4">
+          <div className="flex justify-center">
+            <Switch 
+              checked={tech.active} 
+              onCheckedChange={onToggleStatus}
+              className="data-[state=checked]:bg-[#0078D4]"
+              data-testid={`switch-status-${tech.id}`}
+            />
+          </div>
+        </td>
+        <td className="px-6 py-4 text-right">
+          <Button 
+            variant="link" 
+            className="text-[#0078D4] hover:text-blue-800 p-0 h-auto"
+            onClick={onEditTech}
+            data-testid={`button-edit-${tech.id}`}
+          >
+            Edit
+          </Button>
+        </td>
+      </tr>
+      {isExpanded && (
+        <tr className="bg-slate-50/50">
+          <td colSpan={8} className="px-6 py-3">
+            <div className="ml-12 space-y-2">
+              {propertiesLoading ? (
+                <div className="text-sm text-slate-500 py-2">Loading properties...</div>
+              ) : !properties || properties.length === 0 ? (
+                <div className="text-sm text-slate-500 py-2">No properties assigned</div>
+              ) : (
+                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                  <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
+                    <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-600 uppercase">
+                      <div className="col-span-3">Property</div>
+                      <div className="col-span-3">Weekdays</div>
+                      <div className="col-span-2">Weekend</div>
+                      <div className="col-span-2">Season</div>
+                      <div className="col-span-2 text-right">Actions</div>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {properties.map((property) => {
+                      const activeSeason = property.activeSeason || globalSeason;
+                      const visitDays = activeSeason === "summer" 
+                        ? (property.summerVisitDays || []) 
+                        : (property.winterVisitDays || []);
+                      
+                      return (
+                        <div 
+                          key={property.id} 
+                          className="px-4 py-3 hover:bg-slate-50"
+                          data-testid={`row-property-${property.id}`}
+                        >
+                          <div className="grid grid-cols-12 gap-4 items-center">
+                            <div className="col-span-3">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-slate-400" />
+                                <div>
+                                  <p className="font-medium text-sm text-slate-900">{property.propertyName || "Unnamed Property"}</p>
+                                  {property.address && (
+                                    <p className="text-xs text-slate-500 truncate max-w-[200px]">{property.address}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="col-span-3">
+                              <ScheduleDayCircles days={WEEKDAYS} activeDays={visitDays} label="Week" />
+                            </div>
+                            <div className="col-span-2">
+                              <ScheduleDayCircles days={WEEKEND_DAYS} activeDays={visitDays} label="End" />
+                            </div>
+                            <div className="col-span-2">
+                              <div className="flex items-center gap-2">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => onUpdateSeason(property.propertyId, activeSeason === "summer" ? "winter" : "summer")}
+                                        className={cn(
+                                          "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-colors",
+                                          activeSeason === "summer" 
+                                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200" 
+                                            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                        )}
+                                        data-testid={`button-toggle-season-${property.id}`}
+                                      >
+                                        {activeSeason === "summer" ? (
+                                          <>
+                                            <Sun className="w-3 h-3" />
+                                            Summer
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Snowflake className="w-3 h-3" />
+                                            Winter
+                                          </>
+                                        )}
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Click to switch to {activeSeason === "summer" ? "winter" : "summer"} schedule</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                            </div>
+                            <div className="col-span-2 flex justify-end">
+                              <PropertyActionMenu
+                                property={property}
+                                onRemove={() => onRemoveProperty(property.id)}
+                                onExtendedCover={() => console.log("Extended Cover", property)}
+                                onSplitRoute={() => console.log("Split Route", property)}
+                                onGenerateStops={() => console.log("Generate Stops", property)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 export default function ServiceTechs() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("active");
@@ -693,6 +1062,8 @@ export default function ServiceTechs() {
   const [editingTech, setEditingTech] = useState<Technician | null>(null);
   const [viewingTech, setViewingTech] = useState<Technician | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedTechs, setExpandedTechs] = useState<Set<string>>(new Set());
+  const [globalSeason, setGlobalSeason] = useState<"summer" | "winter">("summer");
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
@@ -775,6 +1146,47 @@ export default function ServiceTechs() {
     },
   });
 
+  const removePropertyMutation = useMutation({
+    mutationFn: async (propertyAssignmentId: string) => {
+      const res = await fetch(`/api/property-technicians/${propertyAssignmentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove property");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties/counts"] });
+    },
+  });
+
+  const updatePropertySeasonMutation = useMutation({
+    mutationFn: async ({ propertyId, activeSeason }: { propertyId: string; activeSeason: string }) => {
+      const res = await fetch(`/api/property-schedule/by-property/${propertyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activeSeason }),
+      });
+      if (!res.ok) throw new Error("Failed to update schedule");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
+    },
+  });
+
+  const toggleTechExpanded = (techId: string) => {
+    setExpandedTechs(prev => {
+      const next = new Set(prev);
+      if (next.has(techId)) {
+        next.delete(techId);
+      } else {
+        next.add(techId);
+      }
+      return next;
+    });
+  };
+
   const filteredTechnicians = technicians
     .filter((tech) => {
       const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.toLowerCase();
@@ -841,6 +1253,39 @@ export default function ServiceTechs() {
               <DropdownMenuItem onClick={() => setFilterStatus("inactive")}>Inactive</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "gap-2 transition-colors",
+                    globalSeason === "summer" 
+                      ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100" 
+                      : "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  )}
+                  onClick={() => setGlobalSeason(globalSeason === "summer" ? "winter" : "summer")}
+                  data-testid="button-toggle-season"
+                >
+                  {globalSeason === "summer" ? (
+                    <>
+                      <Sun className="w-4 h-4" />
+                      Summer Schedule
+                    </>
+                  ) : (
+                    <>
+                      <Snowflake className="w-4 h-4" />
+                      Winter Schedule
+                    </>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle between summer and winter schedule view</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -911,84 +1356,26 @@ export default function ServiceTechs() {
                   const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.trim();
                   const initials = getInitials(tech.firstName, tech.lastName);
                   const avatarColor = getAvatarColor(fullName);
+                  const isExpanded = expandedTechs.has(tech.id);
+                  const propertyCount = propertyCounts[tech.id] || 0;
                   
                   return (
-                    <tr 
-                      key={tech.id} 
-                      className="hover:bg-slate-50 transition-colors"
-                      data-testid={`row-technician-${tech.id}`}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm",
-                            avatarColor
-                          )}>
-                            {initials}
-                          </div>
-                          <span 
-                            className="font-medium text-[#0078D4] hover:underline cursor-pointer"
-                            onClick={() => setViewingTech(tech)}
-                            data-testid={`link-tech-name-${tech.id}`}
-                          >
-                            {fullName || "Unknown"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {tech.phone || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {tech.email || "-"}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {tech.truckNumber ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-700 font-medium text-sm">
-                            #{tech.truckNumber}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {tech.commissionPercent ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded bg-amber-100 text-amber-700 font-medium text-sm">
-                            {tech.commissionPercent}%
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">0%</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {(propertyCounts[tech.id] || 0) > 0 ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-700 font-medium text-sm">
-                            {propertyCounts[tech.id]}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">0</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-center">
-                          <Switch 
-                            checked={tech.active} 
-                            onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
-                            className="data-[state=checked]:bg-[#0078D4]"
-                            data-testid={`switch-status-${tech.id}`}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button 
-                          variant="link" 
-                          className="text-[#0078D4] hover:text-blue-800 p-0 h-auto"
-                          onClick={() => setEditingTech(tech)}
-                          data-testid={`button-edit-${tech.id}`}
-                        >
-                          Edit
-                        </Button>
-                      </td>
-                    </tr>
+                    <TechnicianExpandableRow
+                      key={tech.id}
+                      tech={tech}
+                      fullName={fullName}
+                      initials={initials}
+                      avatarColor={avatarColor}
+                      isExpanded={isExpanded}
+                      propertyCount={propertyCount}
+                      globalSeason={globalSeason}
+                      onToggleExpand={() => toggleTechExpanded(tech.id)}
+                      onViewTech={() => setViewingTech(tech)}
+                      onEditTech={() => setEditingTech(tech)}
+                      onToggleStatus={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
+                      onRemoveProperty={(id) => removePropertyMutation.mutate(id)}
+                      onUpdateSeason={(propertyId, season) => updatePropertySeasonMutation.mutate({ propertyId, activeSeason: season })}
+                    />
                   );
                 })
               )}

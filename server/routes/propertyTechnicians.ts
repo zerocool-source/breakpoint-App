@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { propertyTechnicians, routeOverrides, technicians, routeStops, routes, customers } from "@shared/schema";
+import { propertyTechnicians, routeOverrides, technicians, routeStops, routes, customers, routeSchedules } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -132,9 +132,14 @@ export function registerPropertyTechnicianRoutes(app: any) {
           customerName: customers.name,
           address: customers.address,
           assignedAt: propertyTechnicians.assignedAt,
+          scheduleId: routeSchedules.id,
+          summerVisitDays: routeSchedules.summerVisitDays,
+          winterVisitDays: routeSchedules.winterVisitDays,
+          activeSeason: routeSchedules.activeSeason,
         })
         .from(propertyTechnicians)
         .leftJoin(customers, eq(propertyTechnicians.propertyId, customers.id))
+        .leftJoin(routeSchedules, eq(propertyTechnicians.propertyId, routeSchedules.propertyId))
         .where(eq(propertyTechnicians.technicianId, technicianId))
         .orderBy(desc(propertyTechnicians.assignedAt));
       res.json(assignments);
@@ -593,6 +598,76 @@ export function registerPropertyTechnicianRoutes(app: any) {
       });
     } catch (error: any) {
       console.error("Error creating batch route overrides:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/property-schedule/:scheduleId", async (req: any, res: any) => {
+    try {
+      const { scheduleId } = req.params;
+      const { activeSeason, summerVisitDays, winterVisitDays } = req.body;
+      
+      const updateData: any = { updatedAt: new Date() };
+      if (activeSeason !== undefined) updateData.activeSeason = activeSeason;
+      if (summerVisitDays !== undefined) updateData.summerVisitDays = summerVisitDays;
+      if (winterVisitDays !== undefined) updateData.winterVisitDays = winterVisitDays;
+      
+      const [updated] = await db
+        .update(routeSchedules)
+        .set(updateData)
+        .where(eq(routeSchedules.id, scheduleId))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ error: "Schedule not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating property schedule:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/property-schedule/by-property/:propertyId", async (req: any, res: any) => {
+    try {
+      const { propertyId } = req.params;
+      const { activeSeason, summerVisitDays, winterVisitDays } = req.body;
+      
+      const updateData: any = { updatedAt: new Date() };
+      if (activeSeason !== undefined) updateData.activeSeason = activeSeason;
+      if (summerVisitDays !== undefined) updateData.summerVisitDays = summerVisitDays;
+      if (winterVisitDays !== undefined) updateData.winterVisitDays = winterVisitDays;
+      
+      const existing = await db
+        .select()
+        .from(routeSchedules)
+        .where(eq(routeSchedules.propertyId, propertyId))
+        .limit(1);
+      
+      if (existing.length === 0) {
+        const [created] = await db
+          .insert(routeSchedules)
+          .values({
+            propertyId,
+            activeSeason: activeSeason || "summer",
+            summerVisitDays: summerVisitDays || [],
+            winterVisitDays: winterVisitDays || [],
+            isActive: true,
+          })
+          .returning();
+        return res.json(created);
+      }
+      
+      const [updated] = await db
+        .update(routeSchedules)
+        .set(updateData)
+        .where(eq(routeSchedules.propertyId, propertyId))
+        .returning();
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating property schedule by property:", error);
       res.status(500).json({ error: error.message });
     }
   });
