@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import BreakpointLogo from "@assets/ChatGPT_Image_Jan_17,_2026,_10_07_41_AM_1768673283450.png";
+import BreakpointLogo from "@/assets/breakpoint-logo.png";
 
 interface NavSubSubItem {
   label: string;
