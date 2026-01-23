@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 import { PoolBrainClient } from "../poolbrain-client";
 import { db } from "../db";
-import { routeStops, routes, Route } from "@shared/schema";
+import { routeStops, routes, Route, RouteStop } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export function registerSchedulingRoutes(app: any) {
@@ -623,6 +623,47 @@ export function registerSchedulingRoutes(app: any) {
     } catch (error: any) {
       console.error("Error deleting route stop:", error);
       res.status(500).json({ error: "Failed to delete route stop" });
+    }
+  });
+
+  // Get stops for a specific technician
+  app.get("/api/technician-stops/:technicianId", async (req: Request, res: Response) => {
+    try {
+      const { technicianId } = req.params;
+      
+      // Find routes belonging to this technician
+      const techRoutes = await db
+        .select()
+        .from(routes)
+        .where(eq(routes.technicianId, technicianId));
+      
+      if (techRoutes.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get route IDs
+      const routeIds = techRoutes.map((r: Route) => r.id);
+      
+      // Get all stops for these routes
+      const allStops: RouteStop[] = await db
+        .select()
+        .from(routeStops);
+      
+      // Filter stops that belong to the technician's routes
+      const techStops = allStops.filter((stop: RouteStop) => routeIds.includes(stop.routeId));
+      
+      // Sort by scheduled date (most recent first)
+      techStops.sort((a: RouteStop, b: RouteStop) => {
+        if (!a.scheduledDate && !b.scheduledDate) return 0;
+        if (!a.scheduledDate) return 1;
+        if (!b.scheduledDate) return -1;
+        return new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime();
+      });
+      
+      res.json(techStops);
+    } catch (error: any) {
+      console.error("Error fetching technician stops:", error);
+      res.status(500).json({ error: "Failed to fetch technician stops" });
     }
   });
 

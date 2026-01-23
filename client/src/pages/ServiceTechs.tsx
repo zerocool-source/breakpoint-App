@@ -1038,6 +1038,17 @@ function TechnicianExpandableRow({
     enabled: isExpanded,
   });
 
+  // Fetch scheduled stops for this technician
+  const { data: stops, isLoading: stopsLoading } = useQuery<any[]>({
+    queryKey: ["/api/technician-stops", tech.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/technician-stops/${tech.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isExpanded,
+  });
+
   return (
     <>
       <tr 
@@ -1136,7 +1147,73 @@ function TechnicianExpandableRow({
       {isExpanded && (
         <tr className="bg-slate-50/50">
           <td colSpan={8} className="px-6 py-3">
-            <div className="ml-12 space-y-2">
+            <div className="ml-12 space-y-4">
+              {/* Scheduled Stops Section */}
+              {stopsLoading ? (
+                <div className="text-sm text-slate-500 py-2">Loading stops...</div>
+              ) : stops && stops.length > 0 ? (
+                <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
+                  <div className="bg-blue-50 px-4 py-2 border-b border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <Route className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-semibold text-blue-800">Scheduled Stops ({stops.length})</span>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-blue-100">
+                    {stops.map((stop: any) => (
+                      <div 
+                        key={stop.id} 
+                        className="px-4 py-3 hover:bg-blue-50/50"
+                        data-testid={`row-stop-${stop.id}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm text-slate-900">{stop.propertyName}</span>
+                                {stop.waterBodyType && (
+                                  <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-medium rounded-full">
+                                    {stop.waterBodyType}
+                                  </span>
+                                )}
+                                {stop.isCoverage && (
+                                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                                    Coverage
+                                  </span>
+                                )}
+                              </div>
+                              {stop.address && (
+                                <p className="text-xs text-slate-500">{stop.address}</p>
+                              )}
+                              {stop.notes && (
+                                <p className="text-xs text-slate-600 mt-1 italic">"{stop.notes}"</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {stop.scheduledDate && (
+                              <span className="text-xs text-slate-600 flex items-center gap-1">
+                                <CalendarDays className="w-3 h-3" />
+                                {new Date(stop.scheduledDate).toLocaleDateString()}
+                              </span>
+                            )}
+                            <span className={cn(
+                              "px-2 py-0.5 text-xs font-medium rounded-full",
+                              stop.status === "completed" ? "bg-green-100 text-green-700" :
+                              stop.status === "in_progress" ? "bg-yellow-100 text-yellow-700" :
+                              "bg-slate-100 text-slate-600"
+                            )}>
+                              {stop.status === "not_started" ? "Pending" : stop.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Properties Section */}
               {propertiesLoading ? (
                 <div className="text-sm text-slate-500 py-2">Loading properties...</div>
               ) : !properties || properties.length === 0 ? (
@@ -1394,6 +1471,7 @@ export default function ServiceTechs() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/route-stops"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technician-stops"] });
     },
   });
 
