@@ -1107,6 +1107,9 @@ export const routeStops = pgTable("route_stops", {
   state: text("state"),
   zip: text("zip"),
   poolName: text("pool_name"),
+  waterBodyType: text("water_body_type").default("Pool"), // Pool, Spa, Fountain, Splash Pad, Wader
+  scheduledDate: text("scheduled_date"), // YYYY-MM-DD format
+  isCoverage: boolean("is_coverage").default(false), // Coverage stop flag
   jobType: text("job_type").default("route_stop"), // route_stop, one_time
   status: text("status").default("not_started"), // not_started, in_progress, completed, no_access, skipped
   sortOrder: integer("sort_order").default(0),

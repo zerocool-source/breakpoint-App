@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface TechnicianPropertyWithSchedule {
   id: string;
@@ -822,6 +823,9 @@ function PropertyActionMenu({
   );
 }
 
+const WATER_BODY_TYPES = ["Pool", "Spa", "Fountain", "Splash Pad", "Wader"] as const;
+type WaterBodyType = typeof WATER_BODY_TYPES[number];
+
 interface AddStopData {
   propertyId: string;
   propertyName: string;
@@ -830,6 +834,9 @@ interface AddStopData {
   notes: string;
   technicianId: string;
   technicianName: string;
+  waterBodyType: WaterBodyType;
+  scheduledDate: string;
+  isCoverage?: boolean;
 }
 
 function AddStopModal({
@@ -848,9 +855,15 @@ function AddStopModal({
   onAddStop: (data: AddStopData) => void;
 }) {
   const [notes, setNotes] = useState("");
+  const [waterBodyType, setWaterBodyType] = useState<WaterBodyType>("Pool");
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split("T")[0];
+  });
+  const [isCoverage, setIsCoverage] = useState(false);
 
   const handleSubmit = () => {
-    if (!property) return;
+    if (!property || !scheduledDate) return;
     onAddStop({
       propertyId: property.propertyId,
       propertyName: property.propertyName || "Unknown Property",
@@ -859,13 +872,22 @@ function AddStopModal({
       notes: notes.trim(),
       technicianId,
       technicianName,
+      waterBodyType,
+      scheduledDate,
+      isCoverage,
     });
     setNotes("");
+    setWaterBodyType("Pool");
+    setScheduledDate(new Date().toISOString().split("T")[0]);
+    setIsCoverage(false);
     onClose();
   };
 
   const handleClose = () => {
     setNotes("");
+    setWaterBodyType("Pool");
+    setScheduledDate(new Date().toISOString().split("T")[0]);
+    setIsCoverage(false);
     onClose();
   };
 
@@ -891,6 +913,53 @@ function AddStopModal({
           </div>
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1">
+              Body of Water
+            </label>
+            <Select value={waterBodyType} onValueChange={(val) => setWaterBodyType(val as WaterBodyType)}>
+              <SelectTrigger className="w-full" data-testid="select-water-body-type">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {WATER_BODY_TYPES.map((type) => (
+                  <SelectItem key={type} value={type} data-testid={`option-water-${type.toLowerCase().replace(" ", "-")}`}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1">
+              Scheduled Date
+            </label>
+            <input
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              data-testid="input-scheduled-date"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="coverage-toggle"
+              checked={isCoverage}
+              onChange={(e) => setIsCoverage(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+              data-testid="checkbox-coverage"
+            />
+            <label htmlFor="coverage-toggle" className="text-sm font-medium text-slate-700">
+              Coverage Stop
+            </label>
+            {isCoverage && (
+              <span className="ml-2 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                Coverage
+              </span>
+            )}
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1">
               Notes for this stop
             </label>
             <textarea
@@ -898,7 +967,7 @@ function AddStopModal({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Enter any notes for this stop..."
               className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-              rows={4}
+              rows={3}
               data-testid="input-stop-notes"
             />
           </div>
@@ -910,6 +979,7 @@ function AddStopModal({
           <Button 
             onClick={handleSubmit} 
             className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+            disabled={!scheduledDate}
             data-testid="button-confirm-add-stop"
           >
             Add Stop

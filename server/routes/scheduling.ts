@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 import { PoolBrainClient } from "../poolbrain-client";
 import { db } from "../db";
-import { routeStops, routes } from "@shared/schema";
+import { routeStops, routes, Route } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export function registerSchedulingRoutes(app: any) {
@@ -518,7 +518,7 @@ export function registerSchedulingRoutes(app: any) {
     try {
       const { routeId, propertyId, propertyName, customerId, customerName, poolId, 
               address, city, state, zip, poolName, notes, sortOrder, estimatedTime, frequency,
-              technicianId, technicianName, dayOfWeek } = req.body;
+              technicianId, technicianName, dayOfWeek, waterBodyType, scheduledDate, isCoverage } = req.body;
       
       if (!propertyId) {
         return res.status(400).json({ error: "propertyId is required" });
@@ -538,7 +538,7 @@ export function registerSchedulingRoutes(app: any) {
           .where(eq(routes.technicianId, technicianId));
         
         // First try to find a route matching the target day
-        let targetRoute = existingRoutes.find(r => r.dayOfWeek === targetDayOfWeek);
+        let targetRoute = existingRoutes.find((r: Route) => r.dayOfWeek === targetDayOfWeek);
         
         // If no route for target day, use any existing route
         if (!targetRoute && existingRoutes.length > 0) {
@@ -582,6 +582,9 @@ export function registerSchedulingRoutes(app: any) {
           state,
           zip,
           poolName,
+          waterBodyType: waterBodyType || "Pool",
+          scheduledDate: scheduledDate || undefined,
+          isCoverage: isCoverage || false,
           notes: notes || undefined,
           sortOrder: sortOrder ?? 0,
           estimatedTime: estimatedTime ?? 30,
