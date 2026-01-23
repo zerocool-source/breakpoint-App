@@ -1114,96 +1114,6 @@ function ScheduleDayCircles({
   );
 }
 
-// Stops Tab Content Component
-function StopsTabContent({ 
-  technician, 
-  onMarkComplete 
-}: { 
-  technician: Technician; 
-  onMarkComplete: (stopId: string) => void;
-}) {
-  const today = format(new Date(), "yyyy-MM-dd");
-  
-  const { data: stopsData, isLoading } = useQuery<{ stops: RouteStop[] }>({
-    queryKey: [`/api/scheduling/stops/technician/${technician.id}`, today],
-    queryFn: async () => {
-      const res = await fetch(`/api/scheduling/stops/technician/${technician.id}?date=${today}`);
-      if (!res.ok) throw new Error("Failed to fetch stops");
-      return res.json();
-    },
-  });
-
-  const stops = stopsData?.stops || [];
-
-  if (isLoading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" />
-        <p className="text-sm text-slate-500 mt-2">Loading stops...</p>
-      </div>
-    );
-  }
-
-  if (stops.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Route className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-        <p className="text-slate-500">No scheduled stops for today</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {stops.map((stop) => (
-        <div 
-          key={stop.id} 
-          className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-          data-testid={`card-stop-${stop.id}`}
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h4 className="font-medium text-slate-900">{stop.propertyName || "Unknown Property"}</h4>
-                <span className={cn(
-                  "px-2 py-0.5 text-xs font-medium rounded",
-                  stop.stopType === "Pool" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"
-                )}>
-                  {stop.stopType || "Service"}
-                </span>
-              </div>
-              {stop.notes && (
-                <p className="text-sm text-slate-500 mt-1 italic">{stop.notes}</p>
-              )}
-              <p className="text-xs text-slate-400 mt-2">{format(new Date(stop.scheduledDate), "MMM d, yyyy")}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "px-2 py-1 text-xs font-medium rounded-full",
-                stop.status === "completed" 
-                  ? "bg-green-100 text-green-700" 
-                  : "bg-amber-100 text-amber-700"
-              )}>
-                {stop.status === "completed" ? "Completed" : "Pending"}
-              </span>
-              {stop.status !== "completed" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onMarkComplete(stop.id)}
-                  className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Properties Tab Content Component
 function PropertiesTabContent({
   technician,
@@ -1428,7 +1338,7 @@ export default function ServiceTechs() {
   
   // Selected technician for detail panel
   const [selectedTech, setSelectedTech] = useState<Technician | null>(null);
-  const [activeTab, setActiveTab] = useState<"stops" | "properties" | "notes">("stops");
+  const [activeTab, setActiveTab] = useState<"properties" | "notes">("properties");
   
   // Stop modal state
   const [showAddStopModal, setShowAddStopModal] = useState(false);
@@ -1684,7 +1594,7 @@ export default function ServiceTechs() {
   // Handle technician selection
   const handleSelectTech = (tech: Technician) => {
     setSelectedTech(tech);
-    setActiveTab("stops");
+    setActiveTab("properties");
   };
 
   return (
@@ -1914,18 +1824,6 @@ export default function ServiceTechs() {
               {/* Tab Navigation */}
               <div className="flex border-b border-slate-200 px-6">
                 <button
-                  onClick={() => setActiveTab("stops")}
-                  className={cn(
-                    "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
-                    activeTab === "stops" 
-                      ? "border-blue-600 text-blue-600" 
-                      : "border-transparent text-slate-500 hover:text-slate-700"
-                  )}
-                  data-testid="tab-stops"
-                >
-                  Scheduled Stops
-                </button>
-                <button
                   onClick={() => setActiveTab("properties")}
                   className={cn(
                     "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
@@ -1954,14 +1852,6 @@ export default function ServiceTechs() {
               {/* Tab Content */}
               <ScrollArea className="flex-1">
                 <div className="p-6">
-                  {activeTab === "stops" && (
-                    <StopsTabContent 
-                      technician={selectedTech} 
-                      onMarkComplete={(stopId) => {
-                        // Will implement stop completion
-                      }}
-                    />
-                  )}
                   {activeTab === "properties" && (
                     <PropertiesTabContent
                       technician={selectedTech}
