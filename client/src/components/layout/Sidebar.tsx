@@ -1,39 +1,23 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   LayoutDashboard, 
   Building2, 
   Users, 
   Calendar, 
-  Briefcase, 
-  FileBarChart, 
-  FileText, 
+  BarChart3, 
+  Receipt, 
   MessageSquare, 
   Truck, 
   Zap,
-  ChevronRight,
   Settings,
   Wrench,
-  Package,
-  Hammer,
-  Search,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import BreakpointLogo from "@/assets/breakpoint-logo.png";
-
-interface NavSubSubItem {
-  label: string;
-  href: string;
-  badge?: number;
-}
 
 interface NavSubItem {
   label: string;
-  href?: string;
-  icon?: any;
-  badge?: number;
-  section?: string;
-  children?: NavSubSubItem[];
+  href: string;
 }
 
 interface NavItem {
@@ -41,179 +25,195 @@ interface NavItem {
   label: string;
   href?: string;
   children?: NavSubItem[];
-  badge?: string;
-  disabled?: boolean;
 }
 
-function NavItemComponent({ 
+const navItems: NavItem[] = [
+  { 
+    icon: LayoutDashboard, 
+    label: "Overview", 
+    href: "/"
+  },
+  { 
+    icon: Building2, 
+    label: "Customers", 
+    children: [
+      { label: "All Customers", href: "/customers" },
+      { label: "Visits", href: "/visits" },
+    ]
+  },
+  { 
+    icon: Wrench, 
+    label: "Operations Hub", 
+    children: [
+      { label: "Supervisor Management", href: "/supervisor-management" },
+      { label: "Tech Ops Alerts", href: "/tech-ops" },
+      { label: "Repairs", href: "/repairs" },
+      { label: "Chemicals", href: "/chemicals" },
+      { label: "Service", href: "/service" },
+      { label: "Repair Queue", href: "/repair-queue" },
+    ]
+  },
+  { 
+    icon: Users, 
+    label: "Technicians", 
+    children: [
+      { label: "Repair Tech", href: "/tech-repairs" },
+      { label: "Service Techs", href: "/tech-services" },
+      { label: "Supervisors", href: "/supervisors" },
+    ]
+  },
+  { 
+    icon: Calendar, 
+    label: "Scheduling", 
+    children: [
+      { label: "Calendar", href: "/scheduling" },
+      { label: "Route History", href: "/route-history" },
+    ]
+  },
+  { 
+    icon: BarChart3, 
+    label: "Reports", 
+    href: "/reports"
+  },
+  { 
+    icon: Receipt, 
+    label: "Billing", 
+    children: [
+      { label: "All Estimates", href: "/estimates" },
+      { label: "History Log", href: "/estimate-history" },
+      { label: "Invoices", href: "/invoices" },
+    ]
+  },
+  { 
+    icon: MessageSquare, 
+    label: "Chats Hub", 
+    children: [
+      { label: "Channels", href: "/channels" },
+    ]
+  },
+  { 
+    icon: Truck, 
+    label: "Fleet", 
+    children: [
+      { label: "Fleet Dashboard", href: "/fleet" },
+      { label: "Truck Inventory", href: "/fleet/inventory" },
+    ]
+  },
+  { 
+    icon: Zap, 
+    label: "Automations", 
+    href: "/automations"
+  },
+];
+
+function NavIconItem({ 
   item, 
-  isExpanded, 
-  onToggle, 
   location,
-  expandedSubItems,
-  onToggleSubExpand
+  onMouseEnter,
+  onMouseLeave,
+  isHovered,
 }: { 
   item: NavItem; 
-  isExpanded: boolean; 
-  onToggle: () => void;
   location: string;
-  expandedSubItems: Set<string>;
-  onToggleSubExpand: (key: string) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  isHovered: boolean;
 }) {
   const hasChildren = item.children && item.children.length > 0;
   const isActive = item.href ? location === item.href : false;
   const hasActiveChild = item.children?.some(child => location === child.href);
+  const isHighlighted = isActive || hasActiveChild;
 
-  if (item.disabled) {
-    return (
-      <div className="flex items-center gap-3 px-3 py-2 text-white/40 cursor-not-allowed text-sm rounded-lg">
-        <item.icon className="w-4 h-4" />
-        <span>{item.label}</span>
-        {item.badge && (
-          <span className="ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full bg-white/10 text-white/60">
-            {item.badge}
-          </span>
-        )}
-      </div>
-    );
-  }
+  const content = (
+    <div 
+      className={cn(
+        "relative w-full flex items-center justify-center py-3 cursor-pointer transition-all duration-200 border-l-[3px]",
+        isHighlighted 
+          ? "bg-white/15 border-l-orange-500" 
+          : "hover:bg-white/10 border-l-transparent"
+      )}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <item.icon className={cn(
+        "w-5 h-5 transition-colors",
+        isHighlighted ? "text-white" : "text-white/80"
+      )} />
+    </div>
+  );
 
   if (!hasChildren && item.href) {
     return (
-      <Link 
-        href={item.href}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-          isActive 
-            ? "bg-white text-[#0078D4] shadow-sm" 
-            : "text-white/90 hover:bg-white/15"
-        )}
-      >
-        <item.icon className={cn("w-4 h-4", isActive ? "text-[#0078D4]" : "text-white/90")} />
-        <span>{item.label}</span>
-        {item.badge && (
-          <span className={cn(
-            "ml-auto px-2 py-0.5 text-[10px] font-medium rounded-full",
-            isActive ? "bg-[#FF8000] text-white" : "bg-[#FF8000] text-white"
-          )}>
-            {item.badge}
-          </span>
-        )}
+      <Link href={item.href}>
+        {content}
       </Link>
     );
   }
 
+  return content;
+}
+
+function FlyoutPanel({
+  item,
+  location,
+  isVisible,
+  onMouseEnter,
+  onMouseLeave,
+  position,
+}: {
+  item: NavItem;
+  location: string;
+  isVisible: boolean;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  position: number;
+}) {
+  if (!isVisible) return null;
+
+  const hasChildren = item.children && item.children.length > 0;
+
   return (
-    <div>
-      <button
-        onClick={onToggle}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full text-left",
-          hasActiveChild 
-            ? "bg-white/15 text-white" 
-            : "text-white/90 hover:bg-white/10"
-        )}
-      >
-        <item.icon className="w-4 h-4 text-white/90" />
-        <span className="flex-1">{item.label}</span>
-        <ChevronRight className={cn(
-          "w-4 h-4 transition-transform duration-200 text-white/60",
-          isExpanded && "rotate-90 text-white"
-        )} />
-      </button>
+    <div 
+      className="fixed z-[100] bg-white rounded-lg shadow-xl border border-slate-200 min-w-[200px] py-2 animate-in fade-in slide-in-from-left-2 duration-150"
+      style={{ 
+        left: "68px",
+        top: `${position}px`,
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <div className="px-4 py-2 border-b border-slate-100">
+        <h3 className="font-semibold text-slate-900 text-sm">{item.label}</h3>
+      </div>
       
-      {isExpanded && item.children && (
-        <div className="ml-4 mt-1 space-y-0.5 pl-4 border-l-2 border-white/20">
-          {(() => {
-            let lastSection: string | undefined = undefined;
-            return item.children.map((child) => {
-              const isChildActive = child.href ? location === child.href : false;
-              const hasSubChildren = child.children && child.children.length > 0;
-              const hasActiveSubChild = child.children?.some(sub => location === sub.href);
-              const showSectionHeader = child.section && child.section !== lastSection;
-              if (child.section) lastSection = child.section;
-              
-              if (hasSubChildren) {
-                const isSubExpanded = expandedSubItems.has(child.label);
-                return (
-                  <div key={child.label}>
-                    <button
-                      onClick={() => onToggleSubExpand(child.label)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium w-full text-left transition-colors",
-                        hasActiveSubChild ? "text-white" : "text-white/70 hover:text-white hover:bg-white/10"
-                      )}
-                    >
-                      <ChevronRight className={cn(
-                        "w-3 h-3 transition-transform duration-200",
-                        isSubExpanded && "rotate-90"
-                      )} />
-                      <span className="flex-1">{child.label}</span>
-                    </button>
-                    {isSubExpanded && (
-                      <div className="ml-3 mt-0.5 space-y-0.5 pl-3 border-l border-white/20">
-                        {child.children!.map((subChild) => {
-                          const isSubActive = location === subChild.href;
-                          return (
-                            <Link
-                              key={subChild.href}
-                              href={subChild.href}
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
-                                isSubActive 
-                                  ? "bg-white text-[#0078D4] shadow-sm" 
-                                  : "text-white/70 hover:bg-white/10 hover:text-white"
-                              )}
-                            >
-                              <span className="flex-1">{subChild.label}</span>
-                              {subChild.badge !== undefined && subChild.badge > 0 && (
-                                <span className={cn(
-                                  "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center",
-                                  isSubActive ? "bg-[#FF8000] text-white" : "bg-[#FF8000] text-white"
-                                )}>
-                                  {subChild.badge}
-                                </span>
-                              )}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              
-              return (
-                <div key={child.href || child.label}>
-                  {showSectionHeader && (
-                    <div className="text-[10px] uppercase tracking-wider text-white/50 font-medium px-3 pt-2 pb-1">
-                      {child.section}
-                    </div>
-                  )}
-                  <Link
-                    href={child.href || "#"}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200",
-                      isChildActive 
-                        ? "bg-white text-[#0078D4] shadow-sm" 
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    {child.section && <Users className="w-3.5 h-3.5" />}
-                    <span className="flex-1">{child.label}</span>
-                    {child.section && <ChevronRight className="w-3.5 h-3.5 text-white/40" />}
-                    {child.badge !== undefined && child.badge > 0 && (
-                      <span className={cn(
-                        "px-1.5 py-0.5 text-[10px] font-semibold rounded-full min-w-[18px] text-center bg-[#FF8000] text-white"
-                      )}>
-                        {child.badge}
-                      </span>
-                    )}
-                  </Link>
-                </div>
-              );
-            });
-          })()}
+      {hasChildren ? (
+        <div className="py-1">
+          {item.children!.map((child) => {
+            const isChildActive = location === child.href;
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                className={cn(
+                  "block px-4 py-2 text-sm transition-colors",
+                  isChildActive 
+                    ? "bg-blue-50 text-blue-700 font-medium" 
+                    : "text-slate-700 hover:bg-slate-50"
+                )}
+              >
+                {child.label}
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="px-4 py-2">
+          <Link 
+            href={item.href || "/"}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Go to {item.label}
+          </Link>
         </div>
       )}
     </div>
@@ -222,199 +222,108 @@ function NavItemComponent({
 
 export function Sidebar() {
   const [location] = useLocation();
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(["properties", "chats", "operationsHub"]));
-  const [expandedSubItems, setExpandedSubItems] = useState<Set<string>>(new Set(["Repairs"]));
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [flyoutPosition, setFlyoutPosition] = useState<number>(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  const toggleExpand = (key: string) => {
-    setExpandedItems(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+  const handleMouseEnter = (label: string, element: HTMLDivElement | null) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      setFlyoutPosition(rect.top);
+    }
+    setHoveredItem(label);
   };
 
-  const toggleSubExpand = (key: string) => {
-    setExpandedSubItems(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setHoveredItem(null);
+    }, 150);
   };
 
-  const navItems: (NavItem & { key: string })[] = [
-    { 
-      key: "overview",
-      icon: LayoutDashboard, 
-      label: "Overview", 
-      href: "/"
-    },
-    { 
-      key: "properties",
-      icon: Building2, 
-      label: "Properties", 
-      children: [
-        { label: "Customers", href: "/customers" },
-        { label: "Visits", href: "/visits" },
-      ]
-    },
-    { 
-      key: "operationsHub",
-      icon: Hammer, 
-      label: "Operations Hub", 
-      children: [
-        { label: "Supervisor Management", href: "/supervisor-management", section: "Supervisor Management" },
-        { label: "Tech Ops Alerts", href: "/tech-ops", section: "Tech Ops" },
-        { label: "Repairs", href: "/repairs", section: "Tech Ops" },
-        { label: "Chemicals", href: "/chemicals", section: "Tech Ops" },
-        { label: "Service", href: "/service", section: "Tech Ops" },
-      ]
-    },
-    { 
-      key: "repairQueue",
-      icon: Wrench, 
-      label: "Repair Queue", 
-      href: "/repair-queue"
-    },
-    { 
-      key: "technicians",
-      icon: Users, 
-      label: "Technicians", 
-      children: [
-        { label: "Repair Tech", href: "/tech-repairs" },
-        { label: "Service Techs", href: "/tech-services" },
-        { label: "Supervisors", href: "/supervisors" },
-      ]
-    },
-    { 
-      key: "scheduling",
-      icon: Calendar, 
-      label: "Scheduling", 
-      children: [
-        { label: "Calendar", href: "/scheduling" },
-        { label: "Route History", href: "/route-history" },
-      ]
-    },
-    { 
-      key: "jobs",
-      icon: Briefcase, 
-      label: "Jobs", 
-      children: [
-        { label: "Repairs", href: "/jobs" },
-        { label: "Chemicals", href: "/job-chemicals" },
-      ]
-    },
-    { 
-      key: "reports",
-      icon: FileBarChart, 
-      label: "Reports", 
-      href: "/reports"
-    },
-    { 
-      key: "billing",
-      icon: FileText, 
-      label: "Billing", 
-      children: [
-        { label: "All Estimates", href: "/estimates" },
-        { label: "History Log", href: "/estimate-history" },
-        { label: "Invoices", href: "/invoices" },
-      ]
-    },
-    { 
-      key: "chats",
-      icon: MessageSquare, 
-      label: "Chats Hub", 
-      children: [
-        { label: "Channels", href: "/channels" },
-      ]
-    },
-    { 
-      key: "fleet",
-      icon: Truck, 
-      label: "Fleet", 
-      children: [
-        { label: "Fleet Dashboard", href: "/fleet" },
-        { label: "Truck Inventory", href: "/fleet/inventory" },
-      ]
-    },
-    { 
-      key: "automations",
-      icon: Zap, 
-      label: "Automations", 
-      href: "/automations",
-      badge: "Beta"
-    },
-  ];
+  const handleFlyoutMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  const handleFlyoutMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setHoveredItem(null);
+    }, 150);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
-    <aside className="w-60 h-screen bg-[#0078D4] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
-      <div className="p-4 border-b border-white/10 bg-white">
-        <div className="flex flex-col items-center">
-          <div className="h-36 w-36">
-            <img 
-              src={BreakpointLogo} 
-              alt="Breakpoint Intelligence" 
-              className="h-full w-full object-contain"
-            />
+    <>
+      <aside className="w-[68px] h-screen bg-[#1e3a5f] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
+        <div className="py-4 border-b border-white/10 flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-lg">B</span>
           </div>
         </div>
-      </div>
-      <div className="px-3 py-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-          <input 
-            type="text" 
-            placeholder="Search..."
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-[#FF8000] focus:border-transparent transition-all"
-          />
+        
+        <nav className="flex-1 py-2 overflow-y-auto scrollbar-thin">
+          {navItems.map((item) => (
+            <div 
+              key={item.label}
+              ref={(el) => {
+                if (el) itemRefs.current.set(item.label, el);
+              }}
+            >
+              <NavIconItem
+                item={item}
+                location={location}
+                isHovered={hoveredItem === item.label}
+                onMouseEnter={() => handleMouseEnter(item.label, itemRefs.current.get(item.label) || null)}
+                onMouseLeave={handleMouseLeave}
+              />
+            </div>
+          ))}
+        </nav>
+        
+        <div className="border-t border-white/10 py-2">
+          <Link href="/settings">
+            <div 
+              className={cn(
+                "w-full flex items-center justify-center py-3 cursor-pointer transition-all duration-200 border-l-[3px]",
+                location === "/settings" 
+                  ? "bg-white/15 border-l-orange-500" 
+                  : "hover:bg-white/10 border-l-transparent"
+              )}
+            >
+              <Settings className={cn(
+                "w-5 h-5 transition-colors",
+                location === "/settings" ? "text-white" : "text-white/80"
+              )} />
+            </div>
+          </Link>
         </div>
-      </div>
-      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto scrollbar-thin">
-        {navItems.map((item) => (
-          <NavItemComponent
-            key={item.key}
-            item={item}
-            isExpanded={expandedItems.has(item.key)}
-            onToggle={() => toggleExpand(item.key)}
-            location={location}
-            expandedSubItems={expandedSubItems}
-            onToggleSubExpand={toggleSubExpand}
-          />
-        ))}
-      </nav>
-      <div className="p-3 border-t border-white/10">
-        <Link 
-          href="/customers"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 mb-1",
-            location === "/customers" 
-              ? "bg-white text-[#0078D4] shadow-sm" 
-              : "text-white/90 hover:bg-white/15"
-          )}
-        >
-          <Users className={cn("w-4 h-4", location === "/customers" ? "text-[#0078D4]" : "text-white/90")} />
-          <span>Customers</span>
-        </Link>
-        <Link 
-          href="/settings"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
-            location === "/settings" 
-              ? "bg-white text-[#0078D4] shadow-sm" 
-              : "text-white/90 hover:bg-white/15"
-          )}
-        >
-          <Settings className={cn("w-4 h-4", location === "/settings" ? "text-[#0078D4]" : "text-white/90")} />
-          <span>Settings</span>
-        </Link>
-      </div>
-    </aside>
+      </aside>
+
+      {navItems.map((item) => (
+        <FlyoutPanel
+          key={item.label}
+          item={item}
+          location={location}
+          isVisible={hoveredItem === item.label}
+          onMouseEnter={handleFlyoutMouseEnter}
+          onMouseLeave={handleFlyoutMouseLeave}
+          position={flyoutPosition}
+        />
+      ))}
+    </>
   );
 }
