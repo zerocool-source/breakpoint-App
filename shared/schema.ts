@@ -1601,6 +1601,15 @@ export const invoices = pgTable("invoices", {
   estimateId: varchar("estimate_id"), // Link to source estimate if applicable
   estimateNumber: text("estimate_number"),
   emergencyId: varchar("emergency_id"), // Link to source emergency if applicable
+  
+  // People involved
+  serviceTechId: text("service_tech_id"),
+  serviceTechName: text("service_tech_name"),
+  repairTechId: text("repair_tech_id"),
+  repairTechName: text("repair_tech_name"),
+  sentByUserId: text("sent_by_user_id"),
+  sentByUserName: text("sent_by_user_name"),
+  
   lineItems: json("line_items").$type<{
     description: string;
     quantity: number;

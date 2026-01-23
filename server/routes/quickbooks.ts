@@ -1,7 +1,7 @@
 import { Request, Response, Express } from "express";
 import { db } from "../db";
-import { quickbooksTokens } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { quickbooksTokens, invoices, estimates } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
 
 const QUICKBOOKS_AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
 const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
@@ -215,7 +215,26 @@ export function registerQuickbooksRoutes(app: Express) {
 
   app.post("/api/quickbooks/invoice", async (req: Request, res: Response) => {
     try {
-      const { customerName, lineItems, memo } = req.body;
+      const { 
+        customerName, 
+        lineItems, 
+        memo,
+        estimateId,
+        estimateNumber,
+        customerId: customerIdFromRequest,
+        propertyId,
+        propertyName,
+        propertyAddress,
+        serviceTechId,
+        serviceTechName,
+        repairTechId,
+        repairTechName,
+        sentByUserId,
+        sentByUserName,
+        dueDate,
+        customerNote,
+        internalNotes,
+      } = req.body;
       
       if (!customerName || !lineItems || !Array.isArray(lineItems)) {
         return res.status(400).json({ error: "Missing required fields: customerName, lineItems" });
@@ -268,13 +287,74 @@ export function registerQuickbooksRoutes(app: Express) {
       }
 
       const invoiceData = await invoiceResponse.json();
-      const invoice = invoiceData.Invoice;
+      const qbInvoice = invoiceData.Invoice;
+
+      // Generate our invoice number atomically using a subquery for the count
+      const year = new Date().getFullYear().toString().slice(-2);
+      const countResult = await db
+        .select({ count: sql<number>`COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM '[0-9]+$') AS INTEGER)), 0) + 1` })
+        .from(invoices)
+        .where(sql`invoice_number LIKE ${'INV-' + year + '-%'}`);
+      const nextNum = (countResult[0]?.count || 1).toString().padStart(5, '0');
+      const ourInvoiceNumber = `INV-${year}-${nextNum}`;
+
+      // Calculate totals from line items
+      const subtotal = lineItems.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+      const totalAmount = subtotal; // Can add tax calculations if needed
+
+      // Save invoice to our database
+      const [savedInvoice] = await db.insert(invoices).values({
+        invoiceNumber: ourInvoiceNumber,
+        customerId: customerIdFromRequest || null,
+        customerName: customerName,
+        propertyId: propertyId || null,
+        propertyName: propertyName || customerName,
+        propertyAddress: propertyAddress || null,
+        estimateId: estimateId || null,
+        estimateNumber: estimateNumber || null,
+        serviceTechId: serviceTechId || null,
+        serviceTechName: serviceTechName || null,
+        repairTechId: repairTechId || null,
+        repairTechName: repairTechName || null,
+        sentByUserId: sentByUserId || null,
+        sentByUserName: sentByUserName || null,
+        lineItems: lineItems.map((item: any) => ({
+          description: item.description || item.productService || '',
+          quantity: item.quantity || 1,
+          rate: item.rate || 0,
+          amount: item.amount || 0,
+        })),
+        subtotal: subtotal,
+        totalAmount: totalAmount,
+        amountDue: totalAmount,
+        status: "sent",
+        dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
+        quickbooksInvoiceId: qbInvoice.Id,
+        quickbooksDocNumber: qbInvoice.DocNumber,
+        quickbooksSyncedAt: new Date(),
+        quickbooksSyncStatus: "synced",
+        notes: customerNote || null,
+        internalNotes: internalNotes || null,
+        sentAt: new Date(),
+      }).returning();
+
+      // If this is from an estimate, update the estimate with the invoice ID
+      if (estimateId) {
+        await db.update(estimates)
+          .set({ 
+            invoiceId: savedInvoice.id,
+            invoicedAt: new Date(),
+          })
+          .where(eq(estimates.id, estimateId));
+      }
 
       res.json({
         success: true,
-        invoiceId: invoice.Id,
-        invoiceNumber: invoice.DocNumber,
-        totalAmount: invoice.TotalAmt,
+        invoiceId: qbInvoice.Id,
+        invoiceNumber: qbInvoice.DocNumber,
+        totalAmount: qbInvoice.TotalAmt,
+        localInvoiceId: savedInvoice.id,
+        localInvoiceNumber: ourInvoiceNumber,
       });
     } catch (error) {
       console.error("QuickBooks invoice error:", error);

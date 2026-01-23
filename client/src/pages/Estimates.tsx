@@ -1330,6 +1330,17 @@ export default function Estimates() {
           internalNotes: invoiceData.internalNotes,
           photos: selectedEstimate.photos || [],
           attachments: selectedEstimate.attachments || [],
+          // Additional data for saving invoice to our database
+          estimateId: selectedEstimate.id,
+          estimateNumber: selectedEstimate.estimateNumber,
+          propertyId: selectedEstimate.propertyId,
+          propertyName: selectedEstimate.propertyName,
+          serviceTechId: selectedEstimate.serviceTechId,
+          serviceTechName: selectedEstimate.serviceTechName,
+          repairTechId: selectedEstimate.repairTechId,
+          repairTechName: selectedEstimate.repairTechName,
+          sentByUserId: "office-user-1", // TODO: Get from auth context
+          sentByUserName: "Office Staff",
         }),
       });
 
@@ -1347,16 +1358,19 @@ export default function Estimates() {
         id: selectedEstimate.id,
         status: "invoiced",
         extras: {
-          invoiceId: qbInvoiceData?.invoiceId || invoiceData.invoiceNumber,
+          invoiceId: qbInvoiceData?.localInvoiceId || qbInvoiceData?.invoiceId || invoiceData.invoiceNumber,
           qbInvoiceNumber: qbInvoiceData?.invoiceNumber || null,
           invoicedEmail: invoiceData.email,
         },
       }, {
         onSuccess: () => {
+          // Invalidate invoices query so the new invoice appears in the Invoices page
+          queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+          
           if (qbInvoiceData?.invoiceNumber) {
             toast({ 
               title: "Invoice Created Successfully", 
-              description: `QuickBooks Invoice #${qbInvoiceData.invoiceNumber} created and sent to ${invoiceData.email}.` 
+              description: `QuickBooks Invoice #${qbInvoiceData.invoiceNumber} created and sent to ${invoiceData.email}. Invoice saved to billing.` 
             });
           } else if (invoiceError) {
             toast({ 

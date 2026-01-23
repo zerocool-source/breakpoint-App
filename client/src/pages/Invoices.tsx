@@ -269,8 +269,9 @@ export default function Invoices() {
                   <tr className="border-b border-white/10">
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Invoice #</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Customer</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Property</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Date</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Technicians</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Sent By</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Date Sent</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Due Date</th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Amount</th>
                     <th className="text-center py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Status</th>
@@ -296,22 +297,36 @@ export default function Invoices() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm text-white">{invoice.customerName}</span>
+                          <div>
+                            <span className="text-sm text-white">{invoice.customerName}</span>
+                            {invoice.propertyName && invoice.propertyName !== invoice.customerName && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Building2 className="w-3 h-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">{invoice.propertyName}</span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
-                          {invoice.propertyName ? (
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">{invoice.propertyName}</span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
+                          <div className="space-y-0.5">
+                            {invoice.serviceTechName && (
+                              <p className="text-xs text-muted-foreground">Service: {invoice.serviceTechName}</p>
+                            )}
+                            {invoice.repairTechName && (
+                              <p className="text-xs text-muted-foreground">Repair: {invoice.repairTechName}</p>
+                            )}
+                            {!invoice.serviceTechName && !invoice.repairTechName && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-sm text-muted-foreground">{invoice.sentByUserName || "—"}</span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{formatDate(invoice.createdAt)}</span>
+                            <span className="text-sm text-muted-foreground">{formatDate(invoice.sentAt)}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4">

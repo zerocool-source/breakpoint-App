@@ -1,7 +1,7 @@
 import { Request, Response, Express } from "express";
 import { db } from "../db";
 import { invoices } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 export function registerInvoiceRoutes(app: Express) {
   app.get("/api/invoices", async (_req: Request, res: Response) => {
@@ -36,8 +36,11 @@ export function registerInvoiceRoutes(app: Express) {
       
       if (!invoiceData.invoiceNumber) {
         const year = new Date().getFullYear().toString().slice(-2);
-        const count = await db.select().from(invoices);
-        const nextNum = (count.length + 1).toString().padStart(5, '0');
+        const countResult = await db
+          .select({ count: sql<number>`COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM '[0-9]+$') AS INTEGER)), 0) + 1` })
+          .from(invoices)
+          .where(sql`invoice_number LIKE ${'INV-' + year + '-%'}`);
+        const nextNum = (countResult[0]?.count || 1).toString().padStart(5, '0');
         invoiceData.invoiceNumber = `INV-${year}-${nextNum}`;
       }
       
@@ -104,8 +107,11 @@ export function registerInvoiceRoutes(app: Express) {
   app.get("/api/invoices/next-number", async (_req: Request, res: Response) => {
     try {
       const year = new Date().getFullYear().toString().slice(-2);
-      const allInvoices = await db.select().from(invoices);
-      const nextNum = (allInvoices.length + 1).toString().padStart(5, '0');
+      const countResult = await db
+        .select({ count: sql<number>`COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM '[0-9]+$') AS INTEGER)), 0) + 1` })
+        .from(invoices)
+        .where(sql`invoice_number LIKE ${'INV-' + year + '-%'}`);
+      const nextNum = (countResult[0]?.count || 1).toString().padStart(5, '0');
       res.json({ nextNumber: `INV-${year}-${nextNum}` });
     } catch (error: any) {
       console.error("Error generating invoice number:", error);
