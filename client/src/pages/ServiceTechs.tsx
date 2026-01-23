@@ -755,12 +755,14 @@ function PropertyActionMenu({
   onExtendedCover,
   onSplitRoute,
   onGenerateStops,
+  onAddStop,
 }: {
   property: TechnicianPropertyWithSchedule;
   onRemove: () => void;
   onExtendedCover: () => void;
   onSplitRoute: () => void;
   onGenerateStops: () => void;
+  onAddStop: () => void;
 }) {
   return (
     <DropdownMenu>
@@ -775,6 +777,14 @@ function PropertyActionMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem 
+          onClick={onAddStop} 
+          className="gap-2"
+          data-testid={`menu-item-add-stop-${property.id}`}
+        >
+          <Plus className="w-4 h-4" />
+          Add Stop with Notes
+        </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={onExtendedCover} 
           className="gap-2"
@@ -812,6 +822,104 @@ function PropertyActionMenu({
   );
 }
 
+interface AddStopData {
+  propertyId: string;
+  propertyName: string;
+  customerName?: string;
+  address?: string;
+  notes: string;
+  technicianId: string;
+  technicianName: string;
+}
+
+function AddStopModal({
+  open,
+  onClose,
+  property,
+  technicianId,
+  technicianName,
+  onAddStop,
+}: {
+  open: boolean;
+  onClose: () => void;
+  property: TechnicianPropertyWithSchedule | null;
+  technicianId: string;
+  technicianName: string;
+  onAddStop: (data: AddStopData) => void;
+}) {
+  const [notes, setNotes] = useState("");
+
+  const handleSubmit = () => {
+    if (!property) return;
+    onAddStop({
+      propertyId: property.propertyId,
+      propertyName: property.propertyName || "Unknown Property",
+      customerName: property.customerName || undefined,
+      address: property.address || undefined,
+      notes: notes.trim(),
+      technicianId,
+      technicianName,
+    });
+    setNotes("");
+    onClose();
+  };
+
+  const handleClose = () => {
+    setNotes("");
+    onClose();
+  };
+
+  if (!property) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Stop</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <p className="text-sm text-slate-600 mb-1">Property</p>
+            <p className="font-medium">{property.propertyName || "Unknown Property"}</p>
+            {property.address && (
+              <p className="text-sm text-slate-500">{property.address}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-slate-600 mb-1">Technician</p>
+            <p className="font-medium">{technicianName}</p>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1">
+              Notes for this stop
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Enter any notes for this stop..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              rows={4}
+              data-testid="input-stop-notes"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={handleClose} data-testid="button-cancel-add-stop">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            className="bg-[#0078D4] hover:bg-[#0078D4]/90"
+            data-testid="button-confirm-add-stop"
+          >
+            Add Stop
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TechnicianExpandableRow({
   tech,
   fullName,
@@ -826,6 +934,7 @@ function TechnicianExpandableRow({
   onToggleStatus,
   onRemoveProperty,
   onUpdateSeason,
+  onAddStop,
 }: {
   tech: Technician;
   fullName: string;
@@ -840,6 +949,7 @@ function TechnicianExpandableRow({
   onToggleStatus: (checked: boolean) => void;
   onRemoveProperty: (id: string) => void;
   onUpdateSeason: (propertyId: string, season: string) => void;
+  onAddStop: (property: TechnicianPropertyWithSchedule) => void;
 }) {
   const { data: properties, isLoading: propertiesLoading } = useQuery<TechnicianPropertyWithSchedule[]>({
     queryKey: ["/api/technician-properties", tech.id],
@@ -1038,6 +1148,7 @@ function TechnicianExpandableRow({
                                 onExtendedCover={() => console.log("Extended Cover", property)}
                                 onSplitRoute={() => console.log("Split Route", property)}
                                 onGenerateStops={() => console.log("Generate Stops", property)}
+                                onAddStop={() => onAddStop(property)}
                               />
                             </div>
                           </div>
@@ -1064,6 +1175,10 @@ export default function ServiceTechs() {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedTechs, setExpandedTechs] = useState<Set<string>>(new Set());
   const [globalSeason, setGlobalSeason] = useState<"summer" | "winter">("summer");
+  const [showAddStopModal, setShowAddStopModal] = useState(false);
+  const [addStopProperty, setAddStopProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
+  const [addStopTechnicianId, setAddStopTechnicianId] = useState<string>("");
+  const [addStopTechnicianName, setAddStopTechnicianName] = useState<string>("");
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
@@ -1174,6 +1289,28 @@ export default function ServiceTechs() {
       queryClient.invalidateQueries({ queryKey: ["/api/technician-properties"] });
     },
   });
+
+  const createRouteStopMutation = useMutation({
+    mutationFn: async (data: AddStopData) => {
+      const res = await fetch("/api/route-stops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create route stop");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/route-stops"] });
+    },
+  });
+
+  const handleOpenAddStopModal = (tech: Technician, property: TechnicianPropertyWithSchedule) => {
+    setAddStopProperty(property);
+    setAddStopTechnicianId(tech.id);
+    setAddStopTechnicianName(`${tech.firstName || ""} ${tech.lastName || ""}`.trim());
+    setShowAddStopModal(true);
+  };
 
   const toggleTechExpanded = (techId: string) => {
     setExpandedTechs(prev => {
@@ -1375,6 +1512,7 @@ export default function ServiceTechs() {
                       onToggleStatus={(checked) => toggleStatusMutation.mutate({ id: tech.id, active: checked })}
                       onRemoveProperty={(id) => removePropertyMutation.mutate(id)}
                       onUpdateSeason={(propertyId, season) => updatePropertySeasonMutation.mutate({ propertyId, activeSeason: season })}
+                      onAddStop={(property) => handleOpenAddStopModal(tech, property)}
                     />
                   );
                 })
@@ -1473,6 +1611,18 @@ export default function ServiceTechs() {
       <ServiceLogSidebar
         technician={viewingTech}
         onClose={() => setViewingTech(null)}
+      />
+
+      <AddStopModal
+        open={showAddStopModal}
+        onClose={() => {
+          setShowAddStopModal(false);
+          setAddStopProperty(null);
+        }}
+        property={addStopProperty}
+        technicianId={addStopTechnicianId}
+        technicianName={addStopTechnicianName}
+        onAddStop={(data) => createRouteStopMutation.mutate(data)}
       />
     </AppLayout>
   );

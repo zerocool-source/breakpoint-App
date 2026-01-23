@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
 import { PoolBrainClient } from "../poolbrain-client";
+import { db } from "../db";
+import { routeStops, routes } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export function registerSchedulingRoutes(app: any) {
   // Route Schedule endpoints
@@ -504,6 +507,89 @@ export function registerSchedulingRoutes(app: any) {
       const { routeId } = req.params;
       const stop = await storage.createRouteStop({ ...req.body, routeId });
       res.json({ stop });
+    } catch (error: any) {
+      console.error("Error creating route stop:", error);
+      res.status(500).json({ error: "Failed to create route stop" });
+    }
+  });
+
+  // Create a single route stop (with auto-route creation if needed)
+  app.post("/api/route-stops", async (req: Request, res: Response) => {
+    try {
+      const { routeId, propertyId, propertyName, customerId, customerName, poolId, 
+              address, city, state, zip, poolName, notes, sortOrder, estimatedTime, frequency,
+              technicianId, technicianName, dayOfWeek } = req.body;
+      
+      if (!propertyId) {
+        return res.status(400).json({ error: "propertyId is required" });
+      }
+      
+      let actualRouteId = routeId;
+      
+      // If no routeId provided but technicianId is, find or create a route for the technician
+      if (!actualRouteId && technicianId) {
+        // Default to Monday (1) if not specified
+        const targetDayOfWeek = dayOfWeek !== undefined ? dayOfWeek : 1;
+        
+        // Try to find an existing route for this technician for the target day
+        const existingRoutes = await db
+          .select()
+          .from(routes)
+          .where(eq(routes.technicianId, technicianId));
+        
+        // First try to find a route matching the target day
+        let targetRoute = existingRoutes.find(r => r.dayOfWeek === targetDayOfWeek);
+        
+        // If no route for target day, use any existing route
+        if (!targetRoute && existingRoutes.length > 0) {
+          targetRoute = existingRoutes[0];
+        }
+        
+        if (targetRoute) {
+          actualRouteId = targetRoute.id;
+        } else {
+          // Create a new route for the technician
+          const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+          const [newRoute] = await db
+            .insert(routes)
+            .values({
+              name: `${technicianName || "Technician"}'s ${dayNames[targetDayOfWeek]} Route`,
+              dayOfWeek: targetDayOfWeek,
+              technicianId,
+              technicianName,
+              color: "#0891b2",
+            })
+            .returning();
+          actualRouteId = newRoute.id;
+        }
+      }
+      
+      if (!actualRouteId) {
+        return res.status(400).json({ error: "Either routeId or technicianId is required" });
+      }
+      
+      const [stop] = await db
+        .insert(routeStops)
+        .values({
+          routeId: actualRouteId,
+          propertyId,
+          propertyName: propertyName || "Unknown Property",
+          customerId,
+          customerName: customerName || undefined,
+          poolId,
+          address: address || undefined,
+          city,
+          state,
+          zip,
+          poolName,
+          notes: notes || undefined,
+          sortOrder: sortOrder ?? 0,
+          estimatedTime: estimatedTime ?? 30,
+          frequency: frequency || "weekly",
+        })
+        .returning();
+      
+      res.json({ stop, routeId: actualRouteId });
     } catch (error: any) {
       console.error("Error creating route stop:", error);
       res.status(500).json({ error: "Failed to create route stop" });
