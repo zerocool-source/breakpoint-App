@@ -28,12 +28,12 @@ import type { Invoice } from "@shared/schema";
 type InvoiceStatus = "all" | "draft" | "sent" | "paid" | "overdue" | "voided" | "partial";
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  draft: { label: "Draft", color: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: FileText },
-  sent: { label: "Sent", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Clock },
-  paid: { label: "Paid", color: "bg-green-500/20 text-green-400 border-green-500/30", icon: CheckCircle2 },
-  overdue: { label: "Overdue", color: "bg-red-500/20 text-red-400 border-red-500/30", icon: AlertCircle },
-  voided: { label: "Voided", color: "bg-gray-600/20 text-gray-500 border-gray-600/30", icon: XCircle },
-  partial: { label: "Partial", color: "bg-orange-500/20 text-orange-400 border-orange-500/30", icon: DollarSign },
+  draft: { label: "Draft", color: "bg-slate-100 text-slate-600 border-slate-300", icon: FileText },
+  sent: { label: "Sent", color: "bg-blue-100 text-blue-700 border-blue-300", icon: Clock },
+  paid: { label: "Paid", color: "bg-green-100 text-green-700 border-green-300", icon: CheckCircle2 },
+  overdue: { label: "Overdue", color: "bg-red-100 text-red-700 border-red-300", icon: AlertCircle },
+  voided: { label: "Voided", color: "bg-gray-200 text-gray-600 border-gray-400", icon: XCircle },
+  partial: { label: "Partial", color: "bg-orange-100 text-orange-700 border-orange-300", icon: DollarSign },
 };
 
 function formatCurrency(cents: number): string {
@@ -102,30 +102,30 @@ export default function Invoices() {
     <AppLayout>
       <div className="mb-6">
         <Link href="/estimates">
-          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-muted-foreground hover:text-primary" data-testid="btn-back">
+          <Button variant="ghost" size="sm" className="mb-2 gap-2 text-slate-600 hover:text-blue-600" data-testid="btn-back">
             <ArrowLeft className="w-4 h-4" />
             Back to Estimates
           </Button>
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <FileText className="w-8 h-8 text-primary" />
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <FileText className="w-8 h-8 text-blue-600" />
               Invoices
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-slate-600 mt-1">
               Track invoices sent to QuickBooks and their payment status
             </p>
           </div>
           <div className="flex items-center gap-3">
             {qbStatus?.connected ? (
-              <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10 gap-2">
+              <Badge variant="outline" className="border-green-500 text-green-700 bg-green-100 gap-2">
                 <Link2 className="w-3 h-3" />
                 QuickBooks Connected
               </Badge>
             ) : (
               <Link href="/settings">
-                <Badge variant="outline" className="border-orange-500/30 text-orange-400 bg-orange-500/10 gap-2 cursor-pointer hover:bg-orange-500/20">
+                <Badge variant="outline" className="border-orange-400 text-orange-700 bg-orange-100 gap-2 cursor-pointer hover:bg-orange-200">
                   <AlertCircle className="w-3 h-3" />
                   Connect QuickBooks
                 </Badge>
@@ -148,84 +148,84 @@ export default function Invoices() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <Card className="glass-card border-white/10">
+        <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/20">
-                <FileText className="w-5 h-5 text-primary" />
+              <div className="p-2 rounded-lg bg-blue-100">
+                <FileText className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Total Invoices</p>
+                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                <p className="text-xs text-slate-500">Total Invoices</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">{formatCurrency(stats.totalAmount)}</p>
+            <p className="text-sm text-slate-600 mt-2">{formatCurrency(stats.totalAmount)}</p>
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-white/10">
+        <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/20">
-                <CheckCircle2 className="w-5 h-5 text-green-400" />
+              <div className="p-2 rounded-lg bg-green-100">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-400">{stats.paid}</p>
-                <p className="text-xs text-muted-foreground">Paid</p>
+                <p className="text-2xl font-bold text-green-600">{stats.paid}</p>
+                <p className="text-xs text-slate-500">Paid</p>
               </div>
             </div>
-            <p className="text-sm text-green-400 mt-2">{formatCurrency(stats.paidAmount)}</p>
+            <p className="text-sm text-green-600 mt-2">{formatCurrency(stats.paidAmount)}</p>
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-white/10">
+        <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <Clock className="w-5 h-5 text-blue-400" />
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Clock className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-400">{stats.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
+                <p className="text-xs text-slate-500">Pending</p>
               </div>
             </div>
-            <p className="text-sm text-blue-400 mt-2">{formatCurrency(stats.pendingAmount)}</p>
+            <p className="text-sm text-blue-600 mt-2">{formatCurrency(stats.pendingAmount)}</p>
           </CardContent>
         </Card>
 
-        <Card className="glass-card border-white/10">
+        <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/20">
-                <AlertCircle className="w-5 h-5 text-red-400" />
+              <div className="p-2 rounded-lg bg-red-100">
+                <AlertCircle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-400">{stats.overdue}</p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
+                <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
+                <p className="text-xs text-slate-500">Overdue</p>
               </div>
             </div>
-            <p className="text-sm text-red-400 mt-2">{formatCurrency(stats.overdueAmount)}</p>
+            <p className="text-sm text-red-600 mt-2">{formatCurrency(stats.overdueAmount)}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="glass-card border-white/10 mb-6">
+      <Card className="bg-white border border-slate-200 shadow-sm mb-6">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search by invoice #, customer, or property..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10"
+                className="pl-10 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"
                 data-testid="input-search"
               />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus)}>
-              <SelectTrigger className="w-48 bg-white/5 border-white/10" data-testid="select-status">
-                <Filter className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-48 bg-slate-50 border-slate-200 text-slate-900" data-testid="select-status">
+                <Filter className="w-4 h-4 mr-2 text-slate-500" />
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -243,22 +243,22 @@ export default function Invoices() {
       </Card>
 
       {/* Invoices Table */}
-      <Card className="glass-card border-white/10">
+      <Card className="bg-white border border-slate-200 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold">
+          <CardTitle className="text-lg font-semibold text-slate-900">
             {filteredInvoices.length} Invoice{filteredInvoices.length !== 1 ? 's' : ''}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+              <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
             </div>
           ) : filteredInvoices.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No invoices found</p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">No invoices found</p>
+              <p className="text-sm text-slate-500 mt-1">
                 Invoices will appear here when you send estimates to QuickBooks
               </p>
             </div>
@@ -266,17 +266,17 @@ export default function Invoices() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Invoice #</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Customer</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Technicians</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Sent By</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Date Sent</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Due Date</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Amount</th>
-                    <th className="text-center py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Status</th>
-                    <th className="text-center py-3 px-4 text-xs font-medium text-muted-foreground uppercase">QB Sync</th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-muted-foreground uppercase">Actions</th>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Invoice #</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Customer</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Technicians</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Sent By</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Date Sent</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Due Date</th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-slate-500 uppercase">Amount</th>
+                    <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">Status</th>
+                    <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">QB Sync</th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,22 +287,22 @@ export default function Invoices() {
                     return (
                       <tr 
                         key={invoice.id} 
-                        className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                         data-testid={`invoice-row-${invoice.id}`}
                       >
                         <td className="py-3 px-4">
-                          <span className="font-mono text-sm text-white">{invoice.invoiceNumber}</span>
+                          <span className="font-mono text-sm text-slate-900">{invoice.invoiceNumber}</span>
                           {invoice.estimateNumber && (
-                            <p className="text-xs text-muted-foreground">From: {invoice.estimateNumber}</p>
+                            <p className="text-xs text-slate-500">From: {invoice.estimateNumber}</p>
                           )}
                         </td>
                         <td className="py-3 px-4">
                           <div>
-                            <span className="text-sm text-white">{invoice.customerName}</span>
+                            <span className="text-sm text-slate-900">{invoice.customerName}</span>
                             {invoice.propertyName && invoice.propertyName !== invoice.customerName && (
                               <div className="flex items-center gap-1 mt-0.5">
-                                <Building2 className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">{invoice.propertyName}</span>
+                                <Building2 className="w-3 h-3 text-slate-400" />
+                                <span className="text-xs text-slate-500">{invoice.propertyName}</span>
                               </div>
                             )}
                           </div>
@@ -310,33 +310,33 @@ export default function Invoices() {
                         <td className="py-3 px-4">
                           <div className="space-y-0.5">
                             {invoice.serviceTechName && (
-                              <p className="text-xs text-muted-foreground">Service: {invoice.serviceTechName}</p>
+                              <p className="text-xs text-slate-600">Service: {invoice.serviceTechName}</p>
                             )}
                             {invoice.repairTechName && (
-                              <p className="text-xs text-muted-foreground">Repair: {invoice.repairTechName}</p>
+                              <p className="text-xs text-slate-600">Repair: {invoice.repairTechName}</p>
                             )}
                             {!invoice.serviceTechName && !invoice.repairTechName && (
-                              <span className="text-xs text-muted-foreground">—</span>
+                              <span className="text-xs text-slate-400">—</span>
                             )}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm text-muted-foreground">{invoice.sentByUserName || "—"}</span>
+                          <span className="text-sm text-slate-600">{invoice.sentByUserName || "—"}</span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">{formatDate(invoice.sentAt)}</span>
+                            <Calendar className="w-3 h-3 text-slate-400" />
+                            <span className="text-sm text-slate-600">{formatDate(invoice.sentAt)}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm text-muted-foreground">{formatDate(invoice.dueDate)}</span>
+                          <span className="text-sm text-slate-600">{formatDate(invoice.dueDate)}</span>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div>
-                            <span className="font-semibold text-white">{formatCurrency(invoice.totalAmount || 0)}</span>
+                            <span className="font-semibold text-slate-900">{formatCurrency(invoice.totalAmount || 0)}</span>
                             {invoice.amountDue && invoice.amountDue > 0 && invoice.amountDue !== invoice.totalAmount && (
-                              <p className="text-xs text-orange-400">Due: {formatCurrency(invoice.amountDue)}</p>
+                              <p className="text-xs text-orange-600">Due: {formatCurrency(invoice.amountDue)}</p>
                             )}
                           </div>
                         </td>
@@ -348,15 +348,15 @@ export default function Invoices() {
                         </td>
                         <td className="py-3 px-4 text-center">
                           {invoice.quickbooksSyncStatus === "synced" ? (
-                            <Badge variant="outline" className="border-green-500/30 text-green-400 bg-green-500/10 text-xs">
+                            <Badge variant="outline" className="border-green-300 text-green-700 bg-green-100 text-xs">
                               Synced
                             </Badge>
                           ) : invoice.quickbooksSyncStatus === "failed" ? (
-                            <Badge variant="outline" className="border-red-500/30 text-red-400 bg-red-500/10 text-xs">
+                            <Badge variant="outline" className="border-red-300 text-red-700 bg-red-100 text-xs">
                               Failed
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="border-gray-500/30 text-gray-400 bg-gray-500/10 text-xs">
+                            <Badge variant="outline" className="border-slate-300 text-slate-600 bg-slate-100 text-xs">
                               Pending
                             </Badge>
                           )}
@@ -366,7 +366,7 @@ export default function Invoices() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="gap-1 text-xs"
+                              className="gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               onClick={() => {
                                 window.open(`https://app.qbo.intuit.com/app/invoice?txnId=${invoice.quickbooksInvoiceId}`, '_blank');
                               }}
