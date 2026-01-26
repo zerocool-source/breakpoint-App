@@ -143,6 +143,7 @@ interface InvoicePreviewModalProps {
     customerNote: string;
     memoOnStatement: string;
     internalNotes: string;
+    selectedPhotos: string[];
   }) => Promise<void>;
   isCreating: boolean;
 }
@@ -398,6 +399,34 @@ export function InvoicePreviewModal({
   const handleConfirm = async () => {
     setCreateError(null);
     try {
+      // Build selected photos array based on checkbox selections
+      const selectedPhotoUrls: string[] = [];
+      const photos = estimate?.photos || [];
+      const attachments = estimate?.attachments || [];
+      
+      // Add photos that are checked
+      photos.forEach((photo, index) => {
+        if (selectedAttachments.has(index)) {
+          selectedPhotoUrls.push(photo);
+        }
+      });
+      
+      // Add attachments that are checked (using their URLs)
+      attachments.forEach((attachment, index) => {
+        const globalIndex = photos.length + index;
+        if (selectedAttachments.has(globalIndex)) {
+          selectedPhotoUrls.push(attachment.url);
+        }
+      });
+      
+      // Add local attachments that are checked
+      localAttachments.forEach((attachment, index) => {
+        const globalIndex = photos.length + attachments.length + index;
+        if (selectedAttachments.has(globalIndex)) {
+          selectedPhotoUrls.push(attachment.url);
+        }
+      });
+      
       await onCreateInvoice({
         email: finalEmail,
         ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
@@ -409,6 +438,7 @@ export function InvoicePreviewModal({
         customerNote,
         memoOnStatement,
         internalNotes,
+        selectedPhotos: selectedPhotoUrls,
       });
       setShowConfirmation(false);
       onClose();

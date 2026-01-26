@@ -235,6 +235,7 @@ export function registerQuickbooksRoutes(app: Express) {
         dueDate,
         customerNote,
         internalNotes,
+        selectedPhotos,
       } = req.body;
       
       console.log("=== QuickBooks Invoice Creation Request ===");
@@ -399,46 +400,40 @@ export function registerQuickbooksRoutes(app: Express) {
         sentAt: new Date(),
       }).returning();
 
-      // If this is from an estimate, update the estimate with the invoice ID and upload attachments
+      // Upload selected attachments to QuickBooks
       let uploadedAttachments = 0;
-      let totalAttachments = 0;
+      const photosToUpload: string[] = selectedPhotos || [];
+      const totalAttachments = photosToUpload.length;
       
-      if (estimateId) {
-        // Fetch the estimate to get photos
-        const estimateData = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+      if (totalAttachments > 0) {
+        console.log(`=== Uploading ${totalAttachments} selected attachments to QuickBooks invoice ===`);
         
-        if (estimateData.length > 0) {
-          const estimate = estimateData[0];
-          const photos = estimate.photos || [];
-          totalAttachments = photos.length;
+        // Upload each selected photo to QuickBooks
+        for (let i = 0; i < photosToUpload.length; i++) {
+          const photoUrl = photosToUpload[i];
+          console.log(`Processing photo ${i + 1}/${photosToUpload.length}: ${photoUrl}`);
           
-          console.log(`=== Uploading ${totalAttachments} attachments from estimate to QuickBooks invoice ===`);
-          
-          // Upload each photo to QuickBooks
-          for (let i = 0; i < photos.length; i++) {
-            const photoUrl = photos[i];
-            console.log(`Processing photo ${i + 1}/${photos.length}: ${photoUrl}`);
-            
-            const photoData = await fetchPhotoData(photoUrl);
-            if (photoData) {
-              const success = await uploadAttachmentToQuickBooks(
-                baseUrl,
-                accessToken,
-                qbInvoice.Id,
-                photoData.data,
-                photoData.fileName,
-                photoData.contentType
-              );
-              if (success) {
-                uploadedAttachments++;
-              }
+          const photoData = await fetchPhotoData(photoUrl);
+          if (photoData) {
+            const success = await uploadAttachmentToQuickBooks(
+              baseUrl,
+              accessToken,
+              qbInvoice.Id,
+              photoData.data,
+              photoData.fileName,
+              photoData.contentType
+            );
+            if (success) {
+              uploadedAttachments++;
             }
           }
-          
-          console.log(`=== Attachment upload complete: ${uploadedAttachments}/${totalAttachments} successful ===`);
         }
         
-        // Update estimate with invoice ID
+        console.log(`=== Attachment upload complete: ${uploadedAttachments}/${totalAttachments} successful ===`);
+      }
+      
+      // If this is from an estimate, update it with the invoice ID
+      if (estimateId) {
         await db.update(estimates)
           .set({ 
             invoiceId: savedInvoice.id,

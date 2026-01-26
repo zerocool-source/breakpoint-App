@@ -1306,6 +1306,7 @@ export default function Estimates() {
     customerNote: string;
     memoOnStatement: string;
     internalNotes: string;
+    selectedPhotos: string[];
   }) => {
     console.log("==============================================");
     console.log("INVOICE BUTTON CLICKED - handleCreateInvoice started");
@@ -1342,8 +1343,7 @@ export default function Estimates() {
         customerNote: invoiceData.customerNote,
         memoOnStatement: invoiceData.memoOnStatement,
         internalNotes: invoiceData.internalNotes,
-        photos: selectedEstimate.photos || [],
-        attachments: selectedEstimate.attachments || [],
+        selectedPhotos: invoiceData.selectedPhotos || [],
         estimateId: selectedEstimate.id,
         estimateNumber: selectedEstimate.estimateNumber,
         propertyId: selectedEstimate.propertyId,
