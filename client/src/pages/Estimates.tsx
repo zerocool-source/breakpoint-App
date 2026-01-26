@@ -201,6 +201,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   completed: { label: "Completed", color: "bg-[#DBEAFE] text-[#60A5FA] border-[#93C5FD]", icon: CheckCircle2 },
   ready_to_invoice: { label: "Ready to Invoice", color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: Receipt },
   invoiced: { label: "Invoiced", color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: Receipt },
+  paid: { label: "Paid", color: "bg-green-100 text-green-700 border-green-300", icon: DollarSign },
   archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
 
@@ -644,6 +645,7 @@ export default function Estimates() {
     scheduled: estimates.filter(e => e.status === "scheduled").length,
     completed: estimates.filter(e => e.status === "completed" || e.status === "ready_to_invoice").length,
     invoiced: estimates.filter(e => e.status === "invoiced").length,
+    paid: estimates.filter(e => e.status === "paid").length,
     archived: estimates.filter(e => e.status === "archived").length,
   };
 
@@ -1296,7 +1298,8 @@ export default function Estimates() {
   };
   
   const handleCreateInvoice = async (invoiceData: {
-    email: string;
+    email?: string;
+    sendEmail: boolean;
     ccEmails?: string[];
     bccEmails?: string[];
     invoiceNumber: string;
@@ -1348,6 +1351,7 @@ export default function Estimates() {
       const payload = {
         customerName: selectedEstimate.propertyName,
         customerEmail: invoiceData.email,
+        sendEmail: invoiceData.sendEmail,
         ccEmails: invoiceData.ccEmails,
         bccEmails: invoiceData.bccEmails,
         lineItems: selectedEstimate.items || [],
@@ -1798,6 +1802,10 @@ export default function Estimates() {
               <div className="text-center">
                 <p className="text-xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
                 <p className="text-xs text-[#6B7280] mt-1">Invoiced Value</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold text-green-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.paidValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-[#6B7280] mt-1">Paid Value</p>
               </div>
               <div className="text-center">
                 <p className="text-xl font-bold text-[#FF6A00]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgApprovalTime}h</p>

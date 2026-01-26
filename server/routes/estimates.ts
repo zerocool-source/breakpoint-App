@@ -892,6 +892,7 @@ export function registerEstimateRoutes(app: any) {
         readyToInvoiceValue: 0,
         readyToInvoiceCount: 0,
         invoicedValue: 0,
+        paidValue: 0,
         conversionRate: 0,
         avgApprovalTime: 0,
         avgSchedulingTime: 0,
@@ -908,13 +909,13 @@ export function registerEstimateRoutes(app: any) {
         const amount = (est.totalAmount || 0) / 100;
         metrics.totalValue += amount;
 
-        if (["approved", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced"].includes(status)) {
+        if (["approved", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced", "paid"].includes(status)) {
           metrics.approvedValue += amount;
         }
-        if (["scheduled", "completed", "ready_to_invoice", "invoiced"].includes(status)) {
+        if (["scheduled", "completed", "ready_to_invoice", "invoiced", "paid"].includes(status)) {
           metrics.scheduledValue += amount;
         }
-        if (["completed", "ready_to_invoice", "invoiced"].includes(status)) {
+        if (["completed", "ready_to_invoice", "invoiced", "paid"].includes(status)) {
           metrics.completedValue += amount;
         }
         if (status === "ready_to_invoice") {
@@ -923,6 +924,9 @@ export function registerEstimateRoutes(app: any) {
         }
         if (status === "invoiced") {
           metrics.invoicedValue += amount;
+        }
+        if (status === "paid") {
+          metrics.paidValue += amount;
         }
 
         // Calculate average times
@@ -938,7 +942,7 @@ export function registerEstimateRoutes(app: any) {
       }
 
       const approvedCount = estimates.filter(e => 
-        ["approved", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced"].includes(e.status || "")
+        ["approved", "needs_scheduling", "scheduled", "completed", "ready_to_invoice", "invoiced", "paid"].includes(e.status || "")
       ).length;
       const sentCount = estimates.filter(e => 
         e.status !== "draft"

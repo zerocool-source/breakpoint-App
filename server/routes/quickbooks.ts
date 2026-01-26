@@ -606,6 +606,348 @@ export function registerQuickbooksRoutes(app: Express) {
       res.status(500).json({ error: "Failed to create invoice" });
     }
   });
+
+  // In-memory set to track processed webhook events for idempotency
+  // In production, this should be stored in Redis or database with TTL
+  const processedWebhookEvents = new Set<string>();
+  
+  // QuickBooks Webhooks endpoint for receiving payment notifications
+  // This endpoint needs to be registered in QuickBooks Developer Portal
+  // Webhook verifier token should be set in environment as QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN
+  app.post("/api/webhooks/quickbooks", async (req: Request, res: Response) => {
+    console.log("=== QUICKBOOKS WEBHOOK RECEIVED ===");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+    
+    try {
+      // Verify webhook signature (QuickBooks uses intuit-signature header with HMAC-SHA256)
+      const signature = req.headers["intuit-signature"] as string;
+      const webhookVerifierToken = process.env.QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN;
+      
+      // In production, signature must be present and valid
+      const isProduction = process.env.NODE_ENV === 'production';
+      
+      if (webhookVerifierToken) {
+        if (!signature) {
+          if (isProduction) {
+            console.error("Missing webhook signature in production - rejecting");
+            return res.status(401).json({ error: "Missing signature" });
+          }
+          console.warn("No signature in request - proceeding for sandbox testing only");
+        } else {
+          // Verify signature using raw body bytes
+          const crypto = await import('crypto');
+          // rawBody is set by express.json verify option in app.ts
+          const rawBody = req.rawBody;
+          
+          if (!rawBody) {
+            console.error("No raw body available for signature verification");
+            return res.status(400).json({ error: "Cannot verify signature - no raw body" });
+          }
+          
+          const expectedSignature = crypto.createHmac('sha256', webhookVerifierToken)
+            .update(rawBody as Buffer)
+            .digest('base64');
+          
+          if (signature !== expectedSignature) {
+            console.error("Invalid webhook signature - rejecting request");
+            return res.status(401).json({ error: "Invalid signature" });
+          }
+          console.log("Webhook signature verified successfully");
+        }
+      }
+      
+      // QuickBooks sends notifications in a specific format
+      const { eventNotifications } = req.body;
+      
+      if (!eventNotifications || !Array.isArray(eventNotifications)) {
+        console.log("No event notifications found in webhook payload");
+        return res.status(200).json({ message: "No events to process" });
+      }
+      
+      let processingErrors = 0;
+      
+      for (const notification of eventNotifications) {
+        const realmId = notification.realmId;
+        const dataChangeEvent = notification.dataChangeEvent;
+        
+        if (!dataChangeEvent?.entities) {
+          console.log("No entities in data change event");
+          continue;
+        }
+        
+        for (const entity of dataChangeEvent.entities) {
+          // Generate unique event key for idempotency
+          const eventKey = `${realmId}:${entity.name}:${entity.id}:${entity.operation}:${entity.lastUpdated || ''}`;
+          
+          // Check idempotency at event level
+          if (processedWebhookEvents.has(eventKey)) {
+            console.log(`Event ${eventKey} already processed - skipping`);
+            continue;
+          }
+          
+          console.log(`Processing entity: ${entity.name} (${entity.operation})`);
+          
+          try {
+            // Handle Payment events
+            if (entity.name === "Payment") {
+              console.log(`Payment event detected: ${entity.operation} for ID ${entity.id}`);
+              
+              // For Create or Update operations, fetch and process the payment
+              if (entity.operation === "Create" || entity.operation === "Update") {
+                await processPaymentWebhook(entity.id, realmId);
+              }
+            }
+            
+            // Handle Invoice status changes (useful for tracking when invoices are paid directly in QB)
+            if (entity.name === "Invoice" && entity.operation === "Update") {
+              console.log(`Invoice update event detected for ID ${entity.id}`);
+              // Could fetch invoice and check if balance is 0 (fully paid)
+            }
+            
+            // Mark event as processed after successful handling
+            processedWebhookEvents.add(eventKey);
+            
+            // Clean up old events (keep last 1000) to prevent memory leak
+            if (processedWebhookEvents.size > 1000) {
+              const firstKey = processedWebhookEvents.values().next().value;
+              if (firstKey) processedWebhookEvents.delete(firstKey);
+            }
+          } catch (entityError) {
+            console.error(`Error processing entity ${entity.name}:${entity.id}:`, entityError);
+            processingErrors++;
+          }
+        }
+      }
+      
+      // Return 200 if all events processed, 500 if some failed (allows QB to retry)
+      if (processingErrors > 0) {
+        console.error(`Webhook had ${processingErrors} processing errors`);
+        return res.status(500).json({ message: "Partial processing failure", errors: processingErrors });
+      }
+      
+      res.status(200).json({ message: "Webhook processed successfully" });
+    } catch (error) {
+      console.error("Error processing QuickBooks webhook:", error);
+      // Return 500 to allow QuickBooks to retry
+      res.status(500).json({ error: "Webhook processing failed" });
+    }
+  });
+  
+  // Endpoint to manually query a payment by ID (for testing/debugging)
+  app.get("/api/quickbooks/payment/:paymentId", async (req: Request, res: Response) => {
+    const { paymentId } = req.params;
+    
+    try {
+      const tokens = await getQuickBooksAccessToken();
+      if (!tokens) {
+        return res.status(401).json({ error: "QuickBooks not connected" });
+      }
+      
+      const { accessToken, realmId } = tokens;
+      const baseUrl = `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}`;
+      
+      const response = await fetch(`${baseUrl}/payment/${paymentId}`, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to fetch payment:", errorText);
+        return res.status(response.status).json({ error: "Failed to fetch payment", details: errorText });
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching payment:", error);
+      res.status(500).json({ error: "Failed to fetch payment" });
+    }
+  });
+  
+  // Endpoint to list recent payments (for debugging)
+  app.get("/api/quickbooks/payments", async (req: Request, res: Response) => {
+    try {
+      const tokens = await getQuickBooksAccessToken();
+      if (!tokens) {
+        return res.status(401).json({ error: "QuickBooks not connected" });
+      }
+      
+      const { accessToken, realmId } = tokens;
+      const baseUrl = `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}`;
+      
+      // Query recent payments
+      const queryResponse = await fetch(
+        `${baseUrl}/query?query=${encodeURIComponent("SELECT * FROM Payment ORDER BY TxnDate DESC MAXRESULTS 50")}`,
+        {
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Accept": "application/json",
+          },
+        }
+      );
+      
+      if (!queryResponse.ok) {
+        const errorText = await queryResponse.text();
+        console.error("Failed to query payments:", errorText);
+        return res.status(queryResponse.status).json({ error: "Failed to query payments", details: errorText });
+      }
+      
+      const data = await queryResponse.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error querying payments:", error);
+      res.status(500).json({ error: "Failed to query payments" });
+    }
+  });
+}
+
+// Process payment webhook - fetch payment details and update local records
+async function processPaymentWebhook(paymentId: string, realmId: string): Promise<void> {
+  console.log(`=== PROCESSING PAYMENT WEBHOOK ===`);
+  console.log(`Payment ID: ${paymentId}, Realm ID: ${realmId}`);
+  
+  try {
+    const tokens = await getQuickBooksAccessToken();
+    if (!tokens) {
+      console.error("Cannot process payment webhook - QuickBooks not connected");
+      return;
+    }
+    
+    const { accessToken } = tokens;
+    const baseUrl = `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}`;
+    
+    // Fetch the payment details from QuickBooks
+    const response = await fetch(`${baseUrl}/payment/${paymentId}`, {
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to fetch payment ${paymentId}:`, errorText);
+      return;
+    }
+    
+    const paymentData = await response.json();
+    const payment = paymentData.Payment;
+    
+    console.log("Payment details:", JSON.stringify(payment, null, 2));
+    
+    // Extract payment information
+    const totalAmount = Math.round(parseFloat(payment.TotalAmt) * 100); // Convert to cents
+    const paymentMethod = payment.PaymentMethodRef?.name || "Unknown";
+    const txnDate = payment.TxnDate;
+    
+    // Get linked invoices from the payment
+    const linkedTxns = payment.Line || [];
+    
+    for (const line of linkedTxns) {
+      if (line.LinkedTxn) {
+        for (const linkedTxn of line.LinkedTxn) {
+          if (linkedTxn.TxnType === "Invoice") {
+            const qbInvoiceId = linkedTxn.TxnId;
+            const amountApplied = Math.round(parseFloat(line.Amount) * 100);
+            
+            console.log(`Payment applied to invoice ${qbInvoiceId}: $${amountApplied / 100}`);
+            
+            // Find the matching invoice in our database
+            const matchingInvoices = await db
+              .select()
+              .from(invoices)
+              .where(eq(invoices.quickbooksInvoiceId, qbInvoiceId));
+            
+            // Check for duplicate payment processing (DB-level idempotency)
+            if (matchingInvoices.length > 0 && matchingInvoices[0].qbPaymentId === paymentId) {
+              console.log(`Payment ${paymentId} already applied to invoice ${qbInvoiceId} - skipping duplicate`);
+              continue;
+            }
+            
+            if (matchingInvoices.length > 0) {
+              const invoice = matchingInvoices[0];
+              console.log(`Found matching local invoice: ${invoice.id}`);
+              
+              // Fetch current invoice balance from QuickBooks for accurate status
+              // This makes the update idempotent - we compute total paid from QB's authoritative data
+              let invoiceBalance: number | null = null;
+              try {
+                const invoiceResponse = await fetch(`${baseUrl}/invoice/${qbInvoiceId}`, {
+                  headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Accept": "application/json",
+                  },
+                });
+                if (invoiceResponse.ok) {
+                  const invoiceData = await invoiceResponse.json();
+                  invoiceBalance = Math.round(parseFloat(invoiceData.Invoice.Balance || "0") * 100);
+                  console.log(`QuickBooks invoice balance: $${invoiceBalance / 100}`);
+                } else {
+                  console.error(`Failed to fetch QB invoice: ${invoiceResponse.status}`);
+                }
+              } catch (e) {
+                console.error("Failed to fetch invoice balance from QB:", e);
+              }
+              
+              // If we couldn't fetch the balance, throw error to trigger retry
+              if (invoiceBalance === null) {
+                throw new Error(`Could not fetch invoice balance for ${qbInvoiceId} - will retry`);
+              }
+              
+              const invoiceTotal = invoice.totalAmount || 0;
+              // Calculate total paid from invoice total minus remaining balance
+              const totalPaidFromQB = invoiceTotal - invoiceBalance;
+              
+              // Only mark as "paid" if fully paid (balance is 0)
+              const isFullyPaid = invoiceBalance === 0;
+              const newStatus = isFullyPaid ? "paid" : invoice.status;
+              
+              console.log(`Invoice total: $${invoiceTotal / 100}, QB Balance: $${invoiceBalance / 100}, Total paid: $${totalPaidFromQB / 100}`);
+              console.log(`Fully paid: ${isFullyPaid}`);
+              
+              // Update the invoice with payment information (idempotent - uses QB authoritative data)
+              await db
+                .update(invoices)
+                .set({
+                  status: newStatus,
+                  paidAt: isFullyPaid ? new Date(txnDate) : invoice.paidAt,
+                  paidAmount: totalPaidFromQB, // Use computed value from QB balance
+                  qbPaymentId: paymentId, // Track most recent payment
+                  paymentMethod: paymentMethod,
+                  updatedAt: new Date(),
+                })
+                .where(eq(invoices.id, invoice.id));
+              
+              console.log(`Invoice ${invoice.id} updated - status: ${newStatus}`);
+              
+              // Also update the linked estimate to "paid" if invoice is fully paid
+              if (invoice.estimateId && isFullyPaid) {
+                await db
+                  .update(estimates)
+                  .set({
+                    status: "paid",
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(estimates.id, invoice.estimateId));
+                
+                console.log(`Estimate ${invoice.estimateId} marked as paid`);
+              }
+            } else {
+              console.log(`No matching local invoice found for QB invoice ${qbInvoiceId}`);
+            }
+          }
+        }
+      }
+    }
+    
+    console.log("=== PAYMENT WEBHOOK PROCESSING COMPLETE ===");
+  } catch (error) {
+    console.error("Error processing payment webhook:", error);
+  }
 }
 
 async function getOrCreateDefaultServiceItem(baseUrl: string, accessToken: string): Promise<{ value: string; name: string }> {

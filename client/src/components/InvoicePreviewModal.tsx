@@ -133,7 +133,8 @@ interface InvoicePreviewModalProps {
   billingContacts: BillingContact[];
   loadingBillingContacts: boolean;
   onCreateInvoice: (data: {
-    email: string;
+    email?: string;
+    sendEmail: boolean;
     ccEmails?: string[];
     bccEmails?: string[];
     invoiceNumber: string;
@@ -219,6 +220,7 @@ export function InvoicePreviewModal({
   // Send to
   const [selectedEmail, setSelectedEmail] = useState("");
   const [manualEmail, setManualEmail] = useState("");
+  const [sendEmailToCustomer, setSendEmailToCustomer] = useState(true); // Email checkbox - checked by default
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [bccEmails, setBccEmails] = useState<string[]>([]);
   const [showCcBcc, setShowCcBcc] = useState(false);
@@ -645,9 +647,10 @@ export function InvoicePreviewModal({
       console.log("=== END SELECTED PHOTOS ===");
       
       await onCreateInvoice({
-        email: finalEmail,
-        ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
-        bccEmails: bccEmails.length > 0 ? bccEmails : undefined,
+        email: sendEmailToCustomer ? finalEmail : undefined,
+        sendEmail: sendEmailToCustomer,
+        ccEmails: sendEmailToCustomer && ccEmails.length > 0 ? ccEmails : undefined,
+        bccEmails: sendEmailToCustomer && bccEmails.length > 0 ? bccEmails : undefined,
         invoiceNumber,
         invoiceDate,
         dueDate,
@@ -960,78 +963,99 @@ export function InvoicePreviewModal({
               </div>
 
               {/* Send Invoice To - Email Section */}
-              <div className={`bg-white rounded-lg border p-4 ${!finalEmail ? 'border-orange-300 bg-orange-50' : 'border-[#E2E8F0]'}`}>
-                <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  Send Invoice To
-                  <span className="text-red-500">*</span>
-                </h3>
-                <div className="space-y-3">
-                  {billingContacts.length > 0 ? (
-                    <div>
-                      <Label className="text-sm text-[#64748B]">Select Billing Contact</Label>
-                      <Select 
-                        value={selectedEmail} 
-                        onValueChange={(value) => {
-                          if (value === "manual") {
-                            setSelectedEmail("");
-                          } else {
-                            setSelectedEmail(value);
-                            setManualEmail("");
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="mt-1" data-testid="select-billing-email">
-                          <SelectValue placeholder="Select a billing contact..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {billingContacts.map((contact) => (
-                            <SelectItem key={contact.id} value={contact.email}>
-                              <span className="flex items-center gap-2">
-                                <Users className="w-3 h-3" />
-                                {contact.name} - {contact.email}
+              <div className={`bg-white rounded-lg border p-4 ${sendEmailToCustomer && !finalEmail ? 'border-orange-300 bg-orange-50' : 'border-[#E2E8F0]'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-[#1E293B] flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    Email Invoice to Customer
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="send-email-checkbox"
+                      checked={sendEmailToCustomer}
+                      onCheckedChange={(checked) => setSendEmailToCustomer(checked === true)}
+                      data-testid="checkbox-send-email"
+                    />
+                    <Label htmlFor="send-email-checkbox" className="text-sm text-[#64748B] cursor-pointer">
+                      Send email with View & Pay link
+                    </Label>
+                  </div>
+                </div>
+                
+                {!sendEmailToCustomer && (
+                  <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded mb-3">
+                    Invoice will be created in QuickBooks but not emailed to customer
+                  </div>
+                )}
+                
+                {sendEmailToCustomer && (
+                  <div className="space-y-3">
+                    {billingContacts.length > 0 ? (
+                      <div>
+                        <Label className="text-sm text-[#64748B]">Select Billing Contact</Label>
+                        <Select 
+                          value={selectedEmail} 
+                          onValueChange={(value) => {
+                            if (value === "manual") {
+                              setSelectedEmail("");
+                            } else {
+                              setSelectedEmail(value);
+                              setManualEmail("");
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="mt-1" data-testid="select-billing-email">
+                            <SelectValue placeholder="Select a billing contact..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {billingContacts.map((contact) => (
+                              <SelectItem key={contact.id} value={contact.email}>
+                                <span className="flex items-center gap-2">
+                                  <Users className="w-3 h-3" />
+                                  {contact.name} - {contact.email}
+                                </span>
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="manual">
+                              <span className="flex items-center gap-2 text-[#0078D4]">
+                                <Mail className="w-3 h-3" />
+                                Enter different email...
                               </span>
                             </SelectItem>
-                          ))}
-                          <SelectItem value="manual">
-                            <span className="flex items-center gap-2 text-[#0078D4]">
-                              <Mail className="w-3 h-3" />
-                              Enter different email...
-                            </span>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : null}
-                  
-                  {(billingContacts.length === 0 || selectedEmail === "") && (
-                    <div>
-                      <Label className="text-sm text-[#64748B]">
-                        {billingContacts.length === 0 ? "Email Address" : "Enter Email Address"}
-                      </Label>
-                      <Input
-                        type="email"
-                        value={manualEmail}
-                        onChange={(e) => setManualEmail(e.target.value)}
-                        placeholder="customer@example.com"
-                        className={`mt-1 ${!finalEmail ? 'border-orange-400 focus:border-orange-500' : ''}`}
-                        data-testid="input-manual-email"
-                      />
-                      {!finalEmail && (
-                        <p className="text-xs text-orange-600 mt-1">
-                          Email address is required to send the invoice
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {finalEmail && (
-                    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Invoice will be emailed to: <strong>{finalEmail}</strong>
-                    </div>
-                  )}
-                </div>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : null}
+                    
+                    {(billingContacts.length === 0 || selectedEmail === "") && (
+                      <div>
+                        <Label className="text-sm text-[#64748B]">
+                          {billingContacts.length === 0 ? "Email Address" : "Enter Email Address"}
+                        </Label>
+                        <Input
+                          type="email"
+                          value={manualEmail}
+                          onChange={(e) => setManualEmail(e.target.value)}
+                          placeholder="customer@example.com"
+                          className={`mt-1 ${!finalEmail ? 'border-orange-400 focus:border-orange-500' : ''}`}
+                          data-testid="input-manual-email"
+                        />
+                        {!finalEmail && (
+                          <p className="text-xs text-orange-600 mt-1">
+                            Email address is required to send the invoice
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {finalEmail && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Invoice will be emailed to: <strong>{finalEmail}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Invoice Details */}
@@ -1660,8 +1684,8 @@ export function InvoicePreviewModal({
                 console.log("Total items to potentially upload:", selectedAttachments.size);
                 setShowConfirmation(true);
               }}
-              disabled={isCreating || !finalEmail}
-              title={!finalEmail ? "Email address is required to send invoice" : undefined}
+              disabled={isCreating || (sendEmailToCustomer && !finalEmail)}
+              title={sendEmailToCustomer && !finalEmail ? "Email address is required to send invoice" : undefined}
               className="bg-[#0078D4] hover:bg-[#0078D4]/90"
               data-testid="button-confirm-send"
             >
@@ -1693,12 +1717,22 @@ export function InvoicePreviewModal({
               Confirm Invoice Creation
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to create this invoice in QuickBooks and send it to{" "}
-              <strong>{finalEmail}</strong>?
-              {ccEmails.length > 0 && (
+              {sendEmailToCustomer ? (
                 <>
+                  Are you sure you want to create this invoice in QuickBooks and send it to{" "}
+                  <strong>{finalEmail}</strong>?
+                  {ccEmails.length > 0 && (
+                    <>
+                      <br />
+                      CC: {ccEmails.join(", ")}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  Are you sure you want to create this invoice in QuickBooks?
                   <br />
-                  CC: {ccEmails.join(", ")}
+                  <span className="text-amber-600">Note: Invoice will NOT be emailed to the customer.</span>
                 </>
               )}
             </AlertDialogDescription>

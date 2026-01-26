@@ -1658,6 +1658,11 @@ export const invoices = pgTable("invoices", {
   sentAt: timestamp("sent_at"),
   emailedTo: text("emailed_to"), // Email address invoice was sent to
   emailedAt: timestamp("emailed_at"), // When invoice was emailed
+  // Payment tracking from QuickBooks webhooks
+  paidAt: timestamp("paid_at"), // When payment was received
+  paidAmount: integer("paid_amount"), // Amount paid in cents
+  qbPaymentId: text("qb_payment_id"), // QuickBooks Payment ID
+  paymentMethod: text("payment_method"), // Credit Card, ACH, Check, etc.
   createdByUserId: varchar("created_by_user_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
