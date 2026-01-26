@@ -47,6 +47,7 @@ export const technicians = pgTable("technicians", {
   email: text("email"),
   photoUrl: text("photo_url"), // Profile photo URL
   role: text("role").default("service"), // "service", "repair", "supervisor", "foreman"
+  region: text("region"), // "south", "mid", "north" - county region assignment (supervisors assign to technicians)
   supervisorId: varchar("supervisor_id"), // Self-referential FK for team hierarchy
   truckNumber: text("truck_number"), // Assigned truck number
   commissionPercent: integer("commission_percent").default(0), // Commission % on parts for service repairs
