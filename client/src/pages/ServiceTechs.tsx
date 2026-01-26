@@ -1058,6 +1058,165 @@ function SplitRouteModal({
   );
 }
 
+// Edit Schedule Modal
+function EditScheduleModal({
+  open,
+  onClose,
+  property,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  property: TechnicianPropertyWithSchedule | null;
+  onSave: (summerDays: string[], winterDays: string[]) => void;
+}) {
+  const [summerDays, setSummerDays] = useState<string[]>([]);
+  const [winterDays, setWinterDays] = useState<string[]>([]);
+  const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
+
+  // Initialize with current property schedule
+  useEffect(() => {
+    if (property) {
+      setSummerDays(property.summerVisitDays || []);
+      setWinterDays(property.winterVisitDays || []);
+      setActiveSeason(property.activeSeason === "winter" ? "winter" : "summer");
+    }
+  }, [property]);
+
+  const toggleDay = (day: string) => {
+    if (activeSeason === "summer") {
+      setSummerDays(prev => 
+        prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+      );
+    } else {
+      setWinterDays(prev => 
+        prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+      );
+    }
+  };
+  
+  const currentDays = activeSeason === "summer" ? summerDays : winterDays;
+
+  const handleSave = () => {
+    onSave(summerDays, winterDays);
+    onClose();
+  };
+
+  if (!property) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-white border-slate-200">
+        <DialogHeader className="px-6 py-4 border-b border-slate-100">
+          <DialogTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <Edit2 className="w-5 h-5 text-blue-600" />
+            Edit Schedule
+          </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
+            Update visit days for {property.propertyName}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="p-6 space-y-5">
+          {/* Property Info */}
+          <div className="bg-slate-50 p-3 rounded-lg">
+            <p className="font-medium text-slate-900">{property.propertyName}</p>
+            {property.address && (
+              <p className="text-sm text-slate-600">{property.address}</p>
+            )}
+          </div>
+
+          {/* Season Selection */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Season</label>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setActiveSeason("summer")}
+                className={cn(
+                  "flex-1 gap-2 h-11 relative",
+                  activeSeason === "summer" 
+                    ? "bg-amber-50 border-amber-400 text-amber-700 hover:bg-amber-100" 
+                    : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <Sun className="w-4 h-4" />
+                Summer
+                {summerDays.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {summerDays.length}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setActiveSeason("winter")}
+                className={cn(
+                  "flex-1 gap-2 h-11 relative",
+                  activeSeason === "winter" 
+                    ? "bg-blue-50 border-blue-400 text-blue-700 hover:bg-blue-100" 
+                    : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                <Snowflake className="w-4 h-4" />
+                Winter
+                {winterDays.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {winterDays.length}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Visit Days */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Visit Days for {activeSeason === "summer" ? "Summer" : "Winter"}
+            </label>
+            <div className="flex gap-2">
+              {ALL_DAYS.map(day => (
+                <button
+                  key={day}
+                  onClick={() => toggleDay(day)}
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-all",
+                    currentDays.includes(day)
+                      ? activeSeason === "summer"
+                        ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                        : "bg-blue-500 text-white border-blue-500 shadow-sm"
+                      : "bg-white text-slate-500 border-slate-300 hover:border-slate-400 hover:bg-slate-50"
+                  )}
+                  data-testid={`edit-toggle-day-${day.toLowerCase()}`}
+                >
+                  {day.charAt(0)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-save-schedule"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Remove Property Confirmation
 function RemovePropertyDialog({
   open,
@@ -1340,6 +1499,7 @@ function PropertyCard({
   onRemoveProperty,
   onExtendedCover,
   onSplitRoute,
+  onEditSchedule,
   activeCoverage,
 }: {
   property: TechnicianPropertyWithSchedule;
@@ -1349,6 +1509,7 @@ function PropertyCard({
   onRemoveProperty: (property: TechnicianPropertyWithSchedule) => void;
   onExtendedCover: () => void;
   onSplitRoute: () => void;
+  onEditSchedule: () => void;
   activeCoverage?: RouteOverride | null;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -1561,6 +1722,13 @@ function PropertyCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={onEditSchedule}
+                className="text-slate-700"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit Schedule
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 onUpdateSeason(
                   property.propertyId,
@@ -1717,9 +1885,26 @@ function PropertiesTabContent({
     },
   });
 
-  // State for Extended Cover and Split Route modals
+  // Mutation to update schedule with both summer and winter days
+  const updateScheduleMutation = useMutation({
+    mutationFn: async ({ propertyId, summerDays, winterDays }: { propertyId: string; summerDays: string[]; winterDays: string[] }) => {
+      const res = await fetch(`/api/property-schedule/by-property/${propertyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summerVisitDays: summerDays, winterVisitDays: winterDays }),
+      });
+      if (!res.ok) throw new Error("Failed to update schedule");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/technician-properties/${technician.id}`] });
+    },
+  });
+
+  // State for Extended Cover, Split Route, and Edit Schedule modals
   const [extendedCoverProperty, setExtendedCoverProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
   const [splitRouteProperty, setSplitRouteProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
+  const [editScheduleProperty, setEditScheduleProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
 
   // Fetch route overrides for this technician's properties
   const { data: routeOverridesData } = useQuery<{ routeOverrides: RouteOverride[] }>({
@@ -1816,6 +2001,7 @@ function PropertiesTabContent({
               onRemoveProperty={onRemoveProperty}
               onExtendedCover={() => setExtendedCoverProperty(property)}
               onSplitRoute={() => setSplitRouteProperty(property)}
+              onEditSchedule={() => setEditScheduleProperty(property)}
               activeCoverage={getActiveCoverage(property.propertyId)}
             />
           ))}
@@ -1864,6 +2050,22 @@ function PropertiesTabContent({
           }}
         />
       )}
+
+      {/* Edit Schedule Modal */}
+      <EditScheduleModal
+        open={!!editScheduleProperty}
+        onClose={() => setEditScheduleProperty(null)}
+        property={editScheduleProperty}
+        onSave={(summerDays, winterDays) => {
+          if (editScheduleProperty) {
+            updateScheduleMutation.mutate({
+              propertyId: editScheduleProperty.propertyId,
+              summerDays,
+              winterDays,
+            });
+          }
+        }}
+      />
     </div>
   );
 }
