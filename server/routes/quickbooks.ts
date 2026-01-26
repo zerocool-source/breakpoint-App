@@ -236,12 +236,20 @@ export function registerQuickbooksRoutes(app: Express) {
         internalNotes,
       } = req.body;
       
+      console.log("=== QuickBooks Invoice Creation Request ===");
+      console.log("Customer Name:", customerName);
+      console.log("Line Items:", JSON.stringify(lineItems, null, 2));
+      console.log("Estimate ID:", estimateId);
+      console.log("Memo:", memo);
+      
       if (!customerName || !lineItems || !Array.isArray(lineItems)) {
+        console.error("Missing required fields");
         return res.status(400).json({ error: "Missing required fields: customerName, lineItems" });
       }
 
       const auth = await getQuickBooksAccessToken();
       if (!auth) {
+        console.error("QuickBooks authentication failed - no valid token found");
         return res.status(401).json({ 
           error: "QuickBooks not connected or token expired",
           code: "QB_NOT_CONNECTED",
@@ -250,11 +258,26 @@ export function registerQuickbooksRoutes(app: Express) {
       }
 
       const { accessToken, realmId } = auth;
-      const baseUrl = `https://quickbooks.api.intuit.com/v3/company/${realmId}`;
+      
+      // Use sandbox URL for sandbox realm IDs, production URL otherwise
+      // Sandbox realm IDs typically start with 9341 or 1234
+      const isSandbox = realmId.startsWith("9341") || realmId.startsWith("1234") || realmId === "9341456043862092";
+      const apiHost = isSandbox 
+        ? "https://sandbox-quickbooks.api.intuit.com" 
+        : "https://quickbooks.api.intuit.com";
+      const baseUrl = `${apiHost}/v3/company/${realmId}`;
+      
+      console.log("=== QuickBooks Connection Info ===");
+      console.log("Realm ID:", realmId);
+      console.log("Is Sandbox:", isSandbox);
+      console.log("API Base URL:", baseUrl);
+      console.log("Access Token (first 20 chars):", accessToken.substring(0, 20) + "...");
 
       let customerId = await findOrCreateCustomer(baseUrl, accessToken, customerName);
+      console.log("QuickBooks Customer ID:", customerId);
 
       const defaultItemRef = await getOrCreateDefaultServiceItem(baseUrl, accessToken);
+      console.log("QuickBooks Default Item Ref:", JSON.stringify(defaultItemRef));
       
       const invoiceLines = lineItems.map((item: any, index: number) => ({
         LineNum: index + 1,
@@ -274,6 +297,10 @@ export function registerQuickbooksRoutes(app: Express) {
         PrivateNote: memo || undefined,
       };
 
+      console.log("=== QuickBooks Invoice API Request ===");
+      console.log("URL:", `${baseUrl}/invoice`);
+      console.log("Payload:", JSON.stringify(invoicePayload, null, 2));
+
       const invoiceResponse = await fetch(`${baseUrl}/invoice`, {
         method: "POST",
         headers: {
@@ -284,14 +311,43 @@ export function registerQuickbooksRoutes(app: Express) {
         body: JSON.stringify(invoicePayload),
       });
 
+      console.log("=== QuickBooks Invoice API Response ===");
+      console.log("Status:", invoiceResponse.status, invoiceResponse.statusText);
+
       if (!invoiceResponse.ok) {
         const errorData = await invoiceResponse.text();
-        console.error("QuickBooks invoice creation failed:", errorData);
-        return res.status(400).json({ error: "Failed to create invoice in QuickBooks", details: errorData });
+        console.error("QuickBooks invoice creation FAILED");
+        console.error("Error Response:", errorData);
+        
+        // Try to parse error for better message
+        let errorMessage = "Failed to create invoice in QuickBooks";
+        try {
+          const parsedError = JSON.parse(errorData);
+          if (parsedError.Fault?.Error?.[0]?.Message) {
+            errorMessage = parsedError.Fault.Error[0].Message;
+            if (parsedError.Fault.Error[0].Detail) {
+              errorMessage += ": " + parsedError.Fault.Error[0].Detail;
+            }
+          }
+        } catch (e) {
+          // Use raw error if parsing fails
+        }
+        
+        return res.status(400).json({ 
+          error: errorMessage, 
+          details: errorData,
+          realmId: realmId,
+          isSandbox: isSandbox
+        });
       }
 
       const invoiceData = await invoiceResponse.json();
       const qbInvoice = invoiceData.Invoice;
+      
+      console.log("=== QuickBooks Invoice Created Successfully ===");
+      console.log("QuickBooks Invoice ID:", qbInvoice.Id);
+      console.log("QuickBooks Invoice DocNumber:", qbInvoice.DocNumber);
+      console.log("QuickBooks Invoice TotalAmt:", qbInvoice.TotalAmt);
 
       // Generate our invoice number atomically using a subquery for the count
       const year = new Date().getFullYear().toString().slice(-2);

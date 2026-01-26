@@ -1350,11 +1350,27 @@ export default function Estimates() {
       
       if (invoiceResponse.ok) {
         qbInvoiceData = await invoiceResponse.json();
+        console.log("=== QuickBooks Invoice Created Successfully ===");
+        console.log("Response Data:", qbInvoiceData);
+        console.log("QuickBooks Invoice ID:", qbInvoiceData.invoiceId);
+        console.log("QuickBooks DocNumber:", qbInvoiceData.invoiceNumber);
+        console.log("Local Invoice ID:", qbInvoiceData.localInvoiceId);
       } else {
         const errorData = await invoiceResponse.json().catch(() => ({}));
-        invoiceError = errorData.message || errorData.error || "Failed to create QuickBooks invoice";
+        invoiceError = errorData.error || errorData.message || "Failed to create QuickBooks invoice";
         isQbNotConnected = errorData.code === "QB_NOT_CONNECTED" || invoiceResponse.status === 401;
-        console.warn("QuickBooks invoice creation failed:", invoiceError, errorData);
+        
+        console.error("=== QuickBooks Invoice Creation FAILED ===");
+        console.error("Status:", invoiceResponse.status);
+        console.error("Error:", invoiceError);
+        console.error("Full Error Data:", errorData);
+        if (errorData.realmId) {
+          console.error("Realm ID Used:", errorData.realmId);
+          console.error("Is Sandbox:", errorData.isSandbox);
+        }
+        if (errorData.details) {
+          console.error("QuickBooks Error Details:", errorData.details);
+        }
         
         // If QB is not connected, show a specific error and don't proceed
         if (isQbNotConnected) {
@@ -1367,6 +1383,16 @@ export default function Estimates() {
           setIsCreatingInvoice(false);
           return;
         }
+        
+        // Show the specific error from QuickBooks
+        toast({
+          title: "QuickBooks Error",
+          description: invoiceError,
+          variant: "destructive",
+        });
+        setShowInvoiceDialog(false);
+        setIsCreatingInvoice(false);
+        return;
       }
 
       updateStatusMutation.mutate({
@@ -1382,11 +1408,17 @@ export default function Estimates() {
           // Invalidate invoices query so the new invoice appears in the Invoices page
           queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
           
-          if (qbInvoiceData?.invoiceNumber) {
+          if (qbInvoiceData?.invoiceId) {
             toast({ 
-              title: "Invoice Created Successfully", 
-              description: `QuickBooks Invoice #${qbInvoiceData.invoiceNumber} created and sent to ${invoiceData.email}. Invoice saved to billing.` 
+              title: "Invoice Created in QuickBooks!", 
+              description: `QB Invoice ID: ${qbInvoiceData.invoiceId} | DocNumber: ${qbInvoiceData.invoiceNumber || 'N/A'} | Total: $${qbInvoiceData.totalAmount || '0.00'}. Sent to ${invoiceData.email}.`,
+              duration: 10000, // Show for 10 seconds
             });
+            console.log("=== Invoice Successfully Synced to QuickBooks ===");
+            console.log("QuickBooks Invoice ID:", qbInvoiceData.invoiceId);
+            console.log("QuickBooks DocNumber:", qbInvoiceData.invoiceNumber);
+            console.log("Total Amount:", qbInvoiceData.totalAmount);
+            console.log("Local Invoice Number:", qbInvoiceData.localInvoiceNumber);
           } else if (invoiceError) {
             toast({ 
               title: "Invoiced (QB Failed)", 
