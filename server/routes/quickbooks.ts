@@ -2,6 +2,7 @@ import { Request, Response, Express } from "express";
 import { db } from "../db";
 import { quickbooksTokens, invoices, estimates } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { ObjectStorageService } from "../replit_integrations/object_storage/objectStorage";
 
 const QUICKBOOKS_AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
 const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
@@ -398,8 +399,46 @@ export function registerQuickbooksRoutes(app: Express) {
         sentAt: new Date(),
       }).returning();
 
-      // If this is from an estimate, update the estimate with the invoice ID
+      // If this is from an estimate, update the estimate with the invoice ID and upload attachments
+      let uploadedAttachments = 0;
+      let totalAttachments = 0;
+      
       if (estimateId) {
+        // Fetch the estimate to get photos
+        const estimateData = await db.select().from(estimates).where(eq(estimates.id, estimateId));
+        
+        if (estimateData.length > 0) {
+          const estimate = estimateData[0];
+          const photos = estimate.photos || [];
+          totalAttachments = photos.length;
+          
+          console.log(`=== Uploading ${totalAttachments} attachments from estimate to QuickBooks invoice ===`);
+          
+          // Upload each photo to QuickBooks
+          for (let i = 0; i < photos.length; i++) {
+            const photoUrl = photos[i];
+            console.log(`Processing photo ${i + 1}/${photos.length}: ${photoUrl}`);
+            
+            const photoData = await fetchPhotoData(photoUrl);
+            if (photoData) {
+              const success = await uploadAttachmentToQuickBooks(
+                baseUrl,
+                accessToken,
+                qbInvoice.Id,
+                photoData.data,
+                photoData.fileName,
+                photoData.contentType
+              );
+              if (success) {
+                uploadedAttachments++;
+              }
+            }
+          }
+          
+          console.log(`=== Attachment upload complete: ${uploadedAttachments}/${totalAttachments} successful ===`);
+        }
+        
+        // Update estimate with invoice ID
         await db.update(estimates)
           .set({ 
             invoiceId: savedInvoice.id,
@@ -415,6 +454,8 @@ export function registerQuickbooksRoutes(app: Express) {
         totalAmount: qbInvoice.TotalAmt,
         localInvoiceId: savedInvoice.id,
         localInvoiceNumber: ourInvoiceNumber,
+        attachmentsUploaded: uploadedAttachments,
+        totalAttachments: totalAttachments,
       });
     } catch (error) {
       console.error("QuickBooks invoice error:", error);
@@ -613,6 +654,130 @@ export async function getQuickBooksAccessToken(): Promise<{ accessToken: string;
     return { accessToken: tokenRecord.accessToken, realmId: tokenRecord.realmId };
   } catch (error) {
     console.error("Error getting QuickBooks access token:", error);
+    return null;
+  }
+}
+
+// Helper function to upload attachments to QuickBooks and link them to an invoice
+async function uploadAttachmentToQuickBooks(
+  baseUrl: string, 
+  accessToken: string, 
+  invoiceId: string,
+  fileData: Buffer,
+  fileName: string,
+  contentType: string
+): Promise<boolean> {
+  try {
+    console.log(`=== Uploading attachment to QuickBooks: ${fileName} ===`);
+    
+    // Create multipart form data boundary
+    const boundary = `----FormBoundary${Date.now()}`;
+    
+    // Build the attachment metadata
+    const attachmentMetadata = {
+      AttachableRef: [{
+        EntityRef: {
+          type: "Invoice",
+          value: invoiceId
+        }
+      }],
+      FileName: fileName,
+      ContentType: contentType
+    };
+    
+    // Build multipart body
+    const metadataPart = 
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file_metadata_0"\r\n` +
+      `Content-Type: application/json\r\n\r\n` +
+      JSON.stringify(attachmentMetadata) + `\r\n`;
+    
+    const filePart = 
+      `--${boundary}\r\n` +
+      `Content-Disposition: form-data; name="file_content_0"; filename="${fileName}"\r\n` +
+      `Content-Type: ${contentType}\r\n\r\n`;
+    
+    const endBoundary = `\r\n--${boundary}--\r\n`;
+    
+    // Combine parts into a single buffer
+    const bodyParts = [
+      Buffer.from(metadataPart, 'utf-8'),
+      Buffer.from(filePart, 'utf-8'),
+      fileData,
+      Buffer.from(endBoundary, 'utf-8')
+    ];
+    const body = Buffer.concat(bodyParts);
+    
+    const uploadResponse = await fetch(`${baseUrl}/upload`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Accept": "application/json",
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      },
+      body: body,
+    });
+    
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error(`Failed to upload attachment ${fileName}:`, errorText);
+      return false;
+    }
+    
+    const uploadData = await uploadResponse.json();
+    console.log(`Attachment ${fileName} uploaded successfully:`, uploadData);
+    return true;
+  } catch (error) {
+    console.error(`Error uploading attachment ${fileName}:`, error);
+    return false;
+  }
+}
+
+// Helper to fetch photo data from URL or object storage
+async function fetchPhotoData(photoUrl: string): Promise<{ data: Buffer; contentType: string; fileName: string } | null> {
+  try {
+    const objectStorageService = new ObjectStorageService();
+    
+    // Check if this is an internal object storage path
+    if (photoUrl.startsWith('/objects/')) {
+      try {
+        const objectFile = await objectStorageService.getObjectEntityFile(photoUrl);
+        const [metadata] = await objectFile.getMetadata();
+        
+        // Download the file data
+        const [data] = await objectFile.download();
+        const contentType = metadata.contentType || 'image/jpeg';
+        const fileName = photoUrl.split('/').pop() || 'photo.jpg';
+        
+        return { data, contentType, fileName };
+      } catch (err) {
+        console.error(`Failed to fetch from object storage: ${photoUrl}`, err);
+        return null;
+      }
+    }
+    
+    // For HTTP URLs (including signed object storage URLs), fetch the data
+    const response = await fetch(photoUrl);
+    if (!response.ok) {
+      console.error(`Failed to fetch photo from ${photoUrl}: ${response.status}`);
+      return null;
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const data = Buffer.from(arrayBuffer);
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    
+    // Extract filename from URL
+    const urlParts = photoUrl.split('/');
+    let fileName = urlParts[urlParts.length - 1].split('?')[0];
+    if (!fileName.includes('.')) {
+      const ext = contentType.split('/')[1] || 'jpg';
+      fileName = `photo.${ext}`;
+    }
+    
+    return { data, contentType, fileName };
+  } catch (error) {
+    console.error(`Error fetching photo from ${photoUrl}:`, error);
     return null;
   }
 }
