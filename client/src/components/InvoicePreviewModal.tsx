@@ -1282,42 +1282,58 @@ export function InvoicePreviewModal({
                     (estimate.attachments && estimate.attachments.length > 0) ||
                     localAttachments.length > 0) ? (
                     <div className="space-y-2">
-                      {estimate.photos?.map((photo, index) => (
-                        <div
-                          key={`photo-${index}`}
-                          className="flex items-center gap-3 p-2 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]"
-                        >
-                          <Checkbox
-                            id={`photo-${index}`}
-                            checked={selectedAttachments.has(index)}
-                            onCheckedChange={(checked) => {
-                              console.log(`>>> CHECKBOX TOGGLED for photo ${index}, checked: ${checked}`);
-                              console.log(`Before: selectedAttachments = `, Array.from(selectedAttachments));
-                              const newSet = new Set(selectedAttachments);
-                              if (checked) {
-                                newSet.add(index);
-                              } else {
-                                newSet.delete(index);
-                              }
-                              console.log(`After: newSet = `, Array.from(newSet));
-                              setSelectedAttachments(newSet);
-                              setSelectAllAttachments(
-                                newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + localAttachments.length
-                              );
-                            }}
-                            data-testid={`checkbox-photo-${index}`}
-                          />
-                          <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E2E8F0]">
-                            <img
-                              src={photo}
-                              alt={`Photo ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
+                      {estimate.photos?.map((photo, index) => {
+                        const isChecked = selectedAttachments.has(index);
+                        const togglePhoto = () => {
+                          console.log(`>>> PHOTO ROW CLICKED - index: ${index}, currently checked: ${isChecked}`);
+                          console.log(`Before toggle: selectedAttachments = `, Array.from(selectedAttachments));
+                          const newSet = new Set(selectedAttachments);
+                          if (isChecked) {
+                            newSet.delete(index);
+                          } else {
+                            newSet.add(index);
+                          }
+                          console.log(`After toggle: newSet = `, Array.from(newSet));
+                          setSelectedAttachments(newSet);
+                          setSelectAllAttachments(
+                            newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + localAttachments.length
+                          );
+                        };
+                        return (
+                          <div
+                            key={`photo-${index}`}
+                            className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${
+                              isChecked 
+                                ? 'bg-blue-50 border-blue-300' 
+                                : 'bg-[#F8FAFC] border-[#E2E8F0] hover:bg-gray-100'
+                            }`}
+                            onClick={togglePhoto}
+                          >
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                id={`photo-${index}`}
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  console.log(`>>> CHECKBOX onCheckedChange - photo ${index}, checked: ${checked}`);
+                                  togglePhoto();
+                                }}
+                                data-testid={`checkbox-photo-${index}`}
+                              />
+                            </div>
+                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E2E8F0]">
+                              <img
+                                src={photo}
+                                alt={`Photo ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <span className="text-sm text-[#1E293B]">Photo {index + 1}</span>
+                            <span className={`text-xs ${isChecked ? 'text-blue-600 font-medium' : 'text-[#94A3B8]'}`}>
+                              {isChecked ? '✓ Will attach to email' : 'Click to attach'}
+                            </span>
                           </div>
-                          <span className="text-sm text-[#1E293B]">Photo {index + 1}</span>
-                          <span className="text-xs text-[#94A3B8]">Attach to email</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                       {estimate.attachments?.map((attachment, index) => {
                         const globalIndex = (estimate.photos?.length || 0) + index;
                         return (
