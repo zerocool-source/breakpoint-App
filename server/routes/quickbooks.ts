@@ -542,6 +542,18 @@ export function registerQuickbooksRoutes(app: Express) {
             emailSentTo = customerEmail;
             console.log(`Invoice email sent successfully to: ${customerEmail}`);
             
+            // Verify the response contains the invoice with EmailStatus
+            try {
+              const sendData = JSON.parse(sendResponseText);
+              if (sendData.Invoice?.EmailStatus === "EmailSent") {
+                console.log("QuickBooks confirmed email was sent");
+              } else {
+                console.log("QuickBooks email status:", sendData.Invoice?.EmailStatus);
+              }
+            } catch (e) {
+              console.log("Could not parse send response");
+            }
+            
             // Update invoice record with email sent status
             await db.update(invoices)
               .set({
@@ -550,13 +562,12 @@ export function registerQuickbooksRoutes(app: Express) {
               })
               .where(eq(invoices.id, savedInvoice.id));
           } else {
-            const errorData = await sendResponse.text();
-            console.error("Failed to send invoice email:", errorData);
+            console.error("Failed to send invoice email:", sendResponseText);
             emailError = "Email send failed";
             
             // Try to parse error for better message
             try {
-              const parsedError = JSON.parse(errorData);
+              const parsedError = JSON.parse(sendResponseText);
               if (parsedError.Fault?.Error?.[0]?.Message) {
                 emailError = parsedError.Fault.Error[0].Message;
               }
