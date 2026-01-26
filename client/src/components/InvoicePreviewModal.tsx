@@ -234,6 +234,17 @@ export function InvoicePreviewModal({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
+  // Editable line items
+  const [editableLineItems, setEditableLineItems] = useState<EstimateLineItem[]>([]);
+  const [showAddLineItemForm, setShowAddLineItemForm] = useState(false);
+  const [newLineItem, setNewLineItem] = useState<Partial<EstimateLineItem>>({
+    productService: "",
+    description: "",
+    quantity: 1,
+    rate: 0,
+    taxable: false,
+  });
+  
   // Error state
   const [createError, setCreateError] = useState<string | null>(null);
   
@@ -277,6 +288,17 @@ export function InvoicePreviewModal({
       setSelectedAttachments(new Set());
       setSelectAllAttachments(false);
       setLocalAttachments([]);
+      
+      // Initialize editable line items from estimate
+      setEditableLineItems(estimate.items || []);
+      setShowAddLineItemForm(false);
+      setNewLineItem({
+        productService: "",
+        description: "",
+        quantity: 1,
+        rate: 0,
+        taxable: false,
+      });
       
       // Reset customer selection - try to match by name
       setSelectedCustomerId("");
@@ -394,7 +416,49 @@ export function InvoicePreviewModal({
   if (!estimate) return null;
 
   const finalEmail = selectedEmail || manualEmail;
-  const items = estimate.items || [];
+  const items = editableLineItems;
+  
+  // Handler to add a new line item
+  const handleAddLineItem = () => {
+    if (!newLineItem.productService) return;
+    
+    const amount = (newLineItem.quantity || 1) * (newLineItem.rate || 0);
+    const lineItem: EstimateLineItem = {
+      lineNumber: editableLineItems.length + 1,
+      productService: newLineItem.productService || "",
+      description: newLineItem.description || "",
+      quantity: newLineItem.quantity || 1,
+      rate: newLineItem.rate || 0,
+      amount: amount,
+      taxable: newLineItem.taxable || false,
+    };
+    
+    setEditableLineItems([...editableLineItems, lineItem]);
+    setNewLineItem({
+      productService: "",
+      description: "",
+      quantity: 1,
+      rate: 0,
+      taxable: false,
+    });
+    setShowAddLineItemForm(false);
+  };
+  
+  // Handler to clear all line items
+  const handleClearAllLineItems = () => {
+    setEditableLineItems([]);
+  };
+  
+  // Handler to remove a single line item
+  const handleRemoveLineItem = (index: number) => {
+    const newItems = editableLineItems.filter((_, i) => i !== index);
+    // Renumber the line items
+    const renumbered = newItems.map((item, i) => ({ ...item, lineNumber: i + 1 }));
+    setEditableLineItems(renumbered);
+  };
+  
+  // Calculate totals from editable line items
+  const calculatedSubtotal = editableLineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
 
   const handleConfirm = async () => {
     setCreateError(null);
@@ -867,28 +931,30 @@ export function InvoicePreviewModal({
               <div className="bg-white rounded-lg border border-[#E2E8F0] p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-[#1E293B]">Line Items</h3>
-                  {isEditing && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[#0078D4] border-[#0078D4]"
-                        data-testid="button-add-line-item"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add product or service
-                      </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-[#0078D4] border-[#0078D4]"
+                      onClick={() => setShowAddLineItemForm(true)}
+                      data-testid="button-add-line-item"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add product or service
+                    </Button>
+                    {items.length > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-red-600 hover:text-red-700"
+                        onClick={handleClearAllLineItems}
                         data-testid="button-clear-line-items"
                       >
                         <Trash2 className="w-3 h-3 mr-1" />
                         Clear all lines
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
                 <Table>
                   <TableHeader>
@@ -901,12 +967,13 @@ export function InvoicePreviewModal({
                       <TableHead className="w-[80px] text-right">Rate</TableHead>
                       <TableHead className="w-[90px] text-right">Amount</TableHead>
                       <TableHead className="w-[50px] text-center">Tax</TableHead>
+                      <TableHead className="w-[40px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-[#64748B] py-8">
+                        <TableCell colSpan={9} className="text-center text-[#64748B] py-8">
                           No line items
                         </TableCell>
                       </TableRow>
@@ -935,11 +1002,101 @@ export function InvoicePreviewModal({
                               <span className="text-[#94A3B8]">-</span>
                             )}
                           </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRemoveLineItem(index)}
+                              data-testid={`button-remove-line-item-${index}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
                   </TableBody>
                 </Table>
+                
+                {/* Add Line Item Form */}
+                {showAddLineItemForm && (
+                  <div className="mt-4 p-4 bg-[#F8FAFC] rounded-lg border border-[#E2E8F0]">
+                    <h4 className="font-medium text-[#1E293B] mb-3">Add New Line Item</h4>
+                    <div className="grid grid-cols-6 gap-3">
+                      <div className="col-span-2">
+                        <Label className="text-xs text-[#64748B]">Product/Service</Label>
+                        <Input
+                          value={newLineItem.productService || ""}
+                          onChange={(e) => setNewLineItem({ ...newLineItem, productService: e.target.value })}
+                          placeholder="Enter product or service name"
+                          className="mt-1"
+                          data-testid="input-new-product-service"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs text-[#64748B]">Description</Label>
+                        <Input
+                          value={newLineItem.description || ""}
+                          onChange={(e) => setNewLineItem({ ...newLineItem, description: e.target.value })}
+                          placeholder="Enter description"
+                          className="mt-1"
+                          data-testid="input-new-description"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-[#64748B]">Qty</Label>
+                        <Input
+                          type="number"
+                          value={newLineItem.quantity || 1}
+                          onChange={(e) => setNewLineItem({ ...newLineItem, quantity: parseInt(e.target.value) || 1 })}
+                          className="mt-1"
+                          min={1}
+                          data-testid="input-new-quantity"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-[#64748B]">Rate ($)</Label>
+                        <Input
+                          type="number"
+                          value={newLineItem.rate || 0}
+                          onChange={(e) => setNewLineItem({ ...newLineItem, rate: parseFloat(e.target.value) || 0 })}
+                          className="mt-1"
+                          step="0.01"
+                          min={0}
+                          data-testid="input-new-rate"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="new-taxable"
+                          checked={newLineItem.taxable || false}
+                          onCheckedChange={(checked) => setNewLineItem({ ...newLineItem, taxable: checked === true })}
+                          data-testid="checkbox-new-taxable"
+                        />
+                        <Label htmlFor="new-taxable" className="text-sm text-[#64748B]">Taxable</Label>
+                      </div>
+                      <div className="flex-1" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddLineItemForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleAddLineItem}
+                        disabled={!newLineItem.productService}
+                        data-testid="button-save-line-item"
+                      >
+                        Add Line Item
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Totals */}
                 <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
@@ -948,7 +1105,7 @@ export function InvoicePreviewModal({
                       <div className="flex justify-between">
                         <span className="text-[#64748B]">Subtotal:</span>
                         <span className="font-medium">
-                          {formatCurrency(estimate.subtotal)}
+                          {formatCurrency(calculatedSubtotal * 100)}
                         </span>
                       </div>
                       {(estimate.discountAmount ?? 0) > 0 && (
