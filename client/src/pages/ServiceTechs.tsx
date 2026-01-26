@@ -461,12 +461,13 @@ function AddPropertyModal({
   open: boolean;
   onClose: () => void;
   technician: Technician | null;
-  onAddProperty: (customerId: string, visitDays: string[], season: string) => void;
+  onAddProperty: (customerId: string, summerDays: string[], winterDays: string[]) => void;
 }) {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
   const [propertySearch, setPropertySearch] = useState("");
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [season, setSeason] = useState<"summer" | "winter">("summer");
+  const [summerDays, setSummerDays] = useState<string[]>([]);
+  const [winterDays, setWinterDays] = useState<string[]>([]);
+  const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
 
   const { data: customersData } = useQuery<{ customers: Customer[] }>({
     queryKey: ["/api/customers"],
@@ -499,19 +500,28 @@ function AddPropertyModal({
 
   const handleSubmit = () => {
     if (!selectedPropertyId) return;
-    onAddProperty(selectedPropertyId, selectedDays, season);
+    onAddProperty(selectedPropertyId, summerDays, winterDays);
     setSelectedPropertyId("");
     setPropertySearch("");
-    setSelectedDays([]);
-    setSeason("summer");
+    setSummerDays([]);
+    setWinterDays([]);
+    setActiveSeason("summer");
     onClose();
   };
 
   const toggleDay = (day: string) => {
-    setSelectedDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+    if (activeSeason === "summer") {
+      setSummerDays(prev => 
+        prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+      );
+    } else {
+      setWinterDays(prev => 
+        prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+      );
+    }
   };
+  
+  const currentDays = activeSeason === "summer" ? summerDays : winterDays;
 
   const selectedCustomer = customers.find(c => c.id === selectedPropertyId);
 
@@ -602,46 +612,48 @@ function AddPropertyModal({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => {
-                  if (season !== "summer") {
-                    setSeason("summer");
-                    setSelectedDays([]);
-                  }
-                }}
+                onClick={() => setActiveSeason("summer")}
                 className={cn(
-                  "flex-1 gap-2 h-11",
-                  season === "summer" 
+                  "flex-1 gap-2 h-11 relative",
+                  activeSeason === "summer" 
                     ? "bg-amber-50 border-amber-400 text-amber-700 hover:bg-amber-100" 
                     : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
                 )}
               >
                 <Sun className="w-4 h-4" />
                 Summer
+                {summerDays.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {summerDays.length}
+                  </span>
+                )}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => {
-                  if (season !== "winter") {
-                    setSeason("winter");
-                    setSelectedDays([]);
-                  }
-                }}
+                onClick={() => setActiveSeason("winter")}
                 className={cn(
-                  "flex-1 gap-2 h-11",
-                  season === "winter" 
+                  "flex-1 gap-2 h-11 relative",
+                  activeSeason === "winter" 
                     ? "bg-blue-50 border-blue-400 text-blue-700 hover:bg-blue-100" 
                     : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
                 )}
               >
                 <Snowflake className="w-4 h-4" />
                 Winter
+                {winterDays.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {winterDays.length}
+                  </span>
+                )}
               </Button>
             </div>
           </div>
 
           {/* Visit Days */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Visit Days</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Visit Days for {activeSeason === "summer" ? "Summer" : "Winter"}
+            </label>
             <div className="flex gap-2">
               {ALL_DAYS.map(day => (
                 <button
@@ -649,8 +661,10 @@ function AddPropertyModal({
                   onClick={() => toggleDay(day)}
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-all",
-                    selectedDays.includes(day)
-                      ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                    currentDays.includes(day)
+                      ? activeSeason === "summer"
+                        ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                        : "bg-blue-500 text-white border-blue-500 shadow-sm"
                       : "bg-white text-slate-500 border-slate-300 hover:border-slate-400 hover:bg-slate-50"
                   )}
                   data-testid={`toggle-day-${day.toLowerCase()}`}
@@ -2215,7 +2229,7 @@ export default function ServiceTechs() {
   });
 
   const addPropertyMutation = useMutation({
-    mutationFn: async ({ technicianId, customerId, visitDays, season }: { technicianId: string; customerId: string; visitDays: string[]; season: string }) => {
+    mutationFn: async ({ technicianId, customerId, summerDays, winterDays }: { technicianId: string; customerId: string; summerDays: string[]; winterDays: string[] }) => {
       const customersRes = await fetch("/api/customers");
       const customersData = await customersRes.json();
       const customer = customersData.customers?.find((c: Customer) => c.id === customerId);
@@ -2235,11 +2249,17 @@ export default function ServiceTechs() {
       });
       if (!res.ok) throw new Error("Failed to assign property");
       
-      // Step 2: Set up schedule if visit days selected
-      if (visitDays.length > 0) {
-        const scheduleData = season === "summer" 
-          ? { summerVisitDays: visitDays, activeSeason: "summer" }
-          : { winterVisitDays: visitDays, activeSeason: "winter" };
+      // Step 2: Set up schedule with both summer and winter days
+      if (summerDays.length > 0 || winterDays.length > 0) {
+        const scheduleData: any = {};
+        if (summerDays.length > 0) {
+          scheduleData.summerVisitDays = summerDays;
+        }
+        if (winterDays.length > 0) {
+          scheduleData.winterVisitDays = winterDays;
+        }
+        // Set active season based on which has days, prefer summer if both have
+        scheduleData.activeSeason = summerDays.length > 0 ? "summer" : "winter";
           
         await fetch(`/api/property-schedule/by-property/${customerId}`, {
           method: "PATCH",
@@ -2650,13 +2670,13 @@ export default function ServiceTechs() {
           setAddPropertyTech(null);
         }}
         technician={addPropertyTech}
-        onAddProperty={(customerId, visitDays, season) => {
+        onAddProperty={(customerId, summerDays, winterDays) => {
           if (addPropertyTech) {
             addPropertyMutation.mutate({
               technicianId: addPropertyTech.id,
               customerId,
-              visitDays,
-              season,
+              summerDays,
+              winterDays,
             });
           }
         }}
