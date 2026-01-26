@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,8 @@ function formatDate(dateStr: string | Date | null | undefined): string {
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: invoicesData, isLoading, refetch, isRefetching } = useQuery<{ invoices: Invoice[] }>({
     queryKey: ["/api/invoices"],
@@ -98,6 +100,25 @@ export default function Invoices() {
     pendingAmount: invoices.filter(inv => inv.status === "sent").reduce((sum, inv) => sum + (inv.amountDue || 0), 0),
   };
 
+  const handleSyncPayments = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/quickbooks/sync-payments", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+        alert(`Payment sync complete! ${data.updated || 0} invoice(s) updated.`);
+      } else {
+        alert(data.error || "Failed to sync payments");
+      }
+    } catch (error) {
+      console.error("Error syncing payments:", error);
+      alert("Failed to sync payments from QuickBooks");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="mb-6">
@@ -131,6 +152,17 @@ export default function Invoices() {
                 </Badge>
               </Link>
             )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSyncPayments}
+              disabled={isSyncing || !qbStatus?.connected}
+              className="gap-2"
+              data-testid="btn-sync-payments"
+            >
+              <DollarSign className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
+              {isSyncing ? "Syncing..." : "Sync Payments"}
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
@@ -275,6 +307,8 @@ export default function Invoices() {
                     <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Due Date</th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-slate-500 uppercase">Amount</th>
                     <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">Status</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Date Paid</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Payment Method</th>
                     <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">QB Sync</th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
@@ -345,6 +379,22 @@ export default function Invoices() {
                             <StatusIcon className="w-3 h-3" />
                             {statusInfo.label}
                           </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          {invoice.paidAt ? (
+                            <span className="text-sm text-green-600">{formatDate(invoice.paidAt)}</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {invoice.paymentMethod ? (
+                            <Badge variant="outline" className="border-slate-300 text-slate-600 bg-slate-50 text-xs capitalize">
+                              {invoice.paymentMethod}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           {invoice.quickbooksSyncStatus === "synced" ? (

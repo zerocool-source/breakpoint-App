@@ -1,7 +1,7 @@
 import { Request, Response, Express } from "express";
 import { db } from "../db";
 import { quickbooksTokens, invoices, estimates } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, ne, isNotNull, and } from "drizzle-orm";
 import { ObjectStorageService } from "../replit_integrations/object_storage/objectStorage";
 
 const QUICKBOOKS_AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
@@ -819,6 +819,93 @@ export function registerQuickbooksRoutes(app: Express) {
     } catch (error) {
       console.error("Error querying payments:", error);
       res.status(500).json({ error: "Failed to query payments" });
+    }
+  });
+
+  // Manual payment sync endpoint - checks QuickBooks for payments on our invoices
+  app.post("/api/quickbooks/sync-payments", async (_req: Request, res: Response) => {
+    try {
+      const tokens = await storage.getQuickBooksTokens();
+      if (!tokens?.accessToken) {
+        return res.status(401).json({ success: false, error: "QuickBooks not connected" });
+      }
+
+      const realmId = tokens.realmId;
+      const isSandbox = !process.env.QUICKBOOKS_PRODUCTION;
+      const baseUrl = isSandbox 
+        ? `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}`
+        : `https://quickbooks.api.intuit.com/v3/company/${realmId}`;
+
+      // Get all invoices that are not yet paid
+      const unpaidInvoices = await db
+        .select()
+        .from(invoices)
+        .where(
+          and(
+            ne(invoices.status, "paid"),
+            isNotNull(invoices.quickbooksInvoiceId)
+          )
+        );
+
+      console.log(`Checking ${unpaidInvoices.length} unpaid invoices for payments...`);
+      let updatedCount = 0;
+
+      for (const invoice of unpaidInvoices) {
+        try {
+          // Fetch invoice from QuickBooks to check balance
+          const qbResponse = await fetch(`${baseUrl}/invoice/${invoice.quickbooksInvoiceId}`, {
+            headers: {
+              "Authorization": `Bearer ${tokens.accessToken}`,
+              "Accept": "application/json",
+            },
+          });
+
+          if (qbResponse.ok) {
+            const qbData = await qbResponse.json();
+            const qbInvoice = qbData.Invoice;
+            const balance = Math.round(parseFloat(qbInvoice.Balance || "0") * 100);
+            const totalAmount = invoice.totalAmount || 0;
+            const paidAmount = totalAmount - balance;
+
+            // If there's a payment (balance is less than total)
+            if (balance < totalAmount && balance !== (invoice.amountDue || totalAmount)) {
+              const isFullyPaid = balance === 0;
+              
+              await db
+                .update(invoices)
+                .set({
+                  status: isFullyPaid ? "paid" : "partial",
+                  paidAmount: paidAmount,
+                  paidAt: isFullyPaid ? new Date() : null,
+                  amountDue: balance,
+                  updatedAt: new Date(),
+                })
+                .where(eq(invoices.id, invoice.id));
+
+              // If fully paid, also update the estimate
+              if (isFullyPaid && invoice.estimateId) {
+                await db
+                  .update(estimates)
+                  .set({
+                    status: "paid",
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(estimates.id, invoice.estimateId));
+              }
+
+              updatedCount++;
+              console.log(`Invoice ${invoice.invoiceNumber} updated: balance=$${balance/100}, paid=$${paidAmount/100}, fully paid: ${isFullyPaid}`);
+            }
+          }
+        } catch (error) {
+          console.error(`Error checking invoice ${invoice.invoiceNumber}:`, error);
+        }
+      }
+
+      res.json({ success: true, updated: updatedCount, checked: unpaidInvoices.length });
+    } catch (error: any) {
+      console.error("Error syncing payments:", error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 }
