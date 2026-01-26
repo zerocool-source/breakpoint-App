@@ -824,17 +824,22 @@ export function registerQuickbooksRoutes(app: Express) {
 
   // Manual payment sync endpoint - checks QuickBooks for payments on our invoices
   app.post("/api/quickbooks/sync-payments", async (_req: Request, res: Response) => {
+    console.log("=== MANUAL PAYMENT SYNC STARTED ===");
     try {
-      const tokens = await storage.getQuickBooksTokens();
-      if (!tokens?.accessToken) {
+      const tokens = await getQuickBooksAccessToken();
+      if (!tokens) {
+        console.log("QuickBooks not connected - aborting sync");
         return res.status(401).json({ success: false, error: "QuickBooks not connected" });
       }
 
-      const realmId = tokens.realmId;
+      const { accessToken, realmId } = tokens;
       const isSandbox = !process.env.QUICKBOOKS_PRODUCTION;
       const baseUrl = isSandbox 
         ? `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}`
         : `https://quickbooks.api.intuit.com/v3/company/${realmId}`;
+      
+      console.log(`Using QuickBooks API: ${isSandbox ? 'SANDBOX' : 'PRODUCTION'}`);
+      console.log(`Realm ID: ${realmId}`);
 
       // Get all invoices that are not yet paid
       const unpaidInvoices = await db
@@ -847,60 +852,147 @@ export function registerQuickbooksRoutes(app: Express) {
           )
         );
 
-      console.log(`Checking ${unpaidInvoices.length} unpaid invoices for payments...`);
+      console.log(`Found ${unpaidInvoices.length} unpaid invoices with QuickBooks IDs to check:`);
+      for (const inv of unpaidInvoices) {
+        console.log(`  - ${inv.invoiceNumber} (QB ID: ${inv.quickbooksInvoiceId}, Local ID: ${inv.id}, Status: ${inv.status}, Total: $${(inv.totalAmount || 0)/100})`);
+      }
+
       let updatedCount = 0;
 
       for (const invoice of unpaidInvoices) {
         try {
+          console.log(`\n--- Checking invoice ${invoice.invoiceNumber} (QB ID: ${invoice.quickbooksInvoiceId}) ---`);
+          
           // Fetch invoice from QuickBooks to check balance
           const qbResponse = await fetch(`${baseUrl}/invoice/${invoice.quickbooksInvoiceId}`, {
             headers: {
-              "Authorization": `Bearer ${tokens.accessToken}`,
+              "Authorization": `Bearer ${accessToken}`,
               "Accept": "application/json",
             },
           });
 
-          if (qbResponse.ok) {
-            const qbData = await qbResponse.json();
-            const qbInvoice = qbData.Invoice;
-            const balance = Math.round(parseFloat(qbInvoice.Balance || "0") * 100);
-            const totalAmount = invoice.totalAmount || 0;
-            const paidAmount = totalAmount - balance;
+          console.log(`QuickBooks API response status: ${qbResponse.status}`);
 
-            // If there's a payment (balance is less than total)
-            if (balance < totalAmount && balance !== (invoice.amountDue || totalAmount)) {
-              const isFullyPaid = balance === 0;
-              
+          if (!qbResponse.ok) {
+            const errorText = await qbResponse.text();
+            console.error(`Failed to fetch QB invoice ${invoice.quickbooksInvoiceId}: ${errorText}`);
+            continue;
+          }
+
+          const qbData = await qbResponse.json();
+          const qbInvoice = qbData.Invoice;
+          
+          console.log(`QB Invoice found:`);
+          console.log(`  - DocNumber: ${qbInvoice.DocNumber}`);
+          console.log(`  - TotalAmt: ${qbInvoice.TotalAmt}`);
+          console.log(`  - Balance: ${qbInvoice.Balance}`);
+          console.log(`  - CustomerRef: ${qbInvoice.CustomerRef?.name || qbInvoice.CustomerRef?.value}`);
+          
+          const qbBalance = parseFloat(qbInvoice.Balance || "0");
+          const qbTotal = parseFloat(qbInvoice.TotalAmt || "0");
+          const balance = Math.round(qbBalance * 100);
+          const totalAmount = invoice.totalAmount || 0;
+          const paidAmount = totalAmount - balance;
+          const isFullyPaid = qbBalance === 0;
+
+          console.log(`Payment analysis:`);
+          console.log(`  - QB Balance: $${qbBalance} (${balance} cents)`);
+          console.log(`  - QB Total: $${qbTotal}`);
+          console.log(`  - Local Total: $${totalAmount/100} (${totalAmount} cents)`);
+          console.log(`  - Calculated Paid Amount: $${paidAmount/100}`);
+          console.log(`  - Is Fully Paid: ${isFullyPaid}`);
+          console.log(`  - Current Local Status: ${invoice.status}`);
+          console.log(`  - Current Local AmountDue: ${invoice.amountDue}`);
+
+          // Check if payment has been made (balance is less than total in QB)
+          const hasPayment = qbBalance < qbTotal;
+          console.log(`  - Has Payment in QB: ${hasPayment}`);
+
+          if (hasPayment) {
+            // Try to get payment details for payment method
+            let paymentMethod: string | null = null;
+            let paidAt: Date | null = null;
+
+            // Query payments linked to this invoice
+            const paymentQuery = `SELECT * FROM Payment WHERE Line.LinkedTxn.TxnId = '${invoice.quickbooksInvoiceId}'`;
+            console.log(`Querying payments: ${paymentQuery}`);
+            
+            const paymentResponse = await fetch(
+              `${baseUrl}/query?query=${encodeURIComponent(paymentQuery)}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${accessToken}`,
+                  "Accept": "application/json",
+                },
+              }
+            );
+
+            if (paymentResponse.ok) {
+              const paymentData = await paymentResponse.json();
+              const payments = paymentData.QueryResponse?.Payment || [];
+              console.log(`Found ${payments.length} payment(s) linked to this invoice`);
+
+              if (payments.length > 0) {
+                const latestPayment = payments[payments.length - 1];
+                console.log(`Latest payment details:`);
+                console.log(`  - Payment ID: ${latestPayment.Id}`);
+                console.log(`  - TotalAmt: ${latestPayment.TotalAmt}`);
+                console.log(`  - TxnDate: ${latestPayment.TxnDate}`);
+                console.log(`  - PaymentMethodRef: ${JSON.stringify(latestPayment.PaymentMethodRef)}`);
+                
+                paymentMethod = latestPayment.PaymentMethodRef?.name || latestPayment.PaymentType || null;
+                paidAt = latestPayment.TxnDate ? new Date(latestPayment.TxnDate) : new Date();
+                
+                console.log(`  - Extracted Payment Method: ${paymentMethod}`);
+                console.log(`  - Extracted Paid Date: ${paidAt}`);
+              }
+            } else {
+              console.log(`Payment query failed: ${paymentResponse.status}`);
+            }
+
+            // Update the invoice
+            console.log(`\nUpdating invoice ${invoice.invoiceNumber}...`);
+            await db
+              .update(invoices)
+              .set({
+                status: isFullyPaid ? "paid" : "partial",
+                paidAmount: paidAmount,
+                paidAt: isFullyPaid ? (paidAt || new Date()) : null,
+                paymentMethod: paymentMethod,
+                amountDue: balance,
+                updatedAt: new Date(),
+              })
+              .where(eq(invoices.id, invoice.id));
+
+            console.log(`Invoice ${invoice.invoiceNumber} updated successfully:`);
+            console.log(`  - New Status: ${isFullyPaid ? "paid" : "partial"}`);
+            console.log(`  - Paid Amount: $${paidAmount/100}`);
+            console.log(`  - Payment Method: ${paymentMethod}`);
+            console.log(`  - Paid At: ${paidAt || new Date()}`);
+
+            // If fully paid, also update the estimate
+            if (isFullyPaid && invoice.estimateId) {
               await db
-                .update(invoices)
+                .update(estimates)
                 .set({
-                  status: isFullyPaid ? "paid" : "partial",
-                  paidAmount: paidAmount,
-                  paidAt: isFullyPaid ? new Date() : null,
-                  amountDue: balance,
+                  status: "paid",
                   updatedAt: new Date(),
                 })
-                .where(eq(invoices.id, invoice.id));
-
-              // If fully paid, also update the estimate
-              if (isFullyPaid && invoice.estimateId) {
-                await db
-                  .update(estimates)
-                  .set({
-                    status: "paid",
-                    updatedAt: new Date(),
-                  })
-                  .where(eq(estimates.id, invoice.estimateId));
-              }
-
-              updatedCount++;
-              console.log(`Invoice ${invoice.invoiceNumber} updated: balance=$${balance/100}, paid=$${paidAmount/100}, fully paid: ${isFullyPaid}`);
+                .where(eq(estimates.id, invoice.estimateId));
+              console.log(`Estimate ${invoice.estimateId} marked as paid`);
             }
+
+            updatedCount++;
+          } else {
+            console.log(`No payment detected - invoice balance equals total`);
           }
         } catch (error) {
           console.error(`Error checking invoice ${invoice.invoiceNumber}:`, error);
         }
       }
+
+      console.log(`\n=== MANUAL PAYMENT SYNC COMPLETE ===`);
+      console.log(`Updated ${updatedCount} of ${unpaidInvoices.length} invoices`);
 
       res.json({ success: true, updated: updatedCount, checked: unpaidInvoices.length });
     } catch (error: any) {
