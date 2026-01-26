@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
 import { storage } from "../storage";
 import { PoolBrainClient } from "../poolbrain-client";
+import { db } from "../db";
+import { technicians } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export function registerTechnicianRoutes(app: any) {
   app.get("/api/technicians", async (req: Request, res: Response) => {
@@ -146,6 +149,7 @@ export function registerTechnicianRoutes(app: any) {
       const { id } = req.params;
       const updates = req.body;
       
+      // When assigning to a supervisor, inherit the supervisor's region
       if (updates.supervisorId !== undefined && updates.supervisorId !== null) {
         const supervisor = await storage.getTechnician(updates.supervisorId);
         if (!supervisor) {
@@ -154,8 +158,40 @@ export function registerTechnicianRoutes(app: any) {
         if (supervisor.role !== "supervisor") {
           return res.status(400).json({ error: "Target technician is not a supervisor" });
         }
+        // Inherit region from supervisor (or null if supervisor has no region)
+        updates.region = supervisor.region || null;
       }
       
+      // When removing from supervisor (supervisorId set to null), technician keeps their current region
+      // (no action needed - they retain existing region value)
+      
+      // Check if this is a supervisor and their region is being updated
+      const currentTechnician = await storage.getTechnician(id);
+      if (currentTechnician?.role === "supervisor" && updates.region !== undefined) {
+        // Use transaction for atomic region cascade to all team members
+        await db.transaction(async (tx: typeof db) => {
+          // Get all team members
+          const allTechnicians = await storage.getTechnicians();
+          const teamMembers = allTechnicians.filter((t: { supervisorId: string | null }) => t.supervisorId === id);
+          
+          // Update all team members' region atomically
+          for (const member of teamMembers) {
+            await tx.update(technicians)
+              .set({ region: updates.region || null })
+              .where(eq(technicians.id, member.id));
+          }
+          
+          // Update the supervisor's region
+          await tx.update(technicians)
+            .set({ region: updates.region || null, ...updates })
+            .where(eq(technicians.id, id));
+        });
+        
+        const updatedTechnician = await storage.getTechnician(id);
+        return res.json({ success: true, technician: updatedTechnician });
+      }
+      
+      // Standard update for non-supervisor or non-region changes
       const technician = await storage.updateTechnician(id, updates);
       if (!technician) {
         return res.status(404).json({ error: "Technician not found" });
