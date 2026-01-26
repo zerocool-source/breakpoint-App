@@ -67,7 +67,7 @@ const navItems: NavItem[] = [
     icon: Calendar, 
     label: "Scheduling", 
     children: [
-      { label: "Schedule", href: "/calendar" },
+      { label: "Calendar", href: "/calendar" },
       { label: "Route History", href: "/route-history" },
     ]
   },

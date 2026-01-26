@@ -30,6 +30,9 @@ import {
   Snowflake,
   Wrench,
   UserCheck,
+  Search,
+  ArrowRight,
+  Clock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -41,6 +44,7 @@ interface Technician {
   role: string;
   active: boolean;
   photoUrl?: string;
+  region?: string;
 }
 
 interface TechSchedule {
@@ -161,6 +165,10 @@ export default function Calendar() {
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [showAddCoverageModal, setShowAddCoverageModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
+  const [techsPerPage] = useState(10);
+  const [displayCount, setDisplayCount] = useState(10);
   const [selectedTechForSchedule, setSelectedTechForSchedule] = useState<Technician | null>(null);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [scheduleFormData, setScheduleFormData] = useState({
@@ -223,22 +231,41 @@ export default function Calendar() {
   const timeOffs = timeOffData?.timeOffs || [];
   const customers = customersData?.customers || [];
 
-  const filteredTechnicians = useMemo(() => {
+  const allFilteredTechnicians = useMemo(() => {
     return technicians.filter((tech) => {
       if (!tech.active) return false;
-      if (roleFilter === "service") return tech.role === "service";
-      if (roleFilter === "repair") return tech.role === "repair";
-      if (roleFilter === "supervisor") return tech.role === "supervisor" || tech.role === "foreman";
+      
+      if (roleFilter === "service" && tech.role !== "service") return false;
+      if (roleFilter === "repair" && tech.role !== "repair") return false;
+      if (roleFilter === "supervisor" && tech.role !== "supervisor" && tech.role !== "foreman") return false;
+      
+      if (searchTerm) {
+        const fullName = `${tech.firstName} ${tech.lastName}`.toLowerCase();
+        if (!fullName.includes(searchTerm.toLowerCase())) return false;
+      }
+      
+      if (regionFilter !== "all") {
+        const techRegion = (tech.region || "").toLowerCase();
+        if (techRegion !== regionFilter) return false;
+      }
+      
       return true;
     });
-  }, [technicians, roleFilter]);
+  }, [technicians, roleFilter, searchTerm, regionFilter]);
+  
+  const filteredTechnicians = useMemo(() => {
+    return allFilteredTechnicians.slice(0, displayCount);
+  }, [allFilteredTechnicians, displayCount]);
+  
+  const hasMoreTechs = allFilteredTechnicians.length > displayCount;
+  const totalFilteredCount = allFilteredTechnicians.length;
 
   const stats = useMemo(() => {
-    const activeTechs = filteredTechnicians.length;
+    const activeTechs = allFilteredTechnicians.length;
     const totalStops = schedules.reduce((sum, s) => sum + (s.stopCount || 0), 0);
     const activeCoverages = coverages.filter((c) => c.status === "active").length;
     return { activeTechs, totalStops, activeCoverages };
-  }, [filteredTechnicians, schedules, coverages]);
+  }, [allFilteredTechnicians, schedules, coverages]);
 
   const navigateWeek = (direction: "prev" | "next") => {
     setCurrentWeekStart((prev) => {
@@ -380,7 +407,7 @@ export default function Calendar() {
       <div className="min-h-screen bg-[#F8FAFC]">
         <div className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-4">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-[#0F172A]" data-testid="text-page-title">Schedule</h1>
+            <h1 className="text-2xl font-bold text-[#0F172A]" data-testid="text-page-title">Calendar</h1>
             
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -527,6 +554,133 @@ export default function Calendar() {
             </Card>
           </div>
           
+          {/* Coverage Activity Section */}
+          <Card className="shadow-sm mb-4" data-testid="card-coverage-activity">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-[#0F172A] flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-[#17BEBB]" />
+                  Coverage Activity
+                </h3>
+                <span className="text-xs text-[#64748B]">{coverages.length} active</span>
+              </div>
+              <div className="space-y-2 max-h-[120px] overflow-y-auto">
+                {coverages.length > 0 ? (
+                  coverages.slice(0, 5).map((coverage) => {
+                    const originalTech = technicians.find(t => String(t.id) === String(coverage.originalTechId));
+                    const coveringTech = technicians.find(t => String(t.id) === String(coverage.coveringTechId));
+                    const startDate = new Date(coverage.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const endDate = new Date(coverage.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    return (
+                      <div key={coverage.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-sm" data-testid={`coverage-entry-${coverage.id}`}>
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="font-medium text-[#0F172A]">
+                            {coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : 'Unknown'}
+                          </span>
+                          <ArrowRight className="w-3 h-3 text-[#64748B]" />
+                          <span className="text-[#64748B]">covering for</span>
+                          <span className="font-medium text-[#0F172A]">
+                            {originalTech ? `${originalTech.firstName} ${originalTech.lastName}` : 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-3 h-3 text-[#64748B]" />
+                          <span className="text-xs text-[#64748B]">{startDate} - {endDate}</span>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-xs font-medium",
+                            coverage.status === 'active' ? "bg-green-100 text-green-700" :
+                            coverage.status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-slate-100 text-slate-600"
+                          )}>
+                            {coverage.status}
+                          </span>
+                        </div>
+                        {coverage.propertyName && (
+                          <span className="text-xs text-[#64748B] bg-white px-2 py-0.5 rounded border border-slate-200">
+                            {coverage.propertyName}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-sm text-[#64748B] text-center py-2">No active coverages this week</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Search and Region Filters */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
+              <Input
+                placeholder="Search technicians..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setDisplayCount(10);
+                }}
+                className="pl-9"
+                data-testid="input-search-tech"
+              />
+            </div>
+            
+            <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              <button
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors",
+                  regionFilter === "all"
+                    ? "bg-[#0F172A] text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-50"
+                )}
+                onClick={() => { setRegionFilter("all"); setDisplayCount(10); }}
+                data-testid="button-region-all"
+              >
+                All
+              </button>
+              <button
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors border-l border-slate-200",
+                  regionFilter === "south"
+                    ? "bg-[#22D69A] text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-50"
+                )}
+                onClick={() => { setRegionFilter("south"); setDisplayCount(10); }}
+                data-testid="button-region-south"
+              >
+                South
+              </button>
+              <button
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors border-l border-slate-200",
+                  regionFilter === "middle"
+                    ? "bg-[#0078D4] text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-50"
+                )}
+                onClick={() => { setRegionFilter("middle"); setDisplayCount(10); }}
+                data-testid="button-region-middle"
+              >
+                Middle
+              </button>
+              <button
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-colors border-l border-slate-200",
+                  regionFilter === "north"
+                    ? "bg-[#FF8000] text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-50"
+                )}
+                onClick={() => { setRegionFilter("north"); setDisplayCount(10); }}
+                data-testid="button-region-north"
+              >
+                North
+              </button>
+            </div>
+            
+            <span className="text-sm text-[#64748B]">
+              Showing {filteredTechnicians.length} of {totalFilteredCount} technicians
+            </span>
+          </div>
+          
           <div className="flex items-center gap-6 text-sm text-[#64748B]">
             <span className="font-medium">Live Status:</span>
             <span className="flex items-center gap-1.5">
@@ -579,7 +733,16 @@ export default function Calendar() {
             {filteredTechnicians.length === 0 ? (
               <div className="py-12 text-center text-[#64748B]">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No technicians found for this role filter.</p>
+                <p>No technicians found{searchTerm ? ` matching "${searchTerm}"` : ""}{regionFilter !== "all" ? ` in ${regionFilter} region` : ""}.</p>
+                {(searchTerm || regionFilter !== "all") && (
+                  <Button 
+                    variant="link" 
+                    className="mt-2 text-[#0078D4]"
+                    onClick={() => { setSearchTerm(""); setRegionFilter("all"); }}
+                  >
+                    Clear filters
+                  </Button>
+                )}
               </div>
             ) : (
               filteredTechnicians.map((tech, techIndex) => {
@@ -888,6 +1051,21 @@ export default function Calendar() {
                   </div>
                 );
               })
+            )}
+            
+            {/* Load More Button */}
+            {hasMoreTechs && (
+              <div className="flex justify-center py-4 border-t border-slate-200">
+                <Button
+                  variant="outline"
+                  onClick={() => setDisplayCount(prev => prev + techsPerPage)}
+                  className="gap-2"
+                  data-testid="button-load-more-techs"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  Load More ({totalFilteredCount - displayCount} remaining)
+                </Button>
+              </div>
             )}
           </div>
         </div>
