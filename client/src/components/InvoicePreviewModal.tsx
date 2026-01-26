@@ -258,6 +258,13 @@ export function InvoicePreviewModal({
   // Reset state when modal opens with new estimate
   useEffect(() => {
     if (estimate && open) {
+      console.log("=== INVOICE MODAL OPENED ===");
+      console.log("Estimate received:", estimate);
+      console.log("Estimate photos:", estimate.photos);
+      console.log("Estimate photos count:", estimate.photos?.length || 0);
+      console.log("Estimate attachments:", estimate.attachments);
+      console.log("Resetting selectedAttachments to empty Set");
+      
       setInvoiceNumber(generateInvoiceNumber());
       setInvoiceDate(new Date());
       setDueDate(addDays(new Date(), 30));
@@ -1219,7 +1226,7 @@ export function InvoicePreviewModal({
                   />
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm text-[#64748B]">
-                      Completion Photos & Documents
+                      Completion Photos & Documents ({estimate.photos?.length || 0} photos)
                     </Label>
                     <div className="flex items-center gap-3">
                       {((estimate.photos && estimate.photos.length > 0) ||
@@ -1284,12 +1291,15 @@ export function InvoicePreviewModal({
                             id={`photo-${index}`}
                             checked={selectedAttachments.has(index)}
                             onCheckedChange={(checked) => {
+                              console.log(`>>> CHECKBOX TOGGLED for photo ${index}, checked: ${checked}`);
+                              console.log(`Before: selectedAttachments = `, Array.from(selectedAttachments));
                               const newSet = new Set(selectedAttachments);
                               if (checked) {
                                 newSet.add(index);
                               } else {
                                 newSet.delete(index);
                               }
+                              console.log(`After: newSet = `, Array.from(newSet));
                               setSelectedAttachments(newSet);
                               setSelectAllAttachments(
                                 newSet.size === (estimate.photos?.length || 0) + (estimate.attachments?.length || 0) + localAttachments.length
@@ -1413,7 +1423,13 @@ export function InvoicePreviewModal({
               {isEditing ? "Done Editing" : "Edit Details"}
             </Button>
             <Button
-              onClick={() => setShowConfirmation(true)}
+              onClick={() => {
+                console.log("=== CONFIRM BUTTON CLICKED ===");
+                console.log("Current selectedAttachments:", Array.from(selectedAttachments));
+                console.log("Estimate photos:", estimate?.photos);
+                console.log("Total items to potentially upload:", selectedAttachments.size);
+                setShowConfirmation(true);
+              }}
               disabled={isCreating}
               className="bg-[#0078D4] hover:bg-[#0078D4]/90"
               data-testid="button-confirm-send"
