@@ -168,7 +168,7 @@ export default function Calendar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
   const [techsPerPage] = useState(10);
-  const [displayCount, setDisplayCount] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedTechForSchedule, setSelectedTechForSchedule] = useState<Technician | null>(null);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [scheduleFormData, setScheduleFormData] = useState({
@@ -254,10 +254,11 @@ export default function Calendar() {
   }, [technicians, roleFilter, searchTerm, regionFilter]);
   
   const filteredTechnicians = useMemo(() => {
-    return allFilteredTechnicians.slice(0, displayCount);
-  }, [allFilteredTechnicians, displayCount]);
+    const startIndex = (currentPage - 1) * techsPerPage;
+    return allFilteredTechnicians.slice(startIndex, startIndex + techsPerPage);
+  }, [allFilteredTechnicians, currentPage, techsPerPage]);
   
-  const hasMoreTechs = allFilteredTechnicians.length > displayCount;
+  const totalPages = Math.ceil(allFilteredTechnicians.length / techsPerPage);
   const totalFilteredCount = allFilteredTechnicians.length;
 
   const stats = useMemo(() => {
@@ -618,7 +619,7 @@ export default function Calendar() {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setDisplayCount(10);
+                  setCurrentPage(1);
                 }}
                 className="pl-9"
                 data-testid="input-search-tech"
@@ -633,7 +634,7 @@ export default function Calendar() {
                     ? "bg-[#0F172A] text-white"
                     : "bg-white text-slate-600 hover:bg-slate-50"
                 )}
-                onClick={() => { setRegionFilter("all"); setDisplayCount(10); }}
+                onClick={() => { setRegionFilter("all"); setCurrentPage(1); }}
                 data-testid="button-region-all"
               >
                 All
@@ -645,7 +646,7 @@ export default function Calendar() {
                     ? "bg-[#22D69A] text-white"
                     : "bg-white text-slate-600 hover:bg-slate-50"
                 )}
-                onClick={() => { setRegionFilter("south"); setDisplayCount(10); }}
+                onClick={() => { setRegionFilter("south"); setCurrentPage(1); }}
                 data-testid="button-region-south"
               >
                 South
@@ -657,7 +658,7 @@ export default function Calendar() {
                     ? "bg-[#0078D4] text-white"
                     : "bg-white text-slate-600 hover:bg-slate-50"
                 )}
-                onClick={() => { setRegionFilter("middle"); setDisplayCount(10); }}
+                onClick={() => { setRegionFilter("middle"); setCurrentPage(1); }}
                 data-testid="button-region-middle"
               >
                 Middle
@@ -669,7 +670,7 @@ export default function Calendar() {
                     ? "bg-[#FF8000] text-white"
                     : "bg-white text-slate-600 hover:bg-slate-50"
                 )}
-                onClick={() => { setRegionFilter("north"); setDisplayCount(10); }}
+                onClick={() => { setRegionFilter("north"); setCurrentPage(1); }}
                 data-testid="button-region-north"
               >
                 North
@@ -677,7 +678,7 @@ export default function Calendar() {
             </div>
             
             <span className="text-sm text-[#64748B]">
-              Showing {filteredTechnicians.length} of {totalFilteredCount} technicians
+              Page {currentPage} of {totalPages} ({totalFilteredCount} technicians)
             </span>
           </div>
           
@@ -1053,17 +1054,43 @@ export default function Calendar() {
               })
             )}
             
-            {/* Load More Button */}
-            {hasMoreTechs && (
-              <div className="flex justify-center py-4 border-t border-slate-200">
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 py-4 border-t border-slate-200">
                 <Button
                   variant="outline"
-                  onClick={() => setDisplayCount(prev => prev + techsPerPage)}
-                  className="gap-2"
-                  data-testid="button-load-more-techs"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  data-testid="button-page-prev"
                 >
-                  <ChevronDown className="w-4 h-4" />
-                  Load More ({totalFilteredCount - displayCount} remaining)
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "min-w-[36px]",
+                      currentPage === page && "bg-[#0F172A] text-white"
+                    )}
+                    data-testid={`button-page-${page}`}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  data-testid="button-page-next"
+                >
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             )}
