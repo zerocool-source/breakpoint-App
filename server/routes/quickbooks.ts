@@ -401,23 +401,48 @@ export function registerQuickbooksRoutes(app: Express) {
       }).returning();
 
       // Upload selected attachments to QuickBooks using official Attachments API format
+      console.log("\n" + "=".repeat(60));
+      console.log("STARTING ATTACHMENT UPLOAD PROCESS...");
+      console.log("=".repeat(60));
+      console.log(`Invoice created successfully. QB Invoice ID: ${qbInvoice.Id}`);
+      console.log(`selectedPhotos received from request:`, JSON.stringify(selectedPhotos, null, 2));
+      console.log(`Type of selectedPhotos: ${typeof selectedPhotos}`);
+      console.log(`Is array: ${Array.isArray(selectedPhotos)}`);
+      
       let uploadedAttachments = 0;
       const failedAttachments: string[] = [];
       const photosToUpload: string[] = selectedPhotos || [];
       const totalAttachments = photosToUpload.length;
       
+      console.log(`\nFound ${totalAttachments} photos to upload`);
+      
+      if (totalAttachments === 0) {
+        console.log("WARNING: No photos selected for upload - skipping attachment upload");
+        console.log("Check if 'Attach to email' checkboxes were selected in the invoice modal");
+      }
+      
       if (totalAttachments > 0) {
-        console.log(`=== Uploading ${totalAttachments} selected attachments to QuickBooks invoice ${qbInvoice.Id} ===`);
+        console.log(`\n=== Uploading ${totalAttachments} selected attachments to QuickBooks invoice ${qbInvoice.Id} ===`);
+        console.log(`Photos to upload:`);
+        photosToUpload.forEach((url, idx) => {
+          console.log(`  ${idx + 1}. ${url}`);
+        });
         
         // Upload each selected photo to QuickBooks
         for (let i = 0; i < photosToUpload.length; i++) {
           const photoUrl = photosToUpload[i];
           const attachmentIndex = i + 1; // 1-based index for logging
           
-          console.log(`Processing attachment ${attachmentIndex} of ${totalAttachments}: ${photoUrl}`);
+          console.log(`\n--- Processing attachment ${attachmentIndex} of ${totalAttachments} ---`);
+          console.log(`Photo URL: ${photoUrl}`);
           
           const photoData = await fetchPhotoData(photoUrl);
           if (photoData) {
+            console.log(`Photo data fetched successfully:`);
+            console.log(`  - File name: ${photoData.fileName}`);
+            console.log(`  - Content type: ${photoData.contentType}`);
+            console.log(`  - File size: ${photoData.data.length} bytes`);
+            
             const success = await uploadAttachmentToQuickBooks(
               baseUrl,
               accessToken,
@@ -430,20 +455,24 @@ export function registerQuickbooksRoutes(app: Express) {
             );
             if (success) {
               uploadedAttachments++;
+              console.log(`  => UPLOAD SUCCESS for ${photoData.fileName}`);
             } else {
               failedAttachments.push(photoData.fileName);
+              console.log(`  => UPLOAD FAILED for ${photoData.fileName}`);
             }
           } else {
             console.error(`  - Could not fetch photo data from: ${photoUrl}`);
+            console.error(`  - This may indicate the photo doesn't exist in storage or URL is invalid`);
             failedAttachments.push(photoUrl.split('/').pop() || 'unknown');
           }
         }
         
-        console.log(`=== Attachment upload complete: ${uploadedAttachments}/${totalAttachments} successful ===`);
+        console.log(`\n=== Attachment upload complete: ${uploadedAttachments}/${totalAttachments} successful ===`);
         if (failedAttachments.length > 0) {
           console.log(`=== Failed attachments: ${failedAttachments.join(', ')} ===`);
         }
       }
+      console.log("=".repeat(60) + "\n");
       
       // If this is from an estimate, update it with the invoice ID
       if (estimateId) {
@@ -683,7 +712,10 @@ async function uploadAttachmentToQuickBooks(
   totalAttachments: number
 ): Promise<boolean> {
   try {
+    console.log(`\n>>> UPLOAD ATTACHMENT TO QUICKBOOKS <<<`);
     console.log(`Uploading attachment ${attachmentIndex} of ${totalAttachments}: ${fileName}`);
+    console.log(`Target Invoice ID: ${invoiceId}`);
+    console.log(`Access token present: ${accessToken ? 'YES (first 20 chars: ' + accessToken.substring(0, 20) + '...)' : 'NO'}`);
     
     // Create unique boundary string
     const boundary = `Boundary_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -704,8 +736,11 @@ async function uploadAttachmentToQuickBooks(
       ContentType: contentType
     };
     
+    console.log(`Attachment metadata:`, JSON.stringify(attachmentMetadata, null, 2));
+    
     // Base64 encode the file content
     const fileBase64 = fileData.toString('base64');
+    console.log(`File base64 encoded. Length: ${fileBase64.length} characters`);
     
     // Build multipart body following official QuickBooks format:
     // Part 1: Metadata with Content-Transfer-Encoding: 8bit
@@ -735,11 +770,21 @@ async function uploadAttachmentToQuickBooks(
     // Combine all parts
     const body = metadataPart + filePart + endBoundary;
     
-    console.log(`  - Posting to: ${baseUrl}/upload`);
-    console.log(`  - File size: ${fileData.length} bytes`);
-    console.log(`  - Content-Type: ${contentType}`);
+    console.log(`\nMultipart Request Structure:`);
+    console.log(`  - Boundary: ${boundary}`);
+    console.log(`  - Metadata part name: file_metadata_${indexStr}`);
+    console.log(`  - File content part name: file_content_${indexStr}`);
+    console.log(`  - Total body size: ${body.length} bytes`);
+    console.log(`  - Metadata part preview:`, metadataPart.substring(0, 300) + '...');
     
-    const uploadResponse = await fetch(`${baseUrl}/upload`, {
+    const uploadUrl = `${baseUrl}/upload`;
+    console.log(`\nMaking POST request to: ${uploadUrl}`);
+    console.log(`Request headers:`);
+    console.log(`  - Authorization: Bearer ${accessToken.substring(0, 20)}...`);
+    console.log(`  - Accept: application/json`);
+    console.log(`  - Content-Type: multipart/form-data; boundary=${boundary}`);
+    
+    const uploadResponse = await fetch(uploadUrl, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,
@@ -749,50 +794,86 @@ async function uploadAttachmentToQuickBooks(
       body: body,
     });
     
-    console.log(`  - Response status: ${uploadResponse.status}`);
+    console.log(`\nQuickBooks API Response:`);
+    console.log(`  - Status: ${uploadResponse.status} ${uploadResponse.statusText}`);
+    console.log(`  - Response headers:`, Object.fromEntries(uploadResponse.headers.entries()));
+    
+    const responseText = await uploadResponse.text();
+    console.log(`  - Response body (raw): ${responseText.substring(0, 1000)}${responseText.length > 1000 ? '...[truncated]' : ''}`);
     
     if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error(`  - FAILED to upload attachment ${fileName}:`, errorText);
+      console.error(`\n!!! UPLOAD FAILED !!!`);
+      console.error(`Status: ${uploadResponse.status}`);
+      console.error(`Full error response: ${responseText}`);
       return false;
     }
     
-    const uploadData = await uploadResponse.json();
-    console.log(`  - SUCCESS: Attachment ${fileName} uploaded, ID: ${uploadData?.AttachableResponse?.[0]?.Attachable?.Id || 'unknown'}`);
+    let uploadData;
+    try {
+      uploadData = JSON.parse(responseText);
+    } catch (e) {
+      console.error(`Failed to parse response as JSON: ${e}`);
+      return false;
+    }
+    
+    console.log(`\n=== UPLOAD SUCCESS ===`);
+    console.log(`Full response data:`, JSON.stringify(uploadData, null, 2));
+    const attachmentId = uploadData?.AttachableResponse?.[0]?.Attachable?.Id;
+    console.log(`Attachment ID: ${attachmentId || 'unknown'}`);
     return true;
   } catch (error) {
-    console.error(`Error uploading attachment ${fileName}:`, error);
+    console.error(`\n!!! EXCEPTION during attachment upload !!!`);
+    console.error(`Error type: ${(error as Error).name}`);
+    console.error(`Error message: ${(error as Error).message}`);
+    console.error(`Error stack: ${(error as Error).stack}`);
     return false;
   }
 }
 
 // Helper to fetch photo data from URL or object storage
 async function fetchPhotoData(photoUrl: string): Promise<{ data: Buffer; contentType: string; fileName: string } | null> {
+  console.log(`\n>>> FETCH PHOTO DATA <<<`);
+  console.log(`Photo URL: ${photoUrl}`);
+  console.log(`URL type: ${photoUrl.startsWith('/objects/') ? 'Object Storage Path' : 'HTTP URL'}`);
+  
   try {
     const objectStorageService = new ObjectStorageService();
     
     // Check if this is an internal object storage path
     if (photoUrl.startsWith('/objects/')) {
+      console.log(`Attempting to fetch from Object Storage...`);
       try {
         const objectFile = await objectStorageService.getObjectEntityFile(photoUrl);
+        console.log(`Got object file reference`);
+        
         const [metadata] = await objectFile.getMetadata();
+        console.log(`Metadata:`, metadata);
         
         // Download the file data
         const [data] = await objectFile.download();
         const contentType = metadata.contentType || 'image/jpeg';
         const fileName = photoUrl.split('/').pop() || 'photo.jpg';
         
+        console.log(`SUCCESS: Fetched from object storage`);
+        console.log(`  - File name: ${fileName}`);
+        console.log(`  - Content type: ${contentType}`);
+        console.log(`  - Data size: ${data.length} bytes`);
+        
         return { data, contentType, fileName };
       } catch (err) {
-        console.error(`Failed to fetch from object storage: ${photoUrl}`, err);
+        console.error(`FAILED to fetch from object storage: ${photoUrl}`);
+        console.error(`Error:`, err);
         return null;
       }
     }
     
     // For HTTP URLs (including signed object storage URLs), fetch the data
+    console.log(`Attempting HTTP fetch...`);
     const response = await fetch(photoUrl);
+    console.log(`HTTP Response status: ${response.status} ${response.statusText}`);
+    
     if (!response.ok) {
-      console.error(`Failed to fetch photo from ${photoUrl}: ${response.status}`);
+      console.error(`FAILED to fetch photo via HTTP: ${response.status}`);
       return null;
     }
     
@@ -808,9 +889,16 @@ async function fetchPhotoData(photoUrl: string): Promise<{ data: Buffer; content
       fileName = `photo.${ext}`;
     }
     
+    console.log(`SUCCESS: Fetched via HTTP`);
+    console.log(`  - File name: ${fileName}`);
+    console.log(`  - Content type: ${contentType}`);
+    console.log(`  - Data size: ${data.length} bytes`);
+    
     return { data, contentType, fileName };
   } catch (error) {
-    console.error(`Error fetching photo from ${photoUrl}:`, error);
+    console.error(`EXCEPTION fetching photo from ${photoUrl}:`);
+    console.error(`Error type: ${(error as Error).name}`);
+    console.error(`Error message: ${(error as Error).message}`);
     return null;
   }
 }

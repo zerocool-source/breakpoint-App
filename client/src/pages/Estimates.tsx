@@ -1312,6 +1312,20 @@ export default function Estimates() {
     console.log("INVOICE BUTTON CLICKED - handleCreateInvoice started");
     console.log("==============================================");
     console.log("Invoice Data received:", invoiceData);
+    console.log("=== SELECTED PHOTOS DEBUG ===");
+    console.log("selectedPhotos from invoiceData:", invoiceData.selectedPhotos);
+    console.log("selectedPhotos type:", typeof invoiceData.selectedPhotos);
+    console.log("selectedPhotos is array:", Array.isArray(invoiceData.selectedPhotos));
+    console.log("selectedPhotos length:", invoiceData.selectedPhotos?.length || 0);
+    if (invoiceData.selectedPhotos && invoiceData.selectedPhotos.length > 0) {
+      console.log("Photos to upload:");
+      invoiceData.selectedPhotos.forEach((url: string, idx: number) => {
+        console.log(`  ${idx + 1}. ${url}`);
+      });
+    } else {
+      console.log("WARNING: No photos selected for upload!");
+    }
+    console.log("=== END SELECTED PHOTOS DEBUG ===");
     
     if (!selectedEstimate) {
       console.error("ERROR: No estimate selected, aborting");
@@ -1322,6 +1336,8 @@ export default function Estimates() {
     console.log("Estimate ID:", selectedEstimate.id);
     console.log("Property Name:", selectedEstimate.propertyName);
     console.log("Line Items:", selectedEstimate.items);
+    console.log("Estimate Photos:", selectedEstimate.photos);
+    console.log("Estimate Attachments:", selectedEstimate.attachments);
     
     setIsCreatingInvoice(true);
     console.log("Step 1: Setting isCreatingInvoice to true");

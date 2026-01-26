@@ -464,13 +464,21 @@ export function InvoicePreviewModal({
     setCreateError(null);
     try {
       // Build selected photos array based on checkbox selections
+      console.log("=== BUILDING SELECTED PHOTOS FOR UPLOAD ===");
       const selectedPhotoUrls: string[] = [];
       const photos = estimate?.photos || [];
       const attachments = estimate?.attachments || [];
       
+      console.log("Estimate photos array:", photos);
+      console.log("Estimate attachments array:", attachments);
+      console.log("Local attachments array:", localAttachments);
+      console.log("selectedAttachments Set:", Array.from(selectedAttachments));
+      
       // Add photos that are checked
       photos.forEach((photo, index) => {
-        if (selectedAttachments.has(index)) {
+        const isSelected = selectedAttachments.has(index);
+        console.log(`Photo ${index}: ${photo} - Selected: ${isSelected}`);
+        if (isSelected) {
           selectedPhotoUrls.push(photo);
         }
       });
@@ -478,7 +486,9 @@ export function InvoicePreviewModal({
       // Add attachments that are checked (using their URLs)
       attachments.forEach((attachment, index) => {
         const globalIndex = photos.length + index;
-        if (selectedAttachments.has(globalIndex)) {
+        const isSelected = selectedAttachments.has(globalIndex);
+        console.log(`Attachment ${index} (globalIndex ${globalIndex}): ${attachment.url} - Selected: ${isSelected}`);
+        if (isSelected) {
           selectedPhotoUrls.push(attachment.url);
         }
       });
@@ -486,10 +496,17 @@ export function InvoicePreviewModal({
       // Add local attachments that are checked
       localAttachments.forEach((attachment, index) => {
         const globalIndex = photos.length + attachments.length + index;
-        if (selectedAttachments.has(globalIndex)) {
+        const isSelected = selectedAttachments.has(globalIndex);
+        console.log(`Local Attachment ${index} (globalIndex ${globalIndex}): ${attachment.url} - Selected: ${isSelected}`);
+        if (isSelected) {
           selectedPhotoUrls.push(attachment.url);
         }
       });
+      
+      console.log("=== FINAL selectedPhotoUrls ===");
+      console.log("Count:", selectedPhotoUrls.length);
+      console.log("URLs:", selectedPhotoUrls);
+      console.log("=== END SELECTED PHOTOS ===");
       
       await onCreateInvoice({
         email: finalEmail,
