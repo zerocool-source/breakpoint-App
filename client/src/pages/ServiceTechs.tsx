@@ -1070,23 +1070,44 @@ function EditCoverageModal({
   open: boolean;
   onClose: () => void;
   coverage: RouteOverride | null;
-  onSave: (data: { startDate?: string; endDate?: string; notes?: string }) => void;
+  onSave: (data: { startDate?: string; endDate?: string; notes?: string; coveringTechnicianId?: string; coveringTechnicianName?: string }) => void;
   onDelete: () => void;
 }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [coveringTechnicianId, setCoveringTechnicianId] = useState("");
+
+  // Fetch technicians for the dropdown
+  const { data: techniciansData } = useQuery<{ technicians: Technician[] }>({
+    queryKey: ["/api/technicians/stored"],
+    queryFn: async () => {
+      const res = await fetch("/api/technicians/stored");
+      if (!res.ok) return { technicians: [] };
+      return res.json();
+    },
+  });
+
+  const technicians = techniciansData?.technicians || [];
 
   useEffect(() => {
     if (coverage) {
       setStartDate(coverage.startDate ? coverage.startDate.split("T")[0] : "");
       setEndDate(coverage.endDate ? coverage.endDate.split("T")[0] : "");
       setNotes(coverage.notes || "");
+      setCoveringTechnicianId(coverage.coveringTechnicianId || "");
     }
   }, [coverage]);
 
   const handleSave = () => {
-    onSave({ startDate, endDate, notes });
+    const selectedTech = technicians.find(t => t.id === coveringTechnicianId);
+    onSave({ 
+      startDate, 
+      endDate, 
+      notes,
+      coveringTechnicianId,
+      coveringTechnicianName: selectedTech ? `${selectedTech.firstName} ${selectedTech.lastName}` : undefined,
+    });
     onClose();
   };
 
@@ -1116,12 +1137,28 @@ function EditCoverageModal({
             <p className="font-medium text-green-800">
               {coverage.coverageType === "extended_cover" ? "Extended Cover" : "Split Route"}
             </p>
-            <p className="text-sm text-green-700">
-              {coverage.coverageType === "extended_cover" 
-                ? `Covered by ${coverage.coveringTechnicianName || "Unknown"}`
-                : `Split with ${coverage.coveringTechnicianName || "Unknown"}`
-              }
-            </p>
+          </div>
+
+          {/* Covering Technician */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {coverage.coverageType === "extended_cover" ? "Covered By" : "Split With"}
+            </label>
+            <Select value={coveringTechnicianId} onValueChange={setCoveringTechnicianId}>
+              <SelectTrigger className="w-full h-10 bg-white">
+                <SelectValue placeholder="Select technician" />
+              </SelectTrigger>
+              <SelectContent>
+                {technicians
+                  .filter(t => t.id !== coverage.originalTechnicianId)
+                  .map(tech => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Date Range */}
