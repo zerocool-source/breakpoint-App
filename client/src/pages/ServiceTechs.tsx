@@ -602,7 +602,12 @@ function AddPropertyModal({
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => setSeason("summer")}
+                onClick={() => {
+                  if (season !== "summer") {
+                    setSeason("summer");
+                    setSelectedDays([]);
+                  }
+                }}
                 className={cn(
                   "flex-1 gap-2 h-11",
                   season === "summer" 
@@ -615,7 +620,12 @@ function AddPropertyModal({
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setSeason("winter")}
+                onClick={() => {
+                  if (season !== "winter") {
+                    setSeason("winter");
+                    setSelectedDays([]);
+                  }
+                }}
                 className={cn(
                   "flex-1 gap-2 h-11",
                   season === "winter" 
