@@ -291,10 +291,15 @@ export function InvoicePreviewModal({
       setShipToAddress(estimate.address || "");
       setSelectedShipToAddress("default");
       
-      // Reset attachment selections
-      setSelectedAttachments(new Set());
-      setSelectAllAttachments(false);
+      // Auto-select all photos/attachments by default
+      const allIndexes = new Set<number>();
+      (estimate.photos || []).forEach((_, i) => allIndexes.add(i));
+      (estimate.attachments || []).forEach((_, i) => allIndexes.add(i + (estimate.photos?.length || 0)));
+      setSelectedAttachments(allIndexes);
+      setSelectAllAttachments(allIndexes.size > 0);
       setLocalAttachments([]);
+      
+      console.log("Auto-selected all photos/attachments:", Array.from(allIndexes));
       
       // Initialize editable line items from estimate
       setEditableLineItems(estimate.items || []);
