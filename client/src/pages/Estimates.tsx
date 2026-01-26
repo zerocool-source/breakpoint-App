@@ -1307,55 +1307,84 @@ export default function Estimates() {
     memoOnStatement: string;
     internalNotes: string;
   }) => {
-    if (!selectedEstimate) return;
+    console.log("==============================================");
+    console.log("INVOICE BUTTON CLICKED - handleCreateInvoice started");
+    console.log("==============================================");
+    console.log("Invoice Data received:", invoiceData);
+    
+    if (!selectedEstimate) {
+      console.error("ERROR: No estimate selected, aborting");
+      return;
+    }
+    
+    console.log("Selected Estimate:", selectedEstimate);
+    console.log("Estimate ID:", selectedEstimate.id);
+    console.log("Property Name:", selectedEstimate.propertyName);
+    console.log("Line Items:", selectedEstimate.items);
     
     setIsCreatingInvoice(true);
+    console.log("Step 1: Setting isCreatingInvoice to true");
+    
     try {
+      console.log("Step 2: Preparing invoice payload...");
+      
+      const payload = {
+        customerName: selectedEstimate.propertyName,
+        customerEmail: invoiceData.email,
+        ccEmails: invoiceData.ccEmails,
+        bccEmails: invoiceData.bccEmails,
+        lineItems: selectedEstimate.items || [],
+        memo: `EST#${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
+        invoiceNumber: invoiceData.invoiceNumber,
+        invoiceDate: invoiceData.invoiceDate.toISOString(),
+        dueDate: invoiceData.dueDate.toISOString(),
+        terms: invoiceData.terms,
+        customerNote: invoiceData.customerNote,
+        memoOnStatement: invoiceData.memoOnStatement,
+        internalNotes: invoiceData.internalNotes,
+        photos: selectedEstimate.photos || [],
+        attachments: selectedEstimate.attachments || [],
+        estimateId: selectedEstimate.id,
+        estimateNumber: selectedEstimate.estimateNumber,
+        propertyId: selectedEstimate.propertyId,
+        propertyName: selectedEstimate.propertyName,
+        serviceTechId: selectedEstimate.serviceTechId,
+        serviceTechName: selectedEstimate.serviceTechName,
+        repairTechId: selectedEstimate.repairTechId,
+        repairTechName: selectedEstimate.repairTechName,
+        sentByUserId: "office-user-1",
+        sentByUserName: "Office Staff",
+      };
+      
+      console.log("Step 3: Invoice payload prepared:", JSON.stringify(payload, null, 2));
+      console.log("Step 4: Calling QuickBooks API at /api/quickbooks/invoice...");
+      
       const invoiceResponse = await fetch("/api/quickbooks/invoice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: selectedEstimate.propertyName,
-          customerEmail: invoiceData.email,
-          ccEmails: invoiceData.ccEmails,
-          bccEmails: invoiceData.bccEmails,
-          lineItems: selectedEstimate.items || [],
-          memo: `EST#${selectedEstimate.estimateNumber} - ${selectedEstimate.title}`,
-          invoiceNumber: invoiceData.invoiceNumber,
-          invoiceDate: invoiceData.invoiceDate.toISOString(),
-          dueDate: invoiceData.dueDate.toISOString(),
-          terms: invoiceData.terms,
-          customerNote: invoiceData.customerNote,
-          memoOnStatement: invoiceData.memoOnStatement,
-          internalNotes: invoiceData.internalNotes,
-          photos: selectedEstimate.photos || [],
-          attachments: selectedEstimate.attachments || [],
-          // Additional data for saving invoice to our database
-          estimateId: selectedEstimate.id,
-          estimateNumber: selectedEstimate.estimateNumber,
-          propertyId: selectedEstimate.propertyId,
-          propertyName: selectedEstimate.propertyName,
-          serviceTechId: selectedEstimate.serviceTechId,
-          serviceTechName: selectedEstimate.serviceTechName,
-          repairTechId: selectedEstimate.repairTechId,
-          repairTechName: selectedEstimate.repairTechName,
-          sentByUserId: "office-user-1", // TODO: Get from auth context
-          sentByUserName: "Office Staff",
-        }),
+        body: JSON.stringify(payload),
       });
+      
+      console.log("Step 5: API Response received");
+      console.log("Response Status:", invoiceResponse.status);
+      console.log("Response OK:", invoiceResponse.ok);
 
       let qbInvoiceData = null;
       let invoiceError = null;
       let isQbNotConnected = false;
       
+      console.log("Step 6: Processing API response...");
+      
       if (invoiceResponse.ok) {
+        console.log("Step 6a: Response OK, parsing JSON...");
         qbInvoiceData = await invoiceResponse.json();
-        console.log("=== QuickBooks Invoice Created Successfully ===");
+        console.log("=== SUCCESS: QuickBooks Invoice Created ===");
         console.log("Response Data:", qbInvoiceData);
         console.log("QuickBooks Invoice ID:", qbInvoiceData.invoiceId);
         console.log("QuickBooks DocNumber:", qbInvoiceData.invoiceNumber);
         console.log("Local Invoice ID:", qbInvoiceData.localInvoiceId);
       } else {
+        console.log("Step 6b: Response NOT OK, handling error...");
         const errorData = await invoiceResponse.json().catch(() => ({}));
         invoiceError = errorData.error || errorData.message || "Failed to create QuickBooks invoice";
         isQbNotConnected = errorData.code === "QB_NOT_CONNECTED" || invoiceResponse.status === 401;
@@ -1395,6 +1424,7 @@ export default function Estimates() {
         return;
       }
 
+      console.log("Step 7: Updating estimate status to 'invoiced'...");
       updateStatusMutation.mutate({
         id: selectedEstimate.id,
         status: "invoiced",
@@ -1435,14 +1465,21 @@ export default function Estimates() {
       });
       
       setShowInvoiceDialog(false);
-    } catch (error) {
-      console.error("Error creating invoice:", error);
+      console.log("Step 8: Invoice dialog closed, process complete");
+    } catch (error: any) {
+      console.error("==============================================");
+      console.error("INVOICE CREATION ERROR - Caught in catch block");
+      console.error("==============================================");
+      console.error("Error object:", error);
+      console.error("Error message:", error?.message);
+      console.error("Error stack:", error?.stack);
       toast({
         title: "Invoice Error",
-        description: "An error occurred while creating the invoice.",
+        description: `An error occurred: ${error?.message || "Unknown error"}`,
         variant: "destructive",
       });
     } finally {
+      console.log("Step FINAL: Cleanup - setting isCreatingInvoice to false");
       setIsCreatingInvoice(false);
     }
   };
