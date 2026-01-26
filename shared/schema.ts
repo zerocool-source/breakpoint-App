@@ -1833,3 +1833,89 @@ export const insertSplitRouteItemSchema = createInsertSchema(splitRouteItems).om
 
 export type InsertSplitRouteItem = z.infer<typeof insertSplitRouteItemSchema>;
 export type SplitRouteItem = typeof splitRouteItems.$inferSelect;
+
+// Tech Schedules - Daily schedule blocks for technicians (calendar view)
+export const techSchedules = pgTable("tech_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  technicianId: varchar("technician_id").notNull(),
+  date: timestamp("date").notNull(),
+  startTime: text("start_time").default("08:00"), // HH:MM format
+  endTime: text("end_time").default("16:00"),
+  stopCount: integer("stop_count").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTechScheduleSchema = createInsertSchema(techSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTechSchedule = z.infer<typeof insertTechScheduleSchema>;
+export type TechSchedule = typeof techSchedules.$inferSelect;
+
+// Schedule Properties - Properties assigned to a schedule block
+export const scheduleProperties = pgTable("schedule_properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scheduleId: varchar("schedule_id").notNull(),
+  propertyId: varchar("property_id").notNull(),
+  propertyName: text("property_name"),
+  address: text("address"),
+  status: text("status").default("pending"), // pending, in_progress, completed
+  completedAt: timestamp("completed_at"),
+  estimatedArrival: text("estimated_arrival"), // HH:MM format
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSchedulePropertySchema = createInsertSchema(scheduleProperties).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertScheduleProperty = z.infer<typeof insertSchedulePropertySchema>;
+export type ScheduleProperty = typeof scheduleProperties.$inferSelect;
+
+// Tech Coverages - When a tech covers for another
+export const techCoverages = pgTable("tech_coverages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalTechId: varchar("original_tech_id").notNull(),
+  coveringTechId: varchar("covering_tech_id").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  propertyId: varchar("property_id"), // Optional: specific property coverage
+  propertyName: text("property_name"),
+  reason: text("reason"), // Vacation, Sick, Training, etc.
+  status: text("status").default("active"), // active, completed, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTechCoverageSchema = createInsertSchema(techCoverages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTechCoverage = z.infer<typeof insertTechCoverageSchema>;
+export type TechCoverage = typeof techCoverages.$inferSelect;
+
+// Tech Time Off - When a tech is on leave
+export const techTimeOff = pgTable("tech_time_off", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  technicianId: varchar("technician_id").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  reason: text("reason"), // Vacation, Sick, Personal, etc.
+  notes: text("notes"),
+  coveredByTechId: varchar("covered_by_tech_id"), // Who is covering
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTechTimeOffSchema = createInsertSchema(techTimeOff).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTechTimeOff = z.infer<typeof insertTechTimeOffSchema>;
+export type TechTimeOff = typeof techTimeOff.$inferSelect;

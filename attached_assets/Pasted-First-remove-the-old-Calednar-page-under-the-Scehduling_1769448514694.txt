@@ -1,0 +1,129 @@
+First remove the old Calednar page under the Scehduling section. and then create a new Calendar page. And This page displays a weekly calendar view for technicians with real-time status tracking synced from the Service Tech App in the field.
+
+Header Bar (Sticky at top)
+
+Title: "Schedule" (24px, bold)
+Week Navigation: ‹ [Jan 25 - Jan 31, 2026] › buttons to navigate weeks
+"Today" Button: Quick jump to current week
+Role Filter Tabs: [🔧 Service] [🛠️ Repair] [👔 Supervisors] - NO "All" option, default to Service selected. Each filter shows only that role type. Service = Blue (#0078D4), Repair = Orange (#FF8000), Supervisors = Teal (#17BEBB)
+Season Toggle: [☀️ Summer] [❄️ Winter] - Summer = Orange when active, Winter = Blue when active
+Add Coverage Button: Orange button "+ Add Coverage"
+Stats Row (3 cards)
+
+Active Techs (👥 icon)
+Total Stops This Week (📍 icon)
+Active Coverages (🔄 icon)
+Stats update dynamically based on selected role filter. Cards have subtle shadow and rounded corners (12px).
+
+Live Status Legend Bar
+
+Display below stats: Live Status: 🟢 Completed 🟡 In Progress ⚪ Pending | 🔄 Synced with Service Tech App
+
+Weekly Calendar Grid
+
+Column Headers:
+
+First column: "TECHNICIAN" label (260px wide, sticky)
+Days: SUN | MON | TUE | WED | THU | FRI | SAT with date numbers
+Today's date highlighted with blue circle background
+Last column: Action buttons column (~50px)
+Technician Rows contain:
+
+Technician Info Cell (sticky left):
+
+Avatar with initials (44px, rounded 12px, tech's assigned color)
+Green status dot = Active, Gray = On Leave
+Name (14px, bold) and Role label (11px, gray)
+Status badges: 🏖️ ON LEAVE (red) or 🔄 COVERING (teal)
+Three-dot menu (⋯) on hover: Add Coverage for Week, Set Time Off, View Full Schedule, View Profile
+Schedule Blocks:
+
+Background: Tech's color at 15% opacity with 3px left border
+Shows: "X stops", "8:00 AM - 4:00 PM", progress indicator 🟢 2/6
+"▼ Click to view properties" hint
+Three-dot menu on hover: Add Coverage, Extended Cover, Split Route, Edit Schedule, View Details
+Coverage Blocks (when covering for someone):
+
+Teal background at 15% opacity with 3px teal left border
+Shows: "🔄 Covering for [Initials]", original tech's name, "📍 [Property Name]"
+On Leave Cells:
+
+Striped diagonal pattern background (light red)
+"On Leave" text with "Covered by [Initials]" badge
+Empty Day Cells:
+
+Shows dashed "+" button on hover to quick-add schedule
+Row Action Column:
+
+Blue "+" button appears on row hover, opens "Add Schedule" modal
+Expandable Property List (Click on Schedule Block)
+
+When clicking a schedule block, it expands to show:
+
+Progress Bar with completion percentage (green fill)
+Counter: "2/6" completed
+Property List with Live Status circles:
+🟢 Green = Completed (shows "✓ 8:45 AM")
+🟡 Orange = In Progress (pulses/animates, shows "● In Progress")
+⚪ Gray = Pending (shows "ETA 11:30 AM")
+Each property shows: name, address (truncated), time/status
+Active Coverage This Week Section (Bottom)
+
+Card showing: "🔄 Active Coverage This Week" with "View All →" link
+
+Coverage Flow Display:
+
+[AP Avatar - faded] Aaron Petralia ──────→ [EG Avatar] Eric Gritzke
+     On Vacation                              Covering
+
+Property: Bear Creek MA | Duration: Jan 25 - Feb 1 | ● Active (green badge)
+Add Schedule Modal (Opens from + button)
+
+Header: Tech avatar, name, "Add Schedule" title, Close (×) button
+Form Fields:
+Select Day(s): Mon-Fri toggle buttons (multi-select)
+Number of Stops: Number input
+Start Time / End Time: Dropdown selectors
+Assign Properties: Scrollable checkbox list with property names and addresses
+Notes: Optional textarea
+Footer: Cancel button (gray outline), "Add Schedule" button (orange, disabled if validation fails)
+Color Palette
+
+Azure Blue: #0078D4 (primary, Service filter, Winter toggle, Today highlight)
+Vivid Orange: #FF8000 (CTAs, Summer toggle, Repair filter, Add buttons)
+Tropical Teal: #17BEBB (Supervisors filter, coverage indicators)
+Emerald Green: #22D69A (success, completed status, active badges)
+Red: #EF4444 (on leave badges, errors)
+White: #FFFFFF (cards, modals)
+Light Gray: #F8FAFC (page background)
+Medium Gray: #64748B (secondary text)
+Dark Gray: #0F172A (primary text)
+Filtering Behavior
+
+Service Filter: Shows only Service Technicians
+Repair Filter: Shows only Repair Technicians
+Supervisors Filter: Shows only Supervisors (zones instead of properties, inspections instead of stops)
+Coverage Features
+
+When someone is on leave: Their row shows striped "On Leave" cells with "Covered by [Initials]" badge
+When someone is covering: They have "🔄 COVERING" badge, coverage blocks appear below their regular schedule showing "Covering for [Name]" with property
+Supervisor Coverage: Supervisors can cover other supervisors, shows zones being covered
+Three-Dot Menu Options
+
+On Schedule Blocks: Add Coverage, Extended Cover, Split Route, Edit Schedule, View Details
+On Coverage Blocks: Edit Coverage, End Coverage (red/danger)
+On Technician Row: Add Coverage for Week, Set Time Off, View Full Schedule, View Profile
+Database Tables
+
+technicians (name, role, status, color)
+schedules (tech_id, date, stops, start_time, end_time)
+schedule_properties (schedule_id, property_id, status, completed_at)
+coverages (original_tech_id, covering_tech_id, start_date, end_date, property_id, reason)
+properties (name, address)
+Property status syncs real-time from Service Tech App: 'pending', 'in_progress', 'completed'
+
+Responsive Behavior
+
+Technician column stays sticky on horizontal scroll
+Header row stays sticky on vertical scroll
+Calendar horizontally scrollable on smaller screens

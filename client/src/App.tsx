@@ -43,6 +43,7 @@ import Emergencies from "@/pages/Emergencies";
 import Service from "@/pages/Service";
 import SupervisorTeams from "@/pages/SupervisorTeams";
 import RouteHistory from "@/pages/RouteHistory";
+import Calendar from "@/pages/Calendar";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import Reports from "@/pages/Reports";
 import Invoices from "@/pages/Invoices";
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/estimate-history" component={EstimateHistory} />
       <Route path="/service-repairs" component={ServiceRepairs} />
       <Route path="/scheduling" component={Scheduling} />
+      <Route path="/calendar" component={Calendar} />
       <Route path="/route-history" component={RouteHistory} />
       <Route path="/customers" component={Customers} />
       <Route path="/tech-services" component={ServiceTechs} />
