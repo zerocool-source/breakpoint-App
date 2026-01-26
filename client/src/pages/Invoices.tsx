@@ -22,7 +22,10 @@ import {
   ArrowLeft,
   XCircle,
   Link2,
-  Camera
+  Camera,
+  Mail,
+  Wrench,
+  User
 } from "lucide-react";
 import { Link } from "wouter";
 import type { Invoice } from "@shared/schema";
@@ -303,17 +306,16 @@ export default function Invoices() {
                 <thead>
                   <tr className="border-b border-slate-200">
                     <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Invoice #</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">QB Invoice #</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Customer</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Technicians</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Sent By</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Date Sent</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Due Date</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">QB #</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Customer / Work</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Technician</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Emailed</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Sent</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Due</th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-slate-500 uppercase">Amount</th>
                     <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">Status</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Date Paid</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Payment Method</th>
-                    <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">QB Sync</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Paid</th>
+                    <th className="text-center py-3 px-4 text-xs font-medium text-slate-500 uppercase">Photos</th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
                 </thead>
@@ -323,6 +325,14 @@ export default function Invoices() {
                     const StatusIcon = statusInfo.icon;
                     const photoCount = (invoice.attachments?.length || 0);
                     
+                    const lineItems = invoice.lineItems as Array<{ description?: string; productService?: string }> | null;
+                    const firstLineItem = lineItems?.[0];
+                    const workDescription = firstLineItem?.description || firstLineItem?.productService || "";
+                    const truncatedWork = workDescription.length > 50 ? workDescription.slice(0, 47) + "..." : workDescription;
+                    
+                    const techName = invoice.repairTechName || invoice.serviceTechName;
+                    const techType = invoice.repairTechName ? "Repair" : invoice.serviceTechName ? "Service" : null;
+                    
                     return (
                       <tr 
                         key={invoice.id} 
@@ -331,18 +341,10 @@ export default function Invoices() {
                         data-testid={`invoice-row-${invoice.id}`}
                       >
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <div>
-                              <span className="font-mono text-sm text-slate-900">{invoice.invoiceNumber}</span>
-                              {invoice.estimateNumber && (
-                                <p className="text-xs text-slate-500">From: {invoice.estimateNumber}</p>
-                              )}
-                            </div>
-                            {photoCount > 0 && (
-                              <div className="flex items-center gap-0.5 text-blue-600" title={`${photoCount} photo(s) attached`}>
-                                <Camera className="w-3.5 h-3.5" />
-                                <span className="text-xs font-medium">{photoCount}</span>
-                              </div>
+                          <div>
+                            <span className="font-mono text-sm text-slate-900">{invoice.invoiceNumber}</span>
+                            {invoice.estimateNumber && (
+                              <p className="text-xs text-slate-500">Est: {invoice.estimateNumber}</p>
                             )}
                           </div>
                         </td>
@@ -350,43 +352,62 @@ export default function Invoices() {
                           {invoice.quickbooksDocNumber ? (
                             <span className="font-mono text-sm text-blue-600">{invoice.quickbooksDocNumber}</span>
                           ) : invoice.quickbooksInvoiceId ? (
-                            <span className="text-xs text-slate-400 italic">Sync to fetch</span>
+                            <span className="text-xs text-slate-400 italic">Sync</span>
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 max-w-[280px]">
                           <div>
-                            <span className="text-sm text-slate-900">{invoice.customerName}</span>
+                            <span className="text-sm font-medium text-slate-900">{invoice.customerName}</span>
                             {invoice.propertyName && invoice.propertyName !== invoice.customerName && (
                               <div className="flex items-center gap-1 mt-0.5">
-                                <Building2 className="w-3 h-3 text-slate-400" />
-                                <span className="text-xs text-slate-500">{invoice.propertyName}</span>
+                                <Building2 className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                <span className="text-xs text-slate-500 truncate">{invoice.propertyName}</span>
+                              </div>
+                            )}
+                            {truncatedWork && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Wrench className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                                <span className="text-xs text-slate-600 italic truncate" title={workDescription}>
+                                  {truncatedWork}
+                                </span>
                               </div>
                             )}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="space-y-0.5">
-                            {invoice.serviceTechName && (
-                              <p className="text-xs text-slate-600">Service: {invoice.serviceTechName}</p>
-                            )}
-                            {invoice.repairTechName && (
-                              <p className="text-xs text-slate-600">Repair: {invoice.repairTechName}</p>
-                            )}
-                            {!invoice.serviceTechName && !invoice.repairTechName && (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </div>
+                          {techName ? (
+                            <div className="flex items-center gap-1.5">
+                              <User className="w-3.5 h-3.5 text-slate-400" />
+                              <div>
+                                <span className="text-sm text-slate-900">{techName}</span>
+                                {techType && (
+                                  <span className="text-xs text-slate-500 ml-1">({techType})</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
-                          <span className="text-sm text-slate-600">{invoice.sentByUserName || "—"}</span>
+                          {invoice.emailedTo ? (
+                            <div className="flex items-center gap-1.5" title={`Sent to ${invoice.emailedTo}`}>
+                              <Mail className="w-3.5 h-3.5 text-green-600" />
+                              <span className="text-xs text-slate-600 max-w-[120px] truncate">{invoice.emailedTo}</span>
+                            </div>
+                          ) : invoice.sentAt ? (
+                            <div className="flex items-center gap-1.5 text-slate-400">
+                              <Mail className="w-3.5 h-3.5" />
+                              <span className="text-xs">Not emailed</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-3 h-3 text-slate-400" />
-                            <span className="text-sm text-slate-600">{formatDate(invoice.sentAt)}</span>
-                          </div>
+                          <span className="text-sm text-slate-600">{formatDate(invoice.sentAt)}</span>
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-sm text-slate-600">{formatDate(invoice.dueDate)}</span>
@@ -407,33 +428,24 @@ export default function Invoices() {
                         </td>
                         <td className="py-3 px-4">
                           {invoice.paidAt ? (
-                            <span className="text-sm text-green-600">{formatDate(invoice.paidAt)}</span>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {invoice.paymentMethod ? (
-                            <Badge variant="outline" className="border-slate-300 text-slate-600 bg-slate-50 text-xs capitalize">
-                              {invoice.paymentMethod}
-                            </Badge>
+                            <div>
+                              <span className="text-sm text-green-600">{formatDate(invoice.paidAt)}</span>
+                              {invoice.paymentMethod && (
+                                <p className="text-xs text-slate-500 capitalize">{invoice.paymentMethod}</p>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {invoice.quickbooksSyncStatus === "synced" ? (
-                            <Badge variant="outline" className="border-green-300 text-green-700 bg-green-100 text-xs">
-                              Synced
-                            </Badge>
-                          ) : invoice.quickbooksSyncStatus === "failed" ? (
-                            <Badge variant="outline" className="border-red-300 text-red-700 bg-red-100 text-xs">
-                              Failed
+                          {photoCount > 0 ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
+                              <Camera className="w-3 h-3" />
+                              {photoCount}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="border-slate-300 text-slate-600 bg-slate-100 text-xs">
-                              Pending
-                            </Badge>
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">

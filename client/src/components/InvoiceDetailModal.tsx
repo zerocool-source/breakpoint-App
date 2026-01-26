@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -103,6 +103,9 @@ export function InvoiceDetailModal({ invoice, open, onClose }: InvoiceDetailModa
               <FileText className="w-6 h-6 text-blue-600" />
               Invoice Details
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              View invoice summary, job details, photos, and notes
+            </DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="summary" className="mt-4">
