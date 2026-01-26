@@ -400,18 +400,21 @@ export function registerQuickbooksRoutes(app: Express) {
         sentAt: new Date(),
       }).returning();
 
-      // Upload selected attachments to QuickBooks
+      // Upload selected attachments to QuickBooks using official Attachments API format
       let uploadedAttachments = 0;
+      const failedAttachments: string[] = [];
       const photosToUpload: string[] = selectedPhotos || [];
       const totalAttachments = photosToUpload.length;
       
       if (totalAttachments > 0) {
-        console.log(`=== Uploading ${totalAttachments} selected attachments to QuickBooks invoice ===`);
+        console.log(`=== Uploading ${totalAttachments} selected attachments to QuickBooks invoice ${qbInvoice.Id} ===`);
         
         // Upload each selected photo to QuickBooks
         for (let i = 0; i < photosToUpload.length; i++) {
           const photoUrl = photosToUpload[i];
-          console.log(`Processing photo ${i + 1}/${photosToUpload.length}: ${photoUrl}`);
+          const attachmentIndex = i + 1; // 1-based index for logging
+          
+          console.log(`Processing attachment ${attachmentIndex} of ${totalAttachments}: ${photoUrl}`);
           
           const photoData = await fetchPhotoData(photoUrl);
           if (photoData) {
@@ -421,15 +424,25 @@ export function registerQuickbooksRoutes(app: Express) {
               qbInvoice.Id,
               photoData.data,
               photoData.fileName,
-              photoData.contentType
+              photoData.contentType,
+              attachmentIndex,
+              totalAttachments
             );
             if (success) {
               uploadedAttachments++;
+            } else {
+              failedAttachments.push(photoData.fileName);
             }
+          } else {
+            console.error(`  - Could not fetch photo data from: ${photoUrl}`);
+            failedAttachments.push(photoUrl.split('/').pop() || 'unknown');
           }
         }
         
         console.log(`=== Attachment upload complete: ${uploadedAttachments}/${totalAttachments} successful ===`);
+        if (failedAttachments.length > 0) {
+          console.log(`=== Failed attachments: ${failedAttachments.join(', ')} ===`);
+        }
       }
       
       // If this is from an estimate, update it with the invoice ID
@@ -451,6 +464,10 @@ export function registerQuickbooksRoutes(app: Express) {
         localInvoiceNumber: ourInvoiceNumber,
         attachmentsUploaded: uploadedAttachments,
         totalAttachments: totalAttachments,
+        failedAttachments: failedAttachments,
+        message: totalAttachments > 0 
+          ? `Invoice Created! QB Invoice ID: ${qbInvoice.Id} | ${uploadedAttachments} attachment${uploadedAttachments !== 1 ? 's' : ''} uploaded${failedAttachments.length > 0 ? ` (${failedAttachments.length} failed)` : ''}`
+          : `Invoice Created! QB Invoice ID: ${qbInvoice.Id}`,
       });
     } catch (error) {
       console.error("QuickBooks invoice error:", error);
@@ -654,54 +671,73 @@ export async function getQuickBooksAccessToken(): Promise<{ accessToken: string;
 }
 
 // Helper function to upload attachments to QuickBooks and link them to an invoice
+// Following official QuickBooks Attachments API documentation format
 async function uploadAttachmentToQuickBooks(
   baseUrl: string, 
   accessToken: string, 
   invoiceId: string,
   fileData: Buffer,
   fileName: string,
-  contentType: string
+  contentType: string,
+  attachmentIndex: number,
+  totalAttachments: number
 ): Promise<boolean> {
   try {
-    console.log(`=== Uploading attachment to QuickBooks: ${fileName} ===`);
+    console.log(`Uploading attachment ${attachmentIndex} of ${totalAttachments}: ${fileName}`);
     
-    // Create multipart form data boundary
-    const boundary = `----FormBoundary${Date.now()}`;
+    // Create unique boundary string
+    const boundary = `Boundary_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    // Build the attachment metadata
+    // Format the index with leading zero (01, 02, etc.)
+    const indexStr = attachmentIndex.toString().padStart(2, '0');
+    
+    // Build the attachment metadata JSON per QuickBooks documentation
     const attachmentMetadata = {
       AttachableRef: [{
         EntityRef: {
           type: "Invoice",
           value: invoiceId
-        }
+        },
+        IncludeOnSend: true
       }],
       FileName: fileName,
       ContentType: contentType
     };
     
-    // Build multipart body
+    // Base64 encode the file content
+    const fileBase64 = fileData.toString('base64');
+    
+    // Build multipart body following official QuickBooks format:
+    // Part 1: Metadata with Content-Transfer-Encoding: 8bit
+    // Part 2: File content with Content-Transfer-Encoding: base64
+    const CRLF = '\r\n';
+    
     const metadataPart = 
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file_metadata_0"\r\n` +
-      `Content-Type: application/json\r\n\r\n` +
-      JSON.stringify(attachmentMetadata) + `\r\n`;
+      `--${boundary}${CRLF}` +
+      `Content-Disposition: form-data; name="file_metadata_${indexStr}"; filename="attachment.json"${CRLF}` +
+      `Content-Type: application/json; charset=UTF-8${CRLF}` +
+      `Content-Transfer-Encoding: 8bit${CRLF}` +
+      `${CRLF}` +
+      JSON.stringify(attachmentMetadata) +
+      `${CRLF}`;
     
     const filePart = 
-      `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="file_content_0"; filename="${fileName}"\r\n` +
-      `Content-Type: ${contentType}\r\n\r\n`;
+      `--${boundary}${CRLF}` +
+      `Content-Disposition: form-data; name="file_content_${indexStr}"; filename="${fileName}"${CRLF}` +
+      `Content-Type: ${contentType}${CRLF}` +
+      `Content-Transfer-Encoding: base64${CRLF}` +
+      `${CRLF}` +
+      fileBase64 +
+      `${CRLF}`;
     
-    const endBoundary = `\r\n--${boundary}--\r\n`;
+    const endBoundary = `--${boundary}--${CRLF}`;
     
-    // Combine parts into a single buffer
-    const bodyParts = [
-      Buffer.from(metadataPart, 'utf-8'),
-      Buffer.from(filePart, 'utf-8'),
-      fileData,
-      Buffer.from(endBoundary, 'utf-8')
-    ];
-    const body = Buffer.concat(bodyParts);
+    // Combine all parts
+    const body = metadataPart + filePart + endBoundary;
+    
+    console.log(`  - Posting to: ${baseUrl}/upload`);
+    console.log(`  - File size: ${fileData.length} bytes`);
+    console.log(`  - Content-Type: ${contentType}`);
     
     const uploadResponse = await fetch(`${baseUrl}/upload`, {
       method: "POST",
@@ -713,14 +749,16 @@ async function uploadAttachmentToQuickBooks(
       body: body,
     });
     
+    console.log(`  - Response status: ${uploadResponse.status}`);
+    
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error(`Failed to upload attachment ${fileName}:`, errorText);
+      console.error(`  - FAILED to upload attachment ${fileName}:`, errorText);
       return false;
     }
     
     const uploadData = await uploadResponse.json();
-    console.log(`Attachment ${fileName} uploaded successfully:`, uploadData);
+    console.log(`  - SUCCESS: Attachment ${fileName} uploaded, ID: ${uploadData?.AttachableResponse?.[0]?.Attachable?.Id || 'unknown'}`);
     return true;
   } catch (error) {
     console.error(`Error uploading attachment ${fileName}:`, error);
