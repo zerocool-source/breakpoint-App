@@ -7,6 +7,39 @@ import { ObjectStorageService } from "../replit_integrations/object_storage/obje
 const QUICKBOOKS_AUTH_URL = "https://appcenter.intuit.com/connect/oauth2";
 const QUICKBOOKS_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 
+// Module-level payment notification system
+export interface PaymentNotification {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  amount: number;
+  paymentMethod: string;
+  timestamp: Date;
+}
+
+const paymentNotifications: PaymentNotification[] = [];
+const sseClients: Set<Response> = new Set();
+
+export function broadcastPaymentNotification(notification: PaymentNotification) {
+  const message = JSON.stringify({ type: "payment_received", data: notification });
+  sseClients.forEach(client => {
+    try {
+      client.write(`data: ${message}\n\n`);
+    } catch (error) {
+      console.error("Error sending SSE message:", error);
+      sseClients.delete(client);
+    }
+  });
+  
+  // Store notification (keep last 50)
+  paymentNotifications.unshift(notification);
+  if (paymentNotifications.length > 50) {
+    paymentNotifications.pop();
+  }
+  
+  console.log(`Payment notification broadcast: ${notification.customerName} paid $${notification.amount / 100} for ${notification.invoiceNumber}`);
+}
+
 const SCOPES = [
   "com.intuit.quickbooks.accounting",
   "openid",
@@ -629,6 +662,32 @@ export function registerQuickbooksRoutes(app: Express) {
   // In production, this should be stored in Redis or database with TTL
   const processedWebhookEvents = new Set<string>();
   
+  // SSE endpoint for payment notifications
+  app.get("/api/quickbooks/payment-events", (req: Request, res: Response) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.flushHeaders();
+    
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+    
+    sseClients.add(res);
+    console.log(`SSE client connected. Total clients: ${sseClients.size}`);
+    
+    // Remove client on disconnect
+    req.on("close", () => {
+      sseClients.delete(res);
+      console.log(`SSE client disconnected. Total clients: ${sseClients.size}`);
+    });
+  });
+  
+  // Endpoint to get recent payment notifications
+  app.get("/api/quickbooks/recent-payments", (_req: Request, res: Response) => {
+    res.json({ payments: paymentNotifications.slice(0, 10) });
+  });
+  
   // QuickBooks Webhooks endpoint for receiving payment notifications
   // This endpoint needs to be registered in QuickBooks Developer Portal
   // Webhook verifier token should be set in environment as QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN
@@ -1115,11 +1174,24 @@ async function processPaymentWebhook(paymentId: string, realmId: string): Promis
                   paidAmount: totalPaidFromQB, // Use computed value from QB balance
                   qbPaymentId: paymentId, // Track most recent payment
                   paymentMethod: paymentMethod,
+                  amountDue: invoiceBalance,
                   updatedAt: new Date(),
                 })
                 .where(eq(invoices.id, invoice.id));
               
               console.log(`Invoice ${invoice.id} updated - status: ${newStatus}`);
+              
+              // Broadcast real-time payment notification if paid
+              if (isFullyPaid) {
+                broadcastPaymentNotification({
+                  id: paymentId,
+                  invoiceNumber: invoice.invoiceNumber || "Unknown",
+                  customerName: invoice.customerName || "Unknown Customer",
+                  amount: invoiceTotal,
+                  paymentMethod: paymentMethod,
+                  timestamp: new Date(),
+                });
+              }
               
               // Also update the linked estimate to "paid" if invoice is fully paid
               if (invoice.estimateId && isFullyPaid) {

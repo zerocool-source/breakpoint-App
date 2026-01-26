@@ -1,5 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { PaymentNotifications } from "../PaymentNotifications";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </main>
       </div>
+      <PaymentNotifications />
     </div>
   );
 }
