@@ -519,33 +519,36 @@ function AddPropertyModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-slate-900 border-slate-700">
-        <DialogHeader className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-4 rounded-t-lg">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
+      <DialogContent className="sm:max-w-[500px] p-0 gap-0 bg-white border-slate-200">
+        <DialogHeader className="px-6 py-4 border-b border-slate-100">
+          <DialogTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-blue-600" />
             Add Property to {technician.firstName}
           </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
+            Search and select a property to assign to this technician
+          </DialogDescription>
         </DialogHeader>
         
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-5">
           {/* Property Search */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2">Search Properties</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Search Properties</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search by property name..."
                 value={propertySearch}
                 onChange={(e) => setPropertySearch(e.target.value)}
-                className="pl-9 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                className="pl-9 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
                 data-testid="input-search-property-add"
               />
             </div>
             
             {propertySearch && !selectedPropertyId && (
-              <div className="mt-2 max-h-40 overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg">
+              <div className="mt-2 max-h-40 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-sm">
                 {filteredCustomers.length === 0 ? (
-                  <p className="p-3 text-sm text-slate-400 text-center">No properties found</p>
+                  <p className="p-3 text-sm text-slate-500 text-center">No properties found</p>
                 ) : (
                   filteredCustomers.slice(0, 8).map(customer => (
                     <button
@@ -554,12 +557,12 @@ function AddPropertyModal({
                         setSelectedPropertyId(customer.id);
                         setPropertySearch(customer.name);
                       }}
-                      className="w-full text-left px-4 py-3 hover:bg-slate-700 border-b border-slate-700 last:border-b-0 transition-colors"
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-b-0 transition-colors"
                       data-testid={`select-property-${customer.id}`}
                     >
-                      <p className="font-medium text-sm text-white">{customer.name}</p>
+                      <p className="font-medium text-sm text-slate-900">{customer.name}</p>
                       {customer.address && (
-                        <p className="text-xs text-slate-400">{customer.address}</p>
+                        <p className="text-xs text-slate-500">{customer.address}</p>
                       )}
                     </button>
                   ))
@@ -570,12 +573,12 @@ function AddPropertyModal({
 
           {/* Selected Property */}
           {selectedCustomer && (
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-600">
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">{selectedCustomer.name}</p>
+                  <p className="font-medium text-slate-900">{selectedCustomer.name}</p>
                   {selectedCustomer.address && (
-                    <p className="text-sm text-slate-400">{selectedCustomer.address}</p>
+                    <p className="text-sm text-slate-600">{selectedCustomer.address}</p>
                   )}
                 </div>
                 <Button 
@@ -585,7 +588,7 @@ function AddPropertyModal({
                     setSelectedPropertyId("");
                     setPropertySearch("");
                   }}
-                  className="text-slate-400 hover:text-white"
+                  className="text-slate-500 hover:text-slate-700 hover:bg-blue-100"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -595,16 +598,16 @@ function AddPropertyModal({
 
           {/* Season Selection */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2">Season</label>
-            <div className="flex gap-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Season</label>
+            <div className="flex gap-3">
               <Button
                 variant="outline"
                 onClick={() => setSeason("summer")}
                 className={cn(
-                  "flex-1 gap-2",
+                  "flex-1 gap-2 h-11",
                   season === "summer" 
-                    ? "bg-amber-500/20 border-amber-500 text-amber-400" 
-                    : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"
+                    ? "bg-amber-50 border-amber-400 text-amber-700 hover:bg-amber-100" 
+                    : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
                 )}
               >
                 <Sun className="w-4 h-4" />
@@ -614,10 +617,10 @@ function AddPropertyModal({
                 variant="outline"
                 onClick={() => setSeason("winter")}
                 className={cn(
-                  "flex-1 gap-2",
+                  "flex-1 gap-2 h-11",
                   season === "winter" 
-                    ? "bg-blue-500/20 border-blue-500 text-blue-400" 
-                    : "bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700"
+                    ? "bg-blue-50 border-blue-400 text-blue-700 hover:bg-blue-100" 
+                    : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
                 )}
               >
                 <Snowflake className="w-4 h-4" />
@@ -628,17 +631,17 @@ function AddPropertyModal({
 
           {/* Visit Days */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-2">Visit Days</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Visit Days</label>
             <div className="flex gap-2">
               {ALL_DAYS.map(day => (
                 <button
                   key={day}
                   onClick={() => toggleDay(day)}
                   className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border transition-all",
+                    "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-all",
                     selectedDays.includes(day)
-                      ? "bg-orange-500 text-white border-orange-500"
-                      : "bg-slate-800 text-slate-400 border-slate-600 hover:bg-slate-700"
+                      ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                      : "bg-white text-slate-500 border-slate-300 hover:border-slate-400 hover:bg-slate-50"
                   )}
                   data-testid={`toggle-day-${day.toLowerCase()}`}
                 >
@@ -648,18 +651,18 @@ function AddPropertyModal({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <Button 
-              variant="ghost" 
+              variant="outline" 
               onClick={onClose}
-              className="text-slate-300 hover:text-white hover:bg-slate-700"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50"
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit}
               disabled={!selectedPropertyId}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-confirm-add-property"
             >
               Add Property
