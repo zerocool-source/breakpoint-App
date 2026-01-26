@@ -521,7 +521,10 @@ export function registerQuickbooksRoutes(app: Express) {
         console.log(`Sending invoice ${qbInvoice.Id} to: ${customerEmail}`);
         
         try {
-          const sendResponse = await fetch(`${baseUrl}/invoice/${qbInvoice.Id}/send?sendTo=${encodeURIComponent(customerEmail)}`, {
+          const sendUrl = `${baseUrl}/invoice/${qbInvoice.Id}/send?sendTo=${encodeURIComponent(customerEmail)}`;
+          console.log("Send invoice URL:", sendUrl);
+          
+          const sendResponse = await fetch(sendUrl, {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${accessToken}`,
@@ -529,6 +532,10 @@ export function registerQuickbooksRoutes(app: Express) {
               "Content-Type": "application/octet-stream",
             },
           });
+          
+          console.log("Send invoice response status:", sendResponse.status);
+          const sendResponseText = await sendResponse.text();
+          console.log("Send invoice response body:", sendResponseText);
           
           if (sendResponse.ok) {
             emailSent = true;
