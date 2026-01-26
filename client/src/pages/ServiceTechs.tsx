@@ -1631,7 +1631,15 @@ function PropertyCard({
               {activeCoverage && (
                 <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700 flex items-center gap-1">
                   <Shield className="w-3 h-3" />
-                  {activeCoverage.coverageType === "extended_cover" ? "Covering" : "Split"}
+                  {activeCoverage.coverageType === "extended_cover" ? (
+                    <>
+                      Covered by {activeCoverage.coveringTechnicianName || "Unknown"}
+                    </>
+                  ) : (
+                    <>
+                      Split with {activeCoverage.coveringTechnicianName || "Unknown"}
+                    </>
+                  )}
                   {activeCoverage.startDate && activeCoverage.endDate && (
                     <span className="text-green-600">
                       ({format(new Date(activeCoverage.startDate), "M/d")} - {format(new Date(activeCoverage.endDate), "M/d")})
