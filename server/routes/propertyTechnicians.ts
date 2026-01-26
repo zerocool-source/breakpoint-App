@@ -336,14 +336,19 @@ export function registerPropertyTechnicianRoutes(app: any) {
   app.patch("/api/route-overrides/:id", async (req: any, res: any) => {
     try {
       const { id } = req.params;
-      const { coveringTechnicianId, coveringTechnicianName } = req.body;
+      const { coveringTechnicianId, coveringTechnicianName, startDate, endDate, notes, splitDays } = req.body;
+      
+      const updateData: any = {};
+      if (coveringTechnicianId !== undefined) updateData.coveringTechnicianId = coveringTechnicianId;
+      if (coveringTechnicianName !== undefined) updateData.coveringTechnicianName = coveringTechnicianName;
+      if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
+      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      if (notes !== undefined) updateData.notes = notes;
+      if (splitDays !== undefined) updateData.splitDays = splitDays;
       
       const [updated] = await db
         .update(routeOverrides)
-        .set({
-          coveringTechnicianId,
-          coveringTechnicianName,
-        })
+        .set(updateData)
         .where(eq(routeOverrides.id, id))
         .returning();
       

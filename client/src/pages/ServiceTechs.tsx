@@ -1059,6 +1059,129 @@ function SplitRouteModal({
 }
 
 // Edit Schedule Modal
+// Edit Coverage Modal Component
+function EditCoverageModal({
+  open,
+  onClose,
+  coverage,
+  onSave,
+  onDelete,
+}: {
+  open: boolean;
+  onClose: () => void;
+  coverage: RouteOverride | null;
+  onSave: (data: { startDate?: string; endDate?: string; notes?: string }) => void;
+  onDelete: () => void;
+}) {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (coverage) {
+      setStartDate(coverage.startDate ? coverage.startDate.split("T")[0] : "");
+      setEndDate(coverage.endDate ? coverage.endDate.split("T")[0] : "");
+      setNotes(coverage.notes || "");
+    }
+  }, [coverage]);
+
+  const handleSave = () => {
+    onSave({ startDate, endDate, notes });
+    onClose();
+  };
+
+  const handleDelete = () => {
+    onDelete();
+    onClose();
+  };
+
+  if (!coverage) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[450px] p-0 gap-0 bg-white border-slate-200">
+        <DialogHeader className="px-6 py-4 border-b border-slate-100">
+          <DialogTitle className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-green-600" />
+            Edit Coverage
+          </DialogTitle>
+          <DialogDescription className="text-sm text-slate-500">
+            Modify or remove coverage for {coverage.propertyName || "this property"}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="p-6 space-y-4">
+          {/* Coverage Type Info */}
+          <div className="bg-green-50 p-3 rounded-lg">
+            <p className="font-medium text-green-800">
+              {coverage.coverageType === "extended_cover" ? "Extended Cover" : "Split Route"}
+            </p>
+            <p className="text-sm text-green-700">
+              {coverage.coverageType === "extended_cover" 
+                ? `Covered by ${coverage.coveringTechnicianName || "Unknown"}`
+                : `Split with ${coverage.coveringTechnicianName || "Unknown"}`
+              }
+            </p>
+          </div>
+
+          {/* Date Range */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full h-10 px-3 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full h-10 px-3 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add any notes about this coverage..."
+              rows={2}
+              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-slate-100 flex justify-between">
+          <Button
+            variant="outline"
+            onClick={handleDelete}
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Remove Coverage
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function EditScheduleModal({
   open,
   onClose,
@@ -1501,6 +1624,8 @@ function PropertyCard({
   onSplitRoute,
   onEditSchedule,
   activeCoverage,
+  onEditCoverage,
+  onRemoveCoverage,
 }: {
   property: TechnicianPropertyWithSchedule;
   globalSeason: "summer" | "winter";
@@ -1511,6 +1636,8 @@ function PropertyCard({
   onSplitRoute: () => void;
   onEditSchedule: () => void;
   activeCoverage?: RouteOverride | null;
+  onEditCoverage?: (coverage: RouteOverride) => void;
+  onRemoveCoverage?: (coverageId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -1629,23 +1756,43 @@ function PropertyCard({
                 {property.activeSeason === "summer" ? "Summer" : "Winter"}
               </span>
               {activeCoverage && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700 flex items-center gap-1">
-                  <Shield className="w-3 h-3" />
-                  {activeCoverage.coverageType === "extended_cover" ? (
-                    <>
-                      Covered by {activeCoverage.coveringTechnicianName || "Unknown"}
-                    </>
-                  ) : (
-                    <>
-                      Split with {activeCoverage.coveringTechnicianName || "Unknown"}
-                    </>
-                  )}
-                  {activeCoverage.startDate && activeCoverage.endDate && (
-                    <span className="text-green-600">
-                      ({format(new Date(activeCoverage.startDate), "M/d")} - {format(new Date(activeCoverage.endDate), "M/d")})
-                    </span>
-                  )}
-                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700 flex items-center gap-1 hover:bg-green-200 transition-colors cursor-pointer">
+                      <Shield className="w-3 h-3" />
+                      {activeCoverage.coverageType === "extended_cover" ? (
+                        <>
+                          Covered by {activeCoverage.coveringTechnicianName || "Unknown"}
+                        </>
+                      ) : (
+                        <>
+                          Split with {activeCoverage.coveringTechnicianName || "Unknown"}
+                        </>
+                      )}
+                      {activeCoverage.startDate && activeCoverage.endDate && (
+                        <span className="text-green-600">
+                          ({format(new Date(activeCoverage.startDate), "M/d")} - {format(new Date(activeCoverage.endDate), "M/d")})
+                        </span>
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    <DropdownMenuItem 
+                      onClick={() => onEditCoverage?.(activeCoverage)}
+                      className="text-sm"
+                    >
+                      <Pencil className="w-3.5 h-3.5 mr-2" />
+                      Edit Coverage
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onRemoveCoverage?.(activeCoverage.id)}
+                      className="text-sm text-red-600 focus:text-red-600"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      Remove Coverage
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
             
@@ -1909,10 +2056,42 @@ function PropertiesTabContent({
     },
   });
 
-  // State for Extended Cover, Split Route, and Edit Schedule modals
+  // State for Extended Cover, Split Route, Edit Schedule, and Edit Coverage modals
   const [extendedCoverProperty, setExtendedCoverProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
   const [splitRouteProperty, setSplitRouteProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
   const [editScheduleProperty, setEditScheduleProperty] = useState<TechnicianPropertyWithSchedule | null>(null);
+  const [editCoverageData, setEditCoverageData] = useState<RouteOverride | null>(null);
+
+  // Mutation to remove coverage
+  const removeCoverageMutation = useMutation({
+    mutationFn: async (coverageId: string) => {
+      const res = await fetch(`/api/route-overrides/${coverageId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to remove coverage");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/route-overrides/technician/${technician.id}`] });
+    },
+  });
+
+  // Mutation to update coverage
+  const updateCoverageMutation = useMutation({
+    mutationFn: async ({ coverageId, data }: { coverageId: string; data: { startDate?: string; endDate?: string; coveringTechnicianId?: string; splitDays?: string[]; notes?: string } }) => {
+      const res = await fetch(`/api/route-overrides/${coverageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update coverage");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/route-overrides/technician/${technician.id}`] });
+      setEditCoverageData(null);
+    },
+  });
 
   // Fetch route overrides for this technician's properties
   const { data: routeOverridesData } = useQuery<{ routeOverrides: RouteOverride[] }>({
@@ -2011,6 +2190,8 @@ function PropertiesTabContent({
               onSplitRoute={() => setSplitRouteProperty(property)}
               onEditSchedule={() => setEditScheduleProperty(property)}
               activeCoverage={getActiveCoverage(property.propertyId)}
+              onEditCoverage={(coverage) => setEditCoverageData(coverage)}
+              onRemoveCoverage={(coverageId) => removeCoverageMutation.mutate(coverageId)}
             />
           ))}
         </div>
@@ -2071,6 +2252,26 @@ function PropertiesTabContent({
               summerDays,
               winterDays,
             });
+          }
+        }}
+      />
+
+      {/* Edit Coverage Modal */}
+      <EditCoverageModal
+        open={!!editCoverageData}
+        onClose={() => setEditCoverageData(null)}
+        coverage={editCoverageData}
+        onSave={(data) => {
+          if (editCoverageData) {
+            updateCoverageMutation.mutate({
+              coverageId: editCoverageData.id,
+              data,
+            });
+          }
+        }}
+        onDelete={() => {
+          if (editCoverageData) {
+            removeCoverageMutation.mutate(editCoverageData.id);
           }
         }}
       />
