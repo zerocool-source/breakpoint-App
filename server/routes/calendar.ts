@@ -1,7 +1,11 @@
 import { Express, Request, Response } from "express";
 import { db } from "../db";
-import { techSchedules, scheduleProperties, techCoverages, techTimeOff } from "@shared/schema";
+import { 
+  techSchedules, scheduleProperties, techCoverages, techTimeOff, customers,
+  insertTechScheduleSchema, insertTechCoverageSchema, insertTechTimeOffSchema
+} from "@shared/schema";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
+import { z } from "zod";
 
 export function registerCalendarRoutes(app: Express) {
   app.get("/api/tech-schedules", async (req: Request, res: Response) => {
@@ -44,6 +48,10 @@ export function registerCalendarRoutes(app: Express) {
     try {
       const { technicianId, dates, startTime, endTime, stopCount, notes, propertyIds } = req.body;
       
+      if (!technicianId || !dates || !Array.isArray(dates) || dates.length === 0) {
+        return res.status(400).json({ error: "technicianId and dates array are required" });
+      }
+      
       const createdSchedules = [];
       
       for (const dateStr of dates) {
@@ -61,9 +69,14 @@ export function registerCalendarRoutes(app: Express) {
         
         if (propertyIds && propertyIds.length > 0) {
           for (let i = 0; i < propertyIds.length; i++) {
+            const customer = await db.select().from(customers).where(eq(customers.id, propertyIds[i])).limit(1);
+            const customerData = customer[0];
+            
             await db.insert(scheduleProperties).values({
               scheduleId: schedule.id,
               propertyId: propertyIds[i],
+              propertyName: customerData?.name || null,
+              address: customerData?.address || null,
               sortOrder: i,
               status: "pending",
             });
@@ -110,6 +123,16 @@ export function registerCalendarRoutes(app: Express) {
     try {
       const { originalTechId, coveringTechId, startDate, endDate, propertyId, propertyName, reason } = req.body;
       
+      if (!originalTechId || !coveringTechId || !startDate || !endDate) {
+        return res.status(400).json({ error: "originalTechId, coveringTechId, startDate, and endDate are required" });
+      }
+      
+      let resolvedPropertyName = propertyName;
+      if (propertyId && !propertyName) {
+        const customer = await db.select().from(customers).where(eq(customers.id, propertyId)).limit(1);
+        resolvedPropertyName = customer[0]?.name || null;
+      }
+      
       const [coverage] = await db
         .insert(techCoverages)
         .values({
@@ -118,7 +141,7 @@ export function registerCalendarRoutes(app: Express) {
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           propertyId,
-          propertyName,
+          propertyName: resolvedPropertyName,
           reason,
           status: "active",
         })
@@ -178,6 +201,10 @@ export function registerCalendarRoutes(app: Express) {
   app.post("/api/tech-time-off", async (req: Request, res: Response) => {
     try {
       const { technicianId, startDate, endDate, reason, notes, coveredByTechId } = req.body;
+      
+      if (!technicianId || !startDate || !endDate) {
+        return res.status(400).json({ error: "technicianId, startDate, and endDate are required" });
+      }
       
       const [timeOff] = await db
         .insert(techTimeOff)
