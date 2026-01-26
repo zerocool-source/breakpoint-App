@@ -900,25 +900,33 @@ export function registerQuickbooksRoutes(app: Express) {
       console.log(`Using QuickBooks API: ${isSandbox ? 'SANDBOX' : 'PRODUCTION'}`);
       console.log(`Realm ID: ${realmId}`);
 
-      // Get all invoices that are not yet paid
-      const unpaidInvoices = await db
+      // Get all invoices that need syncing:
+      // - Not yet paid (need payment status check)
+      // - OR missing QuickBooks DocNumber (need to fetch it)
+      const invoicesToSync = await db
         .select()
         .from(invoices)
         .where(
           and(
-            ne(invoices.status, "paid"),
-            isNotNull(invoices.quickbooksInvoiceId)
+            isNotNull(invoices.quickbooksInvoiceId),
+            sql`(${invoices.status} != 'paid' OR ${invoices.quickbooksDocNumber} IS NULL)`
           )
         );
 
-      console.log(`Found ${unpaidInvoices.length} unpaid invoices with QuickBooks IDs to check:`);
-      for (const inv of unpaidInvoices) {
-        console.log(`  - ${inv.invoiceNumber} (QB ID: ${inv.quickbooksInvoiceId}, Local ID: ${inv.id}, Status: ${inv.status}, Total: $${(inv.totalAmount || 0)/100})`);
+      // Also get list of invoices specifically missing DocNumber for logging
+      const missingDocNumber = invoicesToSync.filter(inv => !inv.quickbooksDocNumber);
+      const unpaidInvoices = invoicesToSync.filter(inv => inv.status !== "paid");
+
+      console.log(`Found ${invoicesToSync.length} invoices to sync:`);
+      console.log(`  - ${unpaidInvoices.length} unpaid (need payment check)`);
+      console.log(`  - ${missingDocNumber.length} missing QB DocNumber`);
+      for (const inv of invoicesToSync) {
+        console.log(`  - ${inv.invoiceNumber} (QB ID: ${inv.quickbooksInvoiceId}, DocNumber: ${inv.quickbooksDocNumber || 'MISSING'}, Status: ${inv.status}, Total: $${(inv.totalAmount || 0)/100})`);
       }
 
       let updatedCount = 0;
 
-      for (const invoice of unpaidInvoices) {
+      for (const invoice of invoicesToSync) {
         try {
           console.log(`\n--- Checking invoice ${invoice.invoiceNumber} (QB ID: ${invoice.quickbooksInvoiceId}) ---`);
           
@@ -946,6 +954,13 @@ export function registerQuickbooksRoutes(app: Express) {
           console.log(`  - TotalAmt: ${qbInvoice.TotalAmt}`);
           console.log(`  - Balance: ${qbInvoice.Balance}`);
           console.log(`  - CustomerRef: ${qbInvoice.CustomerRef?.name || qbInvoice.CustomerRef?.value}`);
+          
+          // Check if we need to update the DocNumber
+          const qbDocNumber = qbInvoice.DocNumber;
+          const needsDocNumberUpdate = qbDocNumber && !invoice.quickbooksDocNumber;
+          if (needsDocNumberUpdate) {
+            console.log(`  - DocNumber missing locally, will update to: ${qbDocNumber}`);
+          }
           
           const qbBalance = parseFloat(qbInvoice.Balance || "0");
           const qbTotal = parseFloat(qbInvoice.TotalAmt || "0");
@@ -1019,6 +1034,7 @@ export function registerQuickbooksRoutes(app: Express) {
                 paidAt: isFullyPaid ? (paidAt || new Date()) : null,
                 paymentMethod: paymentMethod,
                 amountDue: balance,
+                quickbooksDocNumber: needsDocNumberUpdate ? qbDocNumber : invoice.quickbooksDocNumber,
                 updatedAt: new Date(),
               })
               .where(eq(invoices.id, invoice.id));
@@ -1028,6 +1044,9 @@ export function registerQuickbooksRoutes(app: Express) {
             console.log(`  - Paid Amount: $${paidAmount/100}`);
             console.log(`  - Payment Method: ${paymentMethod}`);
             console.log(`  - Paid At: ${paidAt || new Date()}`);
+            if (needsDocNumberUpdate) {
+              console.log(`  - QB DocNumber: ${qbDocNumber}`);
+            }
 
             // If fully paid, also update the estimate
             if (isFullyPaid && invoice.estimateId) {
@@ -1042,8 +1061,20 @@ export function registerQuickbooksRoutes(app: Express) {
             }
 
             updatedCount++;
+          } else if (needsDocNumberUpdate) {
+            // Even if no payment, update DocNumber if missing
+            console.log(`\nUpdating invoice ${invoice.invoiceNumber} with QB DocNumber only...`);
+            await db
+              .update(invoices)
+              .set({
+                quickbooksDocNumber: qbDocNumber,
+                updatedAt: new Date(),
+              })
+              .where(eq(invoices.id, invoice.id));
+            console.log(`  - QB DocNumber updated to: ${qbDocNumber}`);
+            updatedCount++;
           } else {
-            console.log(`No payment detected - invoice balance equals total`);
+            console.log(`No payment detected and DocNumber already set - no update needed`);
           }
         } catch (error) {
           console.error(`Error checking invoice ${invoice.invoiceNumber}:`, error);
@@ -1051,9 +1082,9 @@ export function registerQuickbooksRoutes(app: Express) {
       }
 
       console.log(`\n=== MANUAL PAYMENT SYNC COMPLETE ===`);
-      console.log(`Updated ${updatedCount} of ${unpaidInvoices.length} invoices`);
+      console.log(`Updated ${updatedCount} of ${invoicesToSync.length} invoices`);
 
-      res.json({ success: true, updated: updatedCount, checked: unpaidInvoices.length });
+      res.json({ success: true, updated: updatedCount, checked: invoicesToSync.length });
     } catch (error: any) {
       console.error("Error syncing payments:", error);
       res.status(500).json({ success: false, error: error.message });

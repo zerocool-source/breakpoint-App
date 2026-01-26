@@ -300,6 +300,7 @@ export default function Invoices() {
                 <thead>
                   <tr className="border-b border-slate-200">
                     <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Invoice #</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">QB Invoice #</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Customer</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Technicians</th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-slate-500 uppercase">Sent By</th>
@@ -328,6 +329,15 @@ export default function Invoices() {
                           <span className="font-mono text-sm text-slate-900">{invoice.invoiceNumber}</span>
                           {invoice.estimateNumber && (
                             <p className="text-xs text-slate-500">From: {invoice.estimateNumber}</p>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {invoice.quickbooksDocNumber ? (
+                            <span className="font-mono text-sm text-blue-600">{invoice.quickbooksDocNumber}</span>
+                          ) : invoice.quickbooksInvoiceId ? (
+                            <span className="text-xs text-slate-400 italic">Sync to fetch</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </td>
                         <td className="py-3 px-4">
