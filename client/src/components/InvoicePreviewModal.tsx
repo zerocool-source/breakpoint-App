@@ -315,9 +315,12 @@ export function InvoicePreviewModal({
       // Reset customer selection - try to match by name
       setSelectedCustomerId("");
       
-      // Auto-select first billing contact if available
+      // Auto-select email: first from billing contacts, then from estimate
       if (billingContacts.length > 0) {
         setSelectedEmail(billingContacts[0].email);
+      } else if (estimate.customerEmail) {
+        // Use estimate's customer email if no billing contacts
+        setManualEmail(estimate.customerEmail);
       }
     }
   }, [estimate, open, billingContacts]);
@@ -822,6 +825,81 @@ export function InvoicePreviewModal({
                     <p className="text-sm text-[#64748B]">{COMPANY_INFO.address}</p>
                     <p className="text-sm text-[#64748B]">{COMPANY_INFO.cityStateZip}</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Send Invoice To - Email Section */}
+              <div className={`bg-white rounded-lg border p-4 ${!finalEmail ? 'border-orange-300 bg-orange-50' : 'border-[#E2E8F0]'}`}>
+                <h3 className="font-semibold text-[#1E293B] mb-3 flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Send Invoice To
+                  <span className="text-red-500">*</span>
+                </h3>
+                <div className="space-y-3">
+                  {billingContacts.length > 0 ? (
+                    <div>
+                      <Label className="text-sm text-[#64748B]">Select Billing Contact</Label>
+                      <Select 
+                        value={selectedEmail} 
+                        onValueChange={(value) => {
+                          if (value === "manual") {
+                            setSelectedEmail("");
+                          } else {
+                            setSelectedEmail(value);
+                            setManualEmail("");
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="mt-1" data-testid="select-billing-email">
+                          <SelectValue placeholder="Select a billing contact..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {billingContacts.map((contact) => (
+                            <SelectItem key={contact.id} value={contact.email}>
+                              <span className="flex items-center gap-2">
+                                <Users className="w-3 h-3" />
+                                {contact.name} - {contact.email}
+                              </span>
+                            </SelectItem>
+                          ))}
+                          <SelectItem value="manual">
+                            <span className="flex items-center gap-2 text-[#0078D4]">
+                              <Mail className="w-3 h-3" />
+                              Enter different email...
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                  
+                  {(billingContacts.length === 0 || selectedEmail === "") && (
+                    <div>
+                      <Label className="text-sm text-[#64748B]">
+                        {billingContacts.length === 0 ? "Email Address" : "Enter Email Address"}
+                      </Label>
+                      <Input
+                        type="email"
+                        value={manualEmail}
+                        onChange={(e) => setManualEmail(e.target.value)}
+                        placeholder="customer@example.com"
+                        className={`mt-1 ${!finalEmail ? 'border-orange-400 focus:border-orange-500' : ''}`}
+                        data-testid="input-manual-email"
+                      />
+                      {!finalEmail && (
+                        <p className="text-xs text-orange-600 mt-1">
+                          Email address is required to send the invoice
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {finalEmail && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Invoice will be emailed to: <strong>{finalEmail}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1451,7 +1529,8 @@ export function InvoicePreviewModal({
                 console.log("Total items to potentially upload:", selectedAttachments.size);
                 setShowConfirmation(true);
               }}
-              disabled={isCreating}
+              disabled={isCreating || !finalEmail}
+              title={!finalEmail ? "Email address is required to send invoice" : undefined}
               className="bg-[#0078D4] hover:bg-[#0078D4]/90"
               data-testid="button-confirm-send"
             >

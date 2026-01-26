@@ -1656,6 +1656,8 @@ export const invoices = pgTable("invoices", {
   internalNotes: text("internal_notes"),
   attachments: text("attachments").array(),
   sentAt: timestamp("sent_at"),
+  emailedTo: text("emailed_to"), // Email address invoice was sent to
+  emailedAt: timestamp("emailed_at"), // When invoice was emailed
   createdByUserId: varchar("created_by_user_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

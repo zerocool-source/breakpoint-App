@@ -1455,9 +1455,13 @@ export default function Estimates() {
           queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
           
           if (qbInvoiceData?.invoiceId) {
+            // Use the message from the API which includes email status
+            const successMessage = qbInvoiceData.message || 
+              `Invoice Created! QB Invoice ID: ${qbInvoiceData.invoiceId}`;
+            
             toast({ 
-              title: "Invoice Created in QuickBooks!", 
-              description: `QB Invoice ID: ${qbInvoiceData.invoiceId} | DocNumber: ${qbInvoiceData.invoiceNumber || 'N/A'} | Total: $${qbInvoiceData.totalAmount || '0.00'}. Sent to ${invoiceData.email}.`,
+              title: qbInvoiceData.emailSent ? "Invoice Created & Emailed!" : "Invoice Created in QuickBooks!", 
+              description: successMessage,
               duration: 10000, // Show for 10 seconds
             });
             console.log("=== Invoice Successfully Synced to QuickBooks ===");

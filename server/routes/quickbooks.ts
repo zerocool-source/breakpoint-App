@@ -218,6 +218,7 @@ export function registerQuickbooksRoutes(app: Express) {
     try {
       const { 
         customerName, 
+        customerEmail,
         lineItems, 
         memo,
         estimateId,
@@ -236,17 +237,38 @@ export function registerQuickbooksRoutes(app: Express) {
         customerNote,
         internalNotes,
         selectedPhotos,
+        sendEmail = true,
       } = req.body;
       
       console.log("=== QuickBooks Invoice Creation Request ===");
       console.log("Customer Name:", customerName);
+      console.log("Customer Email:", customerEmail);
       console.log("Line Items:", JSON.stringify(lineItems, null, 2));
       console.log("Estimate ID:", estimateId);
       console.log("Memo:", memo);
+      console.log("Send Email:", sendEmail);
       
       if (!customerName || !lineItems || !Array.isArray(lineItems)) {
         console.error("Missing required fields");
         return res.status(400).json({ error: "Missing required fields: customerName, lineItems" });
+      }
+      
+      // Validate email is provided when sendEmail is true
+      if (sendEmail && !customerEmail) {
+        console.error("Email required when sendEmail is true");
+        return res.status(400).json({ 
+          error: "Email address is required to send the invoice",
+          code: "EMAIL_REQUIRED"
+        });
+      }
+      
+      // Validate email format if provided
+      if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+        console.error("Invalid email format:", customerEmail);
+        return res.status(400).json({ 
+          error: "Invalid email address format",
+          code: "INVALID_EMAIL"
+        });
       }
 
       const auth = await getQuickBooksAccessToken();
@@ -293,11 +315,16 @@ export function registerQuickbooksRoutes(app: Express) {
         },
       }));
 
-      const invoicePayload = {
+      const invoicePayload: any = {
         CustomerRef: { value: customerId },
         Line: invoiceLines,
         PrivateNote: memo || undefined,
       };
+      
+      // Add BillEmail if customer email is provided
+      if (customerEmail) {
+        invoicePayload.BillEmail = { Address: customerEmail };
+      }
 
       console.log("=== QuickBooks Invoice API Request ===");
       console.log("URL:", `${baseUrl}/invoice`);
@@ -484,6 +511,81 @@ export function registerQuickbooksRoutes(app: Express) {
           .where(eq(estimates.id, estimateId));
       }
 
+      // Send invoice via email if email is provided and sendEmail is true
+      let emailSent = false;
+      let emailSentTo = "";
+      let emailError = "";
+      
+      if (sendEmail && customerEmail) {
+        console.log("\n=== Sending Invoice via Email ===");
+        console.log(`Sending invoice ${qbInvoice.Id} to: ${customerEmail}`);
+        
+        try {
+          const sendResponse = await fetch(`${baseUrl}/invoice/${qbInvoice.Id}/send?sendTo=${encodeURIComponent(customerEmail)}`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${accessToken}`,
+              "Accept": "application/json",
+              "Content-Type": "application/octet-stream",
+            },
+          });
+          
+          if (sendResponse.ok) {
+            emailSent = true;
+            emailSentTo = customerEmail;
+            console.log(`Invoice email sent successfully to: ${customerEmail}`);
+            
+            // Update invoice record with email sent status
+            await db.update(invoices)
+              .set({
+                emailedTo: customerEmail,
+                emailedAt: new Date(),
+              })
+              .where(eq(invoices.id, savedInvoice.id));
+          } else {
+            const errorData = await sendResponse.text();
+            console.error("Failed to send invoice email:", errorData);
+            emailError = "Email send failed";
+            
+            // Try to parse error for better message
+            try {
+              const parsedError = JSON.parse(errorData);
+              if (parsedError.Fault?.Error?.[0]?.Message) {
+                emailError = parsedError.Fault.Error[0].Message;
+              }
+            } catch (e) {
+              // Use default error
+            }
+          }
+        } catch (sendError) {
+          console.error("Error sending invoice email:", sendError);
+          emailError = "Email send request failed";
+        }
+      } else if (sendEmail && !customerEmail) {
+        console.log("Cannot send email: No customer email provided");
+        emailError = "No email address provided";
+      }
+
+      // Build response message
+      let message = "";
+      if (emailSent) {
+        message = `Invoice Created & Emailed! QB Invoice ID: ${qbInvoice.Id} | Sent to: ${emailSentTo}`;
+        if (uploadedAttachments > 0) {
+          message += ` | ${uploadedAttachments} attachment${uploadedAttachments !== 1 ? 's' : ''} uploaded`;
+        }
+      } else {
+        message = `Invoice Created! QB Invoice ID: ${qbInvoice.Id}`;
+        if (uploadedAttachments > 0) {
+          message += ` | ${uploadedAttachments} attachment${uploadedAttachments !== 1 ? 's' : ''} uploaded`;
+        }
+        if (emailError) {
+          message += ` | Email not sent: ${emailError}`;
+        }
+      }
+      if (failedAttachments.length > 0) {
+        message += ` (${failedAttachments.length} attachment${failedAttachments.length !== 1 ? 's' : ''} failed)`;
+      }
+
       res.json({
         success: true,
         invoiceId: qbInvoice.Id,
@@ -494,9 +596,10 @@ export function registerQuickbooksRoutes(app: Express) {
         attachmentsUploaded: uploadedAttachments,
         totalAttachments: totalAttachments,
         failedAttachments: failedAttachments,
-        message: totalAttachments > 0 
-          ? `Invoice Created! QB Invoice ID: ${qbInvoice.Id} | ${uploadedAttachments} attachment${uploadedAttachments !== 1 ? 's' : ''} uploaded${failedAttachments.length > 0 ? ` (${failedAttachments.length} failed)` : ''}`
-          : `Invoice Created! QB Invoice ID: ${qbInvoice.Id}`,
+        emailSent: emailSent,
+        emailSentTo: emailSentTo,
+        emailError: emailError || undefined,
+        message: message,
       });
     } catch (error) {
       console.error("QuickBooks invoice error:", error);
