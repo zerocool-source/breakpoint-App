@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { InvoiceDetailModal } from "@/components/InvoiceDetailModal";
 import { 
   FileText, 
   Search, 
@@ -20,7 +21,8 @@ import {
   Calendar,
   ArrowLeft,
   XCircle,
-  Link2
+  Link2,
+  Camera
 } from "lucide-react";
 import { Link } from "wouter";
 import type { Invoice } from "@shared/schema";
@@ -57,6 +59,7 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const queryClient = useQueryClient();
 
   const { data: invoicesData, isLoading, refetch, isRefetching } = useQuery<{ invoices: Invoice[] }>({
@@ -318,18 +321,30 @@ export default function Invoices() {
                   {filteredInvoices.map((invoice) => {
                     const statusInfo = statusConfig[invoice.status] || statusConfig.draft;
                     const StatusIcon = statusInfo.icon;
+                    const photoCount = (invoice.attachments?.length || 0);
                     
                     return (
                       <tr 
                         key={invoice.id} 
-                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                        className="border-b border-slate-100 hover:bg-blue-50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedInvoice(invoice)}
                         data-testid={`invoice-row-${invoice.id}`}
                       >
                         <td className="py-3 px-4">
-                          <span className="font-mono text-sm text-slate-900">{invoice.invoiceNumber}</span>
-                          {invoice.estimateNumber && (
-                            <p className="text-xs text-slate-500">From: {invoice.estimateNumber}</p>
-                          )}
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <span className="font-mono text-sm text-slate-900">{invoice.invoiceNumber}</span>
+                              {invoice.estimateNumber && (
+                                <p className="text-xs text-slate-500">From: {invoice.estimateNumber}</p>
+                              )}
+                            </div>
+                            {photoCount > 0 && (
+                              <div className="flex items-center gap-0.5 text-blue-600" title={`${photoCount} photo(s) attached`}>
+                                <Camera className="w-3.5 h-3.5" />
+                                <span className="text-xs font-medium">{photoCount}</span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           {invoice.quickbooksDocNumber ? (
@@ -427,7 +442,8 @@ export default function Invoices() {
                               variant="ghost"
                               size="sm"
                               className="gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 window.open(`https://app.qbo.intuit.com/app/invoice?txnId=${invoice.quickbooksInvoiceId}`, '_blank');
                               }}
                               data-testid={`btn-view-qb-${invoice.id}`}
@@ -446,6 +462,12 @@ export default function Invoices() {
           )}
         </CardContent>
       </Card>
+
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        open={!!selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+      />
     </AppLayout>
   );
 }
