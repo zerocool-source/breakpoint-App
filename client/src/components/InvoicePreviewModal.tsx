@@ -204,7 +204,7 @@ export function InvoicePreviewModal({
   const [billToCO, setBillToCO] = useState("");
   const [billToATTN, setBillToATTN] = useState("");
   const [billToAddress, setBillToAddress] = useState("");
-  const [selectedBillToAddress, setSelectedBillToAddress] = useState("default");
+  const [selectedBillToAddress, setSelectedBillToAddress] = useState("");
   
   // Ship To fields
   const [shipToName, setShipToName] = useState("");
@@ -254,6 +254,91 @@ export function InvoicePreviewModal({
     enabled: open,
   });
   const customers = customersData?.customers || [];
+  
+  // Fetch property data for address dropdown
+  const { data: propertyData } = useQuery<{
+    id: string;
+    name: string;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    billingAddress: string | null;
+    billingCity: string | null;
+    billingState: string | null;
+    billingZip: string | null;
+    primaryContactEmail: string | null;
+  }>({
+    queryKey: ["/api/properties", estimate?.propertyId],
+    queryFn: async () => {
+      if (!estimate?.propertyId) return null;
+      const res = await fetch(`/api/properties/${estimate.propertyId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: open && !!estimate?.propertyId,
+  });
+  
+  // Build address options from property data
+  const addressOptions = React.useMemo(() => {
+    const options: { value: string; label: string; type: 'primary' | 'billing'; fullAddress: string }[] = [];
+    
+    if (propertyData) {
+      // Add primary address if exists
+      if (propertyData.address) {
+        const primaryParts = [
+          propertyData.address,
+          propertyData.city,
+          propertyData.state,
+          propertyData.zip
+        ].filter(Boolean);
+        const primaryFull = primaryParts.join(', ').replace(/, ([A-Z]{2}),/, ', $1');
+        options.push({
+          value: 'primary',
+          label: `${primaryFull} (Primary)`,
+          type: 'primary',
+          fullAddress: primaryFull
+        });
+      }
+      
+      // Add billing address if exists and different from primary
+      if (propertyData.billingAddress) {
+        const billingParts = [
+          propertyData.billingAddress,
+          propertyData.billingCity,
+          propertyData.billingState,
+          propertyData.billingZip
+        ].filter(Boolean);
+        const billingFull = billingParts.join(', ').replace(/, ([A-Z]{2}),/, ', $1');
+        options.push({
+          value: 'billing',
+          label: `${billingFull} (Billing)`,
+          type: 'billing',
+          fullAddress: billingFull
+        });
+      }
+    }
+    
+    // Fallback to estimate address if no property data
+    if (options.length === 0 && estimate?.address) {
+      options.push({
+        value: 'estimate',
+        label: `${estimate.address} (Primary)`,
+        type: 'primary',
+        fullAddress: estimate.address
+      });
+    }
+    
+    // Add custom option
+    options.push({
+      value: 'custom',
+      label: 'Enter custom address...',
+      type: 'primary',
+      fullAddress: ''
+    });
+    
+    return options;
+  }, [propertyData, estimate?.address]);
 
   // Reset state when modal opens with new estimate
   useEffect(() => {
@@ -284,7 +369,7 @@ export function InvoicePreviewModal({
       setBillToCO("");
       setBillToATTN("");
       setBillToAddress(estimate.address || "");
-      setSelectedBillToAddress("default");
+      setSelectedBillToAddress(""); // Will be updated by addressOptions effect
       
       // Initialize Ship To fields
       setShipToName(estimate.propertyName);
@@ -337,6 +422,42 @@ export function InvoicePreviewModal({
       }
     }
   }, [estimate, customers, selectedCustomerId]);
+  
+  // Auto-select billing address when property data loads
+  useEffect(() => {
+    if (open && addressOptions.length > 0 && !selectedBillToAddress) {
+      // Priority: Billing address first, then Primary, then first available
+      const billingAddr = addressOptions.find(opt => opt.type === 'billing' && opt.value !== 'custom');
+      const primaryAddr = addressOptions.find(opt => opt.type === 'primary' && opt.value !== 'custom');
+      const firstNonCustom = addressOptions.find(opt => opt.value !== 'custom');
+      
+      const selected = billingAddr || primaryAddr || firstNonCustom;
+      if (selected) {
+        setSelectedBillToAddress(selected.value);
+        setBillToAddress(selected.fullAddress);
+      }
+    }
+  }, [open, addressOptions, selectedBillToAddress]);
+  
+  // Auto-populate email from customer's email on file (property data or customer list)
+  useEffect(() => {
+    if (open && !selectedEmail && !manualEmail && billingContacts.length === 0) {
+      // Priority: property's primary contact email → estimate.customerEmail → matched customer email
+      if (propertyData?.primaryContactEmail) {
+        setManualEmail(propertyData.primaryContactEmail);
+      } else if (estimate?.customerEmail) {
+        setManualEmail(estimate.customerEmail);
+      } else if (estimate && customers.length > 0) {
+        // Try to find matching customer by name and use their email
+        const matchingCustomer = customers.find(
+          (c) => c.name.toLowerCase() === (estimate.customerName || estimate.propertyName).toLowerCase()
+        );
+        if (matchingCustomer?.email) {
+          setManualEmail(matchingCustomer.email);
+        }
+      }
+    }
+  }, [open, propertyData, estimate, customers, billingContacts, selectedEmail, manualEmail]);
 
   // Update due date when terms change
   useEffect(() => {
@@ -682,15 +803,21 @@ export function InvoicePreviewModal({
                           if (v === "custom") {
                             setBillToAddress("");
                           } else {
-                            setBillToAddress(estimate.address || "");
+                            const selected = addressOptions.find(opt => opt.value === v);
+                            if (selected) {
+                              setBillToAddress(selected.fullAddress);
+                            }
                           }
                         }}>
                           <SelectTrigger className="mt-1" data-testid="select-bill-to-address">
                             <SelectValue placeholder="Select billing address" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="default">Default - {estimate.address || "No address"}</SelectItem>
-                            <SelectItem value="custom">Enter custom address...</SelectItem>
+                            {addressOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -751,11 +878,15 @@ export function InvoicePreviewModal({
                           <span className="text-[#64748B]">{billToATTN || "—"}</span>
                         </div>
                       </div>
-                      {estimate.customerEmail && (
-                        <p className="text-[#64748B]">Email: {estimate.customerEmail}</p>
-                      )}
                       {billToAddress && (
-                        <p className="text-[#64748B]">{billToAddress}</p>
+                        <div className="text-[#64748B]">
+                          <p>{billToAddress}</p>
+                          {selectedBillToAddress !== 'custom' && (
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {addressOptions.find(opt => opt.value === selectedBillToAddress)?.type === 'billing' ? 'Billing Address' : 'Primary Address'}
+                            </Badge>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
