@@ -1,6 +1,9 @@
 import { Express } from "express";
 import { storage } from "../storage";
 import { insertSystemUserSchema } from "@shared/schema";
+import { z } from "zod";
+
+const updateSystemUserSchema = insertSystemUserSchema.partial();
 
 export function registerUserRoutes(app: Express) {
   app.get("/api/system-users", async (req, res) => {
@@ -58,14 +61,19 @@ export function registerUserRoutes(app: Express) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
       
-      if (req.body.email) {
-        const existingUser = await storage.getSystemUserByEmail(req.body.email);
+      const parsed = updateSystemUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid update data", details: parsed.error.errors });
+      }
+      
+      if (parsed.data.email) {
+        const existingUser = await storage.getSystemUserByEmail(parsed.data.email);
         if (existingUser && existingUser.id !== id) {
           return res.status(400).json({ error: "A user with this email already exists" });
         }
       }
       
-      const user = await storage.updateSystemUser(id, req.body);
+      const user = await storage.updateSystemUser(id, parsed.data);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
