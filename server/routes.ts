@@ -27,6 +27,7 @@ import { registerPropertyTechnicianRoutes } from "./routes/propertyTechnicians";
 import { registerVendorRoutes } from "./routes/vendors";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerCalendarRoutes } from "./routes/calendar";
+import { registerSearchRoutes } from "./routes/search";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -63,4 +64,5 @@ function setupRoutes(app: any) {
   registerVendorRoutes(app);
   registerInvoiceRoutes(app);
   registerCalendarRoutes(app);
+  registerSearchRoutes(app);
 }
