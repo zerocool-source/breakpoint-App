@@ -4,9 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -36,14 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { 
-  Search, ChevronDown, Plus, Trash2, Users, UserCheck, ClipboardCheck, 
-  CalendarIcon, AlertTriangle, FileText, ChevronRight, ChevronLeft, RefreshCw,
-  Filter, Building2, X
-} from "lucide-react";
+import { Search, ChevronDown, Plus, Trash2, ChevronRight, ChevronLeft, Users, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Supervisor {
@@ -69,25 +60,6 @@ interface Technician {
   role: string;
 }
 
-interface QcInspection {
-  id: string;
-  supervisorId: string;
-  supervisorName: string | null;
-  propertyId: string | null;
-  propertyName: string;
-  propertyAddress: string | null;
-  title: string | null;
-  notes: string | null;
-  photos: string[] | null;
-  status: string;
-  assignedById: string | null;
-  assignedByName: string | null;
-  dueDate: string | null;
-  completedAt: string | null;
-  completionNotes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 function getInitials(firstName: string, lastName: string): string {
   return `${(firstName || "").charAt(0)}${(lastName || "").charAt(0)}`.toUpperCase();
@@ -589,24 +561,15 @@ function SupervisorTeamModal({
   );
 }
 
+const ITEMS_PER_PAGE = 12;
+
 export default function Supervisors() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingSupervisor, setEditingSupervisor] = useState<Supervisor | null>(null);
   const [managingTeamSupervisor, setManagingTeamSupervisor] = useState<Supervisor | null>(null);
-  const [activeTab, setActiveTab] = useState("concerns");
-  const [assignSupervisor, setAssignSupervisor] = useState("");
-  const [assignProperty, setAssignProperty] = useState("");
-  const [scheduleDate, setScheduleDate] = useState<Date | undefined>();
-  const [inspectionTitle, setInspectionTitle] = useState("");
-  const [inspectionNotes, setInspectionNotes] = useState("");
-  const [filterProperty, setFilterProperty] = useState("all");
-  const [filterSupervisor, setFilterSupervisor] = useState("all");
-  const [filterTechnician, setFilterTechnician] = useState("all");
-  const [expandedSupervisors, setExpandedSupervisors] = useState<Set<string>>(new Set());
-  const [photoGallery, setPhotoGallery] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
-  const [inspectionPropertyFilter, setInspectionPropertyFilter] = useState("all");
-  const [inspectionDateFrom, setInspectionDateFrom] = useState("");
-  const [inspectionDateTo, setInspectionDateTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [countyFilter, setCountyFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
 
   const { data: supervisorsData, isLoading: loadingSupervisors } = useQuery<{ technicians: Supervisor[] }>({
@@ -627,72 +590,55 @@ export default function Supervisors() {
     },
   });
 
-  const { data: qcInspectionsData, isLoading: loadingInspections } = useQuery<{ inspections: QcInspection[] }>({
-    queryKey: ["qc-inspections"],
-    queryFn: async () => {
-      const res = await fetch("/api/qc-inspections");
-      if (!res.ok) throw new Error("Failed to fetch QC inspections");
-      return res.json();
-    },
-  });
-
   const supervisors = supervisorsData?.technicians || [];
   const technicians = techniciansData?.technicians || [];
-  const qcInspections = qcInspectionsData?.inspections || [];
 
-  // Get unique properties from inspections for filter
-  const inspectionProperties = Array.from(new Set(qcInspections.map(i => i.propertyName))).sort();
-
-  // Filter inspections by property and date
-  const filteredInspections = qcInspections.filter(i => {
-    if (inspectionPropertyFilter !== "all" && i.propertyName !== inspectionPropertyFilter) {
-      return false;
-    }
-    if (inspectionDateFrom) {
-      const fromDate = new Date(inspectionDateFrom);
-      const inspectionDate = i.dueDate ? new Date(i.dueDate) : new Date(i.createdAt);
-      if (inspectionDate < fromDate) return false;
-    }
-    if (inspectionDateTo) {
-      const toDate = new Date(inspectionDateTo);
-      toDate.setHours(23, 59, 59, 999);
-      const inspectionDate = i.dueDate ? new Date(i.dueDate) : new Date(i.createdAt);
-      if (inspectionDate > toDate) return false;
-    }
-    return true;
-  });
-
-  // Group inspections by supervisor
-  const inspectionsBySupervisor = filteredInspections.reduce((acc, inspection) => {
-    const key = inspection.supervisorId;
-    if (!acc[key]) {
-      acc[key] = {
-        supervisorId: inspection.supervisorId,
-        supervisorName: inspection.supervisorName || "Unknown Supervisor",
-        inspections: []
-      };
-    }
-    acc[key].inspections.push(inspection);
-    return acc;
-  }, {} as Record<string, { supervisorId: string; supervisorName: string; inspections: QcInspection[] }>);
-
-  const toggleSupervisorExpanded = (supervisorId: string) => {
-    setExpandedSupervisors(prev => {
-      const next = new Set(prev);
-      if (next.has(supervisorId)) {
-        next.delete(supervisorId);
-      } else {
-        next.add(supervisorId);
-      }
-      return next;
+  // Filter supervisors by search and county
+  const filteredSupervisors = supervisors
+    .filter((sup) => {
+      const fullName = `${sup.firstName || ""} ${sup.lastName || ""}`.toLowerCase();
+      const phone = (sup.phone || "").toLowerCase();
+      const email = (sup.email || "").toLowerCase();
+      const matchesSearch = 
+        fullName.includes(searchQuery.toLowerCase()) ||
+        phone.includes(searchQuery.toLowerCase()) ||
+        email.includes(searchQuery.toLowerCase());
+      
+      if (countyFilter === "all") return matchesSearch;
+      if (countyFilter === "none") return matchesSearch && !sup.region;
+      return matchesSearch && sup.region === countyFilter;
+    })
+    .sort((a, b) => {
+      const nameA = `${a.firstName} ${a.lastName}`.toLowerCase();
+      const nameB = `${b.firstName} ${b.lastName}`.toLowerCase();
+      return nameA.localeCompare(nameB);
     });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSupervisors.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedSupervisors = filteredSupervisors.slice(startIndex, endIndex);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, "...", totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    return pages;
   };
 
-  const openPhotoGallery = (photos: string[], index: number) => {
-    setPhotoGallery({ open: true, photos, index });
-  };
-  const unassignedTechnicians = technicians.filter(t => !t.supervisorId && t.active);
-  const totalTechnicians = technicians.filter(t => t.active).length;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, countyFilter]);
 
   const addSupervisorMutation = useMutation({
     mutationFn: async (supervisor: { firstName: string; lastName: string; phone: string; email: string; truckNumber: string }) => {
@@ -768,12 +714,27 @@ export default function Supervisors() {
     },
   });
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const res = await fetch(`/api/technicians/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+      });
+      if (!res.ok) throw new Error("Failed to update supervisor");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "supervisor"] });
+    },
+  });
+
   const getRegionLabel = (region: string | null): string => {
     switch (region) {
       case "south": return "South County";
       case "mid": return "Mid County";
       case "north": return "North County";
-      default: return "";
+      default: return "-";
     }
   };
 
@@ -786,90 +747,130 @@ export default function Supervisors() {
     }
   };
 
-  const activeSupervisors = supervisors.filter(s => s.active);
-
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-            <Users className="w-5 h-5 text-slate-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Supervisor Team Management</h1>
-            <p className="text-sm text-slate-500">Manage supervisor teams and technician assignments</p>
-          </div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-900">Supervisor Team Management</h1>
         </div>
 
-        {/* Top Grid - Supervisors & Teams + Unassigned Technicians */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* Supervisors & Teams */}
-          <div className="col-span-6 bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-slate-600" />
-                <h2 className="font-semibold text-slate-900">Supervisors & Teams</h2>
-                <Badge variant="secondary" className="bg-slate-100 text-slate-600">
-                  {activeSupervisors.length} Supervisors
-                </Badge>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 w-7 p-0"
-                onClick={() => setShowAddModal(true)}
-                data-testid="button-add-supervisor"
-              >
-                <Plus className="w-4 h-4" />
+        {/* Filter Bar */}
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default" className="bg-[#0078D4] hover:bg-[#0078D4]" data-testid="dropdown-filter-county">
+                County: {countyFilter === "all" ? "All" : countyFilter === "none" ? "No County" : getRegionLabel(countyFilter)}
+                <ChevronDown className="w-4 h-4 ml-2" />
               </Button>
-            </div>
-            
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setCountyFilter("all")}>All</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCountyFilter("south")}>South County</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCountyFilter("mid")}>Mid County</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCountyFilter("north")}>North County</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCountyFilter("none")}>No County</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search by name, phone, or email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              data-testid="input-search-supervisors"
+            />
+          </div>
+
+          <Button 
+            className="bg-[#0078D4] hover:bg-[#0078D4] ml-auto" 
+            onClick={() => setShowAddModal(true)}
+            data-testid="button-add-supervisor"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Supervisor
+          </Button>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-100 border-b border-slate-200">
+              <tr>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Supervisor
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Phone
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  County
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Technicians
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="text-right px-6 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
               {loadingSupervisors ? (
-                <div className="text-center py-4 text-slate-500">Loading...</div>
-              ) : activeSupervisors.length === 0 ? (
-                <div className="text-center py-4 text-slate-500">No supervisors found</div>
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                    Loading supervisors...
+                  </td>
+                </tr>
+              ) : filteredSupervisors.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                    {searchQuery || countyFilter !== "all" ? "No supervisors match your filters" : "No supervisors found. Click 'Add Supervisor' to add one."}
+                  </td>
+                </tr>
               ) : (
-                activeSupervisors.map((sup) => {
-                  const fullName = `${sup.firstName} ${sup.lastName}`.trim();
+                paginatedSupervisors.map((sup) => {
+                  const fullName = `${sup.firstName || ""} ${sup.lastName || ""}`.trim();
                   const initials = getInitials(sup.firstName, sup.lastName);
                   const avatarColor = getAvatarColor(fullName);
                   const techCount = technicians.filter(t => t.supervisorId === sup.id).length;
                   
                   return (
-                    <div 
-                      key={sup.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
-                      data-testid={`supervisor-card-${sup.id}`}
+                    <tr 
+                      key={sup.id} 
+                      className="hover:bg-slate-50 transition-colors"
+                      data-testid={`row-supervisor-${sup.id}`}
                     >
-                      <div 
-                        className="flex items-center gap-3 flex-1 cursor-pointer"
-                        onClick={() => setEditingSupervisor(sup)}
-                      >
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold",
-                          avatarColor
-                        )}>
-                          {initials}
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900 flex items-center gap-2">
-                            {fullName}
-                            {sup.region && (
-                              <Badge className={cn("text-xs", getRegionBadgeStyle(sup.region))}>
-                                {getRegionLabel(sup.region)}
-                              </Badge>
-                            )}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm",
+                            avatarColor
+                          )}>
+                            {initials}
                           </div>
-                          <div className="text-xs text-slate-500 flex items-center gap-1">
-                            <span className="text-blue-600">{sup.truckNumber ? `#${sup.truckNumber}` : "No truck"}</span>
-                            <span>•</span>
-                            <span>{sup.email || "No email"}</span>
-                          </div>
+                          <span 
+                            className="font-medium text-[#0078D4] hover:underline cursor-pointer"
+                            onClick={() => setEditingSupervisor(sup)}
+                            data-testid={`link-supervisor-name-${sup.id}`}
+                          >
+                            {fullName || "Unknown"}
+                          </span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        {sup.phone || "-"}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        {sup.email || "-"}
+                      </td>
+                      <td className="px-6 py-4">
                         <Select
                           value={sup.region || "none"}
                           onValueChange={(value) => {
@@ -882,7 +883,6 @@ export default function Supervisors() {
                           <SelectTrigger 
                             className="w-[130px] h-8 text-xs"
                             data-testid={`select-county-${sup.id}`}
-                            onClick={(e) => e.stopPropagation()}
                           >
                             <SelectValue placeholder="Select County" />
                           </SelectTrigger>
@@ -893,453 +893,87 @@ export default function Supervisors() {
                             <SelectItem value="none">No County</SelectItem>
                           </SelectContent>
                         </Select>
-                        <div 
-                          className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <Badge 
+                          className="bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer"
                           onClick={() => setManagingTeamSupervisor(sup)}
                           data-testid={`button-manage-team-${sup.id}`}
                         >
-                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
-                            {techCount} Technicians
-                          </Badge>
-                          <ChevronRight className="w-4 h-4 text-slate-400" />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Unassigned Technicians */}
-          <div className="col-span-6 bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-slate-600" />
-                <h2 className="font-semibold text-slate-900">Unassigned Technicians</h2>
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                  <RefreshCw className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="mb-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search technicians..."
-                  className="pl-10 h-9 bg-slate-50 border-slate-200"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 max-h-[240px] overflow-y-auto">
-              {loadingTechnicians ? (
-                <div className="text-center py-4 text-slate-500">Loading...</div>
-              ) : unassignedTechnicians.length === 0 ? (
-                <div className="text-center py-4 text-slate-500">All technicians assigned</div>
-              ) : (
-                unassignedTechnicians.map((tech) => {
-                  const fullName = `${tech.firstName} ${tech.lastName}`.trim();
-                  const initials = getInitials(tech.firstName, tech.lastName);
-                  const avatarColor = getAvatarColor(fullName);
-                  
-                  return (
-                    <div 
-                      key={tech.id}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors"
-                      data-testid={`unassigned-tech-${tech.id}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold",
-                          avatarColor
-                        )}>
-                          {initials}
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900 text-sm">{fullName}</div>
-                          <div className="text-xs text-slate-500">{tech.phone || "No phone"}</div>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="h-7 text-xs">
-                        <Plus className="w-3 h-3 mr-1" />
-                        Assign
-                      </Button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Assign QC Inspection */}
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <ClipboardCheck className="w-5 h-5 text-slate-600" />
-            <h2 className="font-semibold text-slate-900">Assign QC Inspection</h2>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Assign To Supervisor <span className="text-red-500">*</span>
-              </label>
-              <Select value={assignSupervisor} onValueChange={setAssignSupervisor}>
-                <SelectTrigger data-testid="select-assign-supervisor">
-                  <SelectValue placeholder="Select supervisor..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeSupervisors.map(sup => (
-                    <SelectItem key={sup.id} value={sup.id}>
-                      {sup.firstName} {sup.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Property <span className="text-red-500">*</span>
-              </label>
-              <Input 
-                placeholder="Search property..."
-                value={assignProperty}
-                onChange={(e) => setAssignProperty(e.target.value)}
-                data-testid="input-assign-property"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !scheduleDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {scheduleDate ? format(scheduleDate, "PPP") : "Select date..."}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={scheduleDate}
-                    onSelect={setScheduleDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
-              <Input 
-                placeholder="Inspection title..."
-                value={inspectionTitle}
-                onChange={(e) => setInspectionTitle(e.target.value)}
-                data-testid="input-inspection-title"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
-              <Textarea 
-                placeholder="Add notes for the supervisor..."
-                value={inspectionNotes}
-                onChange={(e) => setInspectionNotes(e.target.value)}
-                className="min-h-[80px]"
-                data-testid="textarea-inspection-notes"
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline">Cancel</Button>
-            <Button className="bg-[#0078D4] hover:bg-[#0078D4]/90">
-              <Plus className="w-4 h-4 mr-2" />
-              Assign Inspection
-            </Button>
-          </div>
-        </div>
-
-        {/* Filter Results */}
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Filter className="w-4 h-4" />
-              <span>Filter Results:</span>
-            </div>
-            <Select value={filterProperty} onValueChange={setFilterProperty}>
-              <SelectTrigger className="w-[150px] h-9">
-                <SelectValue placeholder="All Properties" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Properties</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterSupervisor} onValueChange={setFilterSupervisor}>
-              <SelectTrigger className="w-[150px] h-9">
-                <SelectValue placeholder="All Supervisors" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Supervisors</SelectItem>
-                {activeSupervisors.map(sup => (
-                  <SelectItem key={sup.id} value={sup.id}>
-                    {sup.firstName} {sup.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterTechnician} onValueChange={setFilterTechnician}>
-              <SelectTrigger className="w-[150px] h-9">
-                <SelectValue placeholder="All Technicians" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Technicians</SelectItem>
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2">
-                  <CalendarIcon className="w-4 h-4" />
-                  Date Range
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-
-        {/* Tabs Section */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-white rounded-lg border border-slate-200">
-          <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
-            <TabsTrigger 
-              value="concerns"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
-            >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Report Issue
-            </TabsTrigger>
-            <TabsTrigger 
-              value="inspections"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0078D4] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-6 py-3"
-            >
-              <ClipboardCheck className="w-4 h-4 mr-2" />
-              QC Inspection Log
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="concerns" className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-orange-500" />
-                <h3 className="font-semibold text-slate-900">Report Issue</h3>
-                <Badge variant="outline" className="text-orange-600 border-orange-300">0 Issues</Badge>
-              </div>
-            </div>
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-8 h-8 text-slate-400" />
-              </div>
-              <p className="text-slate-600 font-medium">No issues reported</p>
-              <p className="text-sm text-slate-500 mt-1">Reported issues will appear here</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="inspections" className="p-6">
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-4 mb-6">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">Filters:</span>
-              </div>
-              <Select value={inspectionPropertyFilter} onValueChange={setInspectionPropertyFilter}>
-                <SelectTrigger className="w-[200px]" data-testid="filter-inspection-property">
-                  <SelectValue placeholder="All Properties" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Properties</SelectItem>
-                  {inspectionProperties.map(prop => (
-                    <SelectItem key={prop} value={prop}>{prop}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4 text-slate-400" />
-                <Input
-                  type="date"
-                  value={inspectionDateFrom}
-                  onChange={(e) => setInspectionDateFrom(e.target.value)}
-                  className="w-[140px]"
-                  data-testid="input-inspection-date-from"
-                />
-                <span className="text-slate-400">to</span>
-                <Input
-                  type="date"
-                  value={inspectionDateTo}
-                  onChange={(e) => setInspectionDateTo(e.target.value)}
-                  className="w-[140px]"
-                  data-testid="input-inspection-date-to"
-                />
-              </div>
-              {(inspectionPropertyFilter !== "all" || inspectionDateFrom || inspectionDateTo) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setInspectionPropertyFilter("all");
-                    setInspectionDateFrom("");
-                    setInspectionDateTo("");
-                  }}
-                  data-testid="button-clear-inspection-filters"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Clear
-                </Button>
-              )}
-              <Badge variant="outline" className="ml-auto">
-                {filteredInspections.length} inspection{filteredInspections.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-
-            {/* Inspections grouped by supervisor */}
-            {loadingInspections ? (
-              <div className="flex items-center justify-center py-12">
-                <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
-              </div>
-            ) : Object.keys(inspectionsBySupervisor).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                  <ClipboardCheck className="w-8 h-8 text-slate-400" />
-                </div>
-                <p className="text-slate-600 font-medium">No QC inspections found</p>
-                <p className="text-sm text-slate-500 mt-1">
-                  {inspectionPropertyFilter !== "all" 
-                    ? "No inspections for this property. Try a different filter." 
-                    : "Assign inspections using the form above"}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {Object.values(inspectionsBySupervisor).map(group => {
-                  const isExpanded = expandedSupervisors.has(group.supervisorId);
-                  const initials = getInitials(group.supervisorName.split(' ')[0] || '', group.supervisorName.split(' ')[1] || '');
-                  const avatarColor = getAvatarColor(group.supervisorName);
-                  
-                  return (
-                    <div key={group.supervisorId} className="border rounded-lg overflow-hidden">
-                      {/* Collapsible Supervisor Header */}
-                      <button
-                        onClick={() => toggleSupervisorExpanded(group.supervisorId)}
-                        className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
-                        data-testid={`supervisor-header-${group.supervisorId}`}
-                      >
-                        <ChevronRight className={cn(
-                          "w-5 h-5 text-slate-500 transition-transform",
-                          isExpanded && "rotate-90"
-                        )} />
-                        <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold",
-                          avatarColor
-                        )}>
-                          {initials}
-                        </div>
-                        <span className="font-semibold text-slate-900">{group.supervisorName}</span>
-                        <Badge variant="outline" className="ml-2">
-                          {group.inspections.length} inspection{group.inspections.length !== 1 ? 's' : ''}
+                          {techCount} Technicians
                         </Badge>
-                        <div className="ml-auto flex items-center gap-2 text-sm text-slate-500">
-                          <span>{group.inspections.filter(i => i.status === 'completed').length} completed</span>
-                          <span>•</span>
-                          <span>{group.inspections.filter(i => i.status !== 'completed').length} pending</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center">
+                          <Switch 
+                            checked={sup.active} 
+                            onCheckedChange={(checked) => toggleStatusMutation.mutate({ id: sup.id, active: checked })}
+                            data-testid={`switch-status-${sup.id}`}
+                          />
                         </div>
-                      </button>
-
-                      {/* Inspection Entries */}
-                      {isExpanded && (
-                        <div className="divide-y">
-                          {group.inspections.map(inspection => (
-                            <div key={inspection.id} className="p-4 bg-white" data-testid={`inspection-${inspection.id}`}>
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <Building2 className="w-4 h-4 text-slate-400" />
-                                  <span className="font-medium text-slate-900">{inspection.propertyName}</span>
-                                  {inspection.title && (
-                                    <span className="text-slate-500">- {inspection.title}</span>
-                                  )}
-                                </div>
-                                <Badge 
-                                  variant={inspection.status === 'completed' ? 'default' : 'outline'}
-                                  className={cn(
-                                    inspection.status === 'completed' && "bg-green-100 text-green-800 border-green-200",
-                                    inspection.status === 'assigned' && "bg-blue-100 text-blue-800 border-blue-200",
-                                    inspection.status === 'in_progress' && "bg-yellow-100 text-yellow-800 border-yellow-200"
-                                  )}
-                                >
-                                  {inspection.status === 'completed' ? 'Completed' : 
-                                   inspection.status === 'in_progress' ? 'In Progress' : 'Scheduled'}
-                                </Badge>
-                              </div>
-                              
-                              {/* Date info */}
-                              <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
-                                {inspection.dueDate && (
-                                  <span className="flex items-center gap-1">
-                                    <CalendarIcon className="w-3.5 h-3.5" />
-                                    Due: {format(new Date(inspection.dueDate), "MMM d, yyyy")}
-                                  </span>
-                                )}
-                                {inspection.completedAt && (
-                                  <span className="flex items-center gap-1 text-green-600">
-                                    <UserCheck className="w-3.5 h-3.5" />
-                                    Completed: {format(new Date(inspection.completedAt), "MMM d, yyyy 'at' h:mm a")}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Notes */}
-                              {(inspection.notes || inspection.completionNotes) && (
-                                <div className="bg-slate-50 rounded-md p-3 mb-3 text-sm text-slate-700">
-                                  {inspection.notes && <p className="mb-1"><strong>Notes:</strong> {inspection.notes}</p>}
-                                  {inspection.completionNotes && <p><strong>Completion Notes:</strong> {inspection.completionNotes}</p>}
-                                </div>
-                              )}
-
-                              {/* Photo Thumbnails */}
-                              {inspection.photos && inspection.photos.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                  {inspection.photos.map((photo, idx) => (
-                                    <button
-                                      key={idx}
-                                      onClick={() => openPhotoGallery(inspection.photos!, idx)}
-                                      className="relative w-16 h-16 rounded-md overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors"
-                                      data-testid={`photo-thumb-${inspection.id}-${idx}`}
-                                    >
-                                      <img 
-                                        src={photo} 
-                                        alt={`Inspection photo ${idx + 1}`}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingSupervisor(sup)}
+                          data-testid={`button-edit-${sup.id}`}
+                        >
+                          Edit
+                        </Button>
+                      </td>
+                    </tr>
                   );
-                })}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-slate-500">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredSupervisors.length)} of {filteredSupervisors.length} supervisors
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                data-testid="button-prev-page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              {getPageNumbers().map((page, idx) => (
+                typeof page === 'number' ? (
+                  <Button
+                    key={idx}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-[#0078D4]" : ""}
+                    data-testid={`button-page-${page}`}
+                  >
+                    {page}
+                  </Button>
+                ) : (
+                  <span key={idx} className="px-2 text-slate-400">...</span>
+                )
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                data-testid="button-next-page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Modals */}
         <AddSupervisorModal 
@@ -1363,58 +997,6 @@ export default function Supervisors() {
           onUnassign={(techId) => assignTechnicianMutation.mutate({ techId, supervisorId: null })}
         />
 
-        {/* Photo Gallery Modal */}
-        <Dialog open={photoGallery.open} onOpenChange={(open) => !open && setPhotoGallery({ ...photoGallery, open: false })}>
-          <DialogContent className="max-w-4xl p-0 bg-black/95">
-            <div className="relative">
-              <button
-                onClick={() => setPhotoGallery({ ...photoGallery, open: false })}
-                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              {photoGallery.photos.length > 0 && (
-                <>
-                  <img 
-                    src={photoGallery.photos[photoGallery.index]}
-                    alt={`Photo ${photoGallery.index + 1}`}
-                    className="w-full max-h-[80vh] object-contain"
-                  />
-                  
-                  {/* Navigation arrows */}
-                  {photoGallery.photos.length > 1 && (
-                    <>
-                      <button
-                        onClick={() => setPhotoGallery(prev => ({ 
-                          ...prev, 
-                          index: prev.index === 0 ? prev.photos.length - 1 : prev.index - 1 
-                        }))}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-                      >
-                        <ChevronLeft className="w-6 h-6" />
-                      </button>
-                      <button
-                        onClick={() => setPhotoGallery(prev => ({ 
-                          ...prev, 
-                          index: prev.index === prev.photos.length - 1 ? 0 : prev.index + 1 
-                        }))}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-                      >
-                        <ChevronRight className="w-6 h-6" />
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Photo counter */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/10 rounded-full text-white text-sm">
-                    {photoGallery.index + 1} / {photoGallery.photos.length}
-                  </div>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </AppLayout>
   );
