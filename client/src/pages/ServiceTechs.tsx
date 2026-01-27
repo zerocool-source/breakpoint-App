@@ -2546,7 +2546,7 @@ function NotesTabContent({ technician }: { technician: Technician }) {
   );
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 export default function ServiceTechs() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -2912,7 +2912,7 @@ export default function ServiceTechs() {
                     </p>
                   </div>
                 ) : (
-                  filteredTechnicians.map((tech) => {
+                  paginatedTechnicians.map((tech) => {
                     const fullName = `${tech.firstName} ${tech.lastName}`.trim();
                     const initials = getInitials(tech.firstName, tech.lastName);
                     const avatarColor = getAvatarColor(fullName);
@@ -2987,6 +2987,36 @@ export default function ServiceTechs() {
                   })
                 )}
               </div>
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-2 py-3 border-t border-slate-200 bg-white mt-auto">
+                  <p className="text-sm text-slate-500">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-slate-600">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </ScrollArea>
           </div>
 
