@@ -103,6 +103,59 @@ function Router() {
 
 type AppStage = "intro" | "loading" | "ready";
 
+function ServiceTechRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={TechOpsLanding} />
+      <Route path="/tech-ops" component={TechOpsLanding} />
+      <Route path="/tech-ops/:type" component={TechOps} />
+      <Route path="/service" component={Service} />
+      <Route path="/chemicals" component={Chemicals} />
+      <Route path="/visits" component={Visits} />
+      <Route path="/route-history" component={RouteHistory} />
+      <Route path="/report-equipment" component={EquipmentReports} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function RepairTechRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={RepairQueue} />
+      <Route path="/repair-queue" component={RepairQueue} />
+      <Route path="/repairs" component={RepairsUnified} />
+      <Route path="/service-repairs" component={ServiceRepairs} />
+      <Route path="/estimates" component={Estimates} />
+      <Route path="/estimate-history" component={EstimateHistory} />
+      <Route path="/equipment" component={Equipment} />
+      <Route path="/fleet/inventory" component={TruckInventory} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function SupervisorRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={TechSupervisor} />
+      <Route path="/tech-supervisor" component={TechSupervisor} />
+      <Route path="/supervisor-teams" component={SupervisorTeams} />
+      <Route path="/tech-services" component={ServiceTechs} />
+      <Route path="/tech-repairs" component={RepairTechs} />
+      <Route path="/scheduling" component={Scheduling} />
+      <Route path="/calendar" component={Calendar} />
+      <Route path="/visits" component={Visits} />
+      <Route path="/route-history" component={RouteHistory} />
+      <Route path="/emergencies" component={Emergencies} />
+      <Route path="/customers" component={Customers} />
+      <Route path="/accounts/:accountId" component={AccountDetails} />
+      <Route path="/reports" component={Reports} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
@@ -118,7 +171,18 @@ function AuthenticatedApp() {
     return <Login />;
   }
 
-  return <Router />;
+  // Route based on user role
+  switch (user?.role) {
+    case 'service':
+      return <ServiceTechRouter />;
+    case 'repair':
+      return <RepairTechRouter />;
+    case 'supervisor':
+      return <SupervisorRouter />;
+    default:
+      // Admin gets full access
+      return <Router />;
+  }
 }
 
 function App() {
