@@ -955,8 +955,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Two-Column Lower Section: Recent Activity + Chemical Orders */}
-        <div className="grid grid-cols-2 gap-6">
+        {/* Three-Column Lower Section: Recent Activity + Chemical Orders + Top Chemicals */}
+        <div className="grid grid-cols-3 gap-6">
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -1078,6 +1078,121 @@ export default function Dashboard() {
                   );
                 })()}
               </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Top Chemicals Ordered Card */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-[#60A5FA]" />
+                    Top Chemicals Ordered
+                  </CardTitle>
+                  <CardDescription>Most frequently ordered chemicals</CardDescription>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-blue-600 hover:text-blue-700"
+                  onClick={() => navigate("/chemicals")}
+                >
+                  View All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const topChemicals = [
+                  { name: 'Liquid Chlorine', percentage: 70, color: '#86EFAC', textColor: '#166534' },
+                  { name: 'Muriatic Acid', percentage: 20, color: '#C4B5FD', textColor: '#5B21B6' },
+                  { name: 'pH Increaser', percentage: 10, color: '#FBCFE8', textColor: '#9D174D' },
+                ];
+                
+                return (
+                  <div className="flex flex-col items-center">
+                    {/* Overlapping Bubble Chart */}
+                    <div className="relative h-[180px] w-full flex items-center justify-center">
+                      <svg viewBox="0 0 300 180" className="w-full h-full max-w-[280px]">
+                        {/* Largest circle - Liquid Chlorine (70%) */}
+                        <circle 
+                          cx="100" 
+                          cy="95" 
+                          r="70" 
+                          fill={topChemicals[0].color}
+                          opacity="0.85"
+                          className="drop-shadow-sm"
+                        />
+                        <text 
+                          x="100" 
+                          y="95" 
+                          textAnchor="middle" 
+                          dominantBaseline="middle"
+                          className="text-2xl font-bold"
+                          fill={topChemicals[0].textColor}
+                        >
+                          {topChemicals[0].percentage}%
+                        </text>
+                        
+                        {/* Medium circle - Muriatic Acid (20%) */}
+                        <circle 
+                          cx="190" 
+                          cy="75" 
+                          r="50" 
+                          fill={topChemicals[1].color}
+                          opacity="0.85"
+                          className="drop-shadow-sm"
+                        />
+                        <text 
+                          x="190" 
+                          y="75" 
+                          textAnchor="middle" 
+                          dominantBaseline="middle"
+                          className="text-xl font-bold"
+                          fill={topChemicals[1].textColor}
+                        >
+                          {topChemicals[1].percentage}%
+                        </text>
+                        
+                        {/* Smallest circle - pH Increaser (10%) */}
+                        <circle 
+                          cx="230" 
+                          cy="130" 
+                          r="35" 
+                          fill={topChemicals[2].color}
+                          opacity="0.85"
+                          className="drop-shadow-sm"
+                        />
+                        <text 
+                          x="230" 
+                          y="130" 
+                          textAnchor="middle" 
+                          dominantBaseline="middle"
+                          className="text-base font-bold"
+                          fill={topChemicals[2].textColor}
+                        >
+                          {topChemicals[2].percentage}%
+                        </text>
+                      </svg>
+                    </div>
+                    
+                    {/* Legend */}
+                    <div className="w-full pt-4 border-t border-slate-100 mt-2 space-y-2">
+                      {topChemicals.map((chemical, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span 
+                            className="w-3 h-3 rounded-full shrink-0" 
+                            style={{ backgroundColor: chemical.color }}
+                          />
+                          <span className="text-sm text-slate-700 flex-1">{chemical.name}</span>
+                          <span className="text-sm font-medium text-slate-900">{chemical.percentage}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
