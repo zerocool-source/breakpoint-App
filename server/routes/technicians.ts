@@ -93,10 +93,25 @@ export function registerTechnicianRoutes(app: any) {
       let synced = 0;
       for (const t of techList) {
         const externalId = String(t.RecordID || t.TechnicianID);
+        // Parse Name field if FirstName/LastName are empty
+        let firstName = t.FirstName || "";
+        let lastName = t.LastName || "";
+        if (!firstName && !lastName && t.Name) {
+          const nameParts = t.Name.trim().split(/\s+/);
+          firstName = nameParts[0] || "";
+          lastName = nameParts.slice(1).join(" ") || "";
+        }
+        // Try to extract name from email if still empty
+        if (!firstName && !lastName && t.Email) {
+          const emailName = t.Email.split("@")[0].replace(/[._]/g, " ");
+          const nameParts = emailName.split(/\s+/);
+          firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : "";
+          lastName = nameParts.slice(1).map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+        }
         await storage.upsertTechnician(externalId, {
           externalId,
-          firstName: t.FirstName || "",
-          lastName: t.LastName || "",
+          firstName: firstName || "Unknown",
+          lastName: lastName || "",
           phone: t.Phone || t.CellPhone || "",
           email: t.Email || "",
           role: "service",
