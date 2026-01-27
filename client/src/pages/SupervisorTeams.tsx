@@ -448,9 +448,9 @@ export default function SupervisorTeams() {
                   <Badge 
                     className={cn(
                       "text-xs font-medium",
-                      supervisor.region === "south" && "bg-[#22D69A] text-white",
-                      supervisor.region === "mid" && "bg-[#0078D4] text-white",
-                      supervisor.region === "north" && "bg-[#FF8000] text-white"
+                      supervisor.region === "south" && "bg-blue-500 text-white",
+                      supervisor.region === "mid" && "bg-green-500 text-white",
+                      supervisor.region === "north" && "bg-purple-500 text-white"
                     )}
                   >
                     {getRegionLabel(supervisor.region)}
@@ -750,7 +750,7 @@ export default function SupervisorTeams() {
                     size="sm"
                     variant={regionFilter === "south" ? "default" : "outline"}
                     onClick={() => setRegionFilter("south")}
-                    className={regionFilter === "south" ? "bg-[#22D69A] hover:bg-[#1CBF8A]" : ""}
+                    className={regionFilter === "south" ? "bg-blue-500 hover:bg-blue-600" : ""}
                     data-testid="button-region-south"
                   >
                     South
@@ -759,7 +759,7 @@ export default function SupervisorTeams() {
                     size="sm"
                     variant={regionFilter === "mid" ? "default" : "outline"}
                     onClick={() => setRegionFilter("mid")}
-                    className={regionFilter === "mid" ? "bg-[#0078D4] hover:bg-[#006BBC]" : ""}
+                    className={regionFilter === "mid" ? "bg-green-500 hover:bg-green-600" : ""}
                     data-testid="button-region-mid"
                   >
                     Mid
@@ -768,7 +768,7 @@ export default function SupervisorTeams() {
                     size="sm"
                     variant={regionFilter === "north" ? "default" : "outline"}
                     onClick={() => setRegionFilter("north")}
-                    className={regionFilter === "north" ? "bg-[#FF8000] hover:bg-[#E67300]" : ""}
+                    className={regionFilter === "north" ? "bg-purple-500 hover:bg-purple-600" : ""}
                     data-testid="button-region-north"
                   >
                     North
@@ -796,7 +796,7 @@ export default function SupervisorTeams() {
                           {supervisorsByRegion.south.length > 0 && (
                             <div className="space-y-3">
                               <div className="flex items-center gap-2 px-2">
-                                <div className="w-3 h-3 rounded-full bg-[#22D69A]" />
+                                <div className="w-3 h-3 rounded-full bg-blue-500" />
                                 <h4 className="text-sm font-semibold text-slate-700">South County</h4>
                                 <Badge variant="outline" className="text-xs">{supervisorsByRegion.south.length}</Badge>
                               </div>
@@ -808,7 +808,7 @@ export default function SupervisorTeams() {
                           {supervisorsByRegion.mid.length > 0 && (
                             <div className="space-y-3">
                               <div className="flex items-center gap-2 px-2">
-                                <div className="w-3 h-3 rounded-full bg-[#0078D4]" />
+                                <div className="w-3 h-3 rounded-full bg-green-500" />
                                 <h4 className="text-sm font-semibold text-slate-700">Mid County</h4>
                                 <Badge variant="outline" className="text-xs">{supervisorsByRegion.mid.length}</Badge>
                               </div>
@@ -820,7 +820,7 @@ export default function SupervisorTeams() {
                           {supervisorsByRegion.north.length > 0 && (
                             <div className="space-y-3">
                               <div className="flex items-center gap-2 px-2">
-                                <div className="w-3 h-3 rounded-full bg-[#FF8000]" />
+                                <div className="w-3 h-3 rounded-full bg-purple-500" />
                                 <h4 className="text-sm font-semibold text-slate-700">North County</h4>
                                 <Badge variant="outline" className="text-xs">{supervisorsByRegion.north.length}</Badge>
                               </div>
