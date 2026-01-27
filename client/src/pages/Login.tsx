@@ -38,8 +38,9 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-cyan-600 p-12 flex-col justify-between">
         <div>
-          <div className="flex items-center gap-3 mb-8">
-            <img src={LinkpointLogo} alt="Linkpoint" className="h-16 w-auto" />
+          <div className="flex items-center gap-4 mb-8">
+            <img src={LinkpointLogo} alt="Linkpoint" className="h-28 w-auto" />
+            <span className="px-3 py-1 bg-orange-500 text-white text-sm font-bold rounded-full uppercase tracking-wide">Beta</span>
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">
             Pool Service Management
@@ -87,8 +88,9 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-8">
         <Card className="w-full max-w-md shadow-xl border-0">
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto mb-4 lg:hidden">
-              <img src={LinkpointLogo} alt="Linkpoint" className="h-12 w-auto" />
+            <div className="mx-auto mb-4 lg:hidden flex items-center gap-2 justify-center">
+              <img src={LinkpointLogo} alt="Linkpoint" className="h-16 w-auto" />
+              <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full uppercase">Beta</span>
             </div>
             <CardTitle className="text-2xl">
               {isRegister ? "Create Account" : "Admin Login"}
