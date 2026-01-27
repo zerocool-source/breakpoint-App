@@ -11,6 +11,7 @@ import {
   Zap,
   Settings,
   Wrench,
+  UsersRound,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,11 @@ const navItems: NavItem[] = [
       { label: "Service Techs", href: "/tech-services" },
       { label: "Supervisors", href: "/supervisors" },
     ]
+  },
+  { 
+    icon: UsersRound, 
+    label: "Supervisor Teams", 
+    href: "/supervisor-management"
   },
   { 
     icon: Calendar, 
