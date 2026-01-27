@@ -5,16 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Droplets, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, 
-  Clock, CheckCircle2, Eye, EyeOff, Package, Send, Truck, Calendar, Image as ImageIcon
+  Clock, CheckCircle2, Eye, EyeOff, Package, Send, Truck, Calendar, Image as ImageIcon,
+  Plus, Edit2, Trash2, Copy, X, Store, FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
-import type { TechOpsEntry } from "@shared/schema";
+import type { TechOpsEntry, ChemicalVendor, InvoiceTemplate } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface EnrichedAlert {
   alertId: string;
@@ -61,11 +67,32 @@ function formatCurrency(cents: number): string {
 
 export default function Chemicals() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("orders");
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
   const [showCompleted, setShowCompleted] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<TechOpsEntry | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
+  
+  // Multi-select for chemical orders
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [selectedVendorId, setSelectedVendorId] = useState<string>("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  
+  // Vendor management
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<ChemicalVendor | null>(null);
+  const [vendorForm, setVendorForm] = useState({
+    vendorName: "",
+    contactPerson: "",
+    email: "",
+    phone: "",
+    address: "",
+    notes: "",
+  });
 
   // Fetch chemical alerts from Pool Brain
   const { data: alertsData = { alerts: [] }, isLoading: alertsLoading, refetch: refetchAlerts, isFetching: alertsFetching } = useQuery({
@@ -107,6 +134,186 @@ export default function Chemicals() {
   });
 
   const completedIds = new Set<string>((completedData.completedIds || []).map(String));
+
+  // Fetch vendors
+  const { data: vendors = [] } = useQuery<ChemicalVendor[]>({
+    queryKey: ["vendors"],
+    queryFn: async () => {
+      const res = await fetch("/api/vendors");
+      if (!res.ok) throw new Error("Failed to fetch vendors");
+      return res.json();
+    },
+  });
+
+  // Fetch email templates
+  const { data: templates = [] } = useQuery<InvoiceTemplate[]>({
+    queryKey: ["invoice-templates"],
+    queryFn: async () => {
+      const res = await fetch("/api/invoice-templates");
+      if (!res.ok) throw new Error("Failed to fetch templates");
+      return res.json();
+    },
+  });
+
+  // Vendor mutations
+  const createVendorMutation = useMutation({
+    mutationFn: async (data: typeof vendorForm) => {
+      const res = await fetch("/api/vendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create vendor");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      toast({ title: "Vendor created successfully" });
+      resetVendorForm();
+    },
+  });
+
+  const updateVendorMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: typeof vendorForm }) => {
+      const res = await fetch(`/api/vendors/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update vendor");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      toast({ title: "Vendor updated successfully" });
+      resetVendorForm();
+    },
+  });
+
+  const deleteVendorMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/vendors/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete vendor");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      toast({ title: "Vendor deleted" });
+    },
+  });
+
+  const resetVendorForm = () => {
+    setShowVendorModal(false);
+    setEditingVendor(null);
+    setVendorForm({ vendorName: "", contactPerson: "", email: "", phone: "", address: "", notes: "" });
+  };
+
+  const handleEditVendor = (vendor: ChemicalVendor) => {
+    setEditingVendor(vendor);
+    setVendorForm({
+      vendorName: vendor.vendorName,
+      contactPerson: vendor.contactPerson || "",
+      email: vendor.email || "",
+      phone: vendor.phone || "",
+      address: vendor.address || "",
+      notes: vendor.notes || "",
+    });
+    setShowVendorModal(true);
+  };
+
+  const handleSaveVendor = () => {
+    if (!vendorForm.vendorName.trim()) {
+      toast({ title: "Vendor name is required", variant: "destructive" });
+      return;
+    }
+    if (editingVendor) {
+      updateVendorMutation.mutate({ id: editingVendor.id, data: vendorForm });
+    } else {
+      createVendorMutation.mutate(vendorForm);
+    }
+  };
+
+  // Order selection helpers
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllOrders = () => {
+    const allIds = (chemicalOrders as TechOpsEntry[]).map((o) => o.id);
+    setSelectedOrders(new Set(allIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedOrders(new Set());
+    setSelectedVendorId("");
+    setSelectedTemplateId("");
+  };
+
+  // Generate email content
+  const generateEmailContent = () => {
+    const selected = (chemicalOrders as TechOpsEntry[]).filter((o) => selectedOrders.has(o.id));
+    const vendor = vendors.find((v) => v.id === selectedVendorId);
+    const template = templates.find((t) => t.id === selectedTemplateId);
+    
+    const subject = `Chemical Order Request - ${format(new Date(), "MMM d, yyyy")}`;
+    
+    // Use template header if available
+    const headerText = template?.headerText || `Dear ${vendor?.contactPerson || vendor?.vendorName || "Vendor"},`;
+    
+    let body = `<p>${headerText}</p>\n\n`;
+    body += `<p>Please fulfill the following chemical order request:</p>\n\n`;
+    
+    // Chemical order details with bold chemicals and quantities
+    body += `<table style="border-collapse: collapse; width: 100%; margin: 16px 0;">\n`;
+    body += `<tr style="background: #1e3a5f; color: white;"><th style="padding: 10px; text-align: left;">Property</th><th style="padding: 10px; text-align: left;">Chemicals</th><th style="padding: 10px; text-align: left;">Quantity</th></tr>\n`;
+    
+    selected.forEach((order, idx) => {
+      const bgColor = idx % 2 === 0 ? "#f8fafc" : "#ffffff";
+      body += `<tr style="background: ${bgColor};">`;
+      body += `<td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${order.propertyName || "Unknown"}</td>`;
+      body += `<td style="padding: 10px; border-bottom: 1px solid #e5e7eb;"><strong style="color: #1e40af;">${order.chemicals || order.description || "N/A"}</strong></td>`;
+      body += `<td style="padding: 10px; border-bottom: 1px solid #e5e7eb;"><strong style="color: #059669;">${order.quantity || "As needed"}</strong></td>`;
+      body += `</tr>\n`;
+    });
+    
+    body += `</table>\n\n`;
+    
+    // Use template footer if available
+    const footerText = template?.footerText || "Please confirm receipt and estimated delivery date.";
+    body += `<p>${footerText}</p>\n\n`;
+    
+    // Use template terms if available
+    if (template?.termsConditions) {
+      body += `<p style="font-size: 12px; color: #6b7280; margin-top: 16px;">${template.termsConditions}</p>\n\n`;
+    }
+    
+    body += `<p>Thank you,<br/><strong>Pool Service Team</strong></p>`;
+    
+    setEmailSubject(subject);
+    setEmailBody(body);
+    setShowEmailPreview(true);
+  };
+
+  const copyEmailToClipboard = async () => {
+    const plainText = emailBody.replace(/<[^>]*>/g, "").replace(/\n\n/g, "\n");
+    await navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${plainText}`);
+    toast({ title: "Email copied to clipboard" });
+  };
+
+  const openInEmailClient = () => {
+    const vendor = vendors.find((v) => v.id === selectedVendorId);
+    const plainText = emailBody.replace(/<[^>]*>/g, "").replace(/\n\n/g, "\n");
+    const mailtoUrl = `mailto:${vendor?.email || ""}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(plainText)}`;
+    window.open(mailtoUrl, "_blank");
+  };
 
   const markCompleteMutation = useMutation({
     mutationFn: async ({ alertId, completed }: { alertId: string; completed: boolean }) => {
@@ -314,10 +521,34 @@ export default function Chemicals() {
           <TabsContent value="orders" className="mt-4">
             <Card className="bg-white">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Droplets className="w-5 h-5 text-blue-600" />
-                  Chemical Orders
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-blue-600" />
+                    Chemical Orders
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowVendorModal(true)}
+                      className="gap-1"
+                      data-testid="btn-manage-vendors"
+                    >
+                      <Store className="w-4 h-4" />
+                      Manage Vendors
+                    </Button>
+                    {(chemicalOrders as TechOpsEntry[]).length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={selectedOrders.size === (chemicalOrders as TechOpsEntry[]).length ? clearSelection : selectAllOrders}
+                        data-testid="btn-select-all"
+                      >
+                        {selectedOrders.size === (chemicalOrders as TechOpsEntry[]).length ? "Deselect All" : "Select All"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {ordersLoading ? (
@@ -335,52 +566,67 @@ export default function Chemicals() {
                       {(chemicalOrders as TechOpsEntry[]).map((entry) => {
                         const statusInfo = orderStatusConfig[entry.orderStatus || "pending"] || orderStatusConfig.pending;
                         const StatusIcon = statusInfo.icon;
+                        const isSelected = selectedOrders.has(entry.id);
                         return (
                           <div
                             key={entry.id}
-                            className="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
-                            onClick={() => { setSelectedEntry(entry); setPhotoIndex(0); }}
+                            className={cn(
+                              "p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors flex items-start gap-3",
+                              isSelected && "bg-blue-50 border-blue-300"
+                            )}
                             data-testid={`card-order-${entry.id}`}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-semibold text-slate-900">{entry.propertyName || "Unknown Property"}</h3>
-                                  <Badge className={cn("text-xs", statusInfo.color)}>
-                                    <StatusIcon className="w-3 h-3 mr-1" />
-                                    {statusInfo.label}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-slate-600 mb-2">{entry.chemicals || entry.description || "Chemical order"}</p>
-                                <div className="flex items-center gap-4 text-xs text-slate-500">
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {entry.technicianName}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {formatDate(entry.createdAt)}
-                                  </span>
-                                  {entry.quantity && (
+                            <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleOrderSelection(entry.id)}
+                                data-testid={`checkbox-order-${entry.id}`}
+                              />
+                            </div>
+                            <div 
+                              className="flex-1"
+                              onClick={() => { setSelectedEntry(entry); setPhotoIndex(0); }}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-semibold text-slate-900">{entry.propertyName || "Unknown Property"}</h3>
+                                    <Badge className={cn("text-xs", statusInfo.color)}>
+                                      <StatusIcon className="w-3 h-3 mr-1" />
+                                      {statusInfo.label}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-slate-600 mb-2">{entry.chemicals || entry.description || "Chemical order"}</p>
+                                  <div className="flex items-center gap-4 text-xs text-slate-500">
                                     <span className="flex items-center gap-1">
-                                      <Package className="w-3 h-3" />
-                                      Qty: {entry.quantity}
+                                      <User className="w-3 h-3" />
+                                      {entry.technicianName}
                                     </span>
-                                  )}
-                                  {entry.photos && entry.photos.length > 0 && (
                                     <span className="flex items-center gap-1">
-                                      <ImageIcon className="w-3 h-3" />
-                                      {entry.photos.length}
+                                      <Calendar className="w-3 h-3" />
+                                      {formatDate(entry.createdAt)}
                                     </span>
-                                  )}
+                                    {entry.quantity && (
+                                      <span className="flex items-center gap-1">
+                                        <Package className="w-3 h-3" />
+                                        Qty: {entry.quantity}
+                                      </span>
+                                    )}
+                                    {entry.photos && entry.photos.length > 0 && (
+                                      <span className="flex items-center gap-1">
+                                        <ImageIcon className="w-3 h-3" />
+                                        {entry.photos.length}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
+                                {entry.vendorName && (
+                                  <div className="text-right">
+                                    <p className="text-xs text-slate-500">Vendor</p>
+                                    <p className="text-sm font-medium text-slate-700">{entry.vendorName}</p>
+                                  </div>
+                                )}
                               </div>
-                              {entry.vendorName && (
-                                <div className="text-right">
-                                  <p className="text-xs text-slate-500">Vendor</p>
-                                  <p className="text-sm font-medium text-slate-700">{entry.vendorName}</p>
-                                </div>
-                              )}
                             </div>
                           </div>
                         );
@@ -683,6 +929,262 @@ export default function Chemicals() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedEntry(null)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Action Bar for Selected Orders */}
+      {selectedOrders.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white rounded-xl shadow-2xl p-4 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-4" data-testid="floating-action-bar">
+          <div className="flex items-center gap-2 pr-4 border-r border-slate-700">
+            <span className="text-lg font-semibold">{selectedOrders.size}</span>
+            <span className="text-slate-300">order{selectedOrders.size > 1 ? "s" : ""} selected</span>
+          </div>
+          
+          <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
+            <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white" data-testid="select-vendor">
+              <SelectValue placeholder="Select Vendor" />
+            </SelectTrigger>
+            <SelectContent>
+              {vendors.length === 0 ? (
+                <div className="p-2 text-sm text-slate-500">No vendors. Add one first.</div>
+              ) : (
+                vendors.filter(v => v.isActive !== false).map((vendor) => (
+                  <SelectItem key={vendor.id} value={vendor.id}>
+                    {vendor.vendorName}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+            <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white" data-testid="select-template">
+              <SelectValue placeholder="Email Template" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default">Default Template</SelectItem>
+              {templates.map((template) => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.templateName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={generateEmailContent}
+            disabled={!selectedVendorId}
+            className="bg-blue-600 hover:bg-blue-700"
+            data-testid="btn-create-email"
+          >
+            <Mail className="w-4 h-4 mr-2" />
+            Create Email
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={clearSelection}
+            className="text-slate-400 hover:text-white hover:bg-slate-800"
+            data-testid="btn-clear-selection"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Vendor Management Modal */}
+      <Dialog open={showVendorModal} onOpenChange={(open) => { if (!open) resetVendorForm(); else setShowVendorModal(true); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="w-5 h-5 text-blue-600" />
+              {editingVendor ? "Edit Vendor" : "Manage Vendors"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingVendor ? "Update vendor information" : "Add and manage chemical suppliers"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!editingVendor && (
+            <div className="space-y-4">
+              {/* Vendor List */}
+              <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                {vendors.length === 0 ? (
+                  <div className="p-4 text-center text-slate-500">
+                    No vendors yet. Add your first vendor below.
+                  </div>
+                ) : (
+                  vendors.map((vendor) => (
+                    <div key={vendor.id} className="p-3 flex items-center justify-between hover:bg-slate-50">
+                      <div>
+                        <p className="font-medium">{vendor.vendorName}</p>
+                        <p className="text-sm text-slate-500">
+                          {vendor.email || vendor.phone || "No contact info"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditVendor(vendor)}
+                          data-testid={`btn-edit-vendor-${vendor.id}`}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => deleteVendorMutation.mutate(vendor.id)}
+                          data-testid={`btn-delete-vendor-${vendor.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add New Vendor
+                </h4>
+              </div>
+            </div>
+          )}
+
+          {/* Vendor Form */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="vendorName">Vendor Name *</Label>
+              <Input
+                id="vendorName"
+                value={vendorForm.vendorName}
+                onChange={(e) => setVendorForm({ ...vendorForm, vendorName: e.target.value })}
+                placeholder="Chemical Supply Co."
+                data-testid="input-vendor-name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="contactPerson">Contact Person</Label>
+              <Input
+                id="contactPerson"
+                value={vendorForm.contactPerson}
+                onChange={(e) => setVendorForm({ ...vendorForm, contactPerson: e.target.value })}
+                placeholder="John Smith"
+                data-testid="input-contact-person"
+              />
+            </div>
+            <div>
+              <Label htmlFor="vendorEmail">Email</Label>
+              <Input
+                id="vendorEmail"
+                type="email"
+                value={vendorForm.email}
+                onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
+                placeholder="orders@supplier.com"
+                data-testid="input-vendor-email"
+              />
+            </div>
+            <div>
+              <Label htmlFor="vendorPhone">Phone</Label>
+              <Input
+                id="vendorPhone"
+                value={vendorForm.phone}
+                onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
+                placeholder="(555) 123-4567"
+                data-testid="input-vendor-phone"
+              />
+            </div>
+            <div>
+              <Label htmlFor="vendorAddress">Address</Label>
+              <Input
+                id="vendorAddress"
+                value={vendorForm.address}
+                onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
+                placeholder="123 Supply St, City, ST"
+                data-testid="input-vendor-address"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="vendorNotes">Notes (Account #, Special Instructions)</Label>
+              <Textarea
+                id="vendorNotes"
+                value={vendorForm.notes}
+                onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })}
+                placeholder="Account #12345, Delivers on Tuesdays"
+                rows={2}
+                data-testid="input-vendor-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={resetVendorForm}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveVendor} disabled={createVendorMutation.isPending || updateVendorMutation.isPending}>
+              {editingVendor ? "Update Vendor" : "Add Vendor"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Preview Modal */}
+      <Dialog open={showEmailPreview} onOpenChange={setShowEmailPreview}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-blue-600" />
+              Email Preview
+            </DialogTitle>
+            <DialogDescription>
+              Review the email before sending to {vendors.find(v => v.id === selectedVendorId)?.vendorName || "vendor"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>To</Label>
+              <Input
+                value={vendors.find(v => v.id === selectedVendorId)?.email || "No email on file"}
+                readOnly
+                className="bg-slate-50"
+              />
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                data-testid="input-email-subject"
+              />
+            </div>
+            <div>
+              <Label>Message</Label>
+              <div 
+                className="border rounded-lg p-4 bg-white min-h-[200px] prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: emailBody }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowEmailPreview(false)}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={copyEmailToClipboard} className="gap-2">
+              <Copy className="w-4 h-4" />
+              Copy to Clipboard
+            </Button>
+            <Button onClick={openInEmailClient} className="gap-2">
+              <Send className="w-4 h-4" />
+              Open in Email App
             </Button>
           </DialogFooter>
         </DialogContent>
