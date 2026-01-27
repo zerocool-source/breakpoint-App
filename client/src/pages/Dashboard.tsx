@@ -417,18 +417,48 @@ export default function Dashboard() {
               const alertPct = total > 0 ? (alertCount / total) * 100 : 0;
               const issuePct = total > 0 ? (issueCount / total) * 100 : 0;
               
-              const emergencyItems = metrics?.emergencies?.recentOpen || [];
-              const alertItems = metrics?.alerts?.recentActive || [];
-              const issueItems = metrics?.reportedIssues?.items || [];
+              // Sample data for demonstration
+              const sampleEmergencies = [
+                { id: 'se1', propertyName: 'Sunset Hills HOA', description: 'Major pump motor failure, pool is down', technicianName: 'Mike Johnson', priority: 'critical', timeAgo: '14 days', type: 'emergency' },
+                { id: 'se2', propertyName: 'Desert Springs Resort', description: 'Heater exchanger leaking', technicianName: 'Sarah Williams', priority: 'high', timeAgo: '13 days', type: 'emergency' },
+                { id: 'se3', propertyName: 'Palm Gardens Community', description: 'Control panel error codes', technicianName: 'James Wilson', priority: 'high', timeAgo: '12 days', type: 'emergency' },
+                { id: 'se4', propertyName: 'Lakewood Country Club', description: 'Filter system completely failed', technicianName: 'Jorge Martinez', priority: 'critical', timeAgo: '3 days', type: 'emergency' },
+              ];
+              
+              const sampleAlerts = [
+                { id: 'sa1', propertyName: 'Ocean View Resort', description: 'Chemical levels out of range', technicianName: 'Service Tech', timeAgo: '2 hours ago', type: 'alert' },
+                { id: 'sa2', propertyName: 'Vista Grande HOA', description: 'Pump pressure reading high', technicianName: 'Service Tech', timeAgo: '5 hours ago', type: 'alert' },
+                { id: 'sa3', propertyName: 'Cypress Creek HOA', description: 'Scheduled maintenance due', technicianName: 'System', timeAgo: '1 day ago', type: 'alert' },
+              ];
+              
+              const sampleIssues = [
+                { id: 'si1', propertyName: 'Marina Bay Club', description: 'Customer reported cloudy water', technicianName: 'Pending review', timeAgo: '1 day ago', type: 'issue' },
+                { id: 'si2', propertyName: 'Sunset Marina', description: 'Tile damage reported by customer', technicianName: 'Pending review', timeAgo: '3 days ago', type: 'issue' },
+              ];
+              
+              // Use real data if available, otherwise show sample data
+              const realEmergencyItems = metrics?.emergencies?.recentOpen || [];
+              const realAlertItems = metrics?.alerts?.recentActive || [];
+              const realIssueItems = metrics?.reportedIssues?.items || [];
+              
+              const emergencyItems = realEmergencyItems.length > 0 
+                ? realEmergencyItems.map((e: any) => ({ ...e, type: 'emergency', timeAgo: null }))
+                : sampleEmergencies;
+              const alertItems = realAlertItems.length > 0 
+                ? realAlertItems.map((a: any) => ({ ...a, type: 'alert', timeAgo: null }))
+                : sampleAlerts;
+              const issueItems = realIssueItems.length > 0 
+                ? realIssueItems.map((i: any) => ({ ...i, type: 'issue', timeAgo: null }))
+                : sampleIssues;
               
               const getFilteredItems = () => {
-                if (selectedStatusCategory === 'emergencies') return emergencyItems.map((e: any) => ({ ...e, type: 'emergency' }));
-                if (selectedStatusCategory === 'alerts') return alertItems.map((a: any) => ({ ...a, type: 'alert' }));
-                if (selectedStatusCategory === 'issues') return issueItems.map((i: any) => ({ ...i, type: 'issue' }));
+                if (selectedStatusCategory === 'emergencies') return emergencyItems;
+                if (selectedStatusCategory === 'alerts') return alertItems;
+                if (selectedStatusCategory === 'issues') return issueItems;
                 return [
-                  ...emergencyItems.slice(0, 3).map((e: any) => ({ ...e, type: 'emergency' })),
-                  ...alertItems.slice(0, 3).map((a: any) => ({ ...a, type: 'alert' })),
-                  ...issueItems.slice(0, 3).map((i: any) => ({ ...i, type: 'issue' })),
+                  ...emergencyItems.slice(0, 2),
+                  ...alertItems.slice(0, 2),
+                  ...issueItems.slice(0, 2),
                 ];
               };
               
@@ -438,22 +468,41 @@ export default function Dashboard() {
                 <div className="flex gap-6">
                   {/* Left side: Progress bar and metric boxes */}
                   <div className="w-1/2 space-y-4">
-                    {/* Segmented Progress Bar */}
+                    {/* Segmented Progress Bar with Labels */}
                     <div>
-                      <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-                        <span>0%</span>
-                        <span>50%</span>
-                        <span>100%</span>
-                      </div>
-                      <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex">
+                      <div className="h-6 rounded-full bg-slate-100 overflow-hidden flex relative">
                         {emergencyPct > 0 && (
-                          <div className="h-full bg-red-500 transition-all" style={{ width: `${emergencyPct}%` }} />
+                          <div className="h-full bg-red-500 transition-all flex items-center justify-center relative" style={{ width: `${emergencyPct}%` }}>
+                            {emergencyPct >= 5 && (
+                              <span className="text-[10px] font-bold text-white">{emergencyCount.toLocaleString()}</span>
+                            )}
+                          </div>
                         )}
                         {alertPct > 0 && (
-                          <div className="h-full bg-orange-500 transition-all" style={{ width: `${alertPct}%` }} />
+                          <div className="h-full bg-orange-500 transition-all flex items-center justify-center relative" style={{ width: `${alertPct}%` }}>
+                            {alertPct >= 5 && (
+                              <span className="text-[10px] font-bold text-white">{alertCount.toLocaleString()}</span>
+                            )}
+                          </div>
                         )}
                         {issuePct > 0 && (
-                          <div className="h-full bg-blue-500 transition-all" style={{ width: `${issuePct}%` }} />
+                          <div className="h-full bg-blue-500 transition-all flex items-center justify-center relative" style={{ width: `${issuePct}%` }}>
+                            {issuePct >= 5 && (
+                              <span className="text-[10px] font-bold text-white">{issueCount.toLocaleString()}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {/* Labels for small segments shown below */}
+                      <div className="flex justify-between mt-1">
+                        {emergencyPct > 0 && emergencyPct < 5 && (
+                          <span className="text-[9px] font-medium text-red-600">{emergencyCount}</span>
+                        )}
+                        {alertPct > 0 && alertPct < 5 && (
+                          <span className="text-[9px] font-medium text-orange-600">{alertCount.toLocaleString()}</span>
+                        )}
+                        {issuePct > 0 && issuePct < 5 && (
+                          <span className="text-[9px] font-medium text-blue-600">{issueCount}</span>
                         )}
                       </div>
                     </div>
@@ -509,17 +558,11 @@ export default function Dashboard() {
                       </button>
                     </div>
                     
-                    {/* All toggle */}
-                    <button
-                      onClick={() => setSelectedStatusCategory('all')}
-                      className={`w-full py-2 rounded-lg border text-sm font-medium transition-all ${
-                        selectedStatusCategory === 'all'
-                          ? 'border-slate-400 bg-slate-100 text-slate-700'
-                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
-                      }`}
-                    >
-                      Show All ({total})
-                    </button>
+                    {/* Total label */}
+                    <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 border border-slate-200">
+                      <span className="text-sm font-medium text-slate-600">Total:</span>
+                      <span className="text-lg font-bold text-slate-800">{total.toLocaleString()}</span>
+                    </div>
                   </div>
                   
                   {/* Right side: Items panel */}
@@ -534,10 +577,12 @@ export default function Dashboard() {
                         <p className="text-sm text-slate-400 italic">No items</p>
                       ) : (
                         filteredItems.map((item: any, idx: number) => {
-                          const daysOpen = item.createdAt 
-                            ? Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24))
-                            : 0;
-                          const daysText = daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`;
+                          // Use timeAgo if provided (sample data), otherwise calculate from createdAt
+                          let timeDisplay = item.timeAgo;
+                          if (!timeDisplay && item.createdAt) {
+                            const daysOpen = Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+                            timeDisplay = daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`;
+                          }
                           
                           const bgColor = item.type === 'emergency' ? 'bg-red-50 border-red-100' :
                                           item.type === 'alert' ? 'bg-orange-50 border-orange-100' :
@@ -564,7 +609,7 @@ export default function Dashboard() {
                               <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
                               <div className="flex items-center justify-between text-[10px] text-slate-500">
                                 <span>{item.technicianName || item.submittedByName || 'Unassigned'}</span>
-                                <span>{daysText}</span>
+                                <span>{timeDisplay}</span>
                               </div>
                             </div>
                           );
