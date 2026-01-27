@@ -155,20 +155,22 @@ function AddTechnicianModal({
 }: { 
   open: boolean; 
   onClose: () => void;
-  onAdd: (tech: { firstName: string; lastName: string; phone: string; email: string }) => void;
+  onAdd: (tech: { firstName: string; lastName: string; phone: string; email: string; role: string }) => void;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState("service");
 
   const handleSubmit = () => {
     if (!firstName.trim() || !lastName.trim()) return;
-    onAdd({ firstName: firstName.trim(), lastName: lastName.trim(), phone, email });
+    onAdd({ firstName: firstName.trim(), lastName: lastName.trim(), phone, email, role });
     setFirstName("");
     setLastName("");
     setPhone("");
     setEmail("");
+    setRole("service");
     onClose();
   };
 
@@ -177,6 +179,7 @@ function AddTechnicianModal({
     setLastName("");
     setPhone("");
     setEmail("");
+    setRole("service");
     onClose();
   };
 
@@ -228,6 +231,20 @@ function AddTechnicianModal({
             className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
             data-testid="input-email"
           />
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full h-10 px-3 rounded-md bg-slate-800 border border-slate-600 text-white"
+              data-testid="select-role"
+            >
+              <option value="service">Service Tech</option>
+              <option value="repair">Repair Tech</option>
+              <option value="supervisor">Supervisor</option>
+            </select>
+          </div>
           
           <div className="flex justify-end gap-3 pt-2">
             <Button 
@@ -2601,11 +2618,11 @@ export default function ServiceTechs() {
   const propertyCounts = propertyCountsData?.counts || {};
 
   const addTechnicianMutation = useMutation({
-    mutationFn: async (tech: { firstName: string; lastName: string; phone: string; email: string }) => {
+    mutationFn: async (tech: { firstName: string; lastName: string; phone: string; email: string; role: string }) => {
       const res = await fetch("/api/technicians/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...tech, role: "service", active: true }),
+        body: JSON.stringify({ ...tech, active: true }),
       });
       if (!res.ok) throw new Error("Failed to add technician");
       return res.json();
