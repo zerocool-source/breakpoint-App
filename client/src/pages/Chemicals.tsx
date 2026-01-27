@@ -272,18 +272,41 @@ export default function Chemicals() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-slate-100 p-1">
-            <TabsTrigger value="orders" className="data-[state=active]:bg-white gap-2">
-              <Droplets className="w-4 h-4" />
-              Chemical Orders ({(chemicalOrders as TechOpsEntry[]).length})
+          <TabsList className="bg-slate-100 p-1.5 h-auto gap-1">
+            <TabsTrigger 
+              value="orders" 
+              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:border-blue-500 data-[state=active]:border-b-2 gap-2.5 px-5 py-3 text-base font-medium transition-all"
+            >
+              <Droplets className="w-5 h-5" />
+              <span>Chemical Orders</span>
+              <span className="ml-1 px-2.5 py-0.5 text-sm font-semibold rounded-full bg-blue-100 text-blue-700">
+                {(chemicalOrders as TechOpsEntry[]).length}
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="dropoff" className="data-[state=active]:bg-white gap-2">
-              <Truck className="w-4 h-4" />
-              Chemicals Dropped-Off ({totalDropoffs})
+            <TabsTrigger 
+              value="dropoff" 
+              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:border-green-500 data-[state=active]:border-b-2 gap-2.5 px-5 py-3 text-base font-medium transition-all"
+            >
+              <Truck className="w-5 h-5" />
+              <span>Chemicals Dropped-Off</span>
+              <span className="ml-1 px-2.5 py-0.5 text-sm font-semibold rounded-full bg-green-100 text-green-700">
+                {totalDropoffs}
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="alerts" className="data-[state=active]:bg-white gap-2">
-              <AlertCircle className="w-4 h-4" />
-              Chemical Alerts ({incompleteChemicals.length})
+            <TabsTrigger 
+              value="alerts" 
+              className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:border-orange-500 data-[state=active]:border-b-2 gap-2.5 px-5 py-3 text-base font-medium transition-all"
+            >
+              <AlertCircle className="w-5 h-5" />
+              <span>Chemical Alerts</span>
+              <span className={cn(
+                "ml-1 px-2.5 py-0.5 text-sm font-semibold rounded-full",
+                incompleteChemicals.length > 0 
+                  ? "bg-orange-500 text-white animate-pulse" 
+                  : "bg-slate-100 text-slate-600"
+              )}>
+                {incompleteChemicals.length}
+              </span>
             </TabsTrigger>
           </TabsList>
 
