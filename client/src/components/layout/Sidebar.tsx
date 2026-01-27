@@ -12,7 +12,7 @@ import {
   Settings,
   Wrench,
   Network,
-  Hammer,
+  FileCog,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    icon: Hammer, 
+    icon: FileCog, 
     label: "Repair Queue", 
     href: "/repair-queue"
   },
