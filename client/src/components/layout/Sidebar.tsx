@@ -10,7 +10,7 @@ import {
   Truck, 
   Zap,
   Settings,
-  Wrench,
+  RefreshCcw,
   Network,
   FileCog,
 } from "lucide-react";
@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    icon: Wrench, 
+    icon: RefreshCcw, 
     label: "Operations Hub", 
     children: [
       { label: "Tech Ops Alerts", href: "/tech-ops" },
