@@ -58,7 +58,7 @@ import {
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
   customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity,
-  chemicalVendors, invoiceTemplates
+  chemicalVendors, invoiceTemplates, smsMessages, InsertSmsMessage, SmsMessage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte, sql } from "drizzle-orm";
@@ -458,6 +458,12 @@ export interface IStorage {
   updateInvoiceTemplate(id: string, updates: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined>;
   deleteInvoiceTemplate(id: string): Promise<void>;
   getDefaultInvoiceTemplate(): Promise<InvoiceTemplate | undefined>;
+
+  // SMS Messages
+  getSmsMessages(filters?: { technicianId?: string; customerId?: string; limit?: number }): Promise<SmsMessage[]>;
+  getSmsMessage(id: string): Promise<SmsMessage | undefined>;
+  createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage>;
+  updateSmsMessage(id: string, updates: Partial<SmsMessage>): Promise<SmsMessage | undefined>;
 }
 
 export class DbStorage implements IStorage {
@@ -3138,6 +3144,50 @@ export class DbStorage implements IStorage {
 
   async deleteInvoiceTemplate(id: string): Promise<void> {
     await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id));
+  }
+
+  // SMS Messages
+  async getSmsMessages(filters?: { technicianId?: string; customerId?: string; limit?: number }): Promise<SmsMessage[]> {
+    const conditions = [];
+    
+    if (filters?.technicianId) {
+      conditions.push(eq(smsMessages.technicianId, filters.technicianId));
+    }
+    if (filters?.customerId) {
+      conditions.push(eq(smsMessages.customerId, filters.customerId));
+    }
+
+    let query = db.select().from(smsMessages);
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    query = query.orderBy(desc(smsMessages.createdAt)) as any;
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit) as any;
+    }
+    
+    return query;
+  }
+
+  async getSmsMessage(id: string): Promise<SmsMessage | undefined> {
+    const result = await db.select().from(smsMessages).where(eq(smsMessages.id, id));
+    return result[0];
+  }
+
+  async createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage> {
+    const result = await db.insert(smsMessages).values(message as any).returning();
+    return result[0];
+  }
+
+  async updateSmsMessage(id: string, updates: Partial<SmsMessage>): Promise<SmsMessage | undefined> {
+    const result = await db.update(smsMessages)
+      .set(updates as any)
+      .where(eq(smsMessages.id, id))
+      .returning();
+    return result[0];
   }
 }
 

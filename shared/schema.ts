@@ -1927,3 +1927,31 @@ export const insertTechTimeOffSchema = createInsertSchema(techTimeOff).omit({
 
 export type InsertTechTimeOff = z.infer<typeof insertTechTimeOffSchema>;
 export type TechTimeOff = typeof techTimeOff.$inferSelect;
+
+// SMS Messages - Log of sent SMS messages
+export const smsMessages = pgTable("sms_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  to: text("to").notNull(),
+  from: text("from"),
+  body: text("body").notNull(),
+  status: text("status").default("pending"),
+  twilioSid: text("twilio_sid"),
+  errorMessage: text("error_message"),
+  technicianId: varchar("technician_id"),
+  customerId: varchar("customer_id"),
+  relatedEntityType: text("related_entity_type"),
+  relatedEntityId: varchar("related_entity_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  sentAt: timestamp("sent_at"),
+});
+
+export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
+  id: true,
+  twilioSid: true,
+  errorMessage: true,
+  createdAt: true,
+  sentAt: true,
+});
+
+export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
+export type SmsMessage = typeof smsMessages.$inferSelect;
