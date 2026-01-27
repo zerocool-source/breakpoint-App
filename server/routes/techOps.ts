@@ -1,7 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { storage } from "../storage";
 import { insertTechOpsEntrySchema } from "@shared/schema";
-import { PoolBrainClient } from "../poolbrain-client";
 
 export function registerTechOpsRoutes(app: Express) {
   app.get("/api/tech-ops", async (req: Request, res: Response) => {

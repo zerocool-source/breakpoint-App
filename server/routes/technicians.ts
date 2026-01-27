@@ -1,35 +1,26 @@
 import type { Request, Response } from "express";
 import { storage } from "../storage";
-import { PoolBrainClient } from "../poolbrain-client";
 import { db } from "../db";
 import { technicians } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export function registerTechnicianRoutes(app: any) {
+  // Get all technicians from internal database
   app.get("/api/technicians", async (req: Request, res: Response) => {
     try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      const techsData = await client.getTechnicianDetail({ limit: 500 });
+      const role = req.query.role as string | undefined;
+      const techList = await storage.getTechnicians(role);
       
-      const technicians = (techsData.data || []).map((t: any) => ({
-        id: t.RecordID,
-        name: t.Name || `${t.FirstName || ''} ${t.LastName || ''}`.trim() || "Unknown",
-        firstName: t.FirstName || t.Name?.split(' ')[0] || "Unknown",
-        lastName: t.LastName || t.Name?.split(' ').slice(1).join(' ') || "",
-        role: t.Role || "service",
-        active: t.Active !== false && t.Active !== 0 && t.Active !== "0",
+      const technicians = techList.map((t) => ({
+        id: t.id,
+        name: `${t.firstName} ${t.lastName}`.trim() || "Unknown",
+        firstName: t.firstName || "Unknown",
+        lastName: t.lastName || "",
+        role: t.role || "service",
+        active: t.active,
+        phone: t.phone || null,
+        email: t.email || null,
+        commissionPercent: t.commissionPercent || 10,
       }));
 
       res.json({ technicians });
@@ -39,94 +30,7 @@ export function registerTechnicianRoutes(app: any) {
     }
   });
 
-  app.get("/api/technicians/poolbrain", async (req: Request, res: Response) => {
-    try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      const techsData = await client.getTechnicianDetail({ limit: 500 });
-      const technicians = (techsData.data || []).map((t: any) => ({
-        TechnicianID: t.RecordID || t.TechnicianID,
-        FirstName: t.FirstName || "",
-        LastName: t.LastName || "",
-        Phone: t.Phone || t.CellPhone || "",
-        Email: t.Email || "",
-        Active: t.Active !== false && t.Active !== 0,
-        CompanyID: t.CompanyID,
-      }));
-
-      res.json({ technicians });
-    } catch (error: any) {
-      console.error("Error fetching technicians from Pool Brain:", error);
-      res.status(500).json({ error: "Failed to fetch technicians", message: error.message });
-    }
-  });
-
-  app.post("/api/technicians/sync", async (req: Request, res: Response) => {
-    try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      const techsData = await client.getTechnicianDetail({ limit: 500 });
-      const techList = techsData.data || [];
-
-      let synced = 0;
-      for (const t of techList) {
-        const externalId = String(t.RecordID || t.TechnicianID);
-        // Parse Name field if FirstName/LastName are empty
-        let firstName = t.FirstName || "";
-        let lastName = t.LastName || "";
-        if (!firstName && !lastName && t.Name) {
-          const nameParts = t.Name.trim().split(/\s+/);
-          firstName = nameParts[0] || "";
-          lastName = nameParts.slice(1).join(" ") || "";
-        }
-        // Try to extract name from email if still empty
-        if (!firstName && !lastName && t.Email) {
-          const emailName = t.Email.split("@")[0].replace(/[._]/g, " ");
-          const nameParts = emailName.split(/\s+/);
-          firstName = nameParts[0] ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1) : "";
-          lastName = nameParts.slice(1).map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
-        }
-        await storage.upsertTechnician(externalId, {
-          externalId,
-          firstName: firstName || "Unknown",
-          lastName: lastName || "",
-          phone: t.Phone || t.CellPhone || "",
-          email: t.Email || "",
-          role: "service",
-          active: t.Active !== false && t.Active !== 0,
-        });
-        synced++;
-      }
-
-      res.json({ success: true, synced, message: `Synced ${synced} technicians from Pool Brain` });
-    } catch (error: any) {
-      console.error("Error syncing technicians:", error);
-      res.status(500).json({ error: "Failed to sync technicians", message: error.message });
-    }
-  });
-
+  // Alias for backwards compatibility
   app.get("/api/technicians/stored", async (req: Request, res: Response) => {
     try {
       const role = req.query.role as string | undefined;

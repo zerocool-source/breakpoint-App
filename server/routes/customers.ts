@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { storage } from "../storage";
-import { PoolBrainClient } from "../poolbrain-client";
 
 export function registerCustomerRoutes(app: any) {
   // ==================== CUSTOMERS ====================
@@ -242,276 +241,38 @@ export function registerCustomerRoutes(app: any) {
     }
   });
 
-  // ==================== POOL BRAIN CUSTOMERS WITH EQUIPMENT ====================
+  // ==================== POOL BRAIN CUSTOMERS WITH EQUIPMENT (DISABLED) ====================
 
-  // Get all customers with equipment from Pool Brain API
-  app.get("/api/poolbrain/customers-equipment", async (req: Request, res: Response) => {
-    try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      // Fetch customers, pool details with equipment, and notes
-      const [customersData, poolsData, notesData] = await Promise.all([
-        client.getCustomerDetail({ limit: 2000 }).catch(() => ({ data: [] })),
-        client.getCustomerPoolDetails({ limit: 2000 }).catch(() => ({ data: [] })),
-        client.getCustomerNotes({ limit: 5000 }).catch(() => ({ data: [] })),
-      ]);
-
-      // Build notes map by water body ID
-      const notesByWaterBody: Record<string, string[]> = {};
-      if (notesData.data && Array.isArray(notesData.data)) {
-        notesData.data.forEach((note: any) => {
-          const waterBodyId = note.WaterBodyID || note.waterBodyId || note.PoolID;
-          const noteText = note.Note || note.Notes || note.notes || note.Text || note.text || note.Description || note.description || '';
-          if (waterBodyId && noteText && noteText.trim()) {
-            if (!notesByWaterBody[waterBodyId]) {
-              notesByWaterBody[waterBodyId] = [];
-            }
-            notesByWaterBody[waterBodyId].push(noteText.trim());
-          }
-        });
-      }
-
-      // Build customer map
-      const customerMap: Record<string, any> = {};
-      if (customersData.data && Array.isArray(customersData.data)) {
-        customersData.data.forEach((c: any) => {
-          const id = String(c.RecordID || c.CustomerID);
-          if (id) {
-            customerMap[id] = {
-              id,
-              name: c.Name || c.CustomerName || `${c.FirstName || ''} ${c.LastName || ''}`.trim() || 'Unknown',
-              address: c.Address || c.Street || null,
-              city: c.City || null,
-              state: c.State || null,
-              zip: c.Zip || c.ZipCode || null,
-              email: c.Email || null,
-              phone: c.Phone || c.PhoneNumber || null,
-              pools: [],
-            };
-          }
-        });
-      }
-
-      // Map pools with equipment to customers
-      const pools = poolsData.data || [];
-      for (const pool of pools) {
-        const customerId = String(pool.CustomerID || pool.customerId);
-        if (!customerMap[customerId]) {
-          customerMap[customerId] = {
-            id: customerId,
-            name: pool.CustomerName || 'Unknown Customer',
-            address: null,
-            pools: [],
-          };
-        }
-
-        // Extract equipment info from pool data
-        const equipment: { category: string; type: string; notes: string | null }[] = [];
-        
-        // Helper to extract equipment type name (not notes)
-        const extractEquipmentType = (typeField: any, equipObj: any): string | null => {
-          if (typeField && typeof typeField === 'string' && typeField.trim()) {
-            return typeField.trim();
-          }
-          if (equipObj && typeof equipObj === 'object') {
-            if (equipObj.typeName) return equipObj.typeName;
-            if (equipObj.name) return equipObj.name;
-            if (equipObj.type && typeof equipObj.type === 'string') return equipObj.type;
-            if (equipObj.isPresent === 1 || equipObj.eqId) return 'Installed';
-          }
-          return null;
-        };
-        
-        // Helper to extract notes from equipment object
-        const extractEquipmentNotes = (equipObj: any): string | null => {
-          if (!equipObj || typeof equipObj !== 'object') return null;
-          const notes = equipObj.notes || equipObj.Note || equipObj.Notes || equipObj.description;
-          if (notes && typeof notes === 'string' && notes.trim()) {
-            return notes.trim();
-          }
-          return null;
-        };
-        
-        // Filter
-        const filterType = extractEquipmentType(pool.FilterType, pool.Filter);
-        if (filterType || pool.Filter) {
-          equipment.push({
-            category: 'filter',
-            type: filterType || 'Installed',
-            notes: extractEquipmentNotes(pool.Filter) || (typeof pool.FilterNotes === 'string' ? pool.FilterNotes : null),
-          });
-        }
-        
-        // Pump
-        const pumpType = extractEquipmentType(pool.PumpType, pool.Pump);
-        if (pumpType || pool.Pump) {
-          equipment.push({
-            category: 'pump',
-            type: pumpType || 'Installed',
-            notes: extractEquipmentNotes(pool.Pump) || (typeof pool.PumpNotes === 'string' ? pool.PumpNotes : null),
-          });
-        }
-        
-        // Heater
-        const heaterType = extractEquipmentType(pool.HeaterType, pool.Heater);
-        if (heaterType || pool.Heater) {
-          equipment.push({
-            category: 'heater',
-            type: heaterType || 'Installed',
-            notes: extractEquipmentNotes(pool.Heater) || (typeof pool.HeaterNotes === 'string' ? pool.HeaterNotes : null),
-          });
-        }
-        
-        // Chlorinator
-        const chlorinatorType = extractEquipmentType(pool.ChlorinatorType, pool.Chlorinator);
-        if (chlorinatorType || pool.Chlorinator) {
-          equipment.push({
-            category: 'chlorinator',
-            type: chlorinatorType || 'Installed',
-            notes: extractEquipmentNotes(pool.Chlorinator) || (typeof pool.ChlorinatorNotes === 'string' ? pool.ChlorinatorNotes : null),
-          });
-        }
-        
-        // Controller/Automation
-        const controllerType = extractEquipmentType(pool.ControllerType, pool.Controller) || extractEquipmentType(pool.AutomationType, pool.Automation);
-        if (controllerType || pool.Controller || pool.Automation) {
-          equipment.push({
-            category: 'controller',
-            type: controllerType || 'Installed',
-            notes: extractEquipmentNotes(pool.Controller) || extractEquipmentNotes(pool.Automation) || (typeof pool.ControllerNotes === 'string' ? pool.ControllerNotes : (typeof pool.AutomationNotes === 'string' ? pool.AutomationNotes : null)),
-          });
-        }
-        
-        // Cleaner
-        const cleanerType = extractEquipmentType(pool.CleanerType, pool.Cleaner);
-        if (cleanerType || pool.Cleaner) {
-          equipment.push({
-            category: 'cleaner',
-            type: cleanerType || 'Installed',
-            notes: extractEquipmentNotes(pool.Cleaner) || (typeof pool.CleanerNotes === 'string' ? pool.CleanerNotes : null),
-          });
-        }
-
-        // Timer
-        const timerType = extractEquipmentType(pool.TimerType, pool.Timer);
-        if (timerType || pool.Timer) {
-          equipment.push({
-            category: 'timer',
-            type: timerType || 'Installed',
-            notes: extractEquipmentNotes(pool.Timer) || (typeof pool.TimerNotes === 'string' ? pool.TimerNotes : null),
-          });
-        }
-
-        const poolId = pool.RecordID || pool.PoolID;
-        const poolNotes = notesByWaterBody[poolId] || [];
-        const existingPoolNotes = pool.Notes || pool.PoolNotes || null;
-        const allNotes = existingPoolNotes 
-          ? [existingPoolNotes, ...poolNotes].join('\n')
-          : poolNotes.join('\n') || null;
-
-        customerMap[customerId].pools.push({
-          id: poolId,
-          name: pool.PoolName || pool.Name || 'Pool',
-          type: pool.PoolType || pool.Type || 'Pool',
-          address: pool.PoolAddress || pool.Address || null,
-          waterType: pool.WaterType || null,
-          serviceLevel: pool.ServiceLevel || null,
-          equipment,
-          notes: allNotes,
-        });
-      }
-
-      // Convert to array and filter out customers without pools
-      const customers = Object.values(customerMap).filter((c: any) => c.pools.length > 0);
-
-      res.json({ customers });
-    } catch (error: any) {
-      console.error("Error fetching Pool Brain customers with equipment:", error);
-      res.status(500).json({ error: "Failed to fetch customers with equipment", message: error.message });
-    }
+  // Pool Brain API disabled - returns empty data
+  app.get("/api/poolbrain/customers-equipment", async (_req: Request, res: Response) => {
+    res.json({ 
+      customers: [],
+      message: "Pool Brain API disabled - use internal data"
+    });
   });
 
   // ==================== CUSTOMER DETAIL ====================
 
-  // Get customer detail with pools from Pool Brain
+  // Get customer detail from local database (Pool Brain API disabled)
   app.get("/api/customers/:customerId/detail", async (req: Request, res: Response) => {
     try {
       const { customerId } = req.params;
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
+      
+      // Get customer from local storage
+      const customer = await storage.getCustomer(customerId);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
       }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
+      
+      // Get pools for this customer from local storage
+      const pools = await storage.getPoolsByCustomer(customerId);
+      const addresses = await storage.getCustomerAddresses(customerId);
+      
+      res.json({ 
+        pools: pools || [],
+        addresses: addresses || [],
+        notes: customer.notes || ""
       });
-
-      // Fetch pools for this customer
-      const poolsData = await client.getCustomerPoolDetails({ limit: 500 });
-      const allPools = poolsData.data || [];
-      const rawPools = allPools.filter((p: any) => String(p.CustomerID || p.customerId) === customerId);
-
-      const poolsList = rawPools.map((p: any) => ({
-        id: p.RecordID || p.PoolID,
-        externalId: String(p.RecordID || p.PoolID),
-        name: p.PoolName || p.Name || "Pool",
-        poolType: p.PoolType || p.Type || "Pool",
-        serviceLevel: p.ServiceLevel || p.ServiceType || null,
-        waterType: p.WaterType || null,
-        gallons: p.Gallons || p.Volume || null,
-        address: p.Address || p.PoolAddress || null,
-        city: p.City || null,
-        state: p.State || null,
-        zip: p.Zip || p.ZipCode || null,
-      }));
-
-      // Also try to get customer notes
-      let addresses: any[] = [];
-      let notes = "";
-      try {
-        const customerData = await client.getCustomerDetail({ limit: 1000 });
-        const cust = (customerData.data || []).find((c: any) => String(c.RecordID || c.CustomerID) === customerId);
-        if (cust) {
-          notes = cust.Notes || "";
-          if (cust.Address) {
-            addresses.push({
-              type: "primary",
-              addressLine1: cust.Address,
-              city: cust.City,
-              state: cust.State,
-              zip: cust.Zip,
-            });
-          }
-          if (cust.BillingAddress && cust.BillingAddress !== cust.Address) {
-            addresses.push({
-              type: "billing",
-              addressLine1: cust.BillingAddress,
-              city: cust.BillingCity || cust.City,
-              state: cust.BillingState || cust.State,
-              zip: cust.BillingZip || cust.Zip,
-            });
-          }
-        }
-      } catch (e) {
-        console.log("Could not fetch customer notes");
-      }
-
-      res.json({ pools: poolsList, addresses, notes });
     } catch (error: any) {
       console.error("Error fetching customer detail:", error);
       res.status(500).json({ error: error.message || "Failed to fetch customer detail" });
@@ -607,82 +368,13 @@ export function registerCustomerRoutes(app: any) {
 
   // ==================== CUSTOMER IMPORT ====================
 
-  // Import customers from Pool Brain to local storage
-  app.post("/api/customers/import", async (req: Request, res: Response) => {
-    try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-      const { clearExisting } = req.body || {};
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      if (clearExisting) {
-        await storage.clearAllCustomers();
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      // Fetch customers and pool details
-      const [customersData, poolsData] = await Promise.all([
-        client.getCustomerDetail({ limit: 2000 }),
-        client.getCustomerPoolDetails({ limit: 2000 }).catch(() => ({ data: [] })),
-      ]);
-
-      const rawCustomers = customersData.data || [];
-      const rawPools = poolsData.data || [];
-
-      // Count pools per customer
-      const poolCountMap = new Map<string, number>();
-      for (const pool of rawPools) {
-        const custId = String(pool.CustomerID || pool.customerId || "");
-        poolCountMap.set(custId, (poolCountMap.get(custId) || 0) + 1);
-      }
-
-      let imported = 0;
-      for (const c of rawCustomers) {
-        const externalId = String(c.RecordID || c.CustomerID || c.customerId);
-        const name = c.CustomerName || c.CompanyName || c.Name || "Unknown";
-        const poolCount = poolCountMap.get(externalId) || 0;
-        
-        // Determine status based on Pool Brain data
-        let status = "active";
-        if (c.Status) {
-          const s = c.Status.toLowerCase();
-          if (s.includes("inactive")) status = "inactive";
-          else if (s.includes("lead")) status = "lead";
-        }
-        if (poolCount > 0) status = "active_routed";
-
-        await storage.upsertCustomer(externalId, {
-          name,
-          email: c.Email || c.email || null,
-          phone: c.Phone || c.phone || c.PhoneNumber || null,
-          address: c.Address || c.address || null,
-          city: c.City || c.city || null,
-          state: c.State || c.state || null,
-          zip: c.Zip || c.zip || c.ZipCode || null,
-          status,
-          poolCount,
-          notes: c.Notes || c.notes || null,
-        });
-        imported++;
-      }
-
-      res.json({
-        success: true,
-        message: `Imported ${imported} customers from Pool Brain`,
-        count: imported,
-      });
-    } catch (error: any) {
-      console.error("Error importing customers:", error);
-      res.status(500).json({ error: error.message || "Failed to import customers" });
-    }
+  // Import customers - Pool Brain API disabled
+  app.post("/api/customers/import", async (_req: Request, res: Response) => {
+    res.json({
+      success: false,
+      message: "Pool Brain API disabled - customer import not available. Add customers manually.",
+      count: 0,
+    });
   });
 
   // ==================== CUSTOMER TAGS ====================
