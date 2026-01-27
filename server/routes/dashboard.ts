@@ -200,16 +200,32 @@ export function registerDashboardRoutes(app: any) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10); // Top 10 properties
 
-      // Tech coverage data for calendar
-      const activeCoverages = allCoverages.filter((c: any) => 
-        c.status === "active" || !c.status
-      );
-      
       // Build technician name lookup
       const techNameMap: Record<string, string> = {};
       techniciansList.forEach((t: any) => {
         techNameMap[String(t.id)] = t.name || `Tech ${t.id}`;
       });
+      
+      // Reported issues (from tech ops entries)
+      const reportedIssues = allTechOpsEntries.filter((entry: any) => 
+        entry.entryType === "report_issue" && 
+        (entry.status === "pending" || entry.status === "open" || !entry.status)
+      );
+      
+      const reportedIssuesList = reportedIssues.slice(0, 10).map((issue: any) => ({
+        id: issue.id,
+        propertyName: issue.propertyName || "Unknown Property",
+        description: issue.description || issue.issueTitle || "No description",
+        technicianName: techNameMap[String(issue.technicianId)] || issue.submittedByName || "Unknown",
+        createdAt: issue.createdAt,
+        priority: issue.priority || "medium",
+        issueType: issue.issueType || "other",
+      }));
+      
+      // Tech coverage data for calendar
+      const activeCoverages = allCoverages.filter((c: any) => 
+        c.status === "active" || !c.status
+      );
       
       const coverageList = activeCoverages.map((c: any) => ({
         id: c.id,
@@ -267,6 +283,19 @@ export function registerDashboardRoutes(app: any) {
             urgent: urgentAlerts.length,
             active: activeAlerts.length,
             total: alerts.length,
+            recentActive: activeAlerts.slice(0, 10).map((a: any) => ({
+              id: a.id,
+              propertyName: a.poolName || a.propertyName || "Unknown Property",
+              description: a.description || a.message || a.alertType || "No description",
+              technicianName: a.techName || "Unassigned",
+              createdAt: a.createdAt,
+              severity: a.severity || "normal",
+              alertType: a.alertType || a.type || "Alert",
+            })),
+          },
+          reportedIssues: {
+            count: reportedIssues.length,
+            items: reportedIssuesList,
           },
           emergencies: {
             open: openEmergencies.length,

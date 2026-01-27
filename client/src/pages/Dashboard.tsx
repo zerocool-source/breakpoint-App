@@ -199,6 +199,9 @@ export default function Dashboard() {
   // Calendar state
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  
+  // Emergency & Alerts Status filter state
+  const [selectedStatusCategory, setSelectedStatusCategory] = useState<'all' | 'emergencies' | 'alerts' | 'issues'>('all');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
@@ -387,64 +390,193 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Open Emergencies Section */}
-        {(metrics?.emergencies?.open ?? 0) > 0 && (
-          <Card className="shadow-sm border-l-4 border-l-red-500 bg-white" data-testid="card-emergencies">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
+        {/* Emergency & Alerts Status */}
+        <Card className="shadow-sm bg-white" data-testid="card-emergency-alerts-status">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <span className="text-slate-900">Open Emergencies</span>
-                  <Badge className="bg-red-100 text-red-700 ml-2">{metrics?.emergencies?.open ?? 0}</Badge>
+                  Emergency & Alerts Status
                 </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
+                <CardDescription>Active issues requiring attention</CardDescription>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {metrics?.emergencies?.recentOpen?.map((emergency, index) => {
-                  const daysOpen = emergency.createdAt 
-                    ? Math.floor((new Date().getTime() - new Date(emergency.createdAt).getTime()) / (1000 * 60 * 60 * 24))
-                    : 0;
-                  
-                  return (
-                    <div 
-                      key={emergency.id}
-                      className="p-3 rounded-lg border border-slate-200 bg-white hover:border-red-400 hover:shadow-sm cursor-pointer transition-all"
-                      onClick={() => navigate("/emergencies")}
-                      data-testid={`emergency-card-${index}`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="text-sm font-semibold text-slate-900 truncate flex-1">{emergency.propertyName}</span>
-                        {emergency.priority === "critical" && (
-                          <Badge className="bg-red-600 text-white text-[10px] shrink-0">Critical</Badge>
-                        )}
-                        {emergency.priority === "high" && (
-                          <Badge className="bg-orange-500 text-white text-[10px] shrink-0">High</Badge>
-                        )}
+              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700">
+                View All <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const emergencyCount = metrics?.emergencies?.open ?? 0;
+              const alertCount = metrics?.alerts?.active ?? 0;
+              const issueCount = metrics?.reportedIssues?.count ?? 0;
+              const total = emergencyCount + alertCount + issueCount;
+              
+              const emergencyPct = total > 0 ? (emergencyCount / total) * 100 : 0;
+              const alertPct = total > 0 ? (alertCount / total) * 100 : 0;
+              const issuePct = total > 0 ? (issueCount / total) * 100 : 0;
+              
+              const emergencyItems = metrics?.emergencies?.recentOpen || [];
+              const alertItems = metrics?.alerts?.recentActive || [];
+              const issueItems = metrics?.reportedIssues?.items || [];
+              
+              const getFilteredItems = () => {
+                if (selectedStatusCategory === 'emergencies') return emergencyItems.map((e: any) => ({ ...e, type: 'emergency' }));
+                if (selectedStatusCategory === 'alerts') return alertItems.map((a: any) => ({ ...a, type: 'alert' }));
+                if (selectedStatusCategory === 'issues') return issueItems.map((i: any) => ({ ...i, type: 'issue' }));
+                return [
+                  ...emergencyItems.slice(0, 3).map((e: any) => ({ ...e, type: 'emergency' })),
+                  ...alertItems.slice(0, 3).map((a: any) => ({ ...a, type: 'alert' })),
+                  ...issueItems.slice(0, 3).map((i: any) => ({ ...i, type: 'issue' })),
+                ];
+              };
+              
+              const filteredItems = getFilteredItems();
+              
+              return (
+                <div className="flex gap-6">
+                  {/* Left side: Progress bar and metric boxes */}
+                  <div className="w-1/2 space-y-4">
+                    {/* Segmented Progress Bar */}
+                    <div>
+                      <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                        <span>0%</span>
+                        <span>50%</span>
+                        <span>100%</span>
                       </div>
-                      <p className="text-xs text-slate-600 line-clamp-2 mb-2">{emergency.description}</p>
-                      <div className="flex items-center justify-between text-xs border-t border-red-100 pt-2 mt-2">
-                        <div className="flex items-center gap-1 text-slate-600">
-                          <Users className="w-3 h-3" />
-                          <span className="font-medium">{emergency.submittedByName}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-500 capitalize">{emergency.submitterRole?.replace(/_/g, " ")}</span>
-                          <Badge className="bg-red-100 text-red-700 text-[10px]">
-                            {daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`}
-                          </Badge>
-                        </div>
+                      <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex">
+                        {emergencyPct > 0 && (
+                          <div className="h-full bg-red-500 transition-all" style={{ width: `${emergencyPct}%` }} />
+                        )}
+                        {alertPct > 0 && (
+                          <div className="h-full bg-orange-500 transition-all" style={{ width: `${alertPct}%` }} />
+                        )}
+                        {issuePct > 0 && (
+                          <div className="h-full bg-blue-500 transition-all" style={{ width: `${issuePct}%` }} />
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                    
+                    {/* Metric Boxes */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <button
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
+                        className={`p-3 rounded-lg border text-center transition-all ${
+                          selectedStatusCategory === 'emergencies' 
+                            ? 'border-red-400 bg-red-50 ring-2 ring-red-200' 
+                            : 'border-slate-200 bg-white hover:border-red-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                          <span className="text-xs font-medium text-slate-600">Emergencies</span>
+                        </div>
+                        <p className="text-2xl font-bold text-red-600">{emergencyCount}</p>
+                        <p className="text-[10px] text-slate-500">{emergencyPct.toFixed(0)}%</p>
+                      </button>
+                      
+                      <button
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
+                        className={`p-3 rounded-lg border text-center transition-all ${
+                          selectedStatusCategory === 'alerts' 
+                            ? 'border-orange-400 bg-orange-50 ring-2 ring-orange-200' 
+                            : 'border-slate-200 bg-white hover:border-orange-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                          <span className="text-xs font-medium text-slate-600">Alerts</span>
+                        </div>
+                        <p className="text-2xl font-bold text-orange-600">{alertCount}</p>
+                        <p className="text-[10px] text-slate-500">{alertPct.toFixed(0)}%</p>
+                      </button>
+                      
+                      <button
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
+                        className={`p-3 rounded-lg border text-center transition-all ${
+                          selectedStatusCategory === 'issues' 
+                            ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-200' 
+                            : 'border-slate-200 bg-white hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <span className="text-xs font-medium text-slate-600">Reported Issues</span>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-600">{issueCount}</p>
+                        <p className="text-[10px] text-slate-500">{issuePct.toFixed(0)}%</p>
+                      </button>
+                    </div>
+                    
+                    {/* All toggle */}
+                    <button
+                      onClick={() => setSelectedStatusCategory('all')}
+                      className={`w-full py-2 rounded-lg border text-sm font-medium transition-all ${
+                        selectedStatusCategory === 'all'
+                          ? 'border-slate-400 bg-slate-100 text-slate-700'
+                          : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      Show All ({total})
+                    </button>
+                  </div>
+                  
+                  {/* Right side: Items panel */}
+                  <div className="w-1/2 border-l border-slate-100 pl-6">
+                    <p className="text-xs font-medium text-slate-500 mb-3">
+                      {selectedStatusCategory === 'all' ? 'Recent Items' : 
+                       selectedStatusCategory === 'emergencies' ? 'Emergencies' :
+                       selectedStatusCategory === 'alerts' ? 'Alerts' : 'Reported Issues'}
+                    </p>
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                      {filteredItems.length === 0 ? (
+                        <p className="text-sm text-slate-400 italic">No items</p>
+                      ) : (
+                        filteredItems.map((item: any, idx: number) => {
+                          const daysOpen = item.createdAt 
+                            ? Math.floor((new Date().getTime() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+                            : 0;
+                          const daysText = daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`;
+                          
+                          const bgColor = item.type === 'emergency' ? 'bg-red-50 border-red-100' :
+                                          item.type === 'alert' ? 'bg-orange-50 border-orange-100' :
+                                          'bg-blue-50 border-blue-100';
+                          
+                          return (
+                            <div 
+                              key={item.id || idx} 
+                              className={`p-2.5 rounded-lg border ${bgColor} cursor-pointer hover:shadow-sm transition-all`}
+                              onClick={() => navigate(item.type === 'emergency' ? '/emergencies' : item.type === 'alert' ? '/alerts' : '/tech-ops')}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <span className="text-sm font-medium text-slate-800 truncate flex-1">{item.propertyName}</span>
+                                {item.type === 'emergency' && item.priority === 'critical' && (
+                                  <Badge className="bg-red-600 text-white text-[9px] shrink-0">Critical</Badge>
+                                )}
+                                {item.type === 'emergency' && item.priority === 'high' && (
+                                  <Badge className="bg-orange-500 text-white text-[9px] shrink-0">High</Badge>
+                                )}
+                                {item.type === 'emergency' && item.priority === 'medium' && (
+                                  <Badge className="bg-amber-500 text-white text-[9px] shrink-0">Medium</Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500">
+                                <span>{item.technicianName || item.submittedByName || 'Unassigned'}</span>
+                                <span>{daysText}</span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
 
         {/* Two-Column Section: Estimate Pipeline + Financial Summary (Left) | Coverage Calendar (Right) */}
         <div className="grid grid-cols-2 gap-6">
