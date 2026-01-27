@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, json, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, json, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -589,6 +589,25 @@ export const insertArchivedAlertSchema = createInsertSchema(archivedAlerts).omit
   archivedAt: true,
 });
 
+// System Users table for admin and office staff access management
+export const systemUsers = pgTable("system_users", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  role: text("role").notNull().default("office_staff"), // 'admin' or 'office_staff'
+  active: boolean("active").notNull().default(true),
+  passwordHash: text("password_hash"), // For password-based auth
+  inviteSent: boolean("invite_sent").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSystemUserSchema = createInsertSchema(systemUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settings.$inferSelect;
@@ -640,6 +659,9 @@ export type PayrollEntry = typeof payrollEntries.$inferSelect;
 
 export type InsertArchivedAlert = z.infer<typeof insertArchivedAlertSchema>;
 export type ArchivedAlert = typeof archivedAlerts.$inferSelect;
+
+export type InsertSystemUser = z.infer<typeof insertSystemUserSchema>;
+export type SystemUser = typeof systemUsers.$inferSelect;
 
 // Account Threads (one per account for communication)
 export const threads = pgTable("threads", {
