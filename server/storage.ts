@@ -49,6 +49,7 @@ import {
   type SupervisorActivity, type InsertSupervisorActivity,
   type ChemicalVendor, type InsertChemicalVendor,
   type InvoiceTemplate, type InsertInvoiceTemplate,
+  type SystemUser, type InsertSystemUser,
   settings, alerts, workflows, technicians, technicianNotes, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -58,7 +59,7 @@ import {
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
   customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity,
-  chemicalVendors, invoiceTemplates
+  chemicalVendors, invoiceTemplates, systemUsers
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte, sql } from "drizzle-orm";
@@ -458,6 +459,14 @@ export interface IStorage {
   updateInvoiceTemplate(id: string, updates: Partial<InsertInvoiceTemplate>): Promise<InvoiceTemplate | undefined>;
   deleteInvoiceTemplate(id: string): Promise<void>;
   getDefaultInvoiceTemplate(): Promise<InvoiceTemplate | undefined>;
+
+  // System Users
+  getSystemUsers(role?: string): Promise<SystemUser[]>;
+  getSystemUser(id: number): Promise<SystemUser | undefined>;
+  getSystemUserByEmail(email: string): Promise<SystemUser | undefined>;
+  createSystemUser(user: InsertSystemUser): Promise<SystemUser>;
+  updateSystemUser(id: number, updates: Partial<InsertSystemUser>): Promise<SystemUser | undefined>;
+  deleteSystemUser(id: number): Promise<void>;
 }
 
 export class DbStorage implements IStorage {
@@ -3138,6 +3147,41 @@ export class DbStorage implements IStorage {
 
   async deleteInvoiceTemplate(id: string): Promise<void> {
     await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id));
+  }
+
+  // System Users
+  async getSystemUsers(role?: string): Promise<SystemUser[]> {
+    if (role) {
+      return db.select().from(systemUsers).where(eq(systemUsers.role, role)).orderBy(systemUsers.name);
+    }
+    return db.select().from(systemUsers).orderBy(systemUsers.name);
+  }
+
+  async getSystemUser(id: number): Promise<SystemUser | undefined> {
+    const result = await db.select().from(systemUsers).where(eq(systemUsers.id, id));
+    return result[0];
+  }
+
+  async getSystemUserByEmail(email: string): Promise<SystemUser | undefined> {
+    const result = await db.select().from(systemUsers).where(eq(systemUsers.email, email));
+    return result[0];
+  }
+
+  async createSystemUser(user: InsertSystemUser): Promise<SystemUser> {
+    const result = await db.insert(systemUsers).values(user as any).returning();
+    return result[0];
+  }
+
+  async updateSystemUser(id: number, updates: Partial<InsertSystemUser>): Promise<SystemUser | undefined> {
+    const result = await db.update(systemUsers)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(systemUsers.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteSystemUser(id: number): Promise<void> {
+    await db.delete(systemUsers).where(eq(systemUsers.id, id));
   }
 }
 
