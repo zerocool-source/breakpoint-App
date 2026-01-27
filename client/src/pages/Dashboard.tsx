@@ -17,7 +17,8 @@ import {
   Settings,
   XCircle,
   Send,
-  UserX
+  UserX,
+  ChevronRight
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -88,6 +89,11 @@ interface DashboardData {
       supervisors: number;
       total: number;
       inactive: InactiveTechnician[];
+      repairTechWorkload: Array<{
+        id: string;
+        name: string;
+        jobCount: number;
+      }>;
     };
     alerts: {
       urgent: number;
@@ -683,6 +689,55 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Repair Tech Workload */}
+        {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-all border-l-4 border-l-blue-500" 
+            onClick={() => navigate("/repair-queue")}
+            data-testid="card-repair-tech-workload"
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-blue-600" />
+                  <span className="text-slate-900">Repair Tech Workload</span>
+                </CardTitle>
+                <ChevronRight className="w-5 h-5 text-slate-400" />
+              </div>
+              <CardDescription className="text-slate-600">
+                Jobs scheduled for today by repair technician
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {metrics?.technicians?.repairTechWorkload?.map((tech) => (
+                  <div 
+                    key={tech.id}
+                    className="p-3 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 transition-colors flex items-center justify-between"
+                    data-testid={`workload-tech-${tech.id}`}
+                  >
+                    <span className="text-sm font-medium text-slate-800 truncate mr-2">{tech.name}</span>
+                    <Badge className={`shrink-0 ${
+                      tech.jobCount === 0 
+                        ? "bg-slate-100 text-slate-600" 
+                        : tech.jobCount >= 5 
+                          ? "bg-red-100 text-red-700" 
+                          : tech.jobCount >= 3 
+                            ? "bg-amber-100 text-amber-700" 
+                            : "bg-blue-100 text-blue-700"
+                    }`}>
+                      {tech.jobCount}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              {metrics?.technicians?.repairTechWorkload?.every(t => t.jobCount === 0) && (
+                <p className="text-sm text-slate-500 mt-2 text-center">No jobs scheduled for today</p>
+              )}
             </CardContent>
           </Card>
         )}

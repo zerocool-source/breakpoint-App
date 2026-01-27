@@ -59,6 +59,34 @@ export function registerDashboardRoutes(app: any) {
       const repairForemen = techniciansList.filter((t: any) => t.role === "repair_foreman");
       const supervisors = techniciansList.filter((t: any) => t.role === "supervisor");
 
+      // Calculate repair tech workload - estimates in "scheduled" status assigned to repair techs
+      // These are the jobs that appear in the Repair Queue
+      const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Get all scheduled estimates (repair queue items) - filter by today's date if available
+      const scheduledEstimates = estimates.filter((e: any) => {
+        if (e.status !== "scheduled") return false;
+        // If no scheduled date, include it (might be scheduled without specific date)
+        const scheduledDate = e.scheduledDate;
+        if (!scheduledDate) return true;
+        const dateStr = typeof scheduledDate === 'string' 
+          ? scheduledDate.split('T')[0] 
+          : new Date(scheduledDate).toISOString().split('T')[0];
+        return dateStr === todayStr;
+      });
+
+      // Group by repair technician using repairTechId
+      const repairTechWorkload = repairTechs.map((tech: any) => {
+        const techJobs = scheduledEstimates.filter((e: any) => 
+          e.repairTechId === tech.id
+        );
+        return {
+          id: tech.id,
+          name: tech.name,
+          jobCount: techJobs.length,
+        };
+      }).sort((a: any, b: any) => b.jobCount - a.jobCount);
+
       const urgentAlerts = alerts.filter((a: any) => 
         (a.severity?.toUpperCase()?.includes("URGENT") || a.severity?.toLowerCase()?.includes("urgent")) && 
         (a.status === "Active" || a.status?.toLowerCase() === "active")
@@ -183,6 +211,7 @@ export function registerDashboardRoutes(app: any) {
             supervisors: supervisors.length,
             total: techniciansList.length,
             inactive: inactiveTechnicians,
+            repairTechWorkload,
           },
           alerts: {
             urgent: urgentAlerts.length,
