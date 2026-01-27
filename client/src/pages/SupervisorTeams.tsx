@@ -443,10 +443,23 @@ export default function SupervisorTeams() {
             <div className="flex-1 text-left">
               <div className="font-semibold flex items-center gap-2">
                 {supervisor.firstName} {supervisor.lastName}
+                {/* County Badge */}
+                {supervisor.region && (
+                  <Badge 
+                    className={cn(
+                      "text-xs font-medium",
+                      supervisor.region === "south" && "bg-[#22D69A] text-white",
+                      supervisor.region === "mid" && "bg-[#0078D4] text-white",
+                      supervisor.region === "north" && "bg-[#FF8000] text-white"
+                    )}
+                  >
+                    {getRegionLabel(supervisor.region)}
+                  </Badge>
+                )}
               </div>
               <div className="text-white/70 text-sm flex items-center gap-3">
                 {supervisor.truckNumber && (
-                  <span>No truck</span>
+                  <span>Truck #{supervisor.truckNumber}</span>
                 )}
                 {!supervisor.truckNumber && <span>No truck</span>}
                 {supervisor.email && (
@@ -458,7 +471,7 @@ export default function SupervisorTeams() {
             </div>
           </button>
           
-          {/* Region Dropdown */}
+          {/* County Dropdown */}
           <Select
             value={supervisor.region || "unassigned"}
             onValueChange={(value) => {
@@ -468,14 +481,14 @@ export default function SupervisorTeams() {
               });
             }}
           >
-            <SelectTrigger className="w-[110px] h-8 bg-white/20 border-white/30 text-white text-xs" data-testid={`select-region-${supervisor.id}`}>
-              <SelectValue placeholder="Region" />
+            <SelectTrigger className="w-[130px] h-8 bg-white/20 border-white/30 text-white text-xs" data-testid={`select-region-${supervisor.id}`}>
+              <SelectValue placeholder="Select County" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="south">South</SelectItem>
-              <SelectItem value="mid">Mid</SelectItem>
-              <SelectItem value="north">North</SelectItem>
-              <SelectItem value="unassigned">Unassigned</SelectItem>
+              <SelectItem value="south">South County</SelectItem>
+              <SelectItem value="mid">Mid County</SelectItem>
+              <SelectItem value="north">North County</SelectItem>
+              <SelectItem value="unassigned">No County</SelectItem>
             </SelectContent>
           </Select>
           
