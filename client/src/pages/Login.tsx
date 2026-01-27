@@ -93,7 +93,7 @@ export default function Login() {
               <span className="px-2 py-0.5 bg-orange-500 text-white text-xs font-bold rounded-full uppercase">Beta</span>
             </div>
             <CardTitle className="text-2xl">
-              {isRegister ? "Create Account" : "Admin Login"}
+              {isRegister ? "Create Account" : "Log In"}
             </CardTitle>
             <CardDescription className="text-base">
               {isRegister 
