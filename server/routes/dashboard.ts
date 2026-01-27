@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
 import { db } from "../db";
-import { invoices } from "@shared/schema";
+import { invoices, techOpsEntries } from "@shared/schema";
 import { eq, and, or, not, isNull } from "drizzle-orm";
 
 export function registerDashboardRoutes(app: any) {
@@ -14,6 +14,7 @@ export function registerDashboardRoutes(app: any) {
         alerts,
         emergencies,
         allInvoices,
+        allTechOpsEntries,
       ] = await Promise.all([
         storage.getEstimates(),
         storage.getServiceRepairJobs(),
@@ -21,6 +22,7 @@ export function registerDashboardRoutes(app: any) {
         storage.getAlerts(),
         storage.getEmergencies(),
         db.select().from(invoices),
+        db.select().from(techOpsEntries),
       ]);
 
       const now = new Date();
@@ -177,6 +179,25 @@ export function registerDashboardRoutes(app: any) {
         return sum + (typeof balance === 'number' ? balance : 0);
       }, 0) / 100;
 
+      // Chemical orders by property (pending orders that need to be sent)
+      const pendingChemicalOrders = allTechOpsEntries.filter((entry: any) => 
+        entry.entryType === "chemical_order" && 
+        (!entry.orderStatus || entry.orderStatus === "pending")
+      );
+      
+      const chemicalOrdersByProperty: Record<string, { propertyName: string; count: number }> = {};
+      pendingChemicalOrders.forEach((order: any) => {
+        const propName = order.propertyName || "Unknown Property";
+        if (!chemicalOrdersByProperty[propName]) {
+          chemicalOrdersByProperty[propName] = { propertyName: propName, count: 0 };
+        }
+        chemicalOrdersByProperty[propName].count++;
+      });
+      
+      const chemicalOrdersByPropertyList = Object.values(chemicalOrdersByProperty)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Top 10 properties
+
       res.json({
         metrics: {
           estimates: {
@@ -240,11 +261,13 @@ export function registerDashboardRoutes(app: any) {
         },
         recentActivity,
         urgentItems,
+        chemicalOrdersByProperty: chemicalOrdersByPropertyList,
         summary: {
           needsScheduling: approvedEstimates.filter((e: any) => e.status === "needs_scheduling").length,
           needsInvoicing: readyToInvoice.length,
           pendingApprovals: pendingApprovals.length,
           activeRepairs: pendingServiceRepairs.length + inProgressRepairs.length,
+          pendingChemicalOrders: pendingChemicalOrders.length,
         },
       });
     } catch (error: any) {

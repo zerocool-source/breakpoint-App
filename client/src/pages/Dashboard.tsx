@@ -18,7 +18,8 @@ import {
   XCircle,
   Send,
   UserX,
-  ChevronRight
+  ChevronRight,
+  Droplets
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -191,6 +192,7 @@ export default function Dashboard() {
   const summary = dashboardData?.summary;
   const recentActivity = dashboardData?.recentActivity || [];
   const urgentItems = dashboardData?.urgentItems || [];
+  const chemicalOrdersByProperty = dashboardData?.chemicalOrdersByProperty || [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
@@ -801,6 +803,60 @@ export default function Dashboard() {
               {metrics?.technicians?.repairTechWorkload?.every(t => t.jobCount === 0) && (
                 <p className="text-sm text-slate-500 mt-2 text-center">No jobs scheduled for today</p>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Chemical Orders by Property */}
+        {chemicalOrdersByProperty.length > 0 && (
+          <Card className="shadow-sm" data-testid="card-chemical-orders-by-property">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-cyan-600" />
+                    Chemical Orders by Property
+                  </CardTitle>
+                  <CardDescription>Pending orders that need to be sent</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-cyan-600 hover:text-cyan-700">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const maxCount = Math.max(...chemicalOrdersByProperty.map((p: any) => p.count), 1);
+                const totalOrders = chemicalOrdersByProperty.reduce((sum: number, p: any) => sum + p.count, 0);
+                
+                return (
+                  <div className="space-y-3">
+                    {chemicalOrdersByProperty.map((property: any, idx: number) => {
+                      const percentage = (property.count / maxCount) * 100;
+                      const percentOfTotal = totalOrders > 0 ? Math.round((property.count / totalOrders) * 100) : 0;
+                      
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-700 font-medium truncate flex-1 mr-4">{property.propertyName}</span>
+                            <span className="text-slate-600 tabular-nums shrink-0">{property.count} ({percentOfTotal}%)</span>
+                          </div>
+                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-cyan-500 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-sm">
+                      <span className="text-slate-600">Total Pending Orders</span>
+                      <span className="font-semibold text-slate-900">{totalOrders}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
