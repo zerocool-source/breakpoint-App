@@ -43,7 +43,7 @@ export function registerSearchRoutes(app: Express) {
       customerResults.forEach((c: { id: string; name: string; address: string | null; city: string | null }) => {
         results.push({
           id: c.id,
-          type: "property",
+          type: "customer",
           title: c.name,
           subtitle: c.address || undefined,
           meta: c.city || undefined,
