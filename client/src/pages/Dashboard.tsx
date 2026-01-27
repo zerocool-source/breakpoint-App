@@ -245,7 +245,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-6 gap-4">
           {/* Estimates Total */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-blue-400 transition-all"
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-blue-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-estimates-total"
           >
@@ -257,13 +257,15 @@ export default function Dashboard() {
                 <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.total || 0}</span>
               </div>
               <p className="text-sm font-medium text-slate-700">Estimates</p>
-              <Progress value={100} className="h-1.5 mt-2 bg-blue-100" />
+              <div className="h-1.5 mt-2 rounded-full bg-blue-100 overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Sent for Approval */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-orange-400 transition-all"
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-orange-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-pending-approvals"
           >
@@ -275,37 +277,41 @@ export default function Dashboard() {
                 <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
               </div>
               <p className="text-sm font-medium text-slate-700">Sent for Approval</p>
-              <Progress 
-                value={metrics?.estimates.total ? ((metrics?.estimates.pendingApproval || 0) / metrics?.estimates.total) * 100 : 0} 
-                className="h-1.5 mt-2 bg-orange-100" 
-              />
+              <div className="h-1.5 mt-2 rounded-full bg-orange-100 overflow-hidden">
+                <div 
+                  className="h-full bg-orange-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.pendingApproval || 0) / metrics?.estimates.total) * 100 : 0}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Needs Scheduling */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-sky-400 transition-all"
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-green-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-needs-scheduling"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-sky-100">
-                  <Calendar className="w-5 h-5 text-sky-700" />
+                <div className="p-2 rounded-lg bg-green-100">
+                  <Calendar className="w-5 h-5 text-green-700" />
                 </div>
                 <span className="text-2xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
               </div>
               <p className="text-sm font-medium text-slate-700">Needs Scheduling</p>
-              <Progress 
-                value={metrics?.estimates.total ? ((summary?.needsScheduling || 0) / metrics?.estimates.total) * 100 : 0} 
-                className="h-1.5 mt-2 bg-sky-100" 
-              />
+              <div className="h-1.5 mt-2 rounded-full bg-green-100 overflow-hidden">
+                <div 
+                  className="h-full bg-green-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((summary?.needsScheduling || 0) / metrics?.estimates.total) * 100 : 0}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Ready to Invoice */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-teal-400 transition-all"
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-teal-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-ready-to-invoice"
           >
@@ -317,121 +323,134 @@ export default function Dashboard() {
                 <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
               </div>
               <p className="text-sm font-medium text-slate-700">Ready to Invoice</p>
-              <Progress 
-                value={metrics?.estimates.total ? ((metrics?.estimates.readyToInvoice || 0) / metrics?.estimates.total) * 100 : 0} 
-                className="h-1.5 mt-2 bg-teal-100" 
-              />
+              <div className="h-1.5 mt-2 rounded-full bg-teal-100 overflow-hidden">
+                <div 
+                  className="h-full bg-teal-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.readyToInvoice || 0) / metrics?.estimates.total) * 100 : 0}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Invoices Unpaid */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-red-400 transition-all"
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-amber-400 transition-all bg-white"
             onClick={() => navigate("/invoices")}
             data-testid="card-invoices-unpaid"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-red-100">
-                  <DollarSign className="w-5 h-5 text-red-700" />
+                <div className="p-2 rounded-lg bg-amber-100">
+                  <DollarSign className="w-5 h-5 text-amber-700" />
                 </div>
                 <span className="text-2xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
               </div>
               <p className="text-sm font-medium text-slate-700">Invoices Unpaid</p>
-              <Progress 
-                value={metrics?.invoices?.total ? ((metrics?.invoices?.unpaid || 0) / metrics?.invoices?.total) * 100 : 0} 
-                className="h-1.5 mt-2 bg-red-100" 
-              />
+              <div className="h-1.5 mt-2 rounded-full bg-amber-100 overflow-hidden">
+                <div 
+                  className="h-full bg-amber-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.invoices?.total ? ((metrics?.invoices?.unpaid || 0) / metrics?.invoices?.total) * 100 : 0}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Declined */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-rose-400 transition-all"
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-red-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-declined"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-rose-100">
-                  <XCircle className="w-5 h-5 text-rose-700" />
+                <div className="p-2 rounded-lg bg-red-100">
+                  <XCircle className="w-5 h-5 text-red-700" />
                 </div>
                 <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
               </div>
               <p className="text-sm font-medium text-slate-700">Declined</p>
-              <Progress 
-                value={metrics?.estimates.total ? ((metrics?.estimates.declined || 0) / metrics?.estimates.total) * 100 : 0} 
-                className="h-1.5 mt-2 bg-rose-100" 
-              />
+              <div className="h-1.5 mt-2 rounded-full bg-red-100 overflow-hidden">
+                <div 
+                  className="h-full bg-red-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.declined || 0) / metrics?.estimates.total) * 100 : 0}%` }}
+                ></div>
+              </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Open Emergencies Section */}
         {(metrics?.emergencies?.open ?? 0) > 0 && (
-          <Card className="border-l-4 border-l-red-500" data-testid="card-emergencies">
+          <Card className="shadow-sm border-l-4 border-l-red-500 bg-white" data-testid="card-emergencies">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  Open Emergencies
+                  <span className="text-slate-900">Open Emergencies</span>
                   <Badge className="bg-red-100 text-red-700 ml-2">{metrics?.emergencies?.open ?? 0}</Badge>
                 </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {metrics?.emergencies?.recentOpen?.map((emergency, index) => (
-                  <div 
-                    key={emergency.id}
-                    className="p-3 rounded-lg border border-red-200 bg-red-50/50 hover:bg-red-50 cursor-pointer transition-colors"
-                    onClick={() => navigate("/emergencies")}
-                    data-testid={`emergency-card-${index}`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-medium text-[#1E293B] truncate flex-1">{emergency.propertyName}</span>
-                      {emergency.priority === "critical" && (
-                        <Badge className="bg-red-600 text-white text-[10px] shrink-0">Critical</Badge>
-                      )}
-                      {emergency.priority === "high" && (
-                        <Badge className="bg-[#FF8000]1A text-[#D35400] text-[10px] shrink-0">High</Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-[#64748B] line-clamp-2 mb-2">{emergency.description}</p>
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1 text-slate-500">
-                        <Users className="w-3 h-3" />
-                        <span>{emergency.submittedByName}</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="capitalize">{emergency.submitterRole?.replace(/_/g, " ")}</span>
+                {metrics?.emergencies?.recentOpen?.map((emergency, index) => {
+                  const daysOpen = emergency.createdAt 
+                    ? Math.floor((new Date().getTime() - new Date(emergency.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+                    : 0;
+                  
+                  return (
+                    <div 
+                      key={emergency.id}
+                      className="p-3 rounded-lg border border-slate-200 bg-white hover:border-red-400 hover:shadow-sm cursor-pointer transition-all"
+                      onClick={() => navigate("/emergencies")}
+                      data-testid={`emergency-card-${index}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="text-sm font-semibold text-slate-900 truncate flex-1">{emergency.propertyName}</span>
+                        {emergency.priority === "critical" && (
+                          <Badge className="bg-red-600 text-white text-[10px] shrink-0">Critical</Badge>
+                        )}
+                        {emergency.priority === "high" && (
+                          <Badge className="bg-orange-500 text-white text-[10px] shrink-0">High</Badge>
+                        )}
                       </div>
-                      {emergency.createdAt && (
-                        <span className="text-red-500 font-medium">
-                          {formatDistanceToNow(new Date(emergency.createdAt), { addSuffix: false })}
-                        </span>
-                      )}
+                      <p className="text-xs text-slate-600 line-clamp-2 mb-2">{emergency.description}</p>
+                      <div className="flex items-center justify-between text-xs border-t border-red-100 pt-2 mt-2">
+                        <div className="flex items-center gap-1 text-slate-600">
+                          <Users className="w-3 h-3" />
+                          <span className="font-medium">{emergency.submittedByName}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500 capitalize">{emergency.submitterRole?.replace(/_/g, " ")}</span>
+                          <Badge className="bg-red-100 text-red-700 text-[10px]">
+                            {daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         )}
 
+        {/* Two-Column Middle Section: Estimate Pipeline + Financial Summary */}
         <div className="grid grid-cols-2 gap-6">
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#0078D4]" />
+                    <FileText className="w-5 h-5 text-blue-600" />
                     Estimate Pipeline
                   </CardTitle>
                   <CardDescription>Job estimates by status</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#60A5FA]">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-blue-600 hover:text-blue-700">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -485,12 +504,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-[#22D69A]" />
+                    <DollarSign className="w-5 h-5 text-emerald-600" />
                     Financial Summary
                   </CardTitle>
                   <CardDescription>Values across pipeline stages</CardDescription>
@@ -499,10 +518,10 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200">
+                <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">Total Pipeline Value</span>
-                    <span className="text-2xl font-bold text-blue-700">{formatCurrency(metrics?.values.total || 0)}</span>
+                    <span className="text-2xl font-bold text-emerald-700">{formatCurrency(metrics?.values.total || 0)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -524,50 +543,55 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          <Card className="col-span-2">
+        {/* Two-Column Lower Section: Recent Activity + Urgent Items */}
+        <div className="grid grid-cols-2 gap-6">
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Activity className="w-5 h-5 text-[#60A5FA]" />
-                Recent Activity
-              </CardTitle>
-              <CardDescription>Latest estimates and service repairs</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-[#60A5FA]" />
+                    Recent Activity
+                  </CardTitle>
+                  <CardDescription>Latest estimates and service repairs</CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[280px]">
                 {recentActivity.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-[#64748B]">
                     <p>No recent activity</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {recentActivity.map((item, index) => (
                       <div 
                         key={`${item.type}-${item.id}-${index}`}
-                        className="flex items-center justify-between p-3 rounded-lg border border-[#E2E8F0] hover:border-[#60A5FA]/50 hover:shadow-sm transition-all cursor-pointer"
+                        className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
                         onClick={() => navigate(item.type === "estimate" ? "/estimates" : "/service-repairs")}
                         data-testid={`activity-item-${item.id}`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${item.type === "estimate" ? "bg-[#0078D4]/10" : "bg-[#FF8000]/10"}`}>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className={`p-2 rounded-lg shrink-0 ${item.type === "estimate" ? "bg-blue-100" : "bg-orange-100"}`}>
                             {item.type === "estimate" ? (
-                              <FileText className="w-4 h-4 text-[#0078D4]" />
+                              <FileText className="w-4 h-4 text-blue-700" />
                             ) : (
-                              <Wrench className="w-4 h-4 text-[#D35400]" />
+                              <Wrench className="w-4 h-4 text-orange-700" />
                             )}
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#1E293B]">{item.title}</p>
-                            <p className="text-xs text-[#64748B]">{item.property}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-slate-900 truncate">{item.property}</p>
+                            <p className="text-xs text-slate-500 truncate">{item.title}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 shrink-0">
                           <Badge className={getStatusColor(item.status)}>{item.status?.replace(/_/g, " ")}</Badge>
                           {item.amount > 0 && (
-                            <span className="text-sm font-medium text-[#1E293B]">{formatCurrency(item.amount)}</span>
+                            <span className="text-sm font-semibold text-slate-800">{formatCurrency(item.amount)}</span>
                           )}
                           {item.timestamp && (
-                            <span className="text-xs text-[#94A3B8]">
+                            <span className="text-xs text-slate-400">
                               {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
                             </span>
                           )}
@@ -580,52 +604,56 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-[#D35400]" />
-                Urgent Items
-              </CardTitle>
-              <CardDescription>Requires immediate attention</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    Urgent Items
+                  </CardTitle>
+                  <CardDescription>Requires immediate attention</CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[300px]">
+              <ScrollArea className="h-[280px]">
                 {urgentItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-[#64748B]">
-                    <CheckCircle2 className="w-12 h-12 mb-2 text-[#22D69A]" />
+                  <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                    <CheckCircle2 className="w-12 h-12 mb-2 text-emerald-500" />
                     <p>All caught up!</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {urgentItems.map((item, index) => (
                       <div 
                         key={`${item.type}-${item.id}-${index}`}
-                        className="p-3 rounded-lg border border-[#E2E8F0] hover:border-[#FF8000]/50 transition-all cursor-pointer"
+                        className="p-3 rounded-lg bg-white border border-slate-200 hover:border-red-300 hover:shadow-sm transition-all cursor-pointer"
                         onClick={() => {
                           if (item.type === "ready_to_invoice" || item.type === "needs_scheduling") {
                             navigate("/estimates");
+                          } else if (item.type === "emergency") {
+                            navigate("/emergencies");
                           }
                         }}
                         data-testid={`urgent-item-${item.id}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`p-1.5 rounded-full ${
-                            item.severity === "warning" ? "bg-[#FF8000]1A" : 
-                            item.severity === "info" ? "bg-[#17BEBB]1A" : "bg-red-100"
+                          <div className={`p-2 rounded-full shrink-0 ${
+                            item.severity === "critical" ? "bg-red-100" : 
+                            item.severity === "warning" ? "bg-orange-100" : 
+                            item.severity === "info" ? "bg-teal-100" : "bg-red-100"
                           }`}>
-                            {item.type === "alert" ? (
-                              <Bell className={`w-3 h-3 ${
-                                item.severity === "warning" ? "text-[#D35400]" : "text-red-600"
-                              }`} />
-                            ) : item.type === "ready_to_invoice" ? (
-                              <Receipt className="w-3 h-3 text-[#0D9488]" />
-                            ) : (
-                              <Calendar className="w-3 h-3 text-[#D35400]" />
-                            )}
+                            <AlertTriangle className={`w-4 h-4 ${
+                              item.severity === "critical" ? "text-red-600" :
+                              item.severity === "warning" ? "text-orange-600" : 
+                              item.severity === "info" ? "text-teal-600" : "text-red-600"
+                            }`} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#1E293B] truncate">{item.title}</p>
-                            <p className="text-xs text-[#64748B] truncate">{item.description}</p>
+                            <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                            <p className="text-xs text-slate-500 line-clamp-2">{item.description}</p>
+                            <p className="text-xs text-slate-400 mt-1">{item.property}</p>
                           </div>
                         </div>
                       </div>
@@ -639,7 +667,7 @@ export default function Dashboard() {
 
         {/* Inactive Technicians Section */}
         {(metrics?.technicians?.inactive?.length || 0) > 0 && (
-          <Card className="border-l-4 border-l-amber-500" data-testid="card-inactive-technicians">
+          <Card className="shadow-sm border-l-4 border-l-amber-500 bg-white" data-testid="card-inactive-technicians">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -696,7 +724,7 @@ export default function Dashboard() {
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
           <Card 
-            className="cursor-pointer hover:shadow-md transition-all border-l-4 border-l-blue-500" 
+            className="shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 border-l-blue-500 bg-white" 
             onClick={() => navigate("/repair-queue")}
             data-testid="card-repair-tech-workload"
           >
@@ -742,60 +770,64 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Quick Links */}
+        {/* Bottom Summary Boxes */}
         <div className="grid grid-cols-4 gap-4">
-          <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/tech-ops")} data-testid="card-tech-ops">
+          <Card className="shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 transition-all" onClick={() => navigate("/tech-ops")} data-testid="card-tech-ops">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100">
+                <div className="p-2.5 rounded-lg bg-blue-100">
                   <Users className="w-5 h-5 text-blue-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Tech Ops</p>
+                  <p className="text-sm font-semibold text-slate-900">Tech Ops</p>
                   <p className="text-xs text-slate-600">{metrics?.technicians.total || 0} technicians</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/service-repairs")} data-testid="card-repair-queue">
+          <Card className="shadow-sm cursor-pointer hover:shadow-md hover:border-orange-300 transition-all" onClick={() => navigate("/service-repairs")} data-testid="card-repair-queue">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100">
+                <div className="p-2.5 rounded-lg bg-orange-100">
                   <Wrench className="w-5 h-5 text-orange-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Repair Queue</p>
+                  <p className="text-sm font-semibold text-slate-900">Repair Queue</p>
                   <p className="text-xs text-slate-600">{metrics?.serviceRepairs.pending || 0} pending</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/estimates")} data-testid="card-estimates">
+          <Card className="shadow-sm cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all" onClick={() => navigate("/estimates")} data-testid="card-estimates">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-100">
+                <div className="p-2.5 rounded-lg bg-emerald-100">
                   <FileText className="w-5 h-5 text-emerald-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Estimates</p>
+                  <p className="text-sm font-semibold text-slate-900">Estimates</p>
                   <p className="text-xs text-slate-600">{metrics?.estimates.total || 0} total</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-all" data-testid="card-alerts">
+          <Card className="shadow-sm cursor-pointer hover:shadow-md hover:border-red-300 transition-all" onClick={() => navigate("/alerts")} data-testid="card-alerts">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100">
+                <div className="p-2.5 rounded-lg bg-red-100">
                   <Bell className="w-5 h-5 text-red-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Alerts</p>
+                  <p className="text-sm font-semibold text-slate-900">Alerts</p>
                   <p className="text-xs text-slate-600">{metrics?.alerts.urgent || 0} urgent, {metrics?.alerts.active || 0} active</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
               </div>
             </CardContent>
           </Card>
