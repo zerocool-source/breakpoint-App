@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
+import { db } from "../db";
+import { invoices } from "@shared/schema";
+import { eq, and, or, not, isNull } from "drizzle-orm";
 
 export function registerDashboardRoutes(app: any) {
   app.get("/api/dashboard/overview", async (req: Request, res: Response) => {
@@ -10,12 +13,14 @@ export function registerDashboardRoutes(app: any) {
         techniciansList,
         alerts,
         emergencies,
+        allInvoices,
       ] = await Promise.all([
         storage.getEstimates(),
         storage.getServiceRepairJobs(),
         storage.getTechnicians(),
         storage.getAlerts(),
         storage.getEmergencies(),
+        db.select().from(invoices),
       ]);
 
       const now = new Date();
@@ -28,6 +33,24 @@ export function registerDashboardRoutes(app: any) {
       const completedJobs = estimates.filter((e: any) => e.status === "completed");
       const readyToInvoice = estimates.filter((e: any) => e.status === "ready_to_invoice");
       const invoicedJobs = estimates.filter((e: any) => e.status === "invoiced");
+      const declinedEstimates = estimates.filter((e: any) => e.status === "rejected");
+
+      // Invoice metrics
+      const unpaidInvoices = allInvoices.filter((inv: any) => 
+        inv.status === "sent" || inv.status === "overdue" || inv.status === "partial"
+      );
+      const paidInvoices = allInvoices.filter((inv: any) => inv.status === "paid");
+
+      // Inactive technicians - currently returns empty array as there's no clock-in system
+      // This will be populated when clock-in tracking is implemented
+      // The frontend shows this section only when there are inactive technicians
+      const inactiveTechnicians: Array<{
+        id: string;
+        name: string;
+        role: string;
+        expectedStartTime: string;
+        minutesLate: number;
+      }> = [];
 
       const pendingServiceRepairs = serviceRepairs.filter((r: any) => r.status === "pending" || r.status === "open");
       const inProgressRepairs = serviceRepairs.filter((r: any) => r.status === "in_progress");
@@ -118,6 +141,12 @@ export function registerDashboardRoutes(app: any) {
         })),
       ];
 
+      // Calculate unpaid invoice value
+      const unpaidInvoiceValue = unpaidInvoices.reduce((sum: number, inv: any) => {
+        const balance = inv.balanceDue || inv.totalAmount || 0;
+        return sum + (typeof balance === 'number' ? balance : 0);
+      }, 0) / 100;
+
       res.json({
         metrics: {
           estimates: {
@@ -128,7 +157,14 @@ export function registerDashboardRoutes(app: any) {
             completed: completedJobs.length,
             readyToInvoice: readyToInvoice.length,
             invoiced: invoicedJobs.length,
+            declined: declinedEstimates.length,
             total: estimates.length,
+          },
+          invoices: {
+            unpaid: unpaidInvoices.length,
+            unpaidValue: unpaidInvoiceValue,
+            paid: paidInvoices.length,
+            total: allInvoices.length,
           },
           values: {
             total: totalEstimateValue,
@@ -146,6 +182,7 @@ export function registerDashboardRoutes(app: any) {
             repairForemen: repairForemen.length,
             supervisors: supervisors.length,
             total: techniciansList.length,
+            inactive: inactiveTechnicians,
           },
           alerts: {
             urgent: urgentAlerts.length,

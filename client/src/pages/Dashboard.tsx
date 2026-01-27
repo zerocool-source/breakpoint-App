@@ -13,17 +13,26 @@ import {
   ArrowRight,
   Bell,
   DollarSign,
-  Loader2
+  Loader2,
+  Settings,
+  XCircle,
+  Send,
+  UserX
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
+import { useState } from "react";
 
 interface OpenEmergency {
   id: string;
@@ -33,6 +42,14 @@ interface OpenEmergency {
   priority: string;
   description: string;
   createdAt: string;
+}
+
+interface InactiveTechnician {
+  id: string;
+  name: string;
+  role: string;
+  expectedStartTime: string;
+  minutesLate: number;
 }
 
 interface DashboardData {
@@ -45,6 +62,13 @@ interface DashboardData {
       completed: number;
       readyToInvoice: number;
       invoiced: number;
+      declined: number;
+      total: number;
+    };
+    invoices: {
+      unpaid: number;
+      unpaidValue: number;
+      paid: number;
       total: number;
     };
     values: {
@@ -63,6 +87,7 @@ interface DashboardData {
       repairForemen: number;
       supervisors: number;
       total: number;
+      inactive: InactiveTechnician[];
     };
     alerts: {
       urgent: number;
@@ -106,6 +131,20 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [showThresholdSettings, setShowThresholdSettings] = useState(false);
+  
+  // Persist threshold time in localStorage
+  const [thresholdTime, setThresholdTime] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('inactive_tech_threshold') || "08:00";
+    }
+    return "08:00";
+  });
+  
+  const saveThresholdTime = (time: string) => {
+    setThresholdTime(time);
+    localStorage.setItem('inactive_tech_threshold', time);
+  };
 
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/overview"],
@@ -196,80 +235,128 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        {/* Top Metrics Cards - 6 cards in a row */}
+        <div className="grid grid-cols-6 gap-4">
+          {/* Estimates Total */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#FF8000]/50 transition-all border-l-4 border-l-[#FF8000]"
+            className="cursor-pointer hover:shadow-md hover:border-blue-400 transition-all"
+            onClick={() => navigate("/estimates")}
+            data-testid="card-estimates-total"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-blue-100">
+                  <FileText className="w-5 h-5 text-blue-700" />
+                </div>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.total || 0}</span>
+              </div>
+              <p className="text-sm font-medium text-slate-700">Estimates</p>
+              <Progress value={100} className="h-1.5 mt-2 bg-blue-100" />
+            </CardContent>
+          </Card>
+
+          {/* Sent for Approval */}
+          <Card 
+            className="cursor-pointer hover:shadow-md hover:border-orange-400 transition-all"
             onClick={() => navigate("/estimates")}
             data-testid="card-pending-approvals"
           >
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#64748B] uppercase tracking-wide">Pending Approvals</p>
-                  <p className="text-3xl font-bold text-[#1E293B]">{summary?.pendingApprovals || 0}</p>
-                  <p className="text-sm text-[#D35400]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-orange-100">
+                  <Send className="w-5 h-5 text-orange-700" />
                 </div>
-                <div className="p-3 rounded-full bg-[#FF8000]/10">
-                  <Clock className="w-6 h-6 text-[#D35400]" />
-                </div>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
               </div>
+              <p className="text-sm font-medium text-slate-700">Sent for Approval</p>
+              <Progress 
+                value={metrics?.estimates.total ? ((metrics?.estimates.pendingApproval || 0) / metrics?.estimates.total) * 100 : 0} 
+                className="h-1.5 mt-2 bg-orange-100" 
+              />
             </CardContent>
           </Card>
 
+          {/* Needs Scheduling */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#0078D4]/50 transition-all border-l-4 border-l-[#0078D4]"
+            className="cursor-pointer hover:shadow-md hover:border-sky-400 transition-all"
             onClick={() => navigate("/estimates")}
             data-testid="card-needs-scheduling"
           >
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#64748B] uppercase tracking-wide">Needs Scheduling</p>
-                  <p className="text-3xl font-bold text-[#1E293B]">{summary?.needsScheduling || 0}</p>
-                  <p className="text-sm text-[#0078D4]">Approved jobs awaiting</p>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-sky-100">
+                  <Calendar className="w-5 h-5 text-sky-700" />
                 </div>
-                <div className="p-3 rounded-full bg-[#0078D4]/10">
-                  <Calendar className="w-6 h-6 text-[#0078D4]" />
-                </div>
+                <span className="text-2xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
               </div>
+              <p className="text-sm font-medium text-slate-700">Needs Scheduling</p>
+              <Progress 
+                value={metrics?.estimates.total ? ((summary?.needsScheduling || 0) / metrics?.estimates.total) * 100 : 0} 
+                className="h-1.5 mt-2 bg-sky-100" 
+              />
             </CardContent>
           </Card>
 
+          {/* Ready to Invoice */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#17BEBB]/50 transition-all border-l-4 border-l-#17BEBB"
+            className="cursor-pointer hover:shadow-md hover:border-teal-400 transition-all"
             onClick={() => navigate("/estimates")}
             data-testid="card-ready-to-invoice"
           >
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#64748B] uppercase tracking-wide">Ready to Invoice</p>
-                  <p className="text-3xl font-bold text-[#1E293B]">{summary?.needsInvoicing || 0}</p>
-                  <p className="text-sm text-[#0D9488]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-teal-100">
+                  <Receipt className="w-5 h-5 text-teal-700" />
                 </div>
-                <div className="p-3 rounded-full bg-[#17BEBB]1A">
-                  <Receipt className="w-6 h-6 text-[#0D9488]" />
-                </div>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
               </div>
+              <p className="text-sm font-medium text-slate-700">Ready to Invoice</p>
+              <Progress 
+                value={metrics?.estimates.total ? ((metrics?.estimates.readyToInvoice || 0) / metrics?.estimates.total) * 100 : 0} 
+                className="h-1.5 mt-2 bg-teal-100" 
+              />
             </CardContent>
           </Card>
 
+          {/* Invoices Unpaid */}
           <Card 
-            className="cursor-pointer hover:shadow-md hover:border-[#60A5FA]/50 transition-all border-l-4 border-l-[#60A5FA]"
-            onClick={() => navigate("/tech-ops")}
-            data-testid="card-active-repairs"
+            className="cursor-pointer hover:shadow-md hover:border-red-400 transition-all"
+            onClick={() => navigate("/invoices")}
+            data-testid="card-invoices-unpaid"
           >
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-[#64748B] uppercase tracking-wide">Active Repairs</p>
-                  <p className="text-3xl font-bold text-[#1E293B]">{summary?.activeRepairs || 0}</p>
-                  <p className="text-sm text-[#60A5FA]">Service repairs in progress</p>
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-red-100">
+                  <DollarSign className="w-5 h-5 text-red-700" />
                 </div>
-                <div className="p-3 rounded-full bg-[#60A5FA]/10">
-                  <Wrench className="w-6 h-6 text-[#60A5FA]" />
-                </div>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
               </div>
+              <p className="text-sm font-medium text-slate-700">Invoices Unpaid</p>
+              <Progress 
+                value={metrics?.invoices?.total ? ((metrics?.invoices?.unpaid || 0) / metrics?.invoices?.total) * 100 : 0} 
+                className="h-1.5 mt-2 bg-red-100" 
+              />
+            </CardContent>
+          </Card>
+
+          {/* Declined */}
+          <Card 
+            className="cursor-pointer hover:shadow-md hover:border-rose-400 transition-all"
+            onClick={() => navigate("/estimates")}
+            data-testid="card-declined"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="p-2 rounded-lg bg-rose-100">
+                  <XCircle className="w-5 h-5 text-rose-700" />
+                </div>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
+              </div>
+              <p className="text-sm font-medium text-slate-700">Declined</p>
+              <Progress 
+                value={metrics?.estimates.total ? ((metrics?.estimates.declined || 0) / metrics?.estimates.total) * 100 : 0} 
+                className="h-1.5 mt-2 bg-rose-100" 
+              />
             </CardContent>
           </Card>
         </div>
@@ -344,41 +431,49 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer" onClick={() => navigate("/estimates")}>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                    <span className="text-sm text-[#1E293B]">Draft</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
+                    <span className="text-sm font-medium text-slate-800">Draft</span>
                   </div>
-                  <Badge variant="secondary">{metrics?.estimates.draft || 0}</Badge>
+                  <Badge className="bg-slate-200 text-slate-700 font-semibold">{metrics?.estimates.draft || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[#FF8000]1A hover:bg-[#FF8000]1A cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#FF8000]"></div>
-                    <span className="text-sm text-[#1E293B]">Pending Approval</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
+                    <span className="text-sm font-medium text-slate-800">Pending Approval</span>
                   </div>
-                  <Badge className="bg-[#FF8000]1A text-[#D35400]">{metrics?.estimates.pendingApproval || 0}</Badge>
+                  <Badge className="bg-orange-200 text-orange-800 font-semibold">{metrics?.estimates.pendingApproval || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[#22D69A]1A hover:bg-[#22D69A]1A cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#22D69A]"></div>
-                    <span className="text-sm text-[#1E293B]">Approved</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                    <span className="text-sm font-medium text-slate-800">Approved</span>
                   </div>
-                  <Badge className="bg-[#22D69A]1A text-[#22D69A]">{metrics?.estimates.approved || 0}</Badge>
+                  <Badge className="bg-emerald-200 text-emerald-800 font-semibold">{metrics?.estimates.approved || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-[#0078D4]1A hover:bg-[#0078D4]1A cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-sky-50 hover:bg-sky-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#0078D4]"></div>
-                    <span className="text-sm text-[#1E293B]">Scheduled</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-sky-500"></div>
+                    <span className="text-sm font-medium text-slate-800">Scheduled</span>
                   </div>
-                  <Badge className="bg-[#0078D4]1A text-[#0078D4]">{metrics?.estimates.scheduled || 0}</Badge>
+                  <Badge className="bg-sky-200 text-sky-800 font-semibold">{metrics?.estimates.scheduled || 0}</Badge>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-purple-50 hover:bg-[#17BEBB]1A cursor-pointer" onClick={() => navigate("/estimates")}>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-teal-50 hover:bg-teal-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-[#17BEBB]"></div>
-                    <span className="text-sm text-[#1E293B]">Ready to Invoice</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-teal-500"></div>
+                    <span className="text-sm font-medium text-slate-800">Ready to Invoice</span>
                   </div>
-                  <Badge className="bg-[#17BEBB]1A text-[#0D9488]">{metrics?.estimates.readyToInvoice || 0}</Badge>
+                  <Badge className="bg-teal-200 text-teal-800 font-semibold">{metrics?.estimates.readyToInvoice || 0}</Badge>
+                </div>
+                {/* Unpaid Row */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-red-50 hover:bg-red-100 cursor-pointer transition-colors" onClick={() => navigate("/invoices")}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    <span className="text-sm font-medium text-slate-800">Unpaid</span>
+                  </div>
+                  <Badge className="bg-red-200 text-red-800 font-semibold">{metrics?.invoices?.unpaid || 0}</Badge>
                 </div>
               </div>
             </CardContent>
@@ -398,24 +493,24 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-[#0078D4]/5 to-[#60A5FA]/5 border border-[#0078D4]/20">
+                <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-sky-50 border border-blue-200">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#64748B]">Total Pipeline Value</span>
-                    <span className="text-2xl font-bold text-[#0078D4]">{formatCurrency(metrics?.values.total || 0)}</span>
+                    <span className="text-sm font-medium text-slate-700">Total Pipeline Value</span>
+                    <span className="text-2xl font-bold text-blue-700">{formatCurrency(metrics?.values.total || 0)}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-lg bg-[#FF8000]1A text-center">
-                    <p className="text-xs text-[#64748B]">Pending Approval</p>
-                    <p className="text-lg font-semibold text-[#D35400]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                  <div className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-center">
+                    <p className="text-xs font-medium text-slate-600">Pending Approval</p>
+                    <p className="text-lg font-bold text-orange-700">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-[#0078D4]1A text-center">
-                    <p className="text-xs text-[#64748B]">Scheduled</p>
-                    <p className="text-lg font-semibold text-[#0078D4]">{formatCurrency(metrics?.values.scheduled || 0)}</p>
+                  <div className="p-3 rounded-lg bg-sky-50 border border-sky-100 text-center">
+                    <p className="text-xs font-medium text-slate-600">Scheduled</p>
+                    <p className="text-lg font-bold text-sky-700">{formatCurrency(metrics?.values.scheduled || 0)}</p>
                   </div>
-                  <div className="p-3 rounded-lg bg-purple-50 text-center">
-                    <p className="text-xs text-[#64748B]">Ready to Invoice</p>
-                    <p className="text-lg font-semibold text-[#0D9488]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                  <div className="p-3 rounded-lg bg-teal-50 border border-teal-100 text-center">
+                    <p className="text-xs font-medium text-slate-600">Ready to Invoice</p>
+                    <p className="text-lg font-bold text-teal-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                   </div>
                 </div>
               </div>
@@ -536,16 +631,73 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Inactive Technicians Section */}
+        {(metrics?.technicians?.inactive?.length || 0) > 0 && (
+          <Card className="border-l-4 border-l-amber-500" data-testid="card-inactive-technicians">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <UserX className="w-5 h-5 text-amber-600" />
+                  <span className="text-slate-900">Inactive Technicians</span>
+                  <Badge className="bg-amber-100 text-amber-800 ml-2">{metrics?.technicians?.inactive?.length || 0}</Badge>
+                </CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowThresholdSettings(true)}
+                  className="text-slate-600 hover:text-slate-800"
+                  data-testid="btn-threshold-settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-slate-600">
+                Technicians who haven't clocked in after {thresholdTime}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {metrics?.technicians?.inactive?.map((tech) => {
+                  const hours = Math.floor(tech.minutesLate / 60);
+                  const mins = tech.minutesLate % 60;
+                  const lateText = hours > 0 ? `${hours}h ${mins}m late` : `${mins}m late`;
+                  
+                  return (
+                    <div 
+                      key={tech.id}
+                      className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors"
+                      data-testid={`inactive-tech-${tech.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="text-sm font-medium text-slate-900">{tech.name}</span>
+                        <Badge className="bg-amber-200 text-amber-800 text-[10px] shrink-0">{lateText}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1 text-slate-600">
+                          <Clock className="w-3 h-3" />
+                          <span>Expected: {tech.expectedStartTime}</span>
+                        </div>
+                        <span className="text-slate-500 capitalize">{tech.role?.replace(/_/g, " ")}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quick Links */}
         <div className="grid grid-cols-4 gap-4">
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/tech-ops")} data-testid="card-tech-ops">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#0078D4]/10">
-                  <Users className="w-5 h-5 text-[#0078D4]" />
+                <div className="p-2 rounded-lg bg-blue-100">
+                  <Users className="w-5 h-5 text-blue-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#1E293B]">Tech Ops</p>
-                  <p className="text-xs text-[#64748B]">{metrics?.technicians.total || 0} technicians</p>
+                  <p className="text-sm font-medium text-slate-900">Tech Ops</p>
+                  <p className="text-xs text-slate-600">{metrics?.technicians.total || 0} technicians</p>
                 </div>
               </div>
             </CardContent>
@@ -554,12 +706,12 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/service-repairs")} data-testid="card-repair-queue">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#FF8000]/10">
-                  <Wrench className="w-5 h-5 text-[#D35400]" />
+                <div className="p-2 rounded-lg bg-orange-100">
+                  <Wrench className="w-5 h-5 text-orange-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#1E293B]">Repair Queue</p>
-                  <p className="text-xs text-[#64748B]">{metrics?.serviceRepairs.pending || 0} pending</p>
+                  <p className="text-sm font-medium text-slate-900">Repair Queue</p>
+                  <p className="text-xs text-slate-600">{metrics?.serviceRepairs.pending || 0} pending</p>
                 </div>
               </div>
             </CardContent>
@@ -568,12 +720,12 @@ export default function Dashboard() {
           <Card className="cursor-pointer hover:shadow-md transition-all" onClick={() => navigate("/estimates")} data-testid="card-estimates">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#22D69A]1A">
-                  <FileText className="w-5 h-5 text-[#22D69A]" />
+                <div className="p-2 rounded-lg bg-emerald-100">
+                  <FileText className="w-5 h-5 text-emerald-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#1E293B]">Estimates</p>
-                  <p className="text-xs text-[#64748B]">{metrics?.estimates.total || 0} total</p>
+                  <p className="text-sm font-medium text-slate-900">Estimates</p>
+                  <p className="text-xs text-slate-600">{metrics?.estimates.total || 0} total</p>
                 </div>
               </div>
             </CardContent>
@@ -583,17 +735,62 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-red-100">
-                  <Bell className="w-5 h-5 text-red-600" />
+                  <Bell className="w-5 h-5 text-red-700" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#1E293B]">Alerts</p>
-                  <p className="text-xs text-[#64748B]">{metrics?.alerts.urgent || 0} urgent, {metrics?.alerts.active || 0} active</p>
+                  <p className="text-sm font-medium text-slate-900">Alerts</p>
+                  <p className="text-xs text-slate-600">{metrics?.alerts.urgent || 0} urgent, {metrics?.alerts.active || 0} active</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Threshold Settings Modal */}
+      <Dialog open={showThresholdSettings} onOpenChange={setShowThresholdSettings}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-slate-700" />
+              Clock-in Threshold Settings
+            </DialogTitle>
+            <DialogDescription>
+              Set the time after which technicians are considered inactive if they haven't clocked in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="thresholdTime" className="text-sm font-medium text-slate-700">
+              Expected Start Time
+            </Label>
+            <Input
+              id="thresholdTime"
+              type="time"
+              value={thresholdTime}
+              onChange={(e) => setThresholdTime(e.target.value)}
+              className="mt-2"
+              data-testid="input-threshold-time"
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              Technicians who haven't clocked in by this time will appear in the Inactive list.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowThresholdSettings(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                saveThresholdTime(thresholdTime);
+                toast({ title: "Settings Saved", description: `Threshold time updated to ${thresholdTime}` });
+                setShowThresholdSettings(false);
+              }}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
