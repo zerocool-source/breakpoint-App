@@ -10,7 +10,7 @@ import {
   Truck, 
   Zap,
   Settings,
-  LocateFixed,
+  Share2,
   Network,
   Wrench,
 } from "lucide-react";
@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    icon: LocateFixed, 
+    icon: Share2, 
     label: "Operations Hub", 
     children: [
       { label: "Tech Ops Alerts", href: "/tech-ops" },
