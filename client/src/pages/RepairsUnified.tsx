@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, subDays, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,33 +28,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Wrench, Loader2, AlertCircle, CheckCircle2, Clock, Search,
+  Wrench, Loader2, CheckCircle2, Clock, Search,
   RefreshCw, Building2, User, Calendar, DollarSign, Percent,
-  FileText, MapPin, Phone, Mail, ChevronDown, Archive, Eye, EyeOff,
+  FileText, MapPin, Phone, Mail, ChevronDown, Eye, EyeOff,
   XCircle, FileCheck, ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-
-interface EnrichedAlert {
-  alertId: string;
-  poolId: string;
-  poolName: string;
-  customerId: string | null;
-  customerName: string;
-  address: string;
-  phone: string;
-  email: string;
-  contact: string;
-  notes: string;
-  message: string;
-  type: string;
-  severity: string;
-  status: string;
-  createdAt: string;
-  techName?: string;
-  techId?: number;
-}
 
 interface TechOpsEntry {
   id: string;
@@ -93,49 +73,21 @@ export default function RepairsUnified() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState("repairs-needed");
+  const [activeTab, setActiveTab] = useState("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [propertyFilter, setPropertyFilter] = useState("all");
   const [technicianFilter, setTechnicianFilter] = useState("all");
-  const [showCompleted, setShowCompleted] = useState(false);
   const [editingCommission, setEditingCommission] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<{ percent: number; amount: number }>({ percent: 0, amount: 0 });
   
-  const [declineModal, setDeclineModal] = useState<{ open: boolean; alert: EnrichedAlert | null; reason: string }>({
-    open: false,
-    alert: null,
-    reason: "",
-  });
-  const [editModal, setEditModal] = useState<{ open: boolean; alert: EnrichedAlert | null }>({
-    open: false,
-    alert: null,
-  });
-  const [serviceRepairModal, setServiceRepairModal] = useState<{ open: boolean; repair: (TechOpsEntry & { commissionPercent: number; commissionAmount: number }) | null }>({
+  const [detailModal, setDetailModal] = useState<{ open: boolean; repair: (TechOpsEntry & { commissionPercent: number; commissionAmount: number }) | null }>({
     open: false,
     repair: null,
   });
-  const [selectedServiceRepairs, setSelectedServiceRepairs] = useState<Set<string>>(new Set());
+  const [selectedRepairs, setSelectedRepairs] = useState<Set<string>>(new Set());
   const [showConvertedModal, setShowConvertedModal] = useState(false);
 
-  const { data: alertsData = { alerts: [] }, isLoading: alertsLoading, refetch: refetchAlerts } = useQuery({
-    queryKey: ["enrichedAlerts"],
-    queryFn: async () => {
-      const res = await fetch("/api/alerts/enriched");
-      if (!res.ok) throw new Error("Failed to fetch alerts");
-      return res.json();
-    },
-  });
-
-  const { data: completedData = { completedIds: [] } } = useQuery({
-    queryKey: ["completedAlerts"],
-    queryFn: async () => {
-      const res = await fetch("/api/alerts/completed");
-      if (!res.ok) throw new Error("Failed to fetch completed");
-      return res.json();
-    },
-  });
-
-  const { data: techOpsData = [], isLoading: techOpsLoading } = useQuery<TechOpsEntry[]>({
+  const { data: techOpsData = [], isLoading: techOpsLoading, refetch: refetchRepairs } = useQuery<TechOpsEntry[]>({
     queryKey: ["tech-ops-service-repairs"],
     queryFn: async () => {
       const res = await fetch("/api/tech-ops?entryType=service_repairs");
@@ -164,40 +116,6 @@ export default function RepairsUnified() {
     },
   });
 
-  const { data: photosData = { photos: [] }, isLoading: photosLoading } = useQuery<{ photos: Array<{ url: string; caption?: string }> }>({
-    queryKey: ["alertPhotos", editModal.alert?.alertId],
-    queryFn: async () => {
-      if (!editModal.alert?.alertId) return { photos: [] };
-      const res = await fetch(`/api/alerts/${editModal.alert.alertId}/photos`);
-      if (!res.ok) return { photos: [] };
-      return res.json();
-    },
-    enabled: editModal.open && !!editModal.alert?.alertId,
-  });
-
-  const completedIds = new Set<string>((completedData.completedIds || []).map(String));
-
-  const markCompleteMutation = useMutation({
-    mutationFn: async ({ alertId, completed }: { alertId: string; completed: boolean }) => {
-      if (completed) {
-        const res = await fetch(`/api/alerts/${alertId}/complete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ category: "repair" }),
-        });
-        if (!res.ok) throw new Error("Failed to mark complete");
-        return res.json();
-      } else {
-        const res = await fetch(`/api/alerts/${alertId}/complete`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to unmark");
-        return res.json();
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["completedAlerts"] });
-    },
-  });
-
   const updateCommissionMutation = useMutation({
     mutationFn: async ({ id, commissionPercent, commissionAmount }: { id: string; commissionPercent: number; commissionAmount: number }) => {
       const res = await fetch(`/api/tech-ops/${id}`, {
@@ -218,64 +136,41 @@ export default function RepairsUnified() {
     },
   });
 
-  const createEstimateMutation = useMutation({
-    mutationFn: async (estimateData: any) => {
-      const res = await fetch("/api/estimates", {
-        method: "POST",
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/tech-ops/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(estimateData),
+        body: JSON.stringify({ status, completedAt: status === "completed" ? new Date().toISOString() : null }),
       });
-      if (!res.ok) throw new Error("Failed to create estimate");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["estimates"] });
-      toast({ title: "Estimate created successfully" });
-      navigate("/estimates");
-    },
-    onError: () => {
-      toast({ title: "Failed to create estimate", variant: "destructive" });
-    },
-  });
-
-  const declineRepairMutation = useMutation({
-    mutationFn: async ({ alertId, reason }: { alertId: string; reason?: string }) => {
-      const res = await fetch(`/api/alerts/${alertId}/decline`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-      if (!res.ok) throw new Error("Failed to decline repair");
+      if (!res.ok) throw new Error("Failed to update status");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrichedAlerts"] });
-      toast({ title: "Repair request declined" });
-      setDeclineModal({ open: false, alert: null, reason: "" });
+      queryClient.invalidateQueries({ queryKey: ["tech-ops-service-repairs"] });
+      toast({ title: "Status updated successfully" });
     },
     onError: () => {
-      toast({ title: "Failed to decline repair", variant: "destructive" });
+      toast({ title: "Failed to update status", variant: "destructive" });
     },
   });
 
   const convertToEstimateMutation = useMutation({
     mutationFn: async (repairIds: string[]) => {
-      const selectedRepairs = filteredServiceRepairs.filter(r => repairIds.includes(r.id));
-      if (selectedRepairs.length === 0) throw new Error("No repairs selected");
+      const selectedItems = repairsWithCommission.filter(r => repairIds.includes(r.id));
+      if (selectedItems.length === 0) throw new Error("No repairs selected");
       
-      const uniqueProperties = new Set(selectedRepairs.map(r => r.propertyId));
+      const uniqueProperties = new Set(selectedItems.map(r => r.propertyId));
       if (uniqueProperties.size > 1) {
         throw new Error("MULTI_PROPERTY");
       }
       
-      const firstRepair = selectedRepairs[0];
-      const totalAmountCents = selectedRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
+      const firstRepair = selectedItems[0];
+      const totalAmountCents = selectedItems.reduce((sum, r) => sum + (r.partsCost || 0), 0);
       
-      // Collect all photos from selected repairs
-      const allPhotos = selectedRepairs.flatMap(r => r.photos || []);
+      const allPhotos = selectedItems.flatMap(r => r.photos || []);
       
-      // Build line items with full description including notes
-      const lineItems = selectedRepairs.map((repair, idx) => {
+      const lineItems = selectedItems.map((repair, idx) => {
         const fullDescription = [
           repair.description || "Service repair work",
           repair.notes ? `Notes: ${repair.notes}` : null,
@@ -296,24 +191,24 @@ export default function RepairsUnified() {
         propertyId: firstRepair.propertyId,
         propertyName: firstRepair.propertyName || "Unknown Property",
         address: firstRepair.propertyAddress || null,
-        title: selectedRepairs.length === 1 
+        title: selectedItems.length === 1 
           ? `Service Repair - ${firstRepair.description || "Repair"}` 
-          : `Service Repairs (${selectedRepairs.length} items)`,
-        description: selectedRepairs.map(r => {
+          : `Service Repairs (${selectedItems.length} items)`,
+        description: selectedItems.map(r => {
           const parts = [r.description];
           if (r.notes) parts.push(`Notes: ${r.notes}`);
           return parts.join(" - ");
         }).filter(Boolean).join("\n\n"),
         status: "draft",
         sourceType: "service_tech",
-        serviceRepairCount: selectedRepairs.length,
+        serviceRepairCount: selectedItems.length,
         sourceServiceRepairIds: repairIds,
         totalAmount: totalAmountCents,
         items: lineItems,
         photos: allPhotos.length > 0 ? allPhotos : null,
         serviceTechId: firstRepair.technicianId || null,
         serviceTechName: firstRepair.technicianName || null,
-        techNotes: selectedRepairs.map(r => r.notes).filter(Boolean).join("\n") || null,
+        techNotes: selectedItems.map(r => r.notes).filter(Boolean).join("\n") || null,
       };
 
       const res = await fetch("/api/estimates", {
@@ -325,37 +220,25 @@ export default function RepairsUnified() {
       const result = await res.json();
       const estimateId = result.estimate?.id;
       
-      const failedUpdates: string[] = [];
       for (const repairId of repairIds) {
-        try {
-          const updateRes = await fetch(`/api/tech-ops/${repairId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              status: "converted",
-              convertedToEstimateId: estimateId,
-              convertedAt: new Date().toISOString(),
-            }),
-          });
-          if (!updateRes.ok) {
-            failedUpdates.push(repairId);
-          }
-        } catch {
-          failedUpdates.push(repairId);
-        }
+        await fetch(`/api/tech-ops/${repairId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            status: "converted",
+            convertedToEstimateId: estimateId,
+            convertedAt: new Date().toISOString(),
+          }),
+        });
       }
       
-      if (failedUpdates.length > 0) {
-        console.warn(`Failed to mark ${failedUpdates.length} repairs as converted`);
-      }
-      
-      return { ...result, convertedCount: repairIds.length - failedUpdates.length };
+      return { ...result, convertedCount: repairIds.length };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tech-ops-service-repairs"] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
-      const count = selectedServiceRepairs.size;
-      setSelectedServiceRepairs(new Set());
+      const count = selectedRepairs.size;
+      setSelectedRepairs(new Set());
       toast({ title: `Estimate created from ${count} service repair${count !== 1 ? 's' : ''}` });
       navigate("/estimates");
     },
@@ -372,52 +255,7 @@ export default function RepairsUnified() {
     },
   });
 
-  const allAlerts: EnrichedAlert[] = alertsData.alerts || [];
-
-  const isRepairAlert = (alert: EnrichedAlert): boolean => {
-    const msgLower = alert.message.toLowerCase();
-    return (
-      alert.type === "IssueReport" ||
-      msgLower.includes("repair") ||
-      msgLower.includes("broken") ||
-      msgLower.includes("fix") ||
-      msgLower.includes("replace") ||
-      msgLower.includes("leak") ||
-      msgLower.includes("pump") ||
-      msgLower.includes("filter") ||
-      msgLower.includes("heater")
-    );
-  };
-
-  const repairAlerts = allAlerts.filter(isRepairAlert).filter(a => a.status === "Active");
-  const pendingRepairs = repairAlerts.filter(a => !completedIds.has(String(a.alertId)));
-  const resolvedRepairs = repairAlerts.filter(a => completedIds.has(String(a.alertId)));
-
-  const filteredRepairAlerts = useMemo(() => {
-    let filtered = showCompleted ? repairAlerts : pendingRepairs;
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(a =>
-        a.customerName.toLowerCase().includes(term) ||
-        a.poolName.toLowerCase().includes(term) ||
-        a.message.toLowerCase().includes(term)
-      );
-    }
-    if (propertyFilter !== "all") {
-      filtered = filtered.filter(a => a.customerName === propertyFilter);
-    }
-    if (technicianFilter !== "all") {
-      filtered = filtered.filter(a => a.techName === technicianFilter);
-    }
-    return filtered.sort((a, b) => {
-      const aCompleted = completedIds.has(String(a.alertId)) ? 1 : 0;
-      const bCompleted = completedIds.has(String(b.alertId)) ? 1 : 0;
-      if (aCompleted !== bCompleted) return aCompleted - bCompleted;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [repairAlerts, pendingRepairs, showCompleted, searchTerm, propertyFilter, technicianFilter, completedIds]);
-
-  const serviceRepairsWithCommission = useMemo(() => {
+  const repairsWithCommission = useMemo(() => {
     return techOpsData.map(entry => {
       const tech = techniciansData.find(t => t.id === entry.technicianId);
       const commissionPercent = entry.commissionPercent ?? tech?.commissionPercent ?? 10;
@@ -426,23 +264,27 @@ export default function RepairsUnified() {
     });
   }, [techOpsData, techniciansData]);
 
-  // Split into active (non-converted) and converted service repairs
-  const activeServiceRepairs = useMemo(() => {
-    return serviceRepairsWithCommission.filter(r => r.status !== "converted");
-  }, [serviceRepairsWithCommission]);
+  const pendingRepairs = useMemo(() => {
+    return repairsWithCommission.filter(r => r.status === "pending" || r.status === "active");
+  }, [repairsWithCommission]);
 
-  const convertedServiceRepairs = useMemo(() => {
-    return serviceRepairsWithCommission.filter(r => r.status === "converted");
-  }, [serviceRepairsWithCommission]);
+  const completedRepairs = useMemo(() => {
+    return repairsWithCommission.filter(r => r.status === "completed");
+  }, [repairsWithCommission]);
 
-  const filteredServiceRepairs = useMemo(() => {
-    let filtered = activeServiceRepairs; // Only show non-converted repairs
+  const convertedRepairs = useMemo(() => {
+    return repairsWithCommission.filter(r => r.status === "converted");
+  }, [repairsWithCommission]);
+
+  const filterRepairs = (repairs: typeof repairsWithCommission) => {
+    let filtered = repairs;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(r =>
         r.propertyName.toLowerCase().includes(term) ||
         (r.description?.toLowerCase().includes(term) ?? false) ||
-        (r.serviceRepairNumber?.toLowerCase().includes(term) ?? false)
+        (r.serviceRepairNumber?.toLowerCase().includes(term) ?? false) ||
+        (r.technicianName?.toLowerCase().includes(term) ?? false)
       );
     }
     if (propertyFilter !== "all") {
@@ -452,35 +294,35 @@ export default function RepairsUnified() {
       filtered = filtered.filter(r => r.technicianName === technicianFilter);
     }
     return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [activeServiceRepairs, searchTerm, propertyFilter, technicianFilter]);
+  };
+
+  const filteredPending = useMemo(() => filterRepairs(pendingRepairs), [pendingRepairs, searchTerm, propertyFilter, technicianFilter]);
+  const filteredCompleted = useMemo(() => filterRepairs(completedRepairs), [completedRepairs, searchTerm, propertyFilter, technicianFilter]);
+  const filteredConverted = useMemo(() => filterRepairs(convertedRepairs), [convertedRepairs, searchTerm, propertyFilter, technicianFilter]);
 
   const uniqueProperties = useMemo(() => {
     const props = new Set<string>();
-    repairAlerts.forEach(a => props.add(a.customerName));
-    serviceRepairsWithCommission.forEach(r => props.add(r.propertyName));
+    repairsWithCommission.forEach(r => props.add(r.propertyName));
     return Array.from(props).sort();
-  }, [repairAlerts, serviceRepairsWithCommission]);
+  }, [repairsWithCommission]);
 
   const uniqueTechnicians = useMemo(() => {
     const techs = new Set<string>();
-    repairAlerts.forEach(a => a.techName && techs.add(a.techName));
-    serviceRepairsWithCommission.forEach(r => r.technicianName && techs.add(r.technicianName));
+    repairsWithCommission.forEach(r => r.technicianName && techs.add(r.technicianName));
     return Array.from(techs).sort();
-  }, [repairAlerts, serviceRepairsWithCommission]);
+  }, [repairsWithCommission]);
 
-  const totalSubmissions = repairAlerts.length + activeServiceRepairs.length;
+  const totalSubmissions = repairsWithCommission.length;
   const pendingCount = pendingRepairs.length;
-  const resolvedCount = resolvedRepairs.length + activeServiceRepairs.filter(r => r.status === 'completed').length;
-  const convertedCount = convertedServiceRepairs.length;
+  const completedCount = completedRepairs.length;
+  const convertedCount = convertedRepairs.length;
 
-  // Group converted repairs by estimate
   const convertedByEstimate = useMemo(() => {
     const groups: Record<string, {
       estimate: typeof estimatesData[0] | null;
-      repairs: typeof convertedServiceRepairs;
+      repairs: typeof convertedRepairs;
     }> = {};
     
-    // Create a map of repair ID to estimate
     const repairToEstimate = new Map<string, typeof estimatesData[0]>();
     estimatesData.forEach(estimate => {
       if (estimate.sourceServiceRepairIds) {
@@ -490,8 +332,7 @@ export default function RepairsUnified() {
       }
     });
     
-    // Group repairs by their estimate
-    convertedServiceRepairs.forEach(repair => {
+    convertedRepairs.forEach(repair => {
       const estimate = repairToEstimate.get(repair.id);
       const key = estimate?.id || 'unlinked';
       if (!groups[key]) {
@@ -505,19 +346,7 @@ export default function RepairsUnified() {
       if (!b.estimate) return -1;
       return new Date(b.estimate.createdAt).getTime() - new Date(a.estimate.createdAt).getTime();
     });
-  }, [convertedServiceRepairs, estimatesData]);
-
-  const totalRepairRevenue = filteredServiceRepairs.reduce((sum, r) => sum + (r.partsCost || 0), 0);
-  const totalCommissions = filteredServiceRepairs.reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
-  const netRevenue = totalRepairRevenue - totalCommissions;
-
-  const getSeverityColor = (severity: string) => {
-    const upper = severity.toUpperCase();
-    if (upper === "URGENT") return "bg-red-500/20 text-red-400 border-red-500/50";
-    if (upper.includes("HIGH")) return "bg-orange-500/20 text-orange-400 border-orange-500/50";
-    if (upper.includes("MEDIUM")) return "bg-yellow-500/20 text-yellow-400 border-yellow-500/50";
-    return "bg-blue-500/20 text-blue-400 border-blue-500/50";
-  };
+  }, [convertedRepairs, estimatesData]);
 
   const handleStartEdit = (entry: TechOpsEntry & { commissionPercent: number; commissionAmount: number }) => {
     setEditingCommission(entry.id);
@@ -539,32 +368,8 @@ export default function RepairsUnified() {
     });
   };
 
-  const handleConvertToEstimate = (alert: EnrichedAlert) => {
-    const estimateData = {
-      propertyId: alert.customerId || alert.poolId,
-      propertyName: alert.customerName,
-      customerName: alert.customerName,
-      customerEmail: alert.email,
-      address: alert.address,
-      title: `Repair Request - ${alert.poolName}`,
-      description: alert.message,
-      status: "draft",
-      sourceType: "repair_tech",
-      items: [{
-        lineNumber: 1,
-        productService: "Repair Service",
-        description: alert.message,
-        quantity: 1,
-        rate: 0,
-        amount: 0,
-        taxable: false,
-      }],
-    };
-    createEstimateMutation.mutate(estimateData);
-  };
-
-  const handleServiceRepairCheckbox = (repairId: string, checked: boolean) => {
-    setSelectedServiceRepairs(prev => {
+  const handleRepairCheckbox = (repairId: string, checked: boolean) => {
+    setSelectedRepairs(prev => {
       const next = new Set(prev);
       if (checked) {
         next.add(repairId);
@@ -577,23 +382,21 @@ export default function RepairsUnified() {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const nonConvertedIds = filteredServiceRepairs
-        .filter(r => r.status !== "converted")
-        .map(r => r.id);
-      setSelectedServiceRepairs(new Set(nonConvertedIds));
+      const ids = filteredPending.map(r => r.id);
+      setSelectedRepairs(new Set(ids));
     } else {
-      setSelectedServiceRepairs(new Set());
+      setSelectedRepairs(new Set());
     }
   };
 
   const selectedTotal = useMemo(() => {
-    return filteredServiceRepairs
-      .filter(r => selectedServiceRepairs.has(r.id))
+    return repairsWithCommission
+      .filter(r => selectedRepairs.has(r.id))
       .reduce((sum, r) => sum + (r.partsCost || 0), 0);
-  }, [filteredServiceRepairs, selectedServiceRepairs]);
+  }, [repairsWithCommission, selectedRepairs]);
 
   const handleConvertSelectedToEstimate = () => {
-    const ids = Array.from(selectedServiceRepairs);
+    const ids = Array.from(selectedRepairs);
     if (ids.length === 0) {
       toast({ title: "No repairs selected", variant: "destructive" });
       return;
@@ -601,7 +404,86 @@ export default function RepairsUnified() {
     convertToEstimateMutation.mutate(ids);
   };
 
-  const isLoading = alertsLoading || techOpsLoading;
+  const totalRepairRevenue = filteredPending.reduce((sum, r) => sum + (r.partsCost || 0), 0);
+  const totalCommissions = filteredPending.reduce((sum, r) => sum + (r.commissionAmount || 0), 0);
+  const netRevenue = totalRepairRevenue - totalCommissions;
+
+  const renderRepairCard = (repair: typeof repairsWithCommission[0], showCheckbox = false) => {
+    const isSelected = selectedRepairs.has(repair.id);
+    return (
+      <div
+        key={repair.id}
+        className={cn(
+          "p-4 rounded-lg border transition-all cursor-pointer",
+          repair.status === "completed"
+            ? "bg-emerald-50 border-emerald-200"
+            : repair.status === "converted"
+            ? "bg-indigo-50 border-indigo-200"
+            : "bg-slate-50 border-slate-200 hover:border-blue-300 hover:shadow-sm"
+        )}
+        data-testid={`repair-card-${repair.id}`}
+        onClick={() => setDetailModal({ open: true, repair })}
+      >
+        <div className="flex items-start gap-3">
+          {showCheckbox && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => handleRepairCheckbox(repair.id, !!checked)}
+              className="mt-1"
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`checkbox-${repair.id}`}
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold">
+                {repair.serviceRepairNumber ? `SR-${repair.serviceRepairNumber}` : repair.propertyName}
+              </h3>
+              <Badge className={cn("text-xs", 
+                repair.status === "completed" ? "bg-emerald-100 text-emerald-700" :
+                repair.status === "converted" ? "bg-indigo-100 text-indigo-700" :
+                "bg-amber-100 text-amber-700"
+              )}>
+                {repair.status === "completed" ? "Completed" : 
+                 repair.status === "converted" ? "Converted" : "Pending"}
+              </Badge>
+            </div>
+            <p className="text-sm text-slate-600 flex items-center gap-1 mb-2">
+              <Building2 className="w-3 h-3" />
+              {repair.propertyName}
+            </p>
+            <p className="text-sm text-slate-700 line-clamp-2">
+              {repair.description || "No description provided"}
+            </p>
+            <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+              {repair.technicianName && (
+                <span className="flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  {repair.technicianName}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {format(new Date(repair.createdAt), "MMM d, yyyy")}
+              </span>
+              {repair.partsCost > 0 && (
+                <span className="flex items-center gap-1 font-medium text-slate-700">
+                  <DollarSign className="w-3 h-3" />
+                  {formatCurrency(repair.partsCost)}
+                </span>
+              )}
+              {repair.photos && repair.photos.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <ImageIcon className="w-3 h-3" />
+                  {repair.photos.length} photo{repair.photos.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <AppLayout>
@@ -613,10 +495,10 @@ export default function RepairsUnified() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-800" data-testid="text-heading-repairs">Repairs Center</h1>
-              <p className="text-slate-500 text-sm">Manage repair requests and completed service repairs</p>
+              <p className="text-slate-500 text-sm">Manage service repairs submitted by technicians</p>
             </div>
           </div>
-          <Button onClick={() => { refetchAlerts(); queryClient.invalidateQueries({ queryKey: ["tech-ops-service-repairs"] }); }} variant="outline" className="gap-2">
+          <Button onClick={() => refetchRepairs()} variant="outline" className="gap-2">
             <RefreshCw className="w-4 h-4" />
             Refresh
           </Button>
@@ -641,7 +523,7 @@ export default function RepairsUnified() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-slate-800">{pendingCount}</p>
-                <p className="text-sm text-slate-500">Pending / Unresolved</p>
+                <p className="text-sm text-slate-500">Pending</p>
               </div>
             </CardContent>
           </Card>
@@ -651,8 +533,8 @@ export default function RepairsUnified() {
                 <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-slate-800">{resolvedCount}</p>
-                <p className="text-sm text-slate-500">Completed / Resolved</p>
+                <p className="text-2xl font-bold text-slate-800">{completedCount}</p>
+                <p className="text-sm text-slate-500">Completed</p>
               </div>
             </CardContent>
           </Card>
@@ -711,274 +593,133 @@ export default function RepairsUnified() {
         <Card className="bg-white">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <CardHeader className="pb-0">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="repairs-needed" data-testid="tab-repairs-needed">
-                  Repairs Needed ({pendingRepairs.length})
+              <TabsList className="grid w-full max-w-lg grid-cols-3">
+                <TabsTrigger value="pending" data-testid="tab-pending">
+                  Pending ({pendingCount})
                 </TabsTrigger>
-                <TabsTrigger value="service-repairs" data-testid="tab-service-repairs">
-                  Service Repairs ({activeServiceRepairs.length})
+                <TabsTrigger value="completed" data-testid="tab-completed">
+                  Completed ({completedCount})
+                </TabsTrigger>
+                <TabsTrigger value="converted" data-testid="tab-converted">
+                  Converted ({convertedCount})
                 </TabsTrigger>
               </TabsList>
             </CardHeader>
             <CardContent className="pt-4">
-              {isLoading ? (
+              {techOpsLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
                 </div>
               ) : (
                 <>
-                  <TabsContent value="repairs-needed" className="mt-0">
-                    <div className="flex gap-2 mb-4">
-                      <Button
-                        variant={!showCompleted ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setShowCompleted(false)}
-                        className="gap-2"
-                      >
-                        <EyeOff className="w-4 h-4" />
-                        Pending ({pendingRepairs.length})
-                      </Button>
-                      <Button
-                        variant={showCompleted ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setShowCompleted(true)}
-                        className="gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        All ({repairAlerts.length})
-                      </Button>
-                    </div>
-                    <ScrollArea className="h-[calc(100vh-450px)] min-h-[300px]">
-                      {filteredRepairAlerts.length === 0 ? (
+                  <TabsContent value="pending" className="mt-0">
+                    {selectedRepairs.size > 0 && (
+                      <div className="flex items-center justify-between p-3 mb-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-4">
+                          <span className="text-sm font-medium text-blue-700">
+                            {selectedRepairs.size} repair{selectedRepairs.size !== 1 ? "s" : ""} selected
+                          </span>
+                          <span className="text-sm text-blue-600">
+                            Total: {formatCurrency(selectedTotal)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedRepairs(new Set())}
+                          >
+                            Clear Selection
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleConvertSelectedToEstimate}
+                            disabled={convertToEstimateMutation.isPending}
+                            className="gap-2"
+                          >
+                            {convertToEstimateMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <FileCheck className="w-4 h-4" />
+                            )}
+                            Convert to Estimate
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {filteredPending.length > 0 && (
+                      <div className="flex items-center gap-2 mb-4">
+                        <Checkbox
+                          checked={selectedRepairs.size === filteredPending.length && filteredPending.length > 0}
+                          onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                          data-testid="checkbox-select-all"
+                        />
+                        <span className="text-sm text-slate-600">Select all</span>
+                      </div>
+                    )}
+                    
+                    <ScrollArea className="h-[calc(100vh-500px)] min-h-[300px]">
+                      {filteredPending.length === 0 ? (
                         <div className="text-center py-12 text-slate-500">
                           <CheckCircle2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           <p>No pending repairs</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {filteredRepairAlerts.map((alert) => {
-                            const isCompleted = completedIds.has(String(alert.alertId));
-                            return (
-                              <div
-                                key={alert.alertId}
-                                className={cn(
-                                  "p-4 rounded-lg border transition-all cursor-pointer",
-                                  isCompleted
-                                    ? "bg-emerald-50 border-emerald-200 opacity-70"
-                                    : "bg-slate-50 border-slate-200 hover:border-blue-300 hover:shadow-sm"
-                                )}
-                                data-testid={`repair-card-${alert.alertId}`}
-                                onClick={() => setEditModal({ open: true, alert })}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <Checkbox
-                                    checked={isCompleted}
-                                    onCheckedChange={(checked) => {
-                                      markCompleteMutation.mutate({ alertId: String(alert.alertId), completed: !!checked });
-                                    }}
-                                    className="mt-1"
-                                    onClick={(e) => e.stopPropagation()}
-                                    data-testid={`checkbox-${alert.alertId}`}
-                                  />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h3 className={cn("font-semibold", isCompleted && "line-through text-slate-400")}>
-                                        {alert.poolName}
-                                      </h3>
-                                      <Badge className={cn("text-xs", getSeverityColor(alert.severity))}>
-                                        {alert.severity}
-                                      </Badge>
-                                      {isCompleted && (
-                                        <Badge className="bg-emerald-100 text-emerald-700 text-xs">Resolved</Badge>
-                                      )}
-                                    </div>
-                                    <p className="text-sm text-slate-600 flex items-center gap-1 mb-2">
-                                      <Building2 className="w-3 h-3" />
-                                      {alert.customerName}
-                                    </p>
-                                    <p className={cn("text-sm", isCompleted ? "text-slate-400" : "text-slate-700")}>
-                                      {alert.message}
-                                    </p>
-                                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                                      {alert.techName && (
-                                        <span className="flex items-center gap-1">
-                                          <User className="w-3 h-3" />
-                                          {alert.techName}
-                                        </span>
-                                      )}
-                                      <span className="flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        {format(new Date(alert.createdAt), "MMM d, yyyy")}
-                                      </span>
-                                    </div>
-                                    {!isCompleted && (
-                                      <div className="flex gap-2 mt-3 pt-3 border-t border-slate-200">
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-                                          onClick={(e) => { e.stopPropagation(); handleConvertToEstimate(alert); }}
-                                          disabled={createEstimateMutation.isPending}
-                                          data-testid={`btn-convert-estimate-${alert.alertId}`}
-                                        >
-                                          <FileCheck className="w-3 h-3" />
-                                          Convert to Estimate
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
-                                          onClick={(e) => { e.stopPropagation(); setDeclineModal({ open: true, alert, reason: "" }); }}
-                                          data-testid={`btn-decline-${alert.alertId}`}
-                                        >
-                                          <XCircle className="w-3 h-3" />
-                                          Decline
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                          {filteredPending.map((repair) => renderRepairCard(repair, true))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                    
+                    {filteredPending.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-200">
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="text-center">
+                            <p className="text-slate-500">Total Revenue</p>
+                            <p className="text-lg font-semibold text-slate-800">{formatCurrency(totalRepairRevenue)}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-slate-500">Total Commissions</p>
+                            <p className="text-lg font-semibold text-amber-600">{formatCurrency(totalCommissions)}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-slate-500">Net Revenue</p>
+                            <p className="text-lg font-semibold text-emerald-600">{formatCurrency(netRevenue)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="completed" className="mt-0">
+                    <ScrollArea className="h-[calc(100vh-450px)] min-h-[300px]">
+                      {filteredCompleted.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500">
+                          <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p>No completed repairs</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {filteredCompleted.map((repair) => renderRepairCard(repair))}
                         </div>
                       )}
                     </ScrollArea>
                   </TabsContent>
 
-                  <TabsContent value="service-repairs" className="mt-0 flex flex-col h-[calc(100vh-400px)] min-h-[400px]">
-                    <ScrollArea className="flex-1">
-                      {filteredServiceRepairs.length === 0 ? (
+                  <TabsContent value="converted" className="mt-0">
+                    <ScrollArea className="h-[calc(100vh-450px)] min-h-[300px]">
+                      {filteredConverted.length === 0 ? (
                         <div className="text-center py-12 text-slate-500">
-                          <Wrench className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                          <p>No service repairs found</p>
+                          <FileCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                          <p>No repairs converted to estimates yet</p>
                         </div>
                       ) : (
-                        <div className="space-y-6">
-                          {Object.entries(
-                            filteredServiceRepairs.reduce((acc, repair) => {
-                              const property = repair.propertyName || "Unknown Property";
-                              if (!acc[property]) acc[property] = [];
-                              acc[property].push(repair);
-                              return acc;
-                            }, {} as Record<string, typeof filteredServiceRepairs>)
-                          ).map(([propertyName, repairs]) => (
-                            <div key={propertyName} className="space-y-3">
-                              <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-100 border-l-4 border-blue-600 rounded-r-lg">
-                                <Building2 className="w-5 h-5 text-blue-600" />
-                                <h3 className="font-bold text-lg text-slate-900">{propertyName}</h3>
-                                <span className="text-sm text-slate-500 font-medium">({repairs.length} repair{repairs.length !== 1 ? 's' : ''})</span>
-                              </div>
-                              <div className="space-y-2 pl-2">
-                                {repairs.map((repair) => (
-                                  <div
-                                    key={repair.id}
-                                    className={cn(
-                                      "p-3 rounded-lg border transition-all cursor-pointer",
-                                      selectedServiceRepairs.has(repair.id)
-                                        ? "bg-blue-50 border-blue-300"
-                                        : repair.status === "converted"
-                                        ? "bg-slate-100 border-slate-200 opacity-60"
-                                        : "bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm"
-                                    )}
-                                    onClick={() => setServiceRepairModal({ open: true, repair })}
-                                    data-testid={`service-repair-card-${repair.id}`}
-                                  >
-                                    <div className="flex items-start gap-3">
-                                      <Checkbox
-                                        checked={selectedServiceRepairs.has(repair.id)}
-                                        onCheckedChange={(checked) => handleServiceRepairCheckbox(repair.id, !!checked)}
-                                        disabled={repair.status === "converted"}
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="mt-1"
-                                        data-testid={`checkbox-service-${repair.id}`}
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2">
-                                            <p className="text-sm font-medium text-slate-800 line-clamp-2">
-                                              {repair.description || "Service repair work"}
-                                            </p>
-                                            {repair.serviceRepairNumber && (
-                                              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                                SR#{repair.serviceRepairNumber}
-                                              </span>
-                                            )}
-                                          </div>
-                                          <span className="text-sm font-bold text-emerald-600 whitespace-nowrap">
-                                            {formatCurrency(repair.partsCost || 0)}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-500">
-                                          <span className="flex items-center gap-1">
-                                            <User className="w-3 h-3" />
-                                            {repair.technicianName || "Unknown"}
-                                          </span>
-                                          <span className="flex items-center gap-1">
-                                            <Calendar className="w-3 h-3" />
-                                            {format(new Date(repair.createdAt), "MMM d, yyyy")}
-                                          </span>
-                                          <span className="flex items-center gap-1">
-                                            <Percent className="w-3 h-3" />
-                                            {repair.commissionPercent}% ({formatCurrency(repair.commissionAmount || 0)})
-                                          </span>
-                                          {repair.photos && repair.photos.length > 0 && (
-                                            <span className="flex items-center gap-1">
-                                              <ImageIcon className="w-3 h-3" />
-                                              {repair.photos.length}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
+                        <div className="space-y-3">
+                          {filteredConverted.map((repair) => renderRepairCard(repair))}
                         </div>
                       )}
                     </ScrollArea>
-                    
-                    {/* Sticky Running Total Footer */}
-                    <div className="sticky bottom-0 mt-4 p-4 bg-white border-t border-slate-200 shadow-lg rounded-b-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-slate-600">
-                          <span className="font-medium text-blue-600">{selectedServiceRepairs.size}</span> selected
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-xs text-slate-500">Selected Total</p>
-                            <p className={cn(
-                              "text-xl font-bold",
-                              selectedTotal >= 45000 && selectedTotal <= 55000 ? "text-emerald-600" : 
-                              selectedTotal > 55000 ? "text-orange-600" : "text-blue-600"
-                            )} data-testid="text-selected-total">
-                              {formatCurrency(selectedTotal)}
-                            </p>
-                            {selectedTotal > 0 && selectedTotal < 45000 && (
-                              <p className="text-xs text-slate-500">{formatCurrency(50000 - selectedTotal)} to reach $500</p>
-                            )}
-                            {selectedTotal >= 45000 && selectedTotal <= 55000 && (
-                              <p className="text-xs text-emerald-600">Ready for estimate!</p>
-                            )}
-                          </div>
-                          <Button
-                            className="bg-blue-600 hover:bg-blue-700"
-                            onClick={handleConvertSelectedToEstimate}
-                            disabled={convertToEstimateMutation.isPending || selectedServiceRepairs.size === 0}
-                            data-testid="btn-convert-selected"
-                          >
-                            {convertToEstimateMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <FileCheck className="w-4 h-4 mr-2" />
-                            )}
-                            Convert to Estimate
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
                   </TabsContent>
                 </>
               )}
@@ -987,416 +728,182 @@ export default function RepairsUnified() {
         </Card>
       </div>
 
-      <Dialog open={declineModal.open} onOpenChange={(open) => !open && setDeclineModal({ open: false, alert: null, reason: "" })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Decline Repair Request</DialogTitle>
-            <DialogDescription>
-              {declineModal.alert && (
-                <>
-                  Are you sure you want to decline the repair request for <strong>{declineModal.alert.poolName}</strong> at <strong>{declineModal.alert.customerName}</strong>?
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-slate-700">Reason (optional)</label>
-              <Textarea
-                value={declineModal.reason}
-                onChange={(e) => setDeclineModal(prev => ({ ...prev, reason: e.target.value }))}
-                placeholder="Enter a reason for declining this repair request..."
-                className="mt-1"
-                data-testid="input-decline-reason"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeclineModal({ open: false, alert: null, reason: "" })}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (declineModal.alert) {
-                  declineRepairMutation.mutate({
-                    alertId: String(declineModal.alert.alertId),
-                    reason: declineModal.reason || undefined,
-                  });
-                }
-              }}
-              disabled={declineRepairMutation.isPending}
-              data-testid="btn-confirm-decline"
-            >
-              {declineRepairMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Decline Request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={editModal.open} onOpenChange={(open) => !open && setEditModal({ open: false, alert: null })}>
+      {/* Repair Detail Modal */}
+      <Dialog open={detailModal.open} onOpenChange={(open) => !open && setDetailModal({ open: false, repair: null })}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Review Repair Request</DialogTitle>
-            <DialogDescription>
-              Review the details of this repair request before taking action.
-            </DialogDescription>
-          </DialogHeader>
-          {editModal.alert && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Pool/Equipment</label>
-                  <p className="text-sm text-slate-900 mt-1">{editModal.alert.poolName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Property</label>
-                  <p className="text-sm text-slate-900 mt-1">{editModal.alert.customerName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Severity</label>
-                  <Badge className={cn(
-                    "mt-1",
-                    editModal.alert.severity === "URGENT" && "bg-red-100 text-red-700",
-                    editModal.alert.severity === "HIGH" && "bg-orange-100 text-orange-700",
-                    editModal.alert.severity === "NORMAL" && "bg-blue-100 text-blue-700"
-                  )}>
-                    {editModal.alert.severity}
-                  </Badge>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Date Reported</label>
-                  <p className="text-sm text-slate-900 mt-1">
-                    {format(new Date(editModal.alert.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                  </p>
-                </div>
-                {editModal.alert.techName && (
+          {detailModal.repair && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Wrench className="w-5 h-5 text-blue-600" />
+                  </div>
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Reported By</label>
-                    <p className="text-sm text-slate-900 mt-1">{editModal.alert.techName}</p>
+                    <span className="block">
+                      {detailModal.repair.serviceRepairNumber ? `SR-${detailModal.repair.serviceRepairNumber}` : "Service Repair"}
+                    </span>
+                    <span className="text-sm font-normal text-slate-500">{detailModal.repair.propertyName}</span>
                   </div>
-                )}
-                {editModal.alert.address && (
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-slate-700">Address</label>
-                    <p className="text-sm text-slate-900 mt-1">{editModal.alert.address}</p>
+                    <p className="text-sm text-slate-500 mb-1">Status</p>
+                    <Badge className={cn("text-sm", 
+                      detailModal.repair.status === "completed" ? "bg-emerald-100 text-emerald-700" :
+                      detailModal.repair.status === "converted" ? "bg-indigo-100 text-indigo-700" :
+                      "bg-amber-100 text-amber-700"
+                    )}>
+                      {detailModal.repair.status === "completed" ? "Completed" : 
+                       detailModal.repair.status === "converted" ? "Converted to Estimate" : "Pending"}
+                    </Badge>
                   </div>
-                )}
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Description</label>
-                <p className="text-sm text-slate-900 mt-1 p-3 bg-slate-50 rounded-md">
-                  {editModal.alert.message}
-                </p>
-              </div>
-              {editModal.alert.notes && (
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Additional Notes</label>
-                  <p className="text-sm text-slate-900 mt-1 p-3 bg-slate-50 rounded-md">
-                    {editModal.alert.notes}
-                  </p>
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">Technician</p>
+                    <p className="font-medium">{detailModal.repair.technicianName || "Unassigned"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">Created</p>
+                    <p className="font-medium">{format(new Date(detailModal.repair.createdAt), "MMM d, yyyy h:mm a")}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">Parts Cost</p>
+                    <p className="font-medium text-lg">{formatCurrency(detailModal.repair.partsCost)}</p>
+                  </div>
                 </div>
-              )}
-              <div>
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4" />
-                  Attached Photos
-                </label>
-                {photosLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-                  </div>
-                ) : photosData.photos && photosData.photos.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-                    {photosData.photos.map((photo, idx) => (
-                      <a
-                        key={idx}
-                        href={photo.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block aspect-square rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors"
-                      >
-                        <img
-                          src={photo.url}
-                          alt={photo.caption || `Photo ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 bg-slate-50 rounded-lg mt-2">
-                    <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-sm text-slate-500">No photos attached</p>
+                
+                {detailModal.repair.propertyAddress && (
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">Address</p>
+                    <p className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-slate-400" />
+                      {detailModal.repair.propertyAddress}
+                    </p>
                   </div>
                 )}
+                
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Description</p>
+                  <p className="text-slate-700">{detailModal.repair.description || "No description provided"}</p>
+                </div>
+                
+                {detailModal.repair.notes && (
+                  <div>
+                    <p className="text-sm text-slate-500 mb-1">Notes</p>
+                    <p className="text-slate-700 bg-slate-50 p-3 rounded-lg">{detailModal.repair.notes}</p>
+                  </div>
+                )}
+                
+                {detailModal.repair.photos && detailModal.repair.photos.length > 0 && (
+                  <div>
+                    <p className="text-sm text-slate-500 mb-2">Photos ({detailModal.repair.photos.length})</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {detailModal.repair.photos.map((photo, idx) => (
+                        <a key={idx} href={photo} target="_blank" rel="noopener noreferrer">
+                          <img 
+                            src={photo} 
+                            alt={`Repair photo ${idx + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border hover:opacity-90 transition-opacity"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-500">Commission ({detailModal.repair.commissionPercent}%)</p>
+                      <p className="font-medium text-amber-600">{formatCurrency(detailModal.repair.commissionAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">Net Amount</p>
+                      <p className="font-medium text-emerald-600">{formatCurrency(detailModal.repair.partsCost - detailModal.repair.commissionAmount)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+              <DialogFooter>
+                {detailModal.repair.status === "pending" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      updateStatusMutation.mutate({ id: detailModal.repair!.id, status: "completed" });
+                      setDetailModal({ open: false, repair: null });
+                    }}
+                    className="gap-2"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Mark Completed
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setDetailModal({ open: false, repair: null })}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
           )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setEditModal({ open: false, alert: null })}
-            >
-              Close
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => {
-                if (editModal.alert) {
-                  handleConvertToEstimate(editModal.alert);
-                  setEditModal({ open: false, alert: null });
-                }
-              }}
-              disabled={createEstimateMutation.isPending}
-            >
-              Convert to Estimate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Service Repair Detail Modal */}
-      <Dialog open={serviceRepairModal.open} onOpenChange={(open) => !open && setServiceRepairModal({ open: false, repair: null })}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Service Repair Details</DialogTitle>
-            <DialogDescription>
-              Review the service repair submission details.
-              {serviceRepairModal.repair?.serviceRepairNumber && (
-                <span className="ml-2 font-semibold text-blue-600">SR#{serviceRepairModal.repair.serviceRepairNumber}</span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          {serviceRepairModal.repair && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Property</label>
-                  <p className="text-sm text-slate-900 mt-1">{serviceRepairModal.repair.propertyName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Address</label>
-                  <p className="text-sm text-slate-900 mt-1">{serviceRepairModal.repair.propertyAddress || "—"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Submitted By</label>
-                  <p className="text-sm text-slate-900 mt-1">{serviceRepairModal.repair.technicianName || "Unknown"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Date Completed</label>
-                  <p className="text-sm text-slate-900 mt-1">
-                    {format(new Date(serviceRepairModal.repair.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700">Description</label>
-                <p className="text-sm text-slate-900 mt-1 p-3 bg-slate-50 rounded-md">
-                  {serviceRepairModal.repair.description || "No description provided"}
-                </p>
-              </div>
-              {serviceRepairModal.repair.notes && (
-                <div>
-                  <label className="text-sm font-medium text-slate-700">Additional Notes</label>
-                  <p className="text-sm text-slate-900 mt-1 p-3 bg-slate-50 rounded-md">
-                    {serviceRepairModal.repair.notes}
-                  </p>
-                </div>
-              )}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
-                <div className="text-center">
-                  <label className="text-xs font-medium text-slate-500 block">Parts Cost</label>
-                  <p className="text-lg font-bold text-emerald-600 mt-1">
-                    {formatCurrency(serviceRepairModal.repair.partsCost || 0)}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <label className="text-xs font-medium text-slate-500 block">Commission %</label>
-                  <p className="text-lg font-bold text-blue-600 mt-1">
-                    {serviceRepairModal.repair.commissionPercent}%
-                  </p>
-                </div>
-                <div className="text-center">
-                  <label className="text-xs font-medium text-slate-500 block">Commission Amount</label>
-                  <p className="text-lg font-bold text-orange-600 mt-1">
-                    {formatCurrency(serviceRepairModal.repair.commissionAmount || 0)}
-                  </p>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4" />
-                  Attached Photos
-                </label>
-                {serviceRepairModal.repair.photos && serviceRepairModal.repair.photos.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-                    {serviceRepairModal.repair.photos.map((photoUrl, idx) => (
-                      <a
-                        key={idx}
-                        href={photoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block aspect-square rounded-lg overflow-hidden border border-slate-200 hover:border-blue-400 transition-colors"
-                      >
-                        <img
-                          src={photoUrl}
-                          alt={`Photo ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-6 bg-slate-50 rounded-lg mt-2">
-                    <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-sm text-slate-500">No photos attached</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setServiceRepairModal({ open: false, repair: null })}
-            >
-              Close
-            </Button>
-            {serviceRepairModal.repair && serviceRepairModal.repair.status !== "converted" && (
-              <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => {
-                  if (serviceRepairModal.repair) {
-                    handleServiceRepairCheckbox(serviceRepairModal.repair.id, !selectedServiceRepairs.has(serviceRepairModal.repair.id));
-                    setServiceRepairModal({ open: false, repair: null });
-                  }
-                }}
-              >
-                {selectedServiceRepairs.has(serviceRepairModal.repair.id) ? "Remove from Selection" : "Add to Selection"}
-              </Button>
-            )}
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Converted Repairs Modal */}
       <Dialog open={showConvertedModal} onOpenChange={setShowConvertedModal}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileCheck className="w-5 h-5 text-indigo-600" />
-              Converted to Estimate ({convertedCount})
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <FileCheck className="w-5 h-5 text-indigo-600" />
+              </div>
+              Converted Repairs
             </DialogTitle>
             <DialogDescription>
-              Service repairs that have been converted to estimates, grouped by estimate
+              Repairs that have been converted into estimates
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1 pr-4">
+          <div className="space-y-4 py-4">
             {convertedByEstimate.length === 0 ? (
-              <div className="text-center py-12 text-slate-500">
+              <div className="text-center py-8 text-slate-500">
                 <FileCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No converted repairs yet</p>
+                <p>No repairs have been converted yet</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {convertedByEstimate.map((group, idx) => (
-                  <div key={group.estimate?.id || idx} className="border rounded-lg overflow-hidden">
-                    {/* Estimate Header */}
-                    <div 
-                      className="bg-indigo-50 p-4 border-b cursor-pointer hover:bg-indigo-100 transition-colors"
-                      onClick={() => navigate("/estimates")}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                            <FileCheck className="w-5 h-5 text-indigo-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-slate-900">
-                              EST#{group.estimate?.estimateNumber || group.estimate?.title || ""}
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                              {group.estimate?.propertyName || "Unknown Property"} • {group.repairs.length} repair{group.repairs.length !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-lg text-indigo-600">
-                            {formatCurrency(group.estimate?.totalAmount || group.repairs.reduce((sum, r) => sum + (r.partsCost || 0), 0))}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {group.estimate?.status ? group.estimate.status.replace(/_/g, ' ').toUpperCase() : 'DRAFT'}
-                          </p>
-                        </div>
+              convertedByEstimate.map((group, idx) => (
+                <div key={group.estimate?.id || idx} className="border rounded-lg overflow-hidden">
+                  {group.estimate && (
+                    <div className="p-3 bg-slate-50 border-b flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{group.estimate.estimateNumber || group.estimate.title}</p>
+                        <p className="text-sm text-slate-500">{group.estimate.propertyName}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-emerald-600">{formatCurrency(group.estimate.totalAmount)}</p>
+                        <Badge className="text-xs">{group.estimate.status}</Badge>
                       </div>
                     </div>
-                    {/* Repairs in this estimate */}
-                    <div className="divide-y">
-                      {group.repairs.map((repair) => (
-                        <div 
-                          key={repair.id} 
-                          className="p-4 hover:bg-slate-50 cursor-pointer"
-                          onClick={() => setServiceRepairModal({ open: true, repair })}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-slate-800">{repair.description || "Service Repair"}</p>
-                                {repair.serviceRepairNumber && (
-                                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                    SR#{repair.serviceRepairNumber}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4 text-xs text-slate-500 mt-1">
-                                <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
-                                  {repair.technicianName}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="w-3 h-3" />
-                                  {format(new Date(repair.createdAt), "MMM d, yyyy")}
-                                </span>
-                                {repair.photos && repair.photos.length > 0 && (
-                                  <span className="flex items-center gap-1">
-                                    <ImageIcon className="w-3 h-3" />
-                                    {repair.photos.length}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-emerald-600">{formatCurrency(repair.partsCost || 0)}</p>
-                              <p className="text-xs text-slate-500">{repair.commissionPercent}% comm</p>
-                            </div>
-                          </div>
+                  )}
+                  <div className="p-3 space-y-2">
+                    {group.repairs.map(repair => (
+                      <div key={repair.id} className="flex items-center justify-between text-sm">
+                        <div>
+                          <span className="font-medium">{repair.serviceRepairNumber ? `SR-${repair.serviceRepairNumber}` : repair.propertyName}</span>
+                          {repair.description && <span className="text-slate-500 ml-2">- {repair.description}</span>}
                         </div>
-                      ))}
-                    </div>
+                        <span className="text-slate-600">{formatCurrency(repair.partsCost)}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
-          </ScrollArea>
-          <DialogFooter className="mt-4">
+          </div>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setShowConvertedModal(false)}>
               Close
-            </Button>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => {
-                setShowConvertedModal(false);
-                navigate("/estimates");
-              }}
-            >
-              View All Estimates
             </Button>
           </DialogFooter>
         </DialogContent>
