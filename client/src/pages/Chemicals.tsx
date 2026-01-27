@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Droplets, MapPin, Building2, Phone, Mail, User, ChevronDown, AlertCircle, RefreshCw, 
   Clock, CheckCircle2, Eye, EyeOff, Package, Send, Truck, Calendar, Image as ImageIcon,
-  Plus, Edit2, Trash2, Copy, X, Store, FileText
+  Plus, Edit2, Trash2, Copy, X, Store, FileText, ShoppingCart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -934,66 +934,123 @@ export default function Chemicals() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Action Bar for Selected Orders */}
-      {selectedOrders.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white rounded-xl shadow-2xl p-4 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-4" data-testid="floating-action-bar">
-          <div className="flex items-center gap-2 pr-4 border-r border-slate-700">
-            <span className="text-lg font-semibold">{selectedOrders.size}</span>
-            <span className="text-slate-300">order{selectedOrders.size > 1 ? "s" : ""} selected</span>
+      {/* Slide-out Panel for Selected Orders */}
+      <div 
+        className={cn(
+          "fixed top-0 right-0 h-full w-96 bg-white shadow-2xl border-l transform transition-transform duration-300 ease-in-out z-50",
+          selectedOrders.size > 0 ? "translate-x-0" : "translate-x-full"
+        )}
+        data-testid="orders-slide-panel"
+      >
+        <div className="flex flex-col h-full">
+          {/* Panel Header */}
+          <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-slate-900">
+                {selectedOrders.size} Order{selectedOrders.size !== 1 ? "s" : ""} Selected
+              </h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearSelection}
+              className="text-slate-400 hover:text-slate-600"
+              data-testid="btn-close-panel"
+            >
+              <X className="w-5 h-5" />
+            </Button>
           </div>
-          
-          <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-            <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white" data-testid="select-vendor">
-              <SelectValue placeholder="Select Vendor" />
-            </SelectTrigger>
-            <SelectContent>
-              {vendors.length === 0 ? (
-                <div className="p-2 text-sm text-slate-500">No vendors. Add one first.</div>
-              ) : (
-                vendors.filter(v => v.isActive !== false).map((vendor) => (
-                  <SelectItem key={vendor.id} value={vendor.id}>
-                    {vendor.vendorName}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
 
-          <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-            <SelectTrigger className="w-48 bg-slate-800 border-slate-700 text-white" data-testid="select-template">
-              <SelectValue placeholder="Email Template" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Default Template</SelectItem>
-              {templates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
-                  {template.templateName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Selected Orders List */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-3">
+              {(chemicalOrders as TechOpsEntry[])
+                .filter((o) => selectedOrders.has(o.id))
+                .map((order) => (
+                  <div 
+                    key={order.id} 
+                    className="bg-slate-50 rounded-lg p-3 border"
+                    data-testid={`selected-order-${order.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate">
+                          {order.propertyName || "Unknown Property"}
+                        </p>
+                        <p className="text-sm text-blue-600 font-medium mt-1">
+                          {order.chemicals || order.description || "N/A"}
+                        </p>
+                        <p className="text-sm text-green-600 font-medium">
+                          Qty: {order.quantity || "As needed"}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-6 w-6 text-slate-400 hover:text-red-500"
+                        onClick={() => toggleOrderSelection(order.id)}
+                        data-testid={`btn-remove-order-${order.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
 
-          <Button
-            onClick={generateEmailContent}
-            disabled={!selectedVendorId}
-            className="bg-blue-600 hover:bg-blue-700"
-            data-testid="btn-create-email"
-          >
-            <Mail className="w-4 h-4 mr-2" />
-            Create Email
-          </Button>
+          {/* Panel Footer - Actions */}
+          <div className="border-t bg-white p-4 space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-2 block">Select Vendor</Label>
+              <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
+                <SelectTrigger className="w-full" data-testid="select-vendor">
+                  <SelectValue placeholder="Choose a vendor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendors.length === 0 ? (
+                    <div className="p-2 text-sm text-slate-500">No vendors. Add one first.</div>
+                  ) : (
+                    vendors.filter(v => v.isActive !== false).map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.vendorName}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={clearSelection}
-            className="text-slate-400 hover:text-white hover:bg-slate-800"
-            data-testid="btn-clear-selection"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-2 block">Email Template</Label>
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger className="w-full" data-testid="select-template">
+                  <SelectValue placeholder="Choose a template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Default Template</SelectItem>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.templateName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              onClick={generateEmailContent}
+              disabled={!selectedVendorId}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              data-testid="btn-create-email"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Create Email
+            </Button>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Vendor Management Modal */}
       <Dialog open={showVendorModal} onOpenChange={(open) => { if (!open) resetVendorForm(); else setShowVendorModal(true); }}>
