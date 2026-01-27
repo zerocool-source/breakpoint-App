@@ -446,142 +446,296 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Two-Column Middle Section: Estimate Pipeline + Financial Summary */}
+        {/* Two-Column Section: Estimate Pipeline + Financial Summary (Left) | Coverage Calendar (Right) */}
         <div className="grid grid-cols-2 gap-6">
-          <Card className="shadow-sm">
+          {/* Left Column: Stacked Estimate Pipeline + Financial Summary */}
+          <div className="flex flex-col gap-6">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                      Estimate Pipeline
+                    </CardTitle>
+                    <CardDescription>Job estimates by status</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-blue-600 hover:text-blue-700">
+                    View All <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const pipelineData = [
+                    { label: "Draft", value: metrics?.values?.draft || 0, color: "#64748b" },
+                    { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#f97316" },
+                    { label: "Approved", value: metrics?.values?.approved || 0, color: "#10b981" },
+                    { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0ea5e9" },
+                    { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#14b8a6" },
+                    { label: "Unpaid", value: metrics?.invoices?.unpaidValue || 0, color: "#ef4444" },
+                  ];
+                  
+                  const totalValue = pipelineData.reduce((sum, item) => sum + item.value, 0);
+                  const radius = 80;
+                  const strokeWidth = 20;
+                  const centerX = 100;
+                  const centerY = 90;
+                  
+                  let cumulativeAngle = 180;
+                  const segments = pipelineData.map((item) => {
+                    const percentage = totalValue > 0 ? item.value / totalValue : 0;
+                    const angle = percentage * 180;
+                    const startAngle = cumulativeAngle;
+                    cumulativeAngle += angle;
+                    
+                    const startRad = (startAngle * Math.PI) / 180;
+                    const endRad = ((startAngle + angle) * Math.PI) / 180;
+                    
+                    const x1 = centerX + radius * Math.cos(startRad);
+                    const y1 = centerY + radius * Math.sin(startRad);
+                    const x2 = centerX + radius * Math.cos(endRad);
+                    const y2 = centerY + radius * Math.sin(endRad);
+                    
+                    const largeArc = angle > 180 ? 1 : 0;
+                    
+                    return {
+                      ...item,
+                      path: angle > 0.5 ? `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}` : null,
+                    };
+                  });
+                  
+                  return (
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex-shrink-0">
+                        <svg width="200" height="110" viewBox="0 0 200 110">
+                          <path
+                            d={`M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`}
+                            fill="none"
+                            stroke="#e2e8f0"
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="round"
+                          />
+                          {segments.map((seg, idx) => seg.path && (
+                            <path
+                              key={idx}
+                              d={seg.path}
+                              fill="none"
+                              stroke={seg.color}
+                              strokeWidth={strokeWidth}
+                              strokeLinecap="butt"
+                            />
+                          ))}
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+                          <span className="text-xl font-bold text-slate-900">{formatCurrency(totalValue)}</span>
+                          <span className="text-[10px] text-slate-500">Total Pipeline Value</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-1.5">
+                        {pipelineData.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                              <span className="text-slate-700">{item.label}</span>
+                            </div>
+                            <span className="text-slate-600 font-medium tabular-nums">{formatCurrency(item.value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm flex-1">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-600" />
+                      Financial Summary
+                    </CardTitle>
+                    <CardDescription>Values across pipeline stages</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">Total Pipeline Value</span>
+                      <span className="text-2xl font-bold text-emerald-700">{formatCurrency(metrics?.values.total || 0)}</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-center">
+                      <p className="text-xs font-medium text-slate-600">Pending Approval</p>
+                      <p className="text-lg font-bold text-orange-700">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-sky-50 border border-sky-100 text-center">
+                      <p className="text-xs font-medium text-slate-600">Scheduled</p>
+                      <p className="text-lg font-bold text-sky-700">{formatCurrency(metrics?.values.scheduled || 0)}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-teal-50 border border-teal-100 text-center">
+                      <p className="text-xs font-medium text-slate-600">Ready to Invoice</p>
+                      <p className="text-lg font-bold text-teal-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Coverage Calendar */}
+          <Card className="shadow-sm" data-testid="card-coverage-calendar-main">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    Estimate Pipeline
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                    Coverage Calendar
                   </CardTitle>
-                  <CardDescription>Job estimates by status</CardDescription>
+                  <CardDescription>Technician coverage schedule</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-blue-600 hover:text-blue-700">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
               {(() => {
-                const pipelineData = [
-                  { label: "Draft", value: metrics?.values?.draft || 0, color: "#64748b" },
-                  { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#f97316" },
-                  { label: "Approved", value: metrics?.values?.approved || 0, color: "#10b981" },
-                  { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0ea5e9" },
-                  { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#14b8a6" },
-                  { label: "Unpaid", value: metrics?.invoices?.unpaidValue || 0, color: "#ef4444" },
+                const year = calendarDate.getFullYear();
+                const month = calendarDate.getMonth();
+                const firstDayOfMonth = new Date(year, month, 1);
+                const lastDayOfMonth = new Date(year, month + 1, 0);
+                const daysInMonth = lastDayOfMonth.getDate();
+                const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7;
+                
+                const days: (number | null)[] = [];
+                for (let i = 0; i < startDayOfWeek; i++) days.push(null);
+                for (let i = 1; i <= daysInMonth; i++) days.push(i);
+                
+                // Sample coverage activities with specific dates
+                const sampleCoverages = [
+                  { id: 'sample1', startDate: '2025-01-28', endDate: '2025-01-28', coveringTechName: 'Mike Johnson', originalTechName: 'Jorge Martinez', propertyName: 'Sunset Hills HOA', reason: null },
+                  { id: 'sample2', startDate: '2025-01-30', endDate: '2025-01-30', coveringTechName: 'Sarah Chen', originalTechName: 'David Wilson', propertyName: 'Palm Gardens Community', reason: null },
+                  { id: 'sample3', startDate: '2025-02-03', endDate: '2025-02-03', coveringTechName: 'Jorge Martinez', originalTechName: 'Mike Johnson', propertyName: 'Desert Springs Resort', reason: null },
+                  { id: 'sample4', startDate: '2025-02-05', endDate: '2025-02-05', coveringTechName: 'All techs', originalTechName: '', propertyName: 'main office', reason: 'Training day' },
                 ];
                 
-                const totalValue = pipelineData.reduce((sum, item) => sum + item.value, 0);
-                const radius = 80;
-                const strokeWidth = 20;
-                const centerX = 100;
-                const centerY = 90;
+                // Combine real coverages with sample coverages
+                const allCoverages = [...coverages, ...sampleCoverages];
                 
-                let cumulativeAngle = 180;
-                const segments = pipelineData.map((item) => {
-                  const percentage = totalValue > 0 ? item.value / totalValue : 0;
-                  const angle = percentage * 180;
-                  const startAngle = cumulativeAngle;
-                  cumulativeAngle += angle;
-                  
-                  const startRad = (startAngle * Math.PI) / 180;
-                  const endRad = ((startAngle + angle) * Math.PI) / 180;
-                  
-                  const x1 = centerX + radius * Math.cos(startRad);
-                  const y1 = centerY + radius * Math.sin(startRad);
-                  const x2 = centerX + radius * Math.cos(endRad);
-                  const y2 = centerY + radius * Math.sin(endRad);
-                  
-                  const largeArc = angle > 180 ? 1 : 0;
-                  
-                  return {
-                    ...item,
-                    path: angle > 0.5 ? `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}` : null,
-                  };
-                });
+                const getCoveragesForDate = (day: number) => {
+                  const date = new Date(year, month, day);
+                  return allCoverages.filter((c: any) => {
+                    const start = new Date(c.startDate);
+                    const end = new Date(c.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    date.setHours(12, 0, 0, 0);
+                    return date >= start && date <= end;
+                  });
+                };
+                
+                const selectedCoverages = selectedDate 
+                  ? getCoveragesForDate(selectedDate.getDate())
+                  : allCoverages.slice(0, 4);
+                
+                const monthName = calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
                 
                 return (
-                  <div className="flex items-center gap-4">
-                    <div className="relative flex-shrink-0">
-                      <svg width="200" height="110" viewBox="0 0 200 110">
-                        <path
-                          d={`M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`}
-                          fill="none"
-                          stroke="#e2e8f0"
-                          strokeWidth={strokeWidth}
-                          strokeLinecap="round"
-                        />
-                        {segments.map((seg, idx) => seg.path && (
-                          <path
-                            key={idx}
-                            d={seg.path}
-                            fill="none"
-                            stroke={seg.color}
-                            strokeWidth={strokeWidth}
-                            strokeLinecap="butt"
-                          />
+                  <div className="space-y-4">
+                    {/* Mini Calendar */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7"
+                          onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <span className="text-sm font-semibold text-slate-800">{monthName}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7"
+                          onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-slate-500 mb-1">
+                        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
+                          <div key={d}>{d}</div>
                         ))}
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                        <span className="text-xl font-bold text-slate-900">{formatCurrency(totalValue)}</span>
-                        <span className="text-[10px] text-slate-500">Total Pipeline Value</span>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {days.map((day, idx) => {
+                          if (day === null) return <div key={idx} className="h-9" />;
+                          const dayCoverages = getCoveragesForDate(day);
+                          const hasCoverage = dayCoverages.length > 0;
+                          const isSelected = selectedDate?.getDate() === day && 
+                            selectedDate?.getMonth() === month && 
+                            selectedDate?.getFullYear() === year;
+                          const isToday = new Date().getDate() === day && 
+                            new Date().getMonth() === month && 
+                            new Date().getFullYear() === year;
+                          
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => setSelectedDate(new Date(year, month, day))}
+                              className={`h-9 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors
+                                ${isSelected ? 'bg-purple-600 text-white' : isToday ? 'bg-purple-100 text-purple-700' : 'hover:bg-slate-100 text-slate-700'}
+                              `}
+                            >
+                              <span>{day}</span>
+                              {hasCoverage && !isSelected && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-0.5" />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="flex-1 space-y-1.5">
-                      {pipelineData.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                            <span className="text-slate-700">{item.label}</span>
-                          </div>
-                          <span className="text-slate-600 font-medium tabular-nums">{formatCurrency(item.value)}</span>
-                        </div>
-                      ))}
+                    
+                    {/* Coverage Activities List */}
+                    <div className="border-t border-slate-100 pt-4">
+                      <p className="text-xs font-medium text-slate-500 mb-3">
+                        {selectedDate 
+                          ? `Coverage on ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                          : 'Upcoming Coverage'
+                        }
+                      </p>
+                      <div className="space-y-2 max-h-[180px] overflow-y-auto">
+                        {selectedCoverages.length === 0 ? (
+                          <p className="text-sm text-slate-400 italic">No coverage scheduled</p>
+                        ) : (
+                          selectedCoverages.map((c: any, idx: number) => {
+                            const startDate = new Date(c.startDate);
+                            const dayOfWeek = startDate.toLocaleDateString('en-US', { weekday: 'long' });
+                            const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                            
+                            return (
+                              <div key={c.id || idx} className="p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                                <p className="text-xs text-purple-600 font-medium">{dateStr} - {dayOfWeek}</p>
+                                <p className="text-sm text-slate-700 mt-0.5">
+                                  {c.reason === 'Training day' 
+                                    ? `${c.reason} - ${c.coveringTechName} at ${c.propertyName}`
+                                    : `${c.coveringTechName} covering for ${c.originalTechName} at ${c.propertyName}`
+                                  }
+                                </p>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })()}
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-emerald-600" />
-                    Financial Summary
-                  </CardTitle>
-                  <CardDescription>Values across pipeline stages</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-slate-700">Total Pipeline Value</span>
-                    <span className="text-2xl font-bold text-emerald-700">{formatCurrency(metrics?.values.total || 0)}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-center">
-                    <p className="text-xs font-medium text-slate-600">Pending Approval</p>
-                    <p className="text-lg font-bold text-orange-700">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-sky-50 border border-sky-100 text-center">
-                    <p className="text-xs font-medium text-slate-600">Scheduled</p>
-                    <p className="text-lg font-bold text-sky-700">{formatCurrency(metrics?.values.scheduled || 0)}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-teal-50 border border-teal-100 text-center">
-                    <p className="text-xs font-medium text-slate-600">Ready to Invoice</p>
-                    <p className="text-lg font-bold text-teal-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -866,151 +1020,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-
-        {/* Coverage Calendar */}
-        <Card className="shadow-sm" data-testid="card-coverage-calendar">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-purple-600" />
-                  Coverage Calendar
-                </CardTitle>
-                <CardDescription>Technician coverage schedule</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const year = calendarDate.getFullYear();
-              const month = calendarDate.getMonth();
-              const firstDayOfMonth = new Date(year, month, 1);
-              const lastDayOfMonth = new Date(year, month + 1, 0);
-              const daysInMonth = lastDayOfMonth.getDate();
-              const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7;
-              
-              const days: (number | null)[] = [];
-              for (let i = 0; i < startDayOfWeek; i++) days.push(null);
-              for (let i = 1; i <= daysInMonth; i++) days.push(i);
-              
-              const getCoveragesForDate = (day: number) => {
-                const date = new Date(year, month, day);
-                return coverages.filter((c: any) => {
-                  const start = new Date(c.startDate);
-                  const end = new Date(c.endDate);
-                  start.setHours(0, 0, 0, 0);
-                  end.setHours(23, 59, 59, 999);
-                  return date >= start && date <= end;
-                });
-              };
-              
-              const selectedCoverages = selectedDate 
-                ? getCoveragesForDate(selectedDate.getDate())
-                : coverages.filter((c: any) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const start = new Date(c.startDate);
-                    const end = new Date(c.endDate);
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(23, 59, 59, 999);
-                    return end >= today;
-                  }).slice(0, 5);
-              
-              const monthName = calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-              
-              return (
-                <div className="flex gap-6">
-                  <div className="flex-shrink-0" style={{ width: '280px' }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7"
-                        onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </Button>
-                      <span className="text-sm font-semibold text-slate-800">{monthName}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7"
-                        onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-slate-500 mb-1">
-                      {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
-                        <div key={d}>{d}</div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {days.map((day, idx) => {
-                        if (day === null) return <div key={idx} className="h-8" />;
-                        const dayCoverages = getCoveragesForDate(day);
-                        const hasCoverage = dayCoverages.length > 0;
-                        const isSelected = selectedDate?.getDate() === day && 
-                          selectedDate?.getMonth() === month && 
-                          selectedDate?.getFullYear() === year;
-                        const isToday = new Date().getDate() === day && 
-                          new Date().getMonth() === month && 
-                          new Date().getFullYear() === year;
-                        
-                        return (
-                          <button
-                            key={idx}
-                            onClick={() => setSelectedDate(new Date(year, month, day))}
-                            className={`h-8 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors
-                              ${isSelected ? 'bg-purple-600 text-white' : isToday ? 'bg-purple-100 text-purple-700' : 'hover:bg-slate-100 text-slate-700'}
-                            `}
-                          >
-                            <span>{day}</span>
-                            {hasCoverage && !isSelected && (
-                              <div className="flex gap-0.5 mt-0.5">
-                                <div className="w-1 h-1 rounded-full bg-orange-500" />
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-slate-500 mb-2">
-                      {selectedDate 
-                        ? `Coverage on ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-                        : 'Upcoming Coverage'
-                      }
-                    </p>
-                    {selectedCoverages.length === 0 ? (
-                      <p className="text-sm text-slate-400 italic">No coverage scheduled</p>
-                    ) : (
-                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                        {selectedCoverages.map((c: any, idx: number) => {
-                          const startDate = new Date(c.startDate);
-                          const dayOfWeek = startDate.toLocaleDateString('en-US', { weekday: 'long' });
-                          const dateStr = startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                          
-                          return (
-                            <div key={c.id || idx} className="p-2 rounded-lg bg-purple-50 border border-purple-100">
-                              <p className="text-xs text-purple-600 font-medium">{dateStr} - {dayOfWeek}</p>
-                              <p className="text-sm text-slate-700 mt-0.5">
-                                {c.coveringTechName} covering for {c.originalTechName}
-                                {c.propertyName && <span className="text-slate-500"> at {c.propertyName}</span>}
-                              </p>
-                              {c.reason && <p className="text-xs text-slate-500 mt-0.5">{c.reason}</p>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
 
         {/* Bottom Summary Boxes */}
         <div className="grid grid-cols-4 gap-4">
