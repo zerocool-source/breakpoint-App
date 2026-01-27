@@ -468,30 +468,29 @@ export default function Dashboard() {
                 <div className="flex gap-6">
                   {/* Left side: Donut chart and legend */}
                   <div className="w-1/2 flex flex-col items-center">
-                    {/* Donut Chart */}
+                    {/* Donut Chart - Only Emergencies + Reported Issues */}
                     {(() => {
                       const size = 160;
                       const strokeWidth = 24;
                       const radius = (size - strokeWidth) / 2;
                       const circumference = 2 * Math.PI * radius;
                       
-                      // Calculate segment lengths
-                      const emergencyLength = total > 0 ? (emergencyCount / total) * circumference : 0;
-                      const issueLength = total > 0 ? (issueCount / total) * circumference : 0;
-                      const alertLength = total > 0 ? (alertCount / total) * circumference : 0;
+                      // Total for donut is only Emergencies + Issues (not Alerts)
+                      const donutTotal = emergencyCount + issueCount;
+                      
+                      // Calculate segment lengths based on donut total
+                      const emergencyLength = donutTotal > 0 ? (emergencyCount / donutTotal) * circumference : 0;
+                      const issueLength = donutTotal > 0 ? (issueCount / donutTotal) * circumference : 0;
                       
                       // Calculate offsets (cumulative)
                       const emergencyOffset = 0;
                       const issueOffset = emergencyLength;
-                      const alertOffset = emergencyLength + issueLength;
                       
-                      // Center text based on selection
+                      // Center text based on selection (only emergencies/issues, not alerts)
                       const centerLabel = selectedStatusCategory === 'emergencies' ? 'Emergencies' :
-                                         selectedStatusCategory === 'issues' ? 'Reported Issues' :
-                                         selectedStatusCategory === 'alerts' ? 'Alerts' : 'All';
+                                         selectedStatusCategory === 'issues' ? 'Reported Issues' : 'Total';
                       const centerCount = selectedStatusCategory === 'emergencies' ? emergencyCount :
-                                         selectedStatusCategory === 'issues' ? issueCount :
-                                         selectedStatusCategory === 'alerts' ? alertCount : total;
+                                         selectedStatusCategory === 'issues' ? issueCount : donutTotal;
                       
                       return (
                         <div className="relative mb-4">
@@ -505,21 +504,6 @@ export default function Dashboard() {
                               stroke="#e2e8f0"
                               strokeWidth={strokeWidth}
                             />
-                            {/* Alerts segment (orange) - drawn first as base */}
-                            {alertLength > 0 && (
-                              <circle
-                                cx={size / 2}
-                                cy={size / 2}
-                                r={radius}
-                                fill="none"
-                                stroke={selectedStatusCategory === 'alerts' ? '#ea580c' : '#f97316'}
-                                strokeWidth={selectedStatusCategory === 'alerts' ? strokeWidth + 4 : strokeWidth}
-                                strokeDasharray={`${alertLength} ${circumference - alertLength}`}
-                                strokeDashoffset={-alertOffset}
-                                className="cursor-pointer transition-all duration-200"
-                                onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
-                              />
-                            )}
                             {/* Issues segment (blue) */}
                             {issueLength > 0 && (
                               <circle
@@ -560,7 +544,7 @@ export default function Dashboard() {
                       );
                     })()}
                     
-                    {/* Legend */}
+                    {/* Legend - Only Emergencies + Issues */}
                     <div className="space-y-2 w-full">
                       <button
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
@@ -571,7 +555,7 @@ export default function Dashboard() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
                           <span className="text-sm font-medium text-slate-700">Emergencies</span>
                         </div>
                         <span className="text-sm font-bold text-red-600">{emergencyCount}</span>
@@ -586,26 +570,30 @@ export default function Dashboard() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                           <span className="text-sm font-medium text-slate-700">Reported Issues</span>
                         </div>
                         <span className="text-sm font-bold text-blue-600">{issueCount}</span>
                       </button>
-                      
+                    </div>
+                    
+                    {/* Separate System Alerts metric */}
+                    <div className="mt-4 pt-4 border-t border-slate-100">
                       <button
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'alerts' 
                             ? 'bg-orange-50 border border-orange-200' 
-                            : 'hover:bg-slate-50'
+                            : 'bg-slate-50 hover:bg-orange-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-sm bg-orange-500"></div>
-                          <span className="text-sm font-medium text-slate-700">Alerts</span>
+                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                          <span className="text-sm font-medium text-slate-600">System Alerts</span>
                         </div>
                         <span className="text-sm font-bold text-orange-600">{alertCount.toLocaleString()}</span>
                       </button>
+                      <p className="text-[10px] text-slate-400 mt-1 text-center">Auto-generated system alerts</p>
                     </div>
                   </div>
                   
