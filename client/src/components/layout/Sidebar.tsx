@@ -47,7 +47,6 @@ const navItems: NavItem[] = [
     icon: Wrench, 
     label: "Operations Hub", 
     children: [
-      { label: "Supervisor Management", href: "/supervisor-management" },
       { label: "Tech Ops Alerts", href: "/tech-ops" },
       { label: "Repairs", href: "/repairs" },
       { label: "Chemicals", href: "/chemicals" },
