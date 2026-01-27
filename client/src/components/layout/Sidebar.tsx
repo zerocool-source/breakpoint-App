@@ -11,7 +11,7 @@ import {
   Zap,
   Settings,
   Wrench,
-  UsersRound,
+  Network,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -65,7 +65,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    icon: UsersRound, 
+    icon: Network, 
     label: "Supervisor Teams", 
     href: "/supervisor-management"
   },
