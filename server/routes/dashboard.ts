@@ -103,9 +103,11 @@ export function registerDashboardRoutes(app: any) {
       const inProgressEmergencies = emergencies.filter((e: any) => e.status === "in_progress");
 
       const totalEstimateValue = estimates.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
+      const draftValue = draftEstimates.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
       const pendingApprovalValue = pendingApprovals.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
-      const readyToInvoiceValue = readyToInvoice.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
+      const approvedValue = approvedEstimates.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
       const scheduledValue = scheduledJobs.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
+      const readyToInvoiceValue = readyToInvoice.reduce((sum: number, e: any) => sum + (e.totalAmount || 0), 0) / 100;
 
       const recentActivity = [
         ...estimates.slice(0, 5).map((e: any) => ({
@@ -196,9 +198,11 @@ export function registerDashboardRoutes(app: any) {
           },
           values: {
             total: totalEstimateValue,
+            draft: draftValue,
             pendingApproval: pendingApprovalValue,
-            readyToInvoice: readyToInvoiceValue,
+            approved: approvedValue,
             scheduled: scheduledValue,
+            readyToInvoice: readyToInvoiceValue,
           },
           serviceRepairs: {
             pending: pendingServiceRepairs.length,

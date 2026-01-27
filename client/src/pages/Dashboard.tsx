@@ -456,51 +456,86 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-slate-500"></div>
-                    <span className="text-sm font-medium text-slate-800">Draft</span>
+              {(() => {
+                const pipelineData = [
+                  { label: "Draft", value: metrics?.values?.draft || 0, color: "#64748b" },
+                  { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#f97316" },
+                  { label: "Approved", value: metrics?.values?.approved || 0, color: "#10b981" },
+                  { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0ea5e9" },
+                  { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#14b8a6" },
+                  { label: "Unpaid", value: metrics?.invoices?.unpaidValue || 0, color: "#ef4444" },
+                ];
+                
+                const totalValue = pipelineData.reduce((sum, item) => sum + item.value, 0);
+                const radius = 80;
+                const strokeWidth = 20;
+                const centerX = 100;
+                const centerY = 90;
+                
+                let cumulativeAngle = 180;
+                const segments = pipelineData.map((item) => {
+                  const percentage = totalValue > 0 ? item.value / totalValue : 0;
+                  const angle = percentage * 180;
+                  const startAngle = cumulativeAngle;
+                  cumulativeAngle += angle;
+                  
+                  const startRad = (startAngle * Math.PI) / 180;
+                  const endRad = ((startAngle + angle) * Math.PI) / 180;
+                  
+                  const x1 = centerX + radius * Math.cos(startRad);
+                  const y1 = centerY + radius * Math.sin(startRad);
+                  const x2 = centerX + radius * Math.cos(endRad);
+                  const y2 = centerY + radius * Math.sin(endRad);
+                  
+                  const largeArc = angle > 180 ? 1 : 0;
+                  
+                  return {
+                    ...item,
+                    path: angle > 0.5 ? `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}` : null,
+                  };
+                });
+                
+                return (
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-shrink-0">
+                      <svg width="200" height="110" viewBox="0 0 200 110">
+                        <path
+                          d={`M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`}
+                          fill="none"
+                          stroke="#e2e8f0"
+                          strokeWidth={strokeWidth}
+                          strokeLinecap="round"
+                        />
+                        {segments.map((seg, idx) => seg.path && (
+                          <path
+                            key={idx}
+                            d={seg.path}
+                            fill="none"
+                            stroke={seg.color}
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="butt"
+                          />
+                        ))}
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+                        <span className="text-xl font-bold text-slate-900">{formatCurrency(totalValue)}</span>
+                        <span className="text-[10px] text-slate-500">Total Pipeline Value</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      {pipelineData.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <span className="text-slate-700">{item.label}</span>
+                          </div>
+                          <span className="text-slate-600 font-medium tabular-nums">{formatCurrency(item.value)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <Badge className="bg-slate-200 text-slate-700 font-semibold">{metrics?.estimates.draft || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                    <span className="text-sm font-medium text-slate-800">Pending Approval</span>
-                  </div>
-                  <Badge className="bg-orange-200 text-orange-800 font-semibold">{metrics?.estimates.pendingApproval || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 hover:bg-emerald-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                    <span className="text-sm font-medium text-slate-800">Approved</span>
-                  </div>
-                  <Badge className="bg-emerald-200 text-emerald-800 font-semibold">{metrics?.estimates.approved || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-sky-50 hover:bg-sky-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-sky-500"></div>
-                    <span className="text-sm font-medium text-slate-800">Scheduled</span>
-                  </div>
-                  <Badge className="bg-sky-200 text-sky-800 font-semibold">{metrics?.estimates.scheduled || 0}</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-teal-50 hover:bg-teal-100 cursor-pointer transition-colors" onClick={() => navigate("/estimates")}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-teal-500"></div>
-                    <span className="text-sm font-medium text-slate-800">Ready to Invoice</span>
-                  </div>
-                  <Badge className="bg-teal-200 text-teal-800 font-semibold">{metrics?.estimates.readyToInvoice || 0}</Badge>
-                </div>
-                {/* Unpaid Row */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-red-50 hover:bg-red-100 cursor-pointer transition-colors" onClick={() => navigate("/invoices")}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                    <span className="text-sm font-medium text-slate-800">Unpaid</span>
-                  </div>
-                  <Badge className="bg-red-200 text-red-800 font-semibold">{metrics?.invoices?.unpaid || 0}</Badge>
-                </div>
-              </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
