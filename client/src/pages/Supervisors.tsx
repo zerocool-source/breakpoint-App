@@ -55,6 +55,7 @@ interface Supervisor {
   truckNumber: string | null;
   active: boolean;
   role: string;
+  region: string | null;
 }
 
 interface Technician {
@@ -751,6 +752,40 @@ export default function Supervisors() {
     },
   });
 
+  const updateRegionMutation = useMutation({
+    mutationFn: async ({ supervisorId, region }: { supervisorId: string; region: string | null }) => {
+      const res = await fetch(`/api/technicians/${supervisorId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ region }),
+      });
+      if (!res.ok) throw new Error("Failed to update county");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "supervisor"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored", "service"] });
+    },
+  });
+
+  const getRegionLabel = (region: string | null): string => {
+    switch (region) {
+      case "south": return "South County";
+      case "mid": return "Mid County";
+      case "north": return "North County";
+      default: return "";
+    }
+  };
+
+  const getRegionBadgeStyle = (region: string | null): string => {
+    switch (region) {
+      case "south": return "bg-blue-500 text-white";
+      case "mid": return "bg-green-500 text-white";
+      case "north": return "bg-purple-500 text-white";
+      default: return "bg-slate-100 text-slate-600";
+    }
+  };
+
   const activeSupervisors = supervisors.filter(s => s.active);
 
   return (
@@ -767,10 +802,10 @@ export default function Supervisors() {
           </div>
         </div>
 
-        {/* Top Grid - Supervisors & Teams + Unassigned Technicians + Team Summary */}
+        {/* Top Grid - Supervisors & Teams + Unassigned Technicians */}
         <div className="grid grid-cols-12 gap-6">
           {/* Supervisors & Teams */}
-          <div className="col-span-5 bg-white rounded-lg border border-slate-200 p-4">
+          <div className="col-span-6 bg-white rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-slate-600" />
@@ -819,7 +854,14 @@ export default function Supervisors() {
                           {initials}
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">{fullName}</div>
+                          <div className="font-medium text-slate-900 flex items-center gap-2">
+                            {fullName}
+                            {sup.region && (
+                              <Badge className={cn("text-xs", getRegionBadgeStyle(sup.region))}>
+                                {getRegionLabel(sup.region)}
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-slate-500 flex items-center gap-1">
                             <span className="text-blue-600">{sup.truckNumber ? `#${sup.truckNumber}` : "No truck"}</span>
                             <span>•</span>
@@ -827,15 +869,40 @@ export default function Supervisors() {
                           </div>
                         </div>
                       </div>
-                      <div 
-                        className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-                        onClick={() => setManagingTeamSupervisor(sup)}
-                        data-testid={`button-manage-team-${sup.id}`}
-                      >
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
-                          {techCount} Technicians
-                        </Badge>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={sup.region || "none"}
+                          onValueChange={(value) => {
+                            updateRegionMutation.mutate({
+                              supervisorId: sup.id,
+                              region: value === "none" ? null : value,
+                            });
+                          }}
+                        >
+                          <SelectTrigger 
+                            className="w-[130px] h-8 text-xs"
+                            data-testid={`select-county-${sup.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <SelectValue placeholder="Select County" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="south">South County</SelectItem>
+                            <SelectItem value="mid">Mid County</SelectItem>
+                            <SelectItem value="north">North County</SelectItem>
+                            <SelectItem value="none">No County</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                          onClick={() => setManagingTeamSupervisor(sup)}
+                          data-testid={`button-manage-team-${sup.id}`}
+                        >
+                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                            {techCount} Technicians
+                          </Badge>
+                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                        </div>
                       </div>
                     </div>
                   );
@@ -845,7 +912,7 @@ export default function Supervisors() {
           </div>
 
           {/* Unassigned Technicians */}
-          <div className="col-span-4 bg-white rounded-lg border border-slate-200 p-4">
+          <div className="col-span-6 bg-white rounded-lg border border-slate-200 p-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-slate-600" />
@@ -903,33 +970,6 @@ export default function Supervisors() {
                   );
                 })
               )}
-            </div>
-          </div>
-
-          {/* Team Summary */}
-          <div className="col-span-3 bg-white rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center justify-center mb-4">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2">
-                  <Users className="w-6 h-6 text-slate-500" />
-                </div>
-                <h2 className="font-semibold text-slate-900">Team Summary</h2>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-slate-600">Total Supervisors:</span>
-                <span className="font-semibold text-slate-900">{activeSupervisors.length}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                <span className="text-sm text-slate-600">Total Technicians:</span>
-                <span className="font-semibold text-slate-900">{totalTechnicians}</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-blue-600">Unassigned:</span>
-                <span className="font-semibold text-blue-600">{unassignedTechnicians.length}</span>
-              </div>
             </div>
           </div>
         </div>
