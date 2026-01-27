@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { 
   Activity, 
   FileText, 
@@ -13,17 +14,48 @@ import {
   ArrowRight,
   Bell,
   DollarSign,
-  Loader2
+  Loader2,
+  Search,
+  Building2,
+  ChevronDown,
+  User,
+  Beaker,
+  ClipboardList
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
+
+interface Property {
+  id: string;
+  name: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  customerId?: string | null;
+  customerName?: string | null;
+}
 
 interface OpenEmergency {
   id: string;
@@ -107,6 +139,16 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
+  // Search state
+  const [estimateSearch, setEstimateSearch] = useState("");
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [serviceRepairSearch, setServiceRepairSearch] = useState("");
+
+  // Property dropdown state
+  const [propertyOpen, setPropertyOpen] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [propertyTab, setPropertyTab] = useState("profile");
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/overview"],
     queryFn: async () => {
@@ -141,6 +183,44 @@ export default function Dashboard() {
       });
     },
   });
+
+  // Fetch properties for dropdown
+  const { data: propertiesData } = useQuery<Property[]>({
+    queryKey: ["/api/customers"],
+    queryFn: async () => {
+      const res = await fetch("/api/customers");
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      const data = await res.json();
+      // Transform customers to properties format
+      return (data.customers || []).map((c: any) => ({
+        id: c.id,
+        name: c.displayName || c.name || "Unknown",
+        address: c.billingAddress || c.address,
+        city: c.city,
+        state: c.state,
+        customerId: c.id,
+        customerName: c.displayName || c.name,
+      }));
+    },
+  });
+
+  const properties = propertiesData || [];
+
+  // Search handlers
+  const handleEstimateSearch = () => {
+    if (!estimateSearch.trim()) return;
+    navigate(`/estimates?search=${encodeURIComponent(estimateSearch.trim())}`);
+  };
+
+  const handleInvoiceSearch = () => {
+    if (!invoiceSearch.trim()) return;
+    navigate(`/invoices?search=${encodeURIComponent(invoiceSearch.trim())}`);
+  };
+
+  const handleServiceRepairSearch = () => {
+    if (!serviceRepairSearch.trim()) return;
+    navigate(`/service-repairs?search=${encodeURIComponent(serviceRepairSearch.trim())}`);
+  };
 
   const metrics = dashboardData?.metrics;
   const summary = dashboardData?.summary;
@@ -195,6 +275,258 @@ export default function Dashboard() {
             {syncMutation.isPending ? "Syncing..." : "Sync Pool Brain"}
           </Button>
         </div>
+
+        {/* Search Section */}
+        <Card className="border-slate-200">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-4 gap-4">
+              {/* Estimate Search */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Search Estimate #</label>
+                <div className="relative">
+                  <Input
+                    placeholder="e.g. 26-00001"
+                    value={estimateSearch}
+                    onChange={(e) => setEstimateSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleEstimateSearch()}
+                    className="pr-10"
+                    data-testid="input-search-estimate"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={handleEstimateSearch}
+                    data-testid="button-search-estimate"
+                  >
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Invoice Search */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Search Invoice #</label>
+                <div className="relative">
+                  <Input
+                    placeholder="e.g. INV-001"
+                    value={invoiceSearch}
+                    onChange={(e) => setInvoiceSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleInvoiceSearch()}
+                    className="pr-10"
+                    data-testid="input-search-invoice"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={handleInvoiceSearch}
+                    data-testid="button-search-invoice"
+                  >
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Service Repair Search */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Search Service Repair #</label>
+                <div className="relative">
+                  <Input
+                    placeholder="e.g. SR-001"
+                    value={serviceRepairSearch}
+                    onChange={(e) => setServiceRepairSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleServiceRepairSearch()}
+                    className="pr-10"
+                    data-testid="input-search-service-repair"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={handleServiceRepairSearch}
+                    data-testid="button-search-service-repair"
+                  >
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Property Dropdown */}
+              <div>
+                <label className="text-xs font-medium text-slate-500 mb-1.5 block">Search Property</label>
+                <Popover open={propertyOpen} onOpenChange={setPropertyOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={propertyOpen}
+                      className="w-full justify-between font-normal"
+                      data-testid="button-property-dropdown"
+                    >
+                      {selectedProperty ? (
+                        <span className="truncate">{selectedProperty.name}</span>
+                      ) : (
+                        <span className="text-slate-400">Select property...</span>
+                      )}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search properties..." />
+                      <CommandList>
+                        <CommandEmpty>No properties found.</CommandEmpty>
+                        <CommandGroup>
+                          {properties.map((property) => (
+                            <CommandItem
+                              key={property.id}
+                              value={property.name}
+                              onSelect={() => {
+                                setSelectedProperty(property);
+                                setPropertyOpen(false);
+                                setPropertyTab("profile");
+                              }}
+                              data-testid={`property-option-${property.id}`}
+                            >
+                              <Building2 className="mr-2 h-4 w-4 text-slate-400" />
+                              <div className="flex-1 min-w-0">
+                                <p className="truncate font-medium">{property.name}</p>
+                                {property.address && (
+                                  <p className="text-xs text-slate-500 truncate">{property.address}</p>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Property Details Section */}
+        {selectedProperty && (
+          <Card className="border-slate-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[#0078D4]/10">
+                    <Building2 className="w-5 h-5 text-[#0078D4]" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{selectedProperty.name}</CardTitle>
+                    {selectedProperty.address && (
+                      <CardDescription>{selectedProperty.address}</CardDescription>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedProperty(null)}
+                  className="text-slate-500"
+                  data-testid="button-close-property"
+                >
+                  Close
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={propertyTab} onValueChange={setPropertyTab}>
+                <TabsList className="grid w-full grid-cols-4 mb-4">
+                  <TabsTrigger value="profile" className="gap-2" data-testid="tab-profile">
+                    <User className="w-4 h-4" />
+                    Profile
+                  </TabsTrigger>
+                  <TabsTrigger value="repairs" className="gap-2" data-testid="tab-repairs">
+                    <Wrench className="w-4 h-4" />
+                    Repairs
+                  </TabsTrigger>
+                  <TabsTrigger value="service" className="gap-2" data-testid="tab-service">
+                    <ClipboardList className="w-4 h-4" />
+                    Service
+                  </TabsTrigger>
+                  <TabsTrigger value="chemical" className="gap-2" data-testid="tab-chemical">
+                    <Beaker className="w-4 h-4" />
+                    Chemical
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="profile" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-slate-50">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Customer Name</p>
+                      <p className="font-medium text-slate-900">{selectedProperty.customerName || "-"}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-slate-50">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Address</p>
+                      <p className="font-medium text-slate-900">{selectedProperty.address || "-"}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-slate-50">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">City</p>
+                      <p className="font-medium text-slate-900">{selectedProperty.city || "-"}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-slate-50">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">State</p>
+                      <p className="font-medium text-slate-900">{selectedProperty.state || "-"}</p>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="repairs" className="space-y-4">
+                  <div className="text-center py-8 text-slate-500">
+                    <Wrench className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-medium">Repair History</p>
+                    <p className="text-sm">Select a property to view repair records</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => navigate(`/estimates?property=${encodeURIComponent(selectedProperty.name)}`)}
+                      data-testid="button-view-property-repairs"
+                    >
+                      View All Repairs
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="service" className="space-y-4">
+                  <div className="text-center py-8 text-slate-500">
+                    <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-medium">Service History</p>
+                    <p className="text-sm">Service records for this property</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => navigate(`/service-repairs?property=${encodeURIComponent(selectedProperty.name)}`)}
+                      data-testid="button-view-property-service"
+                    >
+                      View Service Records
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="chemical" className="space-y-4">
+                  <div className="text-center py-8 text-slate-500">
+                    <Beaker className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-medium">Chemical Orders</p>
+                    <p className="text-sm">Chemical order history for this property</p>
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      data-testid="button-view-property-chemical"
+                    >
+                      View Chemical Orders
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-4 gap-4">
           <Card 
