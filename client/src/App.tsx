@@ -173,18 +173,19 @@ function AuthenticatedApp() {
     return <Login />;
   }
 
-  // Route based on user role
-  switch (user?.role) {
-    case 'service':
-      return <ServiceTechRouter />;
-    case 'repair':
-      return <RepairTechRouter />;
-    case 'supervisor':
-      return <SupervisorRouter />;
-    default:
-      // Admin gets full access
-      return <Router />;
+  // Only admin users have access
+  if (user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+          <p className="text-gray-600">Only admin users can access this application.</p>
+        </div>
+      </div>
+    );
   }
+
+  return <Router />;
 }
 
 function App() {
