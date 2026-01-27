@@ -343,36 +343,38 @@ export default function TechOpsLanding() {
           </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2" data-testid="filter-tabs">
+        {/* Filter Tabs - QuickBooks Style */}
+        <div className="flex flex-wrap gap-3" data-testid="filter-tabs">
           {filterTabs.map(tab => {
             const count = countsByType[tab.key] || 0;
             const config = entryTypeConfig[tab.key];
             const isActive = selectedType === tab.key;
             return (
-              <Button
+              <button
                 key={tab.key}
-                variant={isActive ? "default" : "outline"}
-                size="sm"
                 onClick={() => setSelectedType(tab.key)}
                 className={cn(
-                  "gap-2 transition-all",
-                  isActive ? "bg-blue-600 text-white hover:bg-blue-700" : "hover:bg-slate-100"
+                  "flex items-center gap-3 px-5 py-3 rounded-xl text-base font-medium transition-all duration-200",
+                  "border shadow-sm hover:shadow-md",
+                  isActive 
+                    ? "bg-blue-600 text-white border-blue-600 shadow-blue-200" 
+                    : "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
                 )}
                 data-testid={`filter-tab-${tab.key}`}
               >
-                {config && <config.icon className="w-4 h-4" />}
-                {tab.label}
-                <Badge 
-                  variant="secondary" 
+                {config && <config.icon className={cn("w-5 h-5", isActive ? "text-white" : config.color)} />}
+                <span>{tab.label}</span>
+                <span 
                   className={cn(
-                    "ml-1 text-xs",
-                    isActive ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    "inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-sm font-semibold",
+                    isActive 
+                      ? "bg-white/25 text-white" 
+                      : "bg-slate-100 text-slate-600"
                   )}
                 >
                   {count}
-                </Badge>
-              </Button>
+                </span>
+              </button>
             );
           })}
         </div>
