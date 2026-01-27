@@ -466,57 +466,146 @@ export default function Dashboard() {
               
               return (
                 <div className="flex gap-6">
-                  {/* Left side: Progress bar and metric boxes */}
-                  <div className="w-1/2 space-y-4">
-                    {/* Separate Progress Bars for each category */}
-                    <div className="space-y-3">
-                      {/* Emergencies Bar */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-slate-700">Emergencies</span>
-                          <span className="text-xs text-slate-500">{emergencyCount} of {total}</span>
-                        </div>
-                        <div 
-                          className="h-6 rounded-full bg-red-500 flex items-center justify-center cursor-pointer hover:bg-red-600 transition-all"
-                          onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
-                        >
-                          <span className="text-sm font-bold text-white">{emergencyCount}</span>
-                        </div>
-                      </div>
+                  {/* Left side: Donut chart and legend */}
+                  <div className="w-1/2 flex flex-col items-center">
+                    {/* Donut Chart */}
+                    {(() => {
+                      const size = 160;
+                      const strokeWidth = 24;
+                      const radius = (size - strokeWidth) / 2;
+                      const circumference = 2 * Math.PI * radius;
                       
-                      {/* Reported Issues Bar */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-slate-700">Reported Issues</span>
-                          <span className="text-xs text-slate-500">{issueCount} of {total}</span>
-                        </div>
-                        <div 
-                          className="h-6 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-all"
-                          onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
-                        >
-                          <span className="text-sm font-bold text-white">{issueCount}</span>
-                        </div>
-                      </div>
+                      // Calculate segment lengths
+                      const emergencyLength = total > 0 ? (emergencyCount / total) * circumference : 0;
+                      const issueLength = total > 0 ? (issueCount / total) * circumference : 0;
+                      const alertLength = total > 0 ? (alertCount / total) * circumference : 0;
                       
-                      {/* Alerts Bar */}
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-slate-700">Alerts</span>
-                          <span className="text-xs text-slate-500">{alertCount.toLocaleString()} of {total.toLocaleString()}</span>
+                      // Calculate offsets (cumulative)
+                      const emergencyOffset = 0;
+                      const issueOffset = emergencyLength;
+                      const alertOffset = emergencyLength + issueLength;
+                      
+                      // Center text based on selection
+                      const centerLabel = selectedStatusCategory === 'emergencies' ? 'Emergencies' :
+                                         selectedStatusCategory === 'issues' ? 'Reported Issues' :
+                                         selectedStatusCategory === 'alerts' ? 'Alerts' : 'All';
+                      const centerCount = selectedStatusCategory === 'emergencies' ? emergencyCount :
+                                         selectedStatusCategory === 'issues' ? issueCount :
+                                         selectedStatusCategory === 'alerts' ? alertCount : total;
+                      
+                      return (
+                        <div className="relative mb-4">
+                          <svg width={size} height={size} className="transform -rotate-90">
+                            {/* Background circle */}
+                            <circle
+                              cx={size / 2}
+                              cy={size / 2}
+                              r={radius}
+                              fill="none"
+                              stroke="#e2e8f0"
+                              strokeWidth={strokeWidth}
+                            />
+                            {/* Alerts segment (orange) - drawn first as base */}
+                            {alertLength > 0 && (
+                              <circle
+                                cx={size / 2}
+                                cy={size / 2}
+                                r={radius}
+                                fill="none"
+                                stroke={selectedStatusCategory === 'alerts' ? '#ea580c' : '#f97316'}
+                                strokeWidth={selectedStatusCategory === 'alerts' ? strokeWidth + 4 : strokeWidth}
+                                strokeDasharray={`${alertLength} ${circumference - alertLength}`}
+                                strokeDashoffset={-alertOffset}
+                                className="cursor-pointer transition-all duration-200"
+                                onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
+                              />
+                            )}
+                            {/* Issues segment (blue) */}
+                            {issueLength > 0 && (
+                              <circle
+                                cx={size / 2}
+                                cy={size / 2}
+                                r={radius}
+                                fill="none"
+                                stroke={selectedStatusCategory === 'issues' ? '#2563eb' : '#3b82f6'}
+                                strokeWidth={selectedStatusCategory === 'issues' ? strokeWidth + 4 : strokeWidth}
+                                strokeDasharray={`${issueLength} ${circumference - issueLength}`}
+                                strokeDashoffset={-issueOffset}
+                                className="cursor-pointer transition-all duration-200"
+                                onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
+                              />
+                            )}
+                            {/* Emergencies segment (red) */}
+                            {emergencyLength > 0 && (
+                              <circle
+                                cx={size / 2}
+                                cy={size / 2}
+                                r={radius}
+                                fill="none"
+                                stroke={selectedStatusCategory === 'emergencies' ? '#dc2626' : '#ef4444'}
+                                strokeWidth={selectedStatusCategory === 'emergencies' ? strokeWidth + 4 : strokeWidth}
+                                strokeDasharray={`${emergencyLength} ${circumference - emergencyLength}`}
+                                strokeDashoffset={-emergencyOffset}
+                                className="cursor-pointer transition-all duration-200"
+                                onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
+                              />
+                            )}
+                          </svg>
+                          {/* Center text */}
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-2xl font-bold text-slate-800">{centerCount.toLocaleString()}</span>
+                            <span className="text-[10px] font-medium text-slate-500">{centerLabel}</span>
+                          </div>
                         </div>
-                        <div 
-                          className="h-6 rounded-full bg-orange-500 flex items-center justify-center cursor-pointer hover:bg-orange-600 transition-all"
-                          onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
-                        >
-                          <span className="text-sm font-bold text-white">{alertCount.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                     
-                    {/* Total label */}
-                    <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 border border-slate-200">
-                      <span className="text-sm font-medium text-slate-600">Total:</span>
-                      <span className="text-lg font-bold text-slate-800">{total.toLocaleString()}</span>
+                    {/* Legend */}
+                    <div className="space-y-2 w-full">
+                      <button
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
+                          selectedStatusCategory === 'emergencies' 
+                            ? 'bg-red-50 border border-red-200' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-sm bg-red-500"></div>
+                          <span className="text-sm font-medium text-slate-700">Emergencies</span>
+                        </div>
+                        <span className="text-sm font-bold text-red-600">{emergencyCount}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
+                          selectedStatusCategory === 'issues' 
+                            ? 'bg-blue-50 border border-blue-200' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
+                          <span className="text-sm font-medium text-slate-700">Reported Issues</span>
+                        </div>
+                        <span className="text-sm font-bold text-blue-600">{issueCount}</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
+                          selectedStatusCategory === 'alerts' 
+                            ? 'bg-orange-50 border border-orange-200' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-sm bg-orange-500"></div>
+                          <span className="text-sm font-medium text-slate-700">Alerts</span>
+                        </div>
+                        <span className="text-sm font-bold text-orange-600">{alertCount.toLocaleString()}</span>
+                      </button>
                     </div>
                   </div>
                   
