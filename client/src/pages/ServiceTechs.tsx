@@ -2929,7 +2929,7 @@ export default function ServiceTechs() {
                     </p>
                   </div>
                 ) : (
-                  filteredTechnicians.map((tech) => {
+                  paginatedTechnicians.map((tech) => {
                     const fullName = `${tech.firstName} ${tech.lastName}`.trim();
                     const initials = getInitials(tech.firstName, tech.lastName);
                     const avatarColor = getAvatarColor(fullName);
@@ -3004,6 +3004,49 @@ export default function ServiceTechs() {
                   })
                 )}
               </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+                  <span className="text-sm text-slate-500">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 px-3"
+                    >
+                      Previous
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).slice(
+                      Math.max(0, currentPage - 3),
+                      Math.min(totalPages, currentPage + 2)
+                    ).map(page => (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 px-3"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </ScrollArea>
           </div>
 
