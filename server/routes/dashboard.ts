@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
 import { db } from "../db";
-import { invoices, techOpsEntries } from "@shared/schema";
-import { eq, and, or, not, isNull } from "drizzle-orm";
+import { invoices, techOpsEntries, techCoverages } from "@shared/schema";
+import { eq, and, or, not, isNull, gte, lte } from "drizzle-orm";
 
 export function registerDashboardRoutes(app: any) {
   app.get("/api/dashboard/overview", async (req: Request, res: Response) => {
@@ -15,6 +15,7 @@ export function registerDashboardRoutes(app: any) {
         emergencies,
         allInvoices,
         allTechOpsEntries,
+        allCoverages,
       ] = await Promise.all([
         storage.getEstimates(),
         storage.getServiceRepairJobs(),
@@ -23,6 +24,7 @@ export function registerDashboardRoutes(app: any) {
         storage.getEmergencies(),
         db.select().from(invoices),
         db.select().from(techOpsEntries),
+        db.select().from(techCoverages),
       ]);
 
       const now = new Date();
@@ -198,6 +200,29 @@ export function registerDashboardRoutes(app: any) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10); // Top 10 properties
 
+      // Tech coverage data for calendar
+      const activeCoverages = allCoverages.filter((c: any) => 
+        c.status === "active" || !c.status
+      );
+      
+      // Build technician name lookup
+      const techNameMap: Record<string, string> = {};
+      techniciansList.forEach((t: any) => {
+        techNameMap[String(t.id)] = t.name || `Tech ${t.id}`;
+      });
+      
+      const coverageList = activeCoverages.map((c: any) => ({
+        id: c.id,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        originalTechId: c.originalTechId,
+        originalTechName: techNameMap[String(c.originalTechId)] || `Tech ${c.originalTechId}`,
+        coveringTechId: c.coveringTechId,
+        coveringTechName: techNameMap[String(c.coveringTechId)] || `Tech ${c.coveringTechId}`,
+        propertyName: c.propertyName || null,
+        reason: c.reason || null,
+      }));
+
       res.json({
         metrics: {
           estimates: {
@@ -262,6 +287,7 @@ export function registerDashboardRoutes(app: any) {
         recentActivity,
         urgentItems,
         chemicalOrdersByProperty: chemicalOrdersByPropertyList,
+        coverages: coverageList,
         summary: {
           needsScheduling: approvedEstimates.filter((e: any) => e.status === "needs_scheduling").length,
           needsInvoicing: readyToInvoice.length,

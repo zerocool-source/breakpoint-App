@@ -19,6 +19,7 @@ import {
   Send,
   UserX,
   ChevronRight,
+  ChevronLeft,
   Droplets
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -193,6 +194,11 @@ export default function Dashboard() {
   const recentActivity = dashboardData?.recentActivity || [];
   const urgentItems = dashboardData?.urgentItems || [];
   const chemicalOrdersByProperty = dashboardData?.chemicalOrdersByProperty || [];
+  const coverages = dashboardData?.coverages || [];
+  
+  // Calendar state
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
@@ -860,6 +866,151 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Coverage Calendar */}
+        <Card className="shadow-sm" data-testid="card-coverage-calendar">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  Coverage Calendar
+                </CardTitle>
+                <CardDescription>Technician coverage schedule</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const year = calendarDate.getFullYear();
+              const month = calendarDate.getMonth();
+              const firstDayOfMonth = new Date(year, month, 1);
+              const lastDayOfMonth = new Date(year, month + 1, 0);
+              const daysInMonth = lastDayOfMonth.getDate();
+              const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7;
+              
+              const days: (number | null)[] = [];
+              for (let i = 0; i < startDayOfWeek; i++) days.push(null);
+              for (let i = 1; i <= daysInMonth; i++) days.push(i);
+              
+              const getCoveragesForDate = (day: number) => {
+                const date = new Date(year, month, day);
+                return coverages.filter((c: any) => {
+                  const start = new Date(c.startDate);
+                  const end = new Date(c.endDate);
+                  start.setHours(0, 0, 0, 0);
+                  end.setHours(23, 59, 59, 999);
+                  return date >= start && date <= end;
+                });
+              };
+              
+              const selectedCoverages = selectedDate 
+                ? getCoveragesForDate(selectedDate.getDate())
+                : coverages.filter((c: any) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const start = new Date(c.startDate);
+                    const end = new Date(c.endDate);
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(23, 59, 59, 999);
+                    return end >= today;
+                  }).slice(0, 5);
+              
+              const monthName = calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+              
+              return (
+                <div className="flex gap-6">
+                  <div className="flex-shrink-0" style={{ width: '280px' }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <span className="text-sm font-semibold text-slate-800">{monthName}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-slate-500 mb-1">
+                      {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
+                        <div key={d}>{d}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {days.map((day, idx) => {
+                        if (day === null) return <div key={idx} className="h-8" />;
+                        const dayCoverages = getCoveragesForDate(day);
+                        const hasCoverage = dayCoverages.length > 0;
+                        const isSelected = selectedDate?.getDate() === day && 
+                          selectedDate?.getMonth() === month && 
+                          selectedDate?.getFullYear() === year;
+                        const isToday = new Date().getDate() === day && 
+                          new Date().getMonth() === month && 
+                          new Date().getFullYear() === year;
+                        
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedDate(new Date(year, month, day))}
+                            className={`h-8 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors
+                              ${isSelected ? 'bg-purple-600 text-white' : isToday ? 'bg-purple-100 text-purple-700' : 'hover:bg-slate-100 text-slate-700'}
+                            `}
+                          >
+                            <span>{day}</span>
+                            {hasCoverage && !isSelected && (
+                              <div className="flex gap-0.5 mt-0.5">
+                                <div className="w-1 h-1 rounded-full bg-orange-500" />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-500 mb-2">
+                      {selectedDate 
+                        ? `Coverage on ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                        : 'Upcoming Coverage'
+                      }
+                    </p>
+                    {selectedCoverages.length === 0 ? (
+                      <p className="text-sm text-slate-400 italic">No coverage scheduled</p>
+                    ) : (
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {selectedCoverages.map((c: any, idx: number) => {
+                          const startDate = new Date(c.startDate);
+                          const dayOfWeek = startDate.toLocaleDateString('en-US', { weekday: 'long' });
+                          const dateStr = startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                          
+                          return (
+                            <div key={c.id || idx} className="p-2 rounded-lg bg-purple-50 border border-purple-100">
+                              <p className="text-xs text-purple-600 font-medium">{dateStr} - {dayOfWeek}</p>
+                              <p className="text-sm text-slate-700 mt-0.5">
+                                {c.coveringTechName} covering for {c.originalTechName}
+                                {c.propertyName && <span className="text-slate-500"> at {c.propertyName}</span>}
+                              </p>
+                              {c.reason && <p className="text-xs text-slate-500 mt-0.5">{c.reason}</p>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
 
         {/* Bottom Summary Boxes */}
         <div className="grid grid-cols-4 gap-4">
