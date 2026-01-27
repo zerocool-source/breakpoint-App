@@ -12,6 +12,7 @@ import {
   Settings,
   Wrench,
   Network,
+  ClipboardList,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -51,8 +52,12 @@ const navItems: NavItem[] = [
       { label: "Repairs", href: "/repairs" },
       { label: "Chemicals", href: "/chemicals" },
       { label: "Service", href: "/service" },
-      { label: "Repair Queue", href: "/repair-queue" },
     ]
+  },
+  { 
+    icon: ClipboardList, 
+    label: "Repair Queue", 
+    href: "/repair-queue"
   },
   { 
     icon: Users, 
