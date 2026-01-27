@@ -417,23 +417,23 @@ export default function Dashboard() {
               const alertPct = total > 0 ? (alertCount / total) * 100 : 0;
               const issuePct = total > 0 ? (issueCount / total) * 100 : 0;
               
-              // Sample data for demonstration
+              // Sample data for demonstration with reportedBy info
               const sampleEmergencies = [
-                { id: 'se1', propertyName: 'Sunset Hills HOA', description: 'Major pump motor failure, pool is down', technicianName: 'Mike Johnson', priority: 'critical', timeAgo: '14 days', type: 'emergency' },
-                { id: 'se2', propertyName: 'Desert Springs Resort', description: 'Heater exchanger leaking', technicianName: 'Sarah Williams', priority: 'high', timeAgo: '13 days', type: 'emergency' },
-                { id: 'se3', propertyName: 'Palm Gardens Community', description: 'Control panel error codes', technicianName: 'James Wilson', priority: 'high', timeAgo: '12 days', type: 'emergency' },
-                { id: 'se4', propertyName: 'Lakewood Country Club', description: 'Filter system completely failed', technicianName: 'Jorge Martinez', priority: 'critical', timeAgo: '3 days', type: 'emergency' },
+                { id: 'se1', propertyName: 'Sunset Hills HOA', description: 'Major pump motor failure', reportedBy: 'Mike Johnson', reporterRole: 'Service Tech', priority: 'critical', timeAgo: '14 days', type: 'emergency' },
+                { id: 'se2', propertyName: 'Desert Springs Resort', description: 'Heater exchanger leaking', reportedBy: 'Sarah Williams', reporterRole: 'Repair Tech', priority: 'high', timeAgo: '13 days', type: 'emergency' },
+                { id: 'se3', propertyName: 'Palm Gardens Community', description: 'Control panel error codes', reportedBy: 'James Wilson', reporterRole: 'Supervisor', priority: 'high', timeAgo: '12 days', type: 'emergency' },
+                { id: 'se4', propertyName: 'Lakewood Country Club', description: 'Filter system completely failed', reportedBy: 'Jorge Martinez', reporterRole: 'Repair Tech', priority: 'critical', timeAgo: '3 days', type: 'emergency' },
               ];
               
               const sampleAlerts = [
-                { id: 'sa1', propertyName: 'Ocean View Resort', description: 'Chemical levels out of range', technicianName: 'Service Tech', timeAgo: '2 hours ago', type: 'alert' },
-                { id: 'sa2', propertyName: 'Vista Grande HOA', description: 'Pump pressure reading high', technicianName: 'Service Tech', timeAgo: '5 hours ago', type: 'alert' },
-                { id: 'sa3', propertyName: 'Cypress Creek HOA', description: 'Scheduled maintenance due', technicianName: 'System', timeAgo: '1 day ago', type: 'alert' },
+                { id: 'sa1', propertyName: 'Ocean View Resort', description: 'Chemical levels out of range', reportedBy: 'System Auto-Alert', reporterRole: '', timeAgo: '2 hours ago', type: 'alert' },
+                { id: 'sa2', propertyName: 'Vista Grande HOA', description: 'Pump pressure high', reportedBy: 'System Auto-Alert', reporterRole: '', timeAgo: '5 hours ago', type: 'alert' },
+                { id: 'sa3', propertyName: 'Cypress Creek HOA', description: 'Scheduled maintenance due', reportedBy: 'System Auto-Alert', reporterRole: '', timeAgo: '1 day ago', type: 'alert' },
               ];
               
               const sampleIssues = [
-                { id: 'si1', propertyName: 'Marina Bay Club', description: 'Customer reported cloudy water', technicianName: 'Pending review', timeAgo: '1 day ago', type: 'issue' },
-                { id: 'si2', propertyName: 'Sunset Marina', description: 'Tile damage reported by customer', technicianName: 'Pending review', timeAgo: '3 days ago', type: 'issue' },
+                { id: 'si1', propertyName: 'Marina Bay Club', description: 'Customer reported cloudy water', reportedBy: 'John Smith', reporterRole: 'Customer', status: 'Pending review', timeAgo: '1 day ago', type: 'issue' },
+                { id: 'si2', propertyName: 'Sunset Marina', description: 'Tile damage reported', reportedBy: 'Jane Doe', reporterRole: 'Customer', status: 'Pending review', timeAgo: '3 days ago', type: 'issue' },
               ];
               
               // Use real data if available, otherwise show sample data
@@ -468,94 +468,49 @@ export default function Dashboard() {
                 <div className="flex gap-6">
                   {/* Left side: Progress bar and metric boxes */}
                   <div className="w-1/2 space-y-4">
-                    {/* Segmented Progress Bar with Labels */}
-                    <div>
-                      <div className="h-6 rounded-full bg-slate-100 overflow-hidden flex relative">
-                        {emergencyPct > 0 && (
-                          <div className="h-full bg-red-500 transition-all flex items-center justify-center relative" style={{ width: `${emergencyPct}%` }}>
-                            {emergencyPct >= 5 && (
-                              <span className="text-[10px] font-bold text-white">{emergencyCount.toLocaleString()}</span>
-                            )}
-                          </div>
-                        )}
-                        {alertPct > 0 && (
-                          <div className="h-full bg-orange-500 transition-all flex items-center justify-center relative" style={{ width: `${alertPct}%` }}>
-                            {alertPct >= 5 && (
-                              <span className="text-[10px] font-bold text-white">{alertCount.toLocaleString()}</span>
-                            )}
-                          </div>
-                        )}
-                        {issuePct > 0 && (
-                          <div className="h-full bg-blue-500 transition-all flex items-center justify-center relative" style={{ width: `${issuePct}%` }}>
-                            {issuePct >= 5 && (
-                              <span className="text-[10px] font-bold text-white">{issueCount.toLocaleString()}</span>
-                            )}
-                          </div>
-                        )}
+                    {/* Separate Progress Bars for each category */}
+                    <div className="space-y-3">
+                      {/* Emergencies Bar */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-slate-700">Emergencies</span>
+                          <span className="text-xs text-slate-500">{emergencyCount} of {total}</span>
+                        </div>
+                        <div 
+                          className="h-6 rounded-full bg-red-500 flex items-center justify-center cursor-pointer hover:bg-red-600 transition-all"
+                          onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
+                        >
+                          <span className="text-sm font-bold text-white">{emergencyCount}</span>
+                        </div>
                       </div>
-                      {/* Labels for small segments shown below */}
-                      <div className="flex justify-between mt-1">
-                        {emergencyPct > 0 && emergencyPct < 5 && (
-                          <span className="text-[9px] font-medium text-red-600">{emergencyCount}</span>
-                        )}
-                        {alertPct > 0 && alertPct < 5 && (
-                          <span className="text-[9px] font-medium text-orange-600">{alertCount.toLocaleString()}</span>
-                        )}
-                        {issuePct > 0 && issuePct < 5 && (
-                          <span className="text-[9px] font-medium text-blue-600">{issueCount}</span>
-                        )}
+                      
+                      {/* Reported Issues Bar */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-slate-700">Reported Issues</span>
+                          <span className="text-xs text-slate-500">{issueCount} of {total}</span>
+                        </div>
+                        <div 
+                          className="h-6 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-all"
+                          onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
+                        >
+                          <span className="text-sm font-bold text-white">{issueCount}</span>
+                        </div>
                       </div>
-                    </div>
-                    
-                    {/* Metric Boxes */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <button
-                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
-                        className={`p-3 rounded-lg border text-center transition-all ${
-                          selectedStatusCategory === 'emergencies' 
-                            ? 'border-red-400 bg-red-50 ring-2 ring-red-200' 
-                            : 'border-slate-200 bg-white hover:border-red-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-1.5 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                          <span className="text-xs font-medium text-slate-600">Emergencies</span>
-                        </div>
-                        <p className="text-2xl font-bold text-red-600">{emergencyCount}</p>
-                        <p className="text-[10px] text-slate-500">{emergencyPct.toFixed(0)}%</p>
-                      </button>
                       
-                      <button
-                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
-                        className={`p-3 rounded-lg border text-center transition-all ${
-                          selectedStatusCategory === 'alerts' 
-                            ? 'border-orange-400 bg-orange-50 ring-2 ring-orange-200' 
-                            : 'border-slate-200 bg-white hover:border-orange-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-1.5 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                          <span className="text-xs font-medium text-slate-600">Alerts</span>
+                      {/* Alerts Bar */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-slate-700">Alerts</span>
+                          <span className="text-xs text-slate-500">{alertCount.toLocaleString()} of {total.toLocaleString()}</span>
                         </div>
-                        <p className="text-2xl font-bold text-orange-600">{alertCount}</p>
-                        <p className="text-[10px] text-slate-500">{alertPct.toFixed(0)}%</p>
-                      </button>
-                      
-                      <button
-                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
-                        className={`p-3 rounded-lg border text-center transition-all ${
-                          selectedStatusCategory === 'issues' 
-                            ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-200' 
-                            : 'border-slate-200 bg-white hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center gap-1.5 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                          <span className="text-xs font-medium text-slate-600">Reported Issues</span>
+                        <div 
+                          className="h-6 rounded-full bg-orange-500 flex items-center justify-center cursor-pointer hover:bg-orange-600 transition-all"
+                          onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
+                        >
+                          <span className="text-sm font-bold text-white">{alertCount.toLocaleString()}</span>
                         </div>
-                        <p className="text-2xl font-bold text-blue-600">{issueCount}</p>
-                        <p className="text-[10px] text-slate-500">{issuePct.toFixed(0)}%</p>
-                      </button>
+                      </div>
                     </div>
                     
                     {/* Total label */}
@@ -588,6 +543,11 @@ export default function Dashboard() {
                                           item.type === 'alert' ? 'bg-orange-50 border-orange-100' :
                                           'bg-blue-50 border-blue-100';
                           
+                          // Get reporter info
+                          const reporterName = item.reportedBy || item.submittedByName || item.technicianName || 'Unknown';
+                          const reporterRole = item.reporterRole || item.submitterRole || '';
+                          const reporterDisplay = reporterRole ? `${reporterName} (${reporterRole})` : reporterName;
+                          
                           return (
                             <div 
                               key={item.id || idx} 
@@ -605,10 +565,15 @@ export default function Dashboard() {
                                 {item.type === 'emergency' && item.priority === 'medium' && (
                                   <Badge className="bg-amber-500 text-white text-[9px] shrink-0">Medium</Badge>
                                 )}
+                                {item.type === 'issue' && item.status && (
+                                  <Badge className="bg-blue-100 text-blue-700 text-[9px] shrink-0">{item.status}</Badge>
+                                )}
                               </div>
                               <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
-                              <div className="flex items-center justify-between text-[10px] text-slate-500">
-                                <span>{item.technicianName || item.submittedByName || 'Unassigned'}</span>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                                <span className="font-medium text-slate-600">Reported by: {reporterDisplay}</span>
+                              </div>
+                              <div className="flex items-center justify-end text-[10px] text-slate-400">
                                 <span>{timeDisplay}</span>
                               </div>
                             </div>
