@@ -11,6 +11,7 @@ import {
   Zap,
   Settings,
   Wrench,
+  UserCog,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -104,6 +105,14 @@ const navItems: NavItem[] = [
     icon: Zap, 
     label: "Automations", 
     href: "/automations"
+  },
+  { 
+    icon: Settings, 
+    label: "Settings", 
+    children: [
+      { label: "Admin Users", href: "/admin-users" },
+      { label: "App Settings", href: "/settings" },
+    ]
   },
 ];
 

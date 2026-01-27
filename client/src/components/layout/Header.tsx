@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, Calendar, User } from "lucide-react";
+import { Bell, Search, Calendar, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 
 function DateDisplay() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -28,6 +30,14 @@ function DateDisplay() {
 }
 
 export function Header() {
+  const { user, logout, isLoggingOut } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/login");
+  };
+
   return (
     <header className="h-16 border-b border-[#E2E8F0] bg-white sticky top-0 z-40 flex items-center justify-between px-6">
       <div className="flex items-center gap-4 flex-1">
@@ -37,6 +47,7 @@ export function Header() {
             type="text"
             placeholder="Search properties, alerts, customers..." 
             className="w-full pl-10 pr-4 py-2 text-sm bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A5FA] focus:border-transparent transition-all"
+            data-testid="input-search"
           />
         </div>
       </div>
@@ -50,15 +61,35 @@ export function Header() {
           variant="ghost" 
           size="icon" 
           className="relative text-[#64748B] hover:text-[#0078D4] hover:bg-[#EFF6FF] rounded-lg w-9 h-9"
+          data-testid="button-notifications"
         >
           <div className="absolute top-1 right-1 w-2 h-2 bg-[#FF8000] rounded-full" />
           <Bell className="w-5 h-5" />
         </Button>
         
-        <div className="flex items-center gap-2 pl-2">
-          <div className="w-8 h-8 rounded-full bg-[#0078D4] flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
+        <div className="flex items-center gap-3 pl-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-[#0078D4] flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            {user && (
+              <span className="text-sm font-medium text-[#1E293B]" data-testid="text-username">
+                {user.firstName || user.email}
+              </span>
+            )}
           </div>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="text-[#64748B] hover:text-red-600 hover:bg-red-50 rounded-lg w-9 h-9"
+            title="Logout"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </header>

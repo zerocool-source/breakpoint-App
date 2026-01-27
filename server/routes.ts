@@ -29,6 +29,7 @@ import { registerVendorRoutes } from "./routes/vendors";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerCalendarRoutes } from "./routes/calendar";
 import { registerSmsRoutes } from "./routes/sms";
+import adminUsersRouter from "./routes/adminUsers";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -68,4 +69,5 @@ function setupRoutes(app: any) {
   registerInvoiceRoutes(app);
   registerCalendarRoutes(app);
   registerSmsRoutes(app);
+  app.use(adminUsersRouter);
 }

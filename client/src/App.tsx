@@ -49,6 +49,7 @@ import Calendar from "@/pages/Calendar";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import Reports from "@/pages/Reports";
 import Invoices from "@/pages/Invoices";
+import AdminUsers from "@/pages/AdminUsers";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -96,6 +97,7 @@ function Router() {
       <Route path="/api-test" component={ApiSmokeTest} />
       <Route path="/reports" component={Reports} />
       <Route path="/invoices" component={Invoices} />
+      <Route path="/admin-users" component={AdminUsers} />
       <Route component={NotFound} />
     </Switch>
   );
