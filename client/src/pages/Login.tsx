@@ -1,8 +1,38 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Droplets, Shield, BarChart3, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Droplets, Shield, BarChart3, Users, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Login() {
+  const [isRegister, setIsRegister] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [error, setError] = useState("");
+
+  const { login, register, isLoggingIn, isRegistering } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      if (isRegister) {
+        await register({ email, password, firstName, lastName });
+      } else {
+        await login({ email, password });
+      }
+    } catch (err: any) {
+      setError(err.message || "Authentication failed");
+    }
+  };
+
+  const isSubmitting = isLoggingIn || isRegistering;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex">
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-cyan-600 p-12 flex-col justify-between">
@@ -62,26 +92,106 @@ export default function Login() {
             <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 lg:hidden">
               <Droplets className="h-8 w-8 text-blue-600" />
             </div>
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <CardTitle className="text-2xl">
+              {isRegister ? "Create Account" : "Admin Login"}
+            </CardTitle>
             <CardDescription className="text-base">
-              Sign in to access the Pool Brain admin dashboard
+              {isRegister 
+                ? "Register to access the Pool Brain admin dashboard"
+                : "Sign in to access the Pool Brain admin dashboard"
+              }
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-4">
-            <Button
-              asChild
-              size="lg"
-              className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700"
-              data-testid="button-login"
-            >
-              <a href="/api/login">
-                Sign in with Replit
-              </a>
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Use your Replit account to securely access the admin dashboard.
-              Supports Google, GitHub, Apple, and email login.
-            </p>
+          <CardContent className="pt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              {isRegister && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="John"
+                      data-testid="input-firstName"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Doe"
+                      data-testid="input-lastName"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@example.com"
+                  required
+                  data-testid="input-email"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  data-testid="input-password"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700"
+                disabled={isSubmitting}
+                data-testid="button-submit"
+              >
+                {isSubmitting 
+                  ? (isRegister ? "Creating Account..." : "Signing In...")
+                  : (isRegister ? "Create Account" : "Sign In")
+                }
+              </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRegister(!isRegister);
+                    setError("");
+                  }}
+                  className="text-sm text-blue-600 hover:underline"
+                  data-testid="button-toggle-mode"
+                >
+                  {isRegister 
+                    ? "Already have an account? Sign in"
+                    : "Don't have an account? Register"
+                  }
+                </button>
+              </div>
+            </form>
           </CardContent>
         </Card>
       </div>
