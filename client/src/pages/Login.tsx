@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Droplets, Shield, BarChart3, Users, AlertCircle } from "lucide-react";
+import { Shield, BarChart3, Users, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import LinkpointLogo from "@/assets/linkpoint-logo.png";
 
 export default function Login() {
   const [isRegister, setIsRegister] = useState(false);
@@ -38,10 +39,7 @@ export default function Login() {
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-cyan-600 p-12 flex-col justify-between">
         <div>
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <Droplets className="h-7 w-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-white">Pool Brain Admin</span>
+            <img src={LinkpointLogo} alt="Linkpoint" className="h-16 w-auto" />
           </div>
           <h1 className="text-4xl font-bold text-white mb-4">
             Pool Service Management
@@ -82,23 +80,23 @@ export default function Login() {
         </div>
 
         <p className="text-white/50 text-sm">
-          Pool Brain Admin Portal
+          Linkpoint Admin Portal
         </p>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-8">
         <Card className="w-full max-w-md shadow-xl border-0">
           <CardHeader className="text-center pb-2">
-            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4 lg:hidden">
-              <Droplets className="h-8 w-8 text-blue-600" />
+            <div className="mx-auto mb-4 lg:hidden">
+              <img src={LinkpointLogo} alt="Linkpoint" className="h-12 w-auto" />
             </div>
             <CardTitle className="text-2xl">
               {isRegister ? "Create Account" : "Admin Login"}
             </CardTitle>
             <CardDescription className="text-base">
               {isRegister 
-                ? "Register to access the Pool Brain admin dashboard"
-                : "Sign in to access the Pool Brain admin dashboard"
+                ? "Register to access the Linkpoint admin dashboard"
+                : "Sign in to access the Linkpoint admin dashboard"
               }
             </CardDescription>
           </CardHeader>
