@@ -241,15 +241,6 @@ export default function Dashboard() {
             <h1 className="text-2xl font-semibold text-[#1E293B]">Overview</h1>
             <p className="text-[#64748B] text-sm">Real-time business intelligence dashboard</p>
           </div>
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            className="gap-2 bg-[#0078D4] hover:bg-[#0078D4]/90"
-            data-testid="button-sync-poolbrain"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-            {syncMutation.isPending ? "Syncing..." : "Sync Pool Brain"}
-          </Button>
         </div>
 
         {/* Top Metrics Cards - 6 cards in a row */}
