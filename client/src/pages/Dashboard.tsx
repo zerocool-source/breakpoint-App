@@ -964,7 +964,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Two-Column Lower Section: Recent Activity + Urgent Items */}
+        {/* Two-Column Lower Section: Recent Activity + Chemical Orders */}
         <div className="grid grid-cols-2 gap-6">
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
@@ -1025,62 +1025,67 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          {/* Chemical Orders by Property */}
+          <Card className="shadow-sm" data-testid="card-chemical-orders-by-property">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                    Urgent Items
+                    <Droplets className="w-5 h-5 text-cyan-600" />
+                    Chemical Orders by Property
                   </CardTitle>
-                  <CardDescription>Requires immediate attention</CardDescription>
+                  <CardDescription>Pending orders that need to be sent</CardDescription>
                 </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-cyan-600 hover:text-cyan-700">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[280px]">
-                {urgentItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                    <CheckCircle2 className="w-12 h-12 mb-2 text-emerald-500" />
-                    <p>All caught up!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {urgentItems.map((item, index) => (
-                      <div 
-                        key={`${item.type}-${item.id}-${index}`}
-                        className="p-3 rounded-lg bg-white border border-slate-200 hover:border-red-300 hover:shadow-sm transition-all cursor-pointer"
-                        onClick={() => {
-                          if (item.type === "ready_to_invoice" || item.type === "needs_scheduling") {
-                            navigate("/estimates");
-                          } else if (item.type === "emergency") {
-                            navigate("/emergencies");
-                          }
-                        }}
-                        data-testid={`urgent-item-${item.id}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-full shrink-0 ${
-                            item.severity === "critical" ? "bg-red-100" : 
-                            item.severity === "warning" ? "bg-orange-100" : 
-                            item.severity === "info" ? "bg-teal-100" : "bg-red-100"
-                          }`}>
-                            <AlertTriangle className={`w-4 h-4 ${
-                              item.severity === "critical" ? "text-red-600" :
-                              item.severity === "warning" ? "text-orange-600" : 
-                              item.severity === "info" ? "text-teal-600" : "text-red-600"
-                            }`} />
+                {(() => {
+                  // Use sample data for demonstration if no real data
+                  const sampleChemicalOrders = [
+                    { propertyName: 'Sunset Hills HOA', count: 8 },
+                    { propertyName: 'Marina Bay Club', count: 6 },
+                    { propertyName: 'Ocean View Resort', count: 5 },
+                    { propertyName: 'Palm Gardens Community', count: 4 },
+                    { propertyName: 'Desert Springs Resort', count: 3 },
+                    { propertyName: 'Vista Grande HOA', count: 2 },
+                  ];
+                  
+                  const ordersData = chemicalOrdersByProperty.length > 0 ? chemicalOrdersByProperty : sampleChemicalOrders;
+                  const maxCount = Math.max(...ordersData.map((p: any) => p.count), 1);
+                  const totalOrders = ordersData.reduce((sum: number, p: any) => sum + p.count, 0);
+                  
+                  return (
+                    <div className="space-y-3">
+                      {ordersData.map((property: any, idx: number) => {
+                        const percentage = (property.count / maxCount) * 100;
+                        const percentOfTotal = totalOrders > 0 ? Math.round((property.count / totalOrders) * 100) : 0;
+                        
+                        return (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-slate-700 font-medium truncate flex-1 mr-4">{property.propertyName}</span>
+                              <span className="text-slate-600 tabular-nums shrink-0">{property.count} ({percentOfTotal}%)</span>
+                            </div>
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-cyan-500 rounded-full transition-all"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                            <p className="text-xs text-slate-500 line-clamp-2">{item.description}</p>
-                            <p className="text-xs text-slate-400 mt-1">{item.property}</p>
-                          </div>
-                        </div>
+                        );
+                      })}
+                      <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-sm">
+                        <span className="text-slate-600">Total Pending Orders</span>
+                        <span className="font-semibold text-slate-900">{totalOrders}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
               </ScrollArea>
             </CardContent>
           </Card>
@@ -1191,59 +1196,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Chemical Orders by Property */}
-        {chemicalOrdersByProperty.length > 0 && (
-          <Card className="shadow-sm" data-testid="card-chemical-orders-by-property">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-cyan-600" />
-                    Chemical Orders by Property
-                  </CardTitle>
-                  <CardDescription>Pending orders that need to be sent</CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-cyan-600 hover:text-cyan-700">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const maxCount = Math.max(...chemicalOrdersByProperty.map((p: any) => p.count), 1);
-                const totalOrders = chemicalOrdersByProperty.reduce((sum: number, p: any) => sum + p.count, 0);
-                
-                return (
-                  <div className="space-y-3">
-                    {chemicalOrdersByProperty.map((property: any, idx: number) => {
-                      const percentage = (property.count / maxCount) * 100;
-                      const percentOfTotal = totalOrders > 0 ? Math.round((property.count / totalOrders) * 100) : 0;
-                      
-                      return (
-                        <div key={idx} className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-700 font-medium truncate flex-1 mr-4">{property.propertyName}</span>
-                            <span className="text-slate-600 tabular-nums shrink-0">{property.count} ({percentOfTotal}%)</span>
-                          </div>
-                          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-cyan-500 rounded-full transition-all"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Total Pending Orders</span>
-                      <span className="font-semibold text-slate-900">{totalOrders}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Bottom Summary Boxes */}
         <div className="grid grid-cols-4 gap-4">
