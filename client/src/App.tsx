@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IntroVideo } from "@/components/IntroVideo";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { useAuth } from "@/hooks/use-auth";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Intelligence from "@/pages/Intelligence";
 import Automations from "@/pages/Automations";
@@ -101,6 +103,24 @@ function Router() {
 
 type AppStage = "intro" | "loading" | "ready";
 
+function AuthenticatedApp() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return <Router />;
+}
+
 function App() {
   // Skip intro and loading screens - set directly to "ready"
   const [stage, setStage] = useState<AppStage>("ready");
@@ -117,7 +137,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <AuthenticatedApp />
       </TooltipProvider>
     </QueryClientProvider>
   );

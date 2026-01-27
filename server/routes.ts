@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerAlertRoutes } from "./routes/alerts";
 import { registerJobRoutes } from "./routes/jobs";
 import { registerCustomerRoutes } from "./routes/customers";
@@ -31,6 +32,8 @@ import { registerSmsRoutes } from "./routes/sms";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
+  await setupAuth(app);
+  registerAuthRoutes(app);
   setupRoutes(app);
   return server;
 }
