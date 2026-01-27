@@ -11,7 +11,7 @@ import {
   Zap,
   Settings,
   Share2,
-  UserCog,
+  HardHat,
   Wrench,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
     ]
   },
   { 
-    icon: UserCog, 
+    icon: HardHat, 
     label: "Supervisor Teams", 
     href: "/supervisor-management"
   },
