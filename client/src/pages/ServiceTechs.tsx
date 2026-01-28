@@ -2613,15 +2613,6 @@ function PropertiesTabContent({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-500">{properties.length} assigned properties</span>
-        <Button 
-          size="sm" 
-          onClick={onAddProperty}
-          className="bg-blue-600 hover:bg-blue-700 gap-2"
-          data-testid="button-add-property"
-        >
-          <Plus className="w-4 h-4" />
-          Add Property
-        </Button>
       </div>
 
       {properties.length === 0 ? (
