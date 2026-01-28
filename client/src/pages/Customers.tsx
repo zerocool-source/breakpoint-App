@@ -8,6 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -29,7 +39,7 @@ import {
   Search, Plus, Users, Building2, User, MapPin, Phone, Mail,
   MoreVertical, X, ChevronLeft, ChevronRight, Tag, Edit, Trash2,
   Home, FileText, Check, Loader2, Calendar, Clock, Wrench, Droplets,
-  DollarSign, AlertTriangle, Sun, Snowflake
+  DollarSign, AlertTriangle, Sun, Snowflake, Map, ChevronDown
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,10 +57,18 @@ interface Customer {
   poolCount: number | null;
   tags: string | null;
   notes: string | null;
+  zoneId: string | null;
   chemicalsBudget: number | null;
   chemicalsBudgetPeriod: string | null;
   repairsBudget: number | null;
   repairsBudgetPeriod: string | null;
+}
+
+interface Zone {
+  id: string;
+  name: string;
+  color: string | null;
+  customerCount: number;
 }
 
 interface Property {
@@ -175,14 +193,19 @@ const ITEMS_PER_PAGE = 15;
 function CustomerListItem({ 
   customer, 
   isSelected,
-  onClick 
+  onClick,
+  zones,
+  onZoneChange,
 }: { 
   customer: Customer; 
   isSelected: boolean;
   onClick: () => void;
+  zones?: Zone[];
+  onZoneChange?: (customerId: string, zoneId: string | null) => void;
 }) {
   const status = STATUS_OPTIONS.find(s => s.value === customer.status) || STATUS_OPTIONS[0];
   const tags = customer.tags ? customer.tags.split(",").filter(Boolean) : [];
+  const customerZone = zones?.find(z => z.id === customer.zoneId);
 
   return (
     <div
@@ -200,6 +223,57 @@ function CustomerListItem({
             <Badge className={cn("text-white text-xs", status.color)}>
               {status.label}
             </Badge>
+            {/* Zone Badge with Dropdown */}
+            {zones && onZoneChange && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  {customerZone ? (
+                    <button 
+                      className="px-2 py-0.5 rounded-full text-white text-xs font-medium hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: customerZone.color || "#0077b6" }}
+                      data-testid={`zone-badge-${customer.id}`}
+                    >
+                      {customerZone.name}
+                    </button>
+                  ) : (
+                    <button 
+                      className="px-2 py-0.5 rounded-full text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors border border-dashed border-slate-300"
+                      data-testid={`add-zone-${customer.id}`}
+                    >
+                      + Add Zone
+                    </button>
+                  )}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                  {zones.map((zone) => (
+                    <DropdownMenuItem 
+                      key={zone.id}
+                      onClick={() => onZoneChange(customer.id, zone.id)}
+                      className="flex items-center gap-2"
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: zone.color || "#0077b6" }}
+                      />
+                      {zone.name}
+                      {customer.zoneId === zone.id && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                  ))}
+                  {customerZone && (
+                    <>
+                      <div className="h-px bg-slate-200 my-1" />
+                      <DropdownMenuItem 
+                        onClick={() => onZoneChange(customer.id, null)}
+                        className="text-red-600"
+                      >
+                        <X className="w-3 h-3 mr-2" />
+                        Remove Zone
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
           {customer.address && (
             <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
@@ -1076,6 +1150,179 @@ function AddBillingContactModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Zone badge color options
+const ZONE_COLORS = [
+  { value: "#0077b6", label: "Ocean Blue" },
+  { value: "#f97316", label: "Orange" },
+  { value: "#14b8a6", label: "Teal" },
+  { value: "#22c55e", label: "Green" },
+  { value: "#6b7280", label: "Gray" },
+  { value: "#8b5cf6", label: "Purple" },
+  { value: "#ec4899", label: "Pink" },
+];
+
+function ManageZonesModal({
+  open,
+  onClose,
+  zones,
+  onAddZone,
+  onDeleteZone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  zones: Zone[];
+  onAddZone: (name: string, color: string) => void;
+  onDeleteZone: (id: string) => void;
+}) {
+  const [newZoneName, setNewZoneName] = useState("");
+  const [selectedColor, setSelectedColor] = useState("#0077b6");
+  const [deleteConfirmZone, setDeleteConfirmZone] = useState<Zone | null>(null);
+
+  const handleAddZone = () => {
+    if (!newZoneName.trim()) return;
+    onAddZone(newZoneName.trim(), selectedColor);
+    setNewZoneName("");
+    // Cycle to next color
+    const currentIndex = ZONE_COLORS.findIndex(c => c.value === selectedColor);
+    setSelectedColor(ZONE_COLORS[(currentIndex + 1) % ZONE_COLORS.length].value);
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[500px] p-0 gap-0">
+          <DialogHeader className="bg-[#0077b6] text-white px-4 py-3 rounded-t-lg">
+            <DialogTitle className="text-lg font-semibold text-white flex items-center gap-2">
+              <Map className="w-5 h-5" />
+              Manage Zones
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Type zone name..."
+                value={newZoneName}
+                onChange={(e) => setNewZoneName(e.target.value)}
+                className="flex-1"
+                onKeyDown={(e) => e.key === "Enter" && handleAddZone()}
+                data-testid="input-new-zone-name"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="flex-shrink-0">
+                    <div 
+                      className="w-5 h-5 rounded-full" 
+                      style={{ backgroundColor: selectedColor }}
+                    />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  {ZONE_COLORS.map((color) => (
+                    <DropdownMenuItem 
+                      key={color.value}
+                      onClick={() => setSelectedColor(color.value)}
+                      className="flex items-center gap-2"
+                    >
+                      <div 
+                        className="w-4 h-4 rounded-full" 
+                        style={{ backgroundColor: color.value }}
+                      />
+                      {color.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button 
+                onClick={handleAddZone}
+                disabled={!newZoneName.trim()}
+                className="bg-[#f97316] hover:bg-[#ea580c]"
+                data-testid="button-add-zone"
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="border rounded-lg divide-y max-h-[300px] overflow-y-auto">
+              {zones.length === 0 ? (
+                <div className="p-6 text-center text-slate-500">
+                  No zones created yet. Add your first zone above.
+                </div>
+              ) : (
+                zones.map((zone) => (
+                  <div 
+                    key={zone.id} 
+                    className="flex items-center justify-between px-3 py-2"
+                    data-testid={`zone-row-${zone.id}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="px-2 py-1 rounded-full text-white text-xs font-medium"
+                        style={{ backgroundColor: zone.color || "#0077b6" }}
+                      >
+                        {zone.name}
+                      </span>
+                      <span className="text-sm text-slate-500">
+                        {zone.customerCount} customer{zone.customerCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => setDeleteConfirmZone(zone)}
+                      data-testid={`button-delete-zone-${zone.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="px-6 py-4 border-t bg-slate-50">
+            <Button onClick={onClose} className="bg-[#0077b6] hover:bg-[#005f8a]">
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteConfirmZone} onOpenChange={() => setDeleteConfirmZone(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Zone</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmZone?.name}"? 
+              {deleteConfirmZone?.customerCount ? (
+                <span className="block mt-2 text-amber-600 font-medium">
+                  {deleteConfirmZone.customerCount} customer{deleteConfirmZone.customerCount !== 1 ? "s are" : " is"} in this zone. 
+                  They will become unassigned.
+                </span>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (deleteConfirmZone) {
+                  onDeleteZone(deleteConfirmZone.id);
+                  setDeleteConfirmZone(null);
+                }
+              }}
+            >
+              Delete Zone
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -2567,18 +2814,33 @@ function CustomerDetailPanel({
 export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [zoneFilter, setZoneFilter] = useState<string>("all");
+  const [groupByZone, setGroupByZone] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [showSeasonSwitch, setShowSeasonSwitch] = useState(false);
+  const [showZonesModal, setShowZonesModal] = useState(false);
   const [pendingSeason, setPendingSeason] = useState<"summer" | "winter">("summer");
+  const [collapsedZones, setCollapsedZones] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: customersData, isLoading } = useQuery<{ customers: Customer[] }>({
     queryKey: ["/api/customers"],
   });
+
+  const { data: zonesData } = useQuery<{ zones: Zone[] }>({
+    queryKey: ["/api/zones"],
+    queryFn: async () => {
+      const res = await fetch("/api/zones");
+      if (!res.ok) return { zones: [] };
+      return res.json();
+    },
+  });
+
+  const zones = zonesData?.zones || [];
 
   const { data: activeSeasonData } = useQuery<{ activeSeason: string }>({
     queryKey: ["/api/settings/active-season"],
@@ -2590,6 +2852,52 @@ export default function Customers() {
   });
 
   const globalActiveSeason = activeSeasonData?.activeSeason || "summer";
+
+  // Zone mutations
+  const addZoneMutation = useMutation({
+    mutationFn: async ({ name, color }: { name: string; color: string }) => {
+      const res = await fetch("/api/zones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      });
+      if (!res.ok) throw new Error("Failed to create zone");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/zones"] });
+      toast({ title: "Zone created successfully" });
+    },
+  });
+
+  const deleteZoneMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/zones/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete zone");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/zones"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      toast({ title: "Zone deleted successfully" });
+    },
+  });
+
+  const assignZoneMutation = useMutation({
+    mutationFn: async ({ customerId, zoneId }: { customerId: string; zoneId: string | null }) => {
+      const res = await fetch(`/api/customers/${customerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zoneId }),
+      });
+      if (!res.ok) throw new Error("Failed to assign zone");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/zones"] });
+    },
+  });
 
   const switchAllSeasonsMutation = useMutation({
     mutationFn: async (season: string) => {
@@ -2680,17 +2988,47 @@ export default function Customers() {
       
       const matchesStatus = statusFilter === "all" || customer.status === statusFilter;
       
-      return matchesSearch && matchesStatus;
+      // Zone filtering
+      const matchesZone = zoneFilter === "all" || customer.zoneId === zoneFilter;
+      
+      // When groupByZone is enabled, only show customers with zones
+      const hasZoneForGrouping = !groupByZone || customer.zoneId;
+      
+      return matchesSearch && matchesStatus && matchesZone && hasZoneForGrouping;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Group customers by zone for grouped view
+  const customersByZone = groupByZone 
+    ? zones.reduce((acc, zone) => {
+        acc[zone.id] = filteredCustomers.filter(c => c.zoneId === zone.id);
+        return acc;
+      }, {} as Record<string, Customer[]>)
+    : {};
 
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedCustomers = filteredCustomers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  // Helper to get zone by id
+  const getZoneById = (zoneId: string | null) => zones.find(z => z.id === zoneId);
+
+  // Toggle zone collapse
+  const toggleZoneCollapse = (zoneId: string) => {
+    setCollapsedZones(prev => {
+      const next = new Set(prev);
+      if (next.has(zoneId)) {
+        next.delete(zoneId);
+      } else {
+        next.add(zoneId);
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, zoneFilter, groupByZone]);
 
   return (
     <AppLayout>
@@ -2723,6 +3061,15 @@ export default function Customers() {
                       Switch to Summer
                     </>
                   )}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowZonesModal(true)}
+                  className="border-[#0077b6] text-[#0077b6] hover:bg-[#0077b6]/10"
+                  data-testid="button-manage-zones"
+                >
+                  <Map className="h-4 w-4 mr-2" />
+                  Manage Zones
                 </Button>
                 <Button 
                   onClick={() => setShowAddCustomer(true)}
@@ -2758,6 +3105,34 @@ export default function Customers() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={zoneFilter} onValueChange={setZoneFilter}>
+                <SelectTrigger className="w-40" data-testid="select-zone-filter">
+                  <SelectValue placeholder="All Zones" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Zones</SelectItem>
+                  {zones.map((zone) => (
+                    <SelectItem key={zone.id} value={zone.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: zone.color || "#0077b6" }}
+                        />
+                        {zone.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant={groupByZone ? "default" : "outline"}
+                onClick={() => setGroupByZone(!groupByZone)}
+                className={groupByZone ? "bg-[#0077b6] hover:bg-[#005f8a]" : "border-slate-300"}
+                data-testid="button-group-by-zone"
+              >
+                <Map className="h-4 w-4 mr-2" />
+                Group by Zone
+              </Button>
             </div>
           </div>
 
@@ -2776,13 +3151,65 @@ export default function Customers() {
                   </Button>
                 )}
               </div>
+            ) : groupByZone ? (
+              // Group by Zone view
+              zones.filter(zone => customersByZone[zone.id]?.length > 0).map((zone) => {
+                const zoneCustomers = customersByZone[zone.id] || [];
+                const isCollapsed = collapsedZones.has(zone.id);
+                
+                return (
+                  <div key={zone.id} className="border-b border-slate-200">
+                    <div 
+                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50"
+                      style={{ backgroundColor: `${zone.color || "#0077b6"}10` }}
+                      onClick={() => toggleZoneCollapse(zone.id)}
+                      data-testid={`zone-header-${zone.id}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ChevronDown 
+                          className={cn(
+                            "h-4 w-4 text-slate-500 transition-transform",
+                            isCollapsed && "-rotate-90"
+                          )}
+                        />
+                        <span 
+                          className="px-2 py-1 rounded-full text-white text-xs font-medium"
+                          style={{ backgroundColor: zone.color || "#0077b6" }}
+                        >
+                          {zone.name}
+                        </span>
+                        <span className="text-sm font-medium text-slate-700">
+                          ({zoneCustomers.length} customer{zoneCustomers.length !== 1 ? "s" : ""})
+                        </span>
+                      </div>
+                    </div>
+                    {!isCollapsed && zoneCustomers.map((customer) => (
+                      <CustomerListItem
+                        key={customer.id}
+                        customer={customer}
+                        isSelected={selectedCustomer?.id === customer.id}
+                        onClick={() => setSelectedCustomer(customer)}
+                        zones={zones}
+                        onZoneChange={(customerId, zoneId) => 
+                          assignZoneMutation.mutate({ customerId, zoneId })
+                        }
+                      />
+                    ))}
+                  </div>
+                );
+              })
             ) : (
+              // Normal list view
               paginatedCustomers.map((customer) => (
                 <CustomerListItem
                   key={customer.id}
                   customer={customer}
                   isSelected={selectedCustomer?.id === customer.id}
                   onClick={() => setSelectedCustomer(customer)}
+                  zones={zones}
+                  onZoneChange={(customerId, zoneId) => 
+                    assignZoneMutation.mutate({ customerId, zoneId })
+                  }
                 />
               ))
             )}
@@ -2865,6 +3292,14 @@ export default function Customers() {
           }
         }}
         customer={editingCustomer}
+      />
+
+      <ManageZonesModal
+        open={showZonesModal}
+        onClose={() => setShowZonesModal(false)}
+        zones={zones}
+        onAddZone={(name, color) => addZoneMutation.mutate({ name, color })}
+        onDeleteZone={(id) => deleteZoneMutation.mutate(id)}
       />
 
       <Dialog open={showSeasonSwitch} onOpenChange={setShowSeasonSwitch}>
