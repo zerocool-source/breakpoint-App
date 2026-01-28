@@ -709,119 +709,135 @@ export default function RepairQueue() {
   };
 
   const renderRepairCard = (repair: ServiceRepairJob) => {
+    const getStatusBadgeStyle = (status: string | null) => {
+      switch (status) {
+        case "pending":
+        case "assigned":
+          return "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20";
+        case "in_progress":
+          return "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20";
+        case "completed":
+          return "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20";
+        default:
+          return "bg-slate-100 text-slate-600 border-slate-200";
+      }
+    };
     const statusCfg = statusConfig[repair.status || "pending"] || defaultStatus;
     const StatusIcon = statusCfg.icon;
 
     return (
-      <div
+      <Card
         key={repair.id}
-        className="p-4 bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all"
+        className="bg-white shadow-sm rounded-xl hover:shadow-md transition-all"
         data-testid={`repair-item-${repair.id}`}
       >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold text-[#0078D4]">
-              {repair.jobNumber || "—"}
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-900">
+                {repair.jobNumber || "—"}
+              </span>
+              <Badge className={`${getStatusBadgeStyle(repair.status)} border`}>
+                {statusCfg.label}
+              </Badge>
+            </div>
+            <span className="text-lg font-bold text-slate-900">
+              {formatCurrency(repair.totalAmount)}
             </span>
-            <Badge className={statusCfg.color}>
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {statusCfg.label}
-            </Badge>
           </div>
-          <span className="text-lg font-bold text-[#1E293B]">
-            {formatCurrency(repair.totalAmount)}
-          </span>
-        </div>
 
-        <div className="space-y-2 mb-3">
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="w-4 h-4 text-slate-400" />
-            <span className="font-medium">{repair.propertyName || "No property"}</span>
+          <div className="space-y-2 mb-3">
+            <div className="flex items-center gap-2 text-sm text-slate-700">
+              <MapPin className="w-4 h-4 text-slate-400" />
+              <span className="font-medium">{repair.propertyName || "No property"}</span>
+            </div>
+            {repair.technicianName && (
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <User className="w-4 h-4 text-slate-400" />
+                <span>{repair.technicianName}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span>{formatDate(repair.jobDate)}</span>
+            </div>
           </div>
-          {repair.technicianName && (
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <User className="w-4 h-4 text-slate-400" />
-              <span>{repair.technicianName}</span>
+
+          {repair.description && (
+            <p className="text-sm text-slate-600 mb-3 line-clamp-2">{repair.description}</p>
+          )}
+
+          {repair.estimateId && (
+            <div className="flex items-center gap-2 mb-3">
+              <Badge className="bg-slate-100 text-slate-600 border border-slate-200 text-xs">
+                <FileText className="w-3 h-3 mr-1" />
+                From Estimate
+              </Badge>
             </div>
           )}
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <span>{formatDate(repair.jobDate)}</span>
-          </div>
-        </div>
 
-        {repair.description && (
-          <p className="text-sm text-slate-600 mb-3 line-clamp-2">{repair.description}</p>
-        )}
-
-        {repair.estimateId && (
-          <div className="flex items-center gap-2 mb-3">
-            <Badge className="bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33 text-xs">
-              <FileText className="w-3 h-3 mr-1" />
-              From Estimate
-            </Badge>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-          {repair.status === "pending" && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-[#0078D4] hover:text-[#0078D4] hover:bg-[#0078D4]1A"
-              onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
-              data-testid={`button-start-${repair.id}`}
-            >
-              <Wrench className="w-4 h-4 mr-1" /> Start Work
-            </Button>
-          )}
-          {repair.status === "in_progress" && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-[#22D69A] hover:text-[#22D69A] hover:bg-[#22D69A]1A"
-              onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "completed" })}
-              data-testid={`button-complete-${repair.id}`}
-            >
-              <CheckCircle className="w-4 h-4 mr-1" /> Complete
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            data-testid={`button-view-${repair.id}`}
-          >
-            <Eye className="w-4 h-4 mr-1" /> View
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+            {repair.status === "in_progress" && (
               <Button
                 size="sm"
-                variant="ghost"
-                data-testid={`button-more-${repair.id}`}
+                variant="outline"
+                className="text-[#22c55e] border-[#22c55e] hover:bg-[#22c55e]/10"
+                onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "completed" })}
+                data-testid={`button-complete-${repair.id}`}
               >
-                <MoreVertical className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 mr-1" /> Complete
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => openReassignModal(repair)}>
-                <Users className="w-4 h-4 mr-2" />
-                Reassign to Another Tech
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => moveToNeedsSchedulingMutation.mutate({ 
-                  repairId: repair.id, 
-                  estimateId: repair.estimateId 
-                })}
+            )}
+            {repair.status === "pending" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-[#14b8a6] border-[#14b8a6] hover:bg-[#14b8a6]/10"
+                onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
+                data-testid={`button-start-${repair.id}`}
               >
-                <CalendarDays className="w-4 h-4 mr-2" />
-                Move to Needs Scheduling
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+                <Wrench className="w-4 h-4 mr-1" /> Start Work
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-slate-600 border-slate-300 hover:bg-slate-50"
+              data-testid={`button-view-${repair.id}`}
+            >
+              <Eye className="w-4 h-4 mr-1" /> View
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-slate-500 hover:bg-slate-100"
+                  data-testid={`button-more-${repair.id}`}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => openReassignModal(repair)}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Reassign to Another Tech
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => moveToNeedsSchedulingMutation.mutate({ 
+                    repairId: repair.id, 
+                    estimateId: repair.estimateId 
+                  })}
+                >
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Move to Needs Scheduling
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -832,53 +848,60 @@ export default function RepairQueue() {
     return (
       <Card
         key={techData.tech}
-        className={`cursor-pointer transition-all hover:shadow-lg ${selectedTech === techData.tech ? 'ring-2 ring-[#0078D4] shadow-lg' : ''}`}
+        className={`cursor-pointer transition-all bg-white shadow-sm rounded-xl hover:shadow-md ${selectedTech === techData.tech ? 'ring-2 ring-[#0077b6] shadow-md' : ''}`}
         onClick={() => setSelectedTech(selectedTech === techData.tech ? null : techData.tech)}
         data-testid={`tech-card-${techData.tech.replace(/\s+/g, '-').toLowerCase()}`}
       >
         <CardContent className="p-4">
           <div className="flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
-              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#0078D4] text-white"}>
+              <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#0077b6] text-white"}>
                 {getInitials(techData.tech)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-[#1E293B] truncate">{techData.tech}</h3>
+              <h3 className="font-semibold text-slate-900 truncate">{techData.tech}</h3>
               <p className="text-xs text-slate-500">{totalActive} active jobs</p>
             </div>
             {totalActive > 0 && (
-              <Badge className="bg-[#FF8000]/10 text-[#D35400] border-[#FF8000]/20">
+              <Badge className="bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20 font-semibold">
                 {totalActive}
               </Badge>
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="text-center p-2 bg-[#FF8000]1A rounded-lg">
-              <div className="text-lg font-bold text-[#D35400]">{techData.pending}</div>
-              <div className="text-xs text-[#D35400]">Pending</div>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="text-center p-2 rounded-lg">
+              <div className="text-lg font-bold text-[#f97316]">{techData.pending}</div>
+              <div className="text-xs text-slate-500">Pending</div>
             </div>
-            <div className="text-center p-2 bg-purple-50 rounded-lg">
-              <div className="text-lg font-bold text-[#0D9488]">{techData.inProgress}</div>
-              <div className="text-xs text-[#0D9488]">In Progress</div>
+            <div className="text-center p-2 bg-[#14b8a6]/10 rounded-lg">
+              <div className="text-lg font-bold text-[#14b8a6]">{techData.inProgress}</div>
+              <div className="text-xs text-slate-500">In Progress</div>
             </div>
-            <div className="text-center p-2 bg-[#22D69A]1A rounded-lg">
-              <div className="text-lg font-bold text-[#22D69A]">{techData.completed}</div>
-              <div className="text-xs text-[#22D69A]">Completed</div>
+            <div className="text-center p-2 rounded-lg">
+              <div className="text-lg font-bold text-[#22c55e]">{techData.completed}</div>
+              <div className="text-xs text-slate-500">Completed</div>
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">Total Value</span>
-              <span className="font-semibold text-[#1E293B]">{formatCurrency(techData.totalValue)}</span>
+              <span className="text-slate-500">Total Value:</span>
+              <span className="font-semibold text-slate-700">{formatCurrency(techData.totalValue)}</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">Completion</span>
-              <span className="font-medium text-[#22D69A]">{completionRate}%</span>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Completion:</span>
+                <span className="font-medium text-[#0077b6]">{completionRate}%</span>
+              </div>
+              <div className="w-full bg-slate-200 rounded-full h-2">
+                <div 
+                  className="bg-[#0077b6] h-2 rounded-full transition-all" 
+                  style={{ width: `${completionRate}%` }}
+                />
+              </div>
             </div>
-            <Progress value={completionRate} className="h-1.5" />
           </div>
         </CardContent>
       </Card>
@@ -1286,23 +1309,47 @@ export default function RepairQueue() {
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="by-tech" data-testid="tab-by-tech">
+          <TabsList className="bg-transparent border-0 p-0 gap-2 flex-wrap">
+            <TabsTrigger 
+              value="by-tech" 
+              data-testid="tab-by-tech"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
               <Users className="w-4 h-4 mr-2" /> By Technician
             </TabsTrigger>
-            <TabsTrigger value="active-jobs" data-testid="tab-active-jobs">
+            <TabsTrigger 
+              value="active-jobs" 
+              data-testid="tab-active-jobs"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
               <Wrench className="w-4 h-4 mr-2" /> Active Jobs ({pendingRepairs.length + inProgressRepairs.length})
             </TabsTrigger>
-            <TabsTrigger value="completed" data-testid="tab-completed">
-              Completed ({completedRepairs.length})
+            <TabsTrigger 
+              value="completed" 
+              data-testid="tab-completed"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" /> Completed ({completedRepairs.length})
             </TabsTrigger>
-            <TabsTrigger value="estimates-log" data-testid="tab-estimates-log">
+            <TabsTrigger 
+              value="estimates-log" 
+              data-testid="tab-estimates-log"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
               <FileText className="w-4 h-4 mr-2" /> Estimates Log ({estimatesFromRepairs.length})
             </TabsTrigger>
-            <TabsTrigger value="emergencies" data-testid="tab-emergencies">
+            <TabsTrigger 
+              value="emergencies" 
+              data-testid="tab-emergencies"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
               <AlertCircle className="w-4 h-4 mr-2" /> Emergencies ({emergencies.length})
             </TabsTrigger>
-            <TabsTrigger value="parts-ordered" data-testid="tab-parts-ordered">
+            <TabsTrigger 
+              value="parts-ordered" 
+              data-testid="tab-parts-ordered"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
               <Package className="w-4 h-4 mr-2" /> Parts Ordered
             </TabsTrigger>
           </TabsList>
