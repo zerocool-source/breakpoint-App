@@ -1709,20 +1709,6 @@ export default function Estimates() {
           </div>
         </div>
 
-        {/* QuickBooks-style Status Cards Row */}
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {Object.entries(statusConfig).filter(([key]) => !["needs_scheduling", "ready_to_invoice"].includes(key)).map(([key, config]) => (
-            <div 
-              key={key} 
-              className={`flex-shrink-0 min-w-[120px] bg-[#f9fafb] rounded-lg border border-gray-200 border-b-4 ${statusCardColors[key] || "border-b-gray-300"} cursor-pointer hover:shadow-md transition-all px-4 py-3`}
-              onClick={() => setActiveTab(key)}
-            >
-              <p className="text-2xl font-bold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{statusCounts[key as keyof typeof statusCounts] || 0}</p>
-              <p className="text-xs text-[#6B7280] mt-1">{config.label}</p>
-            </div>
-          ))}
-        </div>
-
         {/* Dark Dashboard Workflow Metrics */}
         {metrics && (
           <div className="bg-[#0f172a] rounded-2xl p-6 space-y-6">
