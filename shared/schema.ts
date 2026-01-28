@@ -84,6 +84,22 @@ export const insertTechnicianNoteSchema = createInsertSchema(technicianNotes).om
 export type InsertTechnicianNote = z.infer<typeof insertTechnicianNoteSchema>;
 export type TechnicianNote = typeof technicianNotes.$inferSelect;
 
+// Customer Zones (for grouping customers by geographic zones)
+export const customerZones = pgTable("customer_zones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  color: text("color").default("#0077b6"), // Hex color for badge
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCustomerZoneSchema = createInsertSchema(customerZones).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCustomerZone = z.infer<typeof insertCustomerZoneSchema>;
+export type CustomerZone = typeof customerZones.$inferSelect;
+
 // Customers / HOAs (from Pool Brain or manual entry)
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -99,6 +115,7 @@ export const customers = pgTable("customers", {
   poolCount: integer("pool_count").default(0),
   tags: text("tags"),
   notes: text("notes"),
+  zoneId: varchar("zone_id"), // FK to customerZones for geographic grouping
   // Budget fields (optional)
   chemicalsBudget: integer("chemicals_budget"), // Amount in cents
   chemicalsBudgetPeriod: text("chemicals_budget_period").default("monthly"), // "monthly" or "annual"

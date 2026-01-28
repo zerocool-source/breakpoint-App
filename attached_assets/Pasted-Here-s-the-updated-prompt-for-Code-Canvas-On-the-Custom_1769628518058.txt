@@ -1,0 +1,83 @@
+Here's the updated prompt for Code Canvas:
+
+```
+On the Customers page, add a Zones management system:
+
+**PART 1 - ADD ZONES BUTTON IN HEADER:**
+
+1. Next to the "Add Customer" button in the header, add a "Manage Zones" button:
+   - Ocean blue (#0077b6) outline style button with a map/location icon
+   - When clicked, open a "Manage Zones" modal/popup
+
+2. MANAGE ZONES MODAL:
+   - Title: "Manage Zones"
+   - Input field: "Add New Zone" with placeholder "Type zone name..."
+   - "Add" button next to input (orange #f97316)
+   - Below, show a list of existing zones:
+     - Zone name
+     - Count of customers in that zone
+     - "Delete" button (red trash icon) - with confirmation: "Are you sure? X customers are in this zone. They will become unassigned."
+   - Sample zones: "Zone A - North", "Zone B - Central", "Zone C - South", "Zone D - East", "Zone E - West"
+   - "Done" button to close modal
+
+**PART 2 - ZONE DROPDOWN ON EACH CUSTOMER ROW:**
+
+1. Add a Zone column/dropdown on each customer row:
+   - Show current zone as a colored tag/badge (if assigned)
+   - If no zone assigned, show "+ Add Zone" text/button in gray
+   
+2. Zone dropdown functionality:
+   - Click on the zone badge or "+ Add Zone" to open a dropdown
+   - Dropdown shows all available zones from the Manage Zones list
+   - Select a zone to assign it to that customer
+   - The zone appears as a colored pill/badge tag on the row
+   - Option to "Remove Zone" at the bottom of dropdown
+
+3. Zone badge colors (assign automatically or cycle through):
+   - Zone A: Ocean blue (#0077b6)
+   - Zone B: Orange (#f97316)
+   - Zone C: Teal (#14b8a6)
+   - Zone D: Green (#22c55e)
+   - Zone E: Gray (#6b7280)
+
+4. Allow changing zones:
+   - Click on existing zone badge to open dropdown
+   - Select a different zone to change it
+   - Change is saved immediately
+
+**PART 3 - GROUP CUSTOMERS BY ZONE (Only show customers with zones):**
+
+1. Add a "Group by Zone" toggle or view option in the header:
+   - Toggle button: "Group by Zone" (on/off)
+   - Or tabs: "All Customers" | "By Zone"
+
+2. When "Group by Zone" is enabled:
+   - ONLY show customers that have a zone assigned
+   - Customers WITHOUT a zone are hidden/excluded from this view
+   - Show zone headers as section dividers
+   - Each zone section shows: "Zone A - North (12 customers)" as a collapsible header
+   - Customers under each zone are listed below the header
+   - Zones sorted alphabetically or by customer count
+
+3. Zone section styling:
+   - Zone header has a light colored background matching the zone badge color
+   - Collapsible with arrow icon (expand/collapse)
+   - Show customer count in the header
+
+4. When "Group by Zone" is OFF (default "All Customers" view):
+   - Show ALL customers including those without zones
+   - Normal list view
+
+**PART 4 - FILTER BY ZONE:**
+
+1. Add a Zone filter dropdown next to existing filters:
+   - "All Customers" (default - shows everyone)
+   - List of all zones (clicking one shows only that zone)
+   - Selecting a zone filters the list to show only customers in that zone
+
+**STYLING:**
+- Keep the same clean UI style as the rest of the app
+- Zone badges should be small, rounded pills with colored backgrounds and white text
+- Dropdowns should match the existing dropdown styling
+- Use subtle animations for expanding/collapsing zone groups
+```

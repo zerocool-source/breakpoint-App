@@ -50,6 +50,7 @@ import {
   type ChemicalVendor, type InsertChemicalVendor,
   type InvoiceTemplate, type InsertInvoiceTemplate,
   type SystemUser, type InsertSystemUser,
+  type CustomerZone, type InsertCustomerZone,
   settings, alerts, workflows, technicians, technicianNotes, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -59,7 +60,7 @@ import {
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
   customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity,
-  chemicalVendors, invoiceTemplates, systemUsers
+  chemicalVendors, invoiceTemplates, systemUsers, customerZones
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte, sql } from "drizzle-orm";
@@ -467,6 +468,14 @@ export interface IStorage {
   createSystemUser(user: InsertSystemUser): Promise<SystemUser>;
   updateSystemUser(id: number, updates: Partial<InsertSystemUser>): Promise<SystemUser | undefined>;
   deleteSystemUser(id: number): Promise<void>;
+
+  // Customer Zones
+  getCustomerZones(): Promise<CustomerZone[]>;
+  getCustomerZone(id: string): Promise<CustomerZone | undefined>;
+  createCustomerZone(zone: InsertCustomerZone): Promise<CustomerZone>;
+  updateCustomerZone(id: string, updates: Partial<InsertCustomerZone>): Promise<CustomerZone | undefined>;
+  deleteCustomerZone(id: string): Promise<void>;
+  getCustomerCountByZone(zoneId: string): Promise<number>;
 }
 
 export class DbStorage implements IStorage {
@@ -3182,6 +3191,45 @@ export class DbStorage implements IStorage {
 
   async deleteSystemUser(id: number): Promise<void> {
     await db.delete(systemUsers).where(eq(systemUsers.id, id));
+  }
+
+  // Customer Zones
+  async getCustomerZones(): Promise<CustomerZone[]> {
+    return db.select().from(customerZones).orderBy(customerZones.name);
+  }
+
+  async getCustomerZone(id: string): Promise<CustomerZone | undefined> {
+    const result = await db.select().from(customerZones).where(eq(customerZones.id, id));
+    return result[0];
+  }
+
+  async createCustomerZone(zone: InsertCustomerZone): Promise<CustomerZone> {
+    const result = await db.insert(customerZones).values(zone).returning();
+    return result[0];
+  }
+
+  async updateCustomerZone(id: string, updates: Partial<InsertCustomerZone>): Promise<CustomerZone | undefined> {
+    const result = await db.update(customerZones)
+      .set(updates)
+      .where(eq(customerZones.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteCustomerZone(id: string): Promise<void> {
+    // First, unassign all customers from this zone
+    await db.update(customers)
+      .set({ zoneId: null })
+      .where(eq(customers.zoneId, id));
+    // Then delete the zone
+    await db.delete(customerZones).where(eq(customerZones.id, id));
+  }
+
+  async getCustomerCountByZone(zoneId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(customers)
+      .where(eq(customers.zoneId, zoneId));
+    return result[0]?.count || 0;
   }
 }
 
