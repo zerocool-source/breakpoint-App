@@ -47,9 +47,17 @@ interface Technician {
   active: boolean;
   photoUrl?: string;
   region?: string;
+  supervisorId?: string | null;
   routeLocked?: boolean;
   summerVisitDays?: string[];
   winterVisitDays?: string[];
+}
+
+interface Supervisor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  region?: string | null;
 }
 
 interface QcInspection {
@@ -220,6 +228,20 @@ export default function Calendar() {
     },
   });
 
+  // Create supervisor ID to region mapping from technicians data
+  // Includes both supervisors and foremen who can have technicians assigned to them
+  const supervisorRegionMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const allTechs = techniciansData?.technicians || [];
+    for (const tech of allTechs) {
+      // Include supervisors and foremen in the mapping
+      if ((tech.role === "supervisor" || tech.role === "foreman") && tech.region) {
+        map.set(String(tech.id), tech.region);
+      }
+    }
+    return map;
+  }, [techniciansData]);
+
   // Fetch QC Inspections for supervisors tab
   const { data: qcInspectionsData } = useQuery<{ inspections: QcInspection[] }>({
     queryKey: ["/api/qc-inspections", weekDates[0]?.toISOString()],
@@ -359,14 +381,27 @@ export default function Calendar() {
         if (!fullName.includes(searchTerm.toLowerCase())) return false;
       }
       
+      // County filter: get technician's county from their supervisor's region
       if (regionFilter !== "all") {
-        const techRegion = (tech.region || "").toLowerCase();
-        if (techRegion !== regionFilter) return false;
+        // For supervisors/foremen, use their own region
+        if (tech.role === "supervisor" || tech.role === "foreman") {
+          const supervisorRegion = (tech.region || "").toLowerCase();
+          // Map "middle" filter to "mid" in database
+          const filterRegion = regionFilter === "middle" ? "mid" : regionFilter;
+          if (supervisorRegion !== filterRegion) return false;
+        } else {
+          // For technicians, look up their supervisor's region
+          if (!tech.supervisorId) return false; // Unassigned technicians don't appear in county filters
+          const supervisorRegion = supervisorRegionMap.get(String(tech.supervisorId)) || "";
+          // Map "middle" filter to "mid" in database
+          const filterRegion = regionFilter === "middle" ? "mid" : regionFilter;
+          if (supervisorRegion.toLowerCase() !== filterRegion) return false;
+        }
       }
       
       return true;
     });
-  }, [technicians, roleFilter, searchTerm, regionFilter]);
+  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap]);
   
   const filteredTechnicians = useMemo(() => {
     const startIndex = (currentPage - 1) * techsPerPage;
