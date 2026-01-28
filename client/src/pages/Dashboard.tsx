@@ -736,7 +736,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Ready to Invoice - Light teal background */}
-                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#e0f7fa' }}>
+                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#ccfbf1' }}>
                     <div className="w-12 h-12 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(20, 184, 166, 0.3)' }}>
                       <Receipt className="w-6 h-6 text-white" />
                     </div>
