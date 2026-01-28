@@ -776,6 +776,33 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Summary Row */}
+                <div className="border-t border-slate-200 mt-4 pt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Total Estimates */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.total || 0}</span>
+                        <p className="text-sm text-slate-500">Total Estimates</p>
+                      </div>
+                    </div>
+
+                    {/* Declined */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-100">
+                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div>
+                        <span className="text-2xl font-bold text-red-600">{metrics?.estimates.declined || 0}</span>
+                        <p className="text-sm text-slate-500">{metrics?.estimates.declined || 0} declined</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
