@@ -24,7 +24,8 @@ import {
   UserPlus,
   Building2,
   HardHat,
-  Hammer
+  Hammer,
+  Download
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -37,6 +38,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -191,6 +194,21 @@ export default function Dashboard() {
     notes: "",
   });
 
+  // Financial Report Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportDateRange, setReportDateRange] = useState({
+    from: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd"),
+    to: format(new Date(), "yyyy-MM-dd"),
+  });
+  const [reportFilters, setReportFilters] = useState({
+    pendingApproval: true,
+    scheduled: true,
+    readyToInvoice: true,
+    invoiced: true,
+    paid: true,
+  });
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/overview"],
     queryFn: async () => {
@@ -337,6 +355,125 @@ export default function Dashboard() {
       tags: propertyForm.tags || undefined,
       notes: propertyForm.notes || undefined,
     });
+  };
+
+  // Report Quick Select Handlers
+  const setQuickDateRange = (period: "week" | "month" | "quarter" | "year") => {
+    const now = new Date();
+    let from: Date;
+    
+    switch (period) {
+      case "week":
+        const dayOfWeek = now.getDay();
+        from = new Date(now);
+        from.setDate(now.getDate() - dayOfWeek);
+        break;
+      case "month":
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "quarter":
+        const quarter = Math.floor(now.getMonth() / 3);
+        from = new Date(now.getFullYear(), quarter * 3, 1);
+        break;
+      case "year":
+        from = new Date(now.getFullYear(), 0, 1);
+        break;
+    }
+    
+    setReportDateRange({
+      from: format(from, "yyyy-MM-dd"),
+      to: format(now, "yyyy-MM-dd"),
+    });
+  };
+
+  const handleDownloadReport = async () => {
+    setReportLoading(true);
+    try {
+      // Fetch estimates data
+      const res = await fetch(`/api/estimates?startDate=${reportDateRange.from}&endDate=${reportDateRange.to}`);
+      if (!res.ok) throw new Error("Failed to fetch estimates");
+      const data = await res.json();
+      const estimates = data.estimates || [];
+
+      // Filter by selected statuses
+      const statusMap: Record<string, string[]> = {
+        pendingApproval: ["pending_approval"],
+        scheduled: ["scheduled"],
+        readyToInvoice: ["ready_to_invoice"],
+        invoiced: ["invoiced"],
+        paid: ["paid"],
+      };
+      
+      const selectedStatuses = Object.entries(reportFilters)
+        .filter(([_, checked]) => checked)
+        .flatMap(([key]) => statusMap[key] || []);
+
+      const filteredEstimates = estimates.filter((est: any) => 
+        selectedStatuses.includes(est.status)
+      );
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Prepare data rows
+      const rows = filteredEstimates.map((est: any) => ({
+        "Date": est.createdAt ? format(new Date(est.createdAt), "MM/dd/yyyy") : "",
+        "Property": est.propertyName || "",
+        "Customer": est.customerName || "",
+        "Estimate #": est.estimateNumber || est.id,
+        "Status": (est.status || "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        "Amount": est.totalAmount || 0,
+      }));
+
+      // Calculate totals
+      const totalAmount = rows.reduce((sum: number, row: any) => sum + (row.Amount || 0), 0);
+      
+      // Add summary row
+      rows.push({
+        "Date": "",
+        "Property": "",
+        "Customer": "",
+        "Estimate #": "",
+        "Status": "TOTAL",
+        "Amount": totalAmount,
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      
+      // Set column widths
+      ws["!cols"] = [
+        { wch: 12 }, // Date
+        { wch: 25 }, // Property
+        { wch: 25 }, // Customer
+        { wch: 12 }, // Estimate #
+        { wch: 18 }, // Status
+        { wch: 12 }, // Amount
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Financial Report");
+
+      // Generate filename
+      const fromDate = reportDateRange.from.replace(/-/g, "");
+      const toDate = reportDateRange.to.replace(/-/g, "");
+      const fileName = `Breakpoint_Financial_Report_${fromDate}_to_${toDate}.xlsx`;
+
+      // Download
+      XLSX.writeFile(wb, fileName);
+      
+      toast({
+        title: "Report downloaded successfully",
+        description: `${filteredEstimates.length} records exported to Excel`,
+      });
+      setShowReportModal(false);
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Could not generate the report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const metrics = dashboardData?.metrics;
@@ -943,6 +1080,16 @@ export default function Dashboard() {
                     </CardTitle>
                     <CardDescription>Values across pipeline stages</CardDescription>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowReportModal(true)}
+                    className="gap-1.5 text-xs text-slate-600 border-slate-200 hover:bg-slate-50"
+                    data-testid="button-download-report"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Report
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1869,6 +2016,172 @@ export default function Dashboard() {
                 </>
               ) : (
                 "Add Property"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Financial Report Modal */}
+      <Dialog open={showReportModal} onOpenChange={setShowReportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5 text-[#0077b6]" />
+              Download Financial Report
+            </DialogTitle>
+            <DialogDescription>
+              Select date range and filters for your report
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="report-from">From Date</Label>
+                <Input
+                  id="report-from"
+                  type="date"
+                  value={reportDateRange.from}
+                  onChange={(e) => setReportDateRange({ ...reportDateRange, from: e.target.value })}
+                  data-testid="input-report-from-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="report-to">To Date</Label>
+                <Input
+                  id="report-to"
+                  type="date"
+                  value={reportDateRange.to}
+                  onChange={(e) => setReportDateRange({ ...reportDateRange, to: e.target.value })}
+                  data-testid="input-report-to-date"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDateRange("week")}
+                className="text-xs"
+                data-testid="button-quick-week"
+              >
+                This Week
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDateRange("month")}
+                className="text-xs"
+                data-testid="button-quick-month"
+              >
+                This Month
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDateRange("quarter")}
+                className="text-xs"
+                data-testid="button-quick-quarter"
+              >
+                This Quarter
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickDateRange("year")}
+                className="text-xs"
+                data-testid="button-quick-year"
+              >
+                This Year
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Include in Report:</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-pending"
+                    checked={reportFilters.pendingApproval}
+                    onCheckedChange={(checked) => setReportFilters({ ...reportFilters, pendingApproval: !!checked })}
+                    data-testid="checkbox-pending-approval"
+                  />
+                  <Label htmlFor="filter-pending" className="text-sm text-slate-600 cursor-pointer">
+                    Pending Approval
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-scheduled"
+                    checked={reportFilters.scheduled}
+                    onCheckedChange={(checked) => setReportFilters({ ...reportFilters, scheduled: !!checked })}
+                    data-testid="checkbox-scheduled"
+                  />
+                  <Label htmlFor="filter-scheduled" className="text-sm text-slate-600 cursor-pointer">
+                    Scheduled
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-ready"
+                    checked={reportFilters.readyToInvoice}
+                    onCheckedChange={(checked) => setReportFilters({ ...reportFilters, readyToInvoice: !!checked })}
+                    data-testid="checkbox-ready-to-invoice"
+                  />
+                  <Label htmlFor="filter-ready" className="text-sm text-slate-600 cursor-pointer">
+                    Ready to Invoice
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-invoiced"
+                    checked={reportFilters.invoiced}
+                    onCheckedChange={(checked) => setReportFilters({ ...reportFilters, invoiced: !!checked })}
+                    data-testid="checkbox-invoiced"
+                  />
+                  <Label htmlFor="filter-invoiced" className="text-sm text-slate-600 cursor-pointer">
+                    Invoiced
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-paid"
+                    checked={reportFilters.paid}
+                    onCheckedChange={(checked) => setReportFilters({ ...reportFilters, paid: !!checked })}
+                    data-testid="checkbox-paid"
+                  />
+                  <Label htmlFor="filter-paid" className="text-sm text-slate-600 cursor-pointer">
+                    Paid
+                  </Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReportModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDownloadReport}
+              disabled={reportLoading}
+              className="gap-2 bg-[#0077b6] hover:bg-[#006299]"
+              data-testid="button-download-excel"
+            >
+              {reportLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download Excel
+                </>
               )}
             </Button>
           </DialogFooter>
