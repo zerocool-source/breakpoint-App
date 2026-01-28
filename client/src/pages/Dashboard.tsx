@@ -1357,23 +1357,29 @@ export default function Dashboard() {
                   <div className="space-y-4">
                     {/* Equipment Metrics Row */}
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-[#fff7ed] border-l-4 border-l-[#f97316]">
-                        <div>
-                          <p className="text-xl font-bold text-[#1f2937]">{equipmentMetrics.dueSoon}</p>
-                          <p className="text-xs text-[#6b7280]">Due Soon</p>
+                      <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#f97316] hover:bg-slate-50 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center mb-2">
+                          <Clock className="w-4 h-4 text-[#f97316]" />
                         </div>
+                        <span className="text-2xl font-bold text-[#1f2937]">{equipmentMetrics.dueSoon}</span>
+                        <span className="text-xs text-[#6b7280] mt-1">Due Soon</span>
+                        <span className="text-[10px] text-[#9ca3af] mt-1">+1 this week</span>
                       </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-[#fef2f2] border-l-4 border-l-[#ef4444]">
-                        <div>
-                          <p className="text-xl font-bold text-[#1f2937]">{equipmentMetrics.overdue}</p>
-                          <p className="text-xs text-[#6b7280]">Overdue</p>
+                      <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#ef4444] hover:bg-slate-50 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                          <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
                         </div>
+                        <span className="text-2xl font-bold text-[#1f2937]">{equipmentMetrics.overdue}</span>
+                        <span className="text-xs text-[#6b7280] mt-1">Overdue</span>
+                        <span className="text-[10px] text-[#9ca3af] mt-1">Needs attention</span>
                       </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-[#dcfce7] border-l-4 border-l-[#22c55e]">
-                        <div>
-                          <p className="text-xl font-bold text-[#1f2937]">{equipmentMetrics.convertedToJobs}</p>
-                          <p className="text-xs text-[#6b7280]">Converted to Jobs</p>
+                      <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#22c55e] hover:bg-slate-50 transition-colors">
+                        <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mb-2">
+                          <Wrench className="w-4 h-4 text-[#22c55e]" />
                         </div>
+                        <span className="text-2xl font-bold text-[#1f2937]">{equipmentMetrics.convertedToJobs}</span>
+                        <span className="text-xs text-[#6b7280] mt-1">Converted to Jobs</span>
+                        <span className="text-[10px] text-[#9ca3af] mt-1">+2 this month</span>
                       </div>
                     </div>
 
