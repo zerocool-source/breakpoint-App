@@ -223,56 +223,20 @@ function CustomerListItem({
             <Badge className={cn("text-white text-xs", status.color)}>
               {status.label}
             </Badge>
-            {/* Zone Badge with Dropdown */}
-            {zones && onZoneChange && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  {customerZone ? (
-                    <button 
-                      className="px-2 py-0.5 rounded-full text-white text-xs font-medium hover:opacity-80 transition-opacity"
-                      style={{ backgroundColor: customerZone.color || "#0077b6" }}
-                      data-testid={`zone-badge-${customer.id}`}
-                    >
-                      {customerZone.name}
-                    </button>
-                  ) : (
-                    <button 
-                      className="px-2 py-0.5 rounded-full text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors border border-dashed border-slate-300"
-                      data-testid={`add-zone-${customer.id}`}
-                    >
-                      + Add Zone
-                    </button>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                  {zones.map((zone) => (
-                    <DropdownMenuItem 
-                      key={zone.id}
-                      onClick={() => onZoneChange(customer.id, zone.id)}
-                      className="flex items-center gap-2"
-                    >
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: zone.color || "#0077b6" }}
-                      />
-                      {zone.name}
-                      {customer.zoneId === zone.id && <Check className="h-4 w-4 ml-auto" />}
-                    </DropdownMenuItem>
-                  ))}
-                  {customerZone && (
-                    <>
-                      <div className="h-px bg-slate-200 my-1" />
-                      <DropdownMenuItem 
-                        onClick={() => onZoneChange(customer.id, null)}
-                        className="text-red-600"
-                      >
-                        <X className="w-3 h-3 mr-2" />
-                        Remove Zone
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+            {/* Zone Badge */}
+            {zones && onZoneChange && customerZone && (
+              <span 
+                className="px-2 py-0.5 rounded-full text-white text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
+                style={{ backgroundColor: customerZone.color || "#0077b6" }}
+                data-testid={`zone-badge-${customer.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onZoneChange(customer.id, null);
+                }}
+                title="Click to remove zone"
+              >
+                {customerZone.name}
+              </span>
             )}
           </div>
           {customer.address && (
@@ -1344,11 +1308,15 @@ function CustomerDetailPanel({
   onClose,
   onEdit,
   onDelete,
+  zones,
+  onZoneChange,
 }: {
   customer: Customer;
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  zones?: Zone[];
+  onZoneChange?: (customerId: string, zoneId: string | null) => void;
 }) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("properties");
@@ -1799,6 +1767,31 @@ function CustomerDetailPanel({
                 <span className="text-xs text-slate-500">
                   {customer.poolCount} {customer.poolCount === 1 ? "pool" : "pools"}
                 </span>
+              )}
+              {/* Zone Selector */}
+              {zones && onZoneChange && (
+                <Select
+                  value={customer.zoneId || "none"}
+                  onValueChange={(value) => onZoneChange(customer.id, value === "none" ? null : value)}
+                >
+                  <SelectTrigger className="h-7 w-auto min-w-[120px] text-xs">
+                    <SelectValue placeholder="Select Zone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Zone</SelectItem>
+                    {zones.map((zone) => (
+                      <SelectItem key={zone.id} value={zone.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: zone.color || "#0077b6" }}
+                          />
+                          {zone.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
           </div>
@@ -3285,6 +3278,8 @@ export default function Customers() {
                   deleteCustomerMutation.mutate(selectedCustomer.id);
                 }
               }}
+              zones={zones}
+              onZoneChange={(customerId, zoneId) => assignZoneMutation.mutate({ customerId, zoneId })}
             />
           </div>
         )}
