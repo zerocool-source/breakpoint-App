@@ -1310,6 +1310,12 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {(() => {
+                const equipmentMetrics = {
+                  dueSoon: 3,
+                  overdue: 2,
+                  convertedToJobs: 5,
+                };
+
                 const equipmentItems = [
                   { id: 'eq1', name: 'Variable Speed Pump', property: 'Sunset Hills HOA', status: 'due_soon', daysUntil: 5 },
                   { id: 'eq2', name: 'Sand Filter', property: 'Marina Bay Club', status: 'overdue', daysOverdue: 3 },
@@ -1348,19 +1354,44 @@ export default function Dashboard() {
                 };
                 
                 return (
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {equipmentItems.map((item) => (
-                      <div 
-                        key={item.id} 
-                        className="flex items-center gap-3 p-2 bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#1f2937] truncate">{item.name}</p>
-                          <p className="text-xs text-[#6b7280] truncate">{item.property}</p>
+                  <div className="space-y-4">
+                    {/* Equipment Metrics Row */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-[#fff7ed] border-l-4 border-l-[#f97316]">
+                        <div>
+                          <p className="text-xl font-bold text-[#1f2937]">{equipmentMetrics.dueSoon}</p>
+                          <p className="text-xs text-[#6b7280]">Due Soon</p>
                         </div>
-                        {getStatusBadge(item)}
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-[#fef2f2] border-l-4 border-l-[#ef4444]">
+                        <div>
+                          <p className="text-xl font-bold text-[#1f2937]">{equipmentMetrics.overdue}</p>
+                          <p className="text-xs text-[#6b7280]">Overdue</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-[#dcfce7] border-l-4 border-l-[#22c55e]">
+                        <div>
+                          <p className="text-xl font-bold text-[#1f2937]">{equipmentMetrics.convertedToJobs}</p>
+                          <p className="text-xs text-[#6b7280]">Converted to Jobs</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Equipment List */}
+                    <div className="space-y-2 max-h-[320px] overflow-y-auto">
+                      {equipmentItems.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className="flex items-center gap-3 p-2 bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#1f2937] truncate">{item.name}</p>
+                            <p className="text-xs text-[#6b7280] truncate">{item.property}</p>
+                          </div>
+                          {getStatusBadge(item)}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
