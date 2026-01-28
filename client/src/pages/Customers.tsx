@@ -1128,29 +1128,6 @@ function AddBillingContactModal({
   );
 }
 
-// Zone badge color options
-const ZONE_COLORS = [
-  { value: "#0077b6", label: "Ocean Blue" },
-  { value: "#f97316", label: "Orange" },
-  { value: "#14b8a6", label: "Teal" },
-  { value: "#22c55e", label: "Green" },
-  { value: "#6b7280", label: "Gray" },
-  { value: "#8b5cf6", label: "Purple" },
-  { value: "#ec4899", label: "Pink" },
-  { value: "#ef4444", label: "Red" },
-  { value: "#f59e0b", label: "Amber" },
-  { value: "#84cc16", label: "Lime" },
-  { value: "#06b6d4", label: "Cyan" },
-  { value: "#3b82f6", label: "Blue" },
-  { value: "#6366f1", label: "Indigo" },
-  { value: "#a855f7", label: "Violet" },
-  { value: "#f43f5e", label: "Rose" },
-  { value: "#78716c", label: "Stone" },
-  { value: "#0d9488", label: "Emerald" },
-  { value: "#0ea5e9", label: "Sky" },
-  { value: "#d946ef", label: "Fuchsia" },
-];
-
 function ManageZonesModal({
   open,
   onClose,
@@ -1165,16 +1142,12 @@ function ManageZonesModal({
   onDeleteZone: (id: string) => void;
 }) {
   const [newZoneName, setNewZoneName] = useState("");
-  const [selectedColor, setSelectedColor] = useState("#0077b6");
   const [deleteConfirmZone, setDeleteConfirmZone] = useState<Zone | null>(null);
 
   const handleAddZone = () => {
     if (!newZoneName.trim()) return;
-    onAddZone(newZoneName.trim(), selectedColor);
+    onAddZone(newZoneName.trim(), "#0077b6");
     setNewZoneName("");
-    // Cycle to next color
-    const currentIndex = ZONE_COLORS.findIndex(c => c.value === selectedColor);
-    setSelectedColor(ZONE_COLORS[(currentIndex + 1) % ZONE_COLORS.length].value);
   };
 
   return (
@@ -1199,31 +1172,6 @@ function ManageZonesModal({
                 onKeyDown={(e) => e.key === "Enter" && handleAddZone()}
                 data-testid="input-new-zone-name"
               />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="flex-shrink-0">
-                    <div 
-                      className="w-5 h-5 rounded-full" 
-                      style={{ backgroundColor: selectedColor }}
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  {ZONE_COLORS.map((color) => (
-                    <DropdownMenuItem 
-                      key={color.value}
-                      onClick={() => setSelectedColor(color.value)}
-                      className="flex items-center gap-2"
-                    >
-                      <div 
-                        className="w-4 h-4 rounded-full" 
-                        style={{ backgroundColor: color.value }}
-                      />
-                      {color.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
               <Button 
                 onClick={handleAddZone}
                 disabled={!newZoneName.trim()}
