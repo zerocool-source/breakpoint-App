@@ -119,6 +119,32 @@ export function registerPropertyTechnicianRoutes(app: any) {
     }
   });
 
+  // Endpoint for Calendar page - get all technician property assignments with visit days
+  app.get("/api/technician-properties/calendar", async (req: any, res: any) => {
+    try {
+      const assignments = await db
+        .select({
+          id: propertyTechnicians.id,
+          technicianId: propertyTechnicians.technicianId,
+          propertyId: propertyTechnicians.propertyId,
+          technicianName: propertyTechnicians.technicianName,
+          propertyName: customers.name,
+          address: customers.address,
+          summerVisitDays: routeSchedules.summerVisitDays,
+          winterVisitDays: routeSchedules.winterVisitDays,
+          activeSeason: routeSchedules.activeSeason,
+        })
+        .from(propertyTechnicians)
+        .leftJoin(customers, eq(propertyTechnicians.propertyId, customers.id))
+        .leftJoin(routeSchedules, eq(propertyTechnicians.propertyId, routeSchedules.propertyId))
+        .orderBy(propertyTechnicians.technicianId);
+      res.json({ assignments });
+    } catch (error: any) {
+      console.error("Error fetching calendar technician properties:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/technician-properties/:technicianId", async (req: any, res: any) => {
     try {
       const { technicianId } = req.params;

@@ -84,6 +84,18 @@ interface ScheduledRepair {
   repairTechName: string | null;
 }
 
+interface TechPropertyAssignment {
+  id: string;
+  technicianId: string;
+  propertyId: string;
+  technicianName: string | null;
+  propertyName: string | null;
+  address: string | null;
+  summerVisitDays: string[] | null;
+  winterVisitDays: string[] | null;
+  activeSeason: string | null;
+}
+
 interface TechSchedule {
   id: string;
   technicianId: string;
@@ -200,6 +212,7 @@ export default function Calendar() {
   const [roleFilter, setRoleFilter] = useState<"service" | "repair" | "supervisor">("service");
   const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
+  const [expandedRouteBlocks, setExpandedRouteBlocks] = useState<Set<string>>(new Set());
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [showAddCoverageModal, setShowAddCoverageModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -315,6 +328,16 @@ export default function Calendar() {
     queryKey: ["/api/customers"],
   });
 
+  // Fetch technician property assignments for route display
+  const { data: propertyAssignmentsData } = useQuery<{ assignments: TechPropertyAssignment[] }>({
+    queryKey: ["/api/technician-properties/calendar"],
+    queryFn: async () => {
+      const res = await fetch("/api/technician-properties/calendar");
+      if (!res.ok) return { assignments: [] };
+      return res.json();
+    },
+  });
+
   const technicians = techniciansData?.technicians || [];
   const schedules = schedulesData?.schedules || [];
   const coverages = coveragesData?.coverages || [];
@@ -322,6 +345,7 @@ export default function Calendar() {
   const customers = customersData?.customers || [];
   const qcInspections = qcInspectionsData?.inspections || [];
   const scheduledEstimates = scheduledEstimatesData?.estimates || [];
+  const propertyAssignments = propertyAssignmentsData?.assignments || [];
 
   // Mutation to toggle route lock
   const toggleRouteLockMutation = useMutation({
@@ -365,6 +389,29 @@ export default function Calendar() {
       if (String(est.repairTechId) !== String(techId)) return false;
       if (!est.scheduledDate) return false;
       return est.scheduledDate.startsWith(dateStr);
+    });
+  };
+
+  // Map day of week to visit day codes (SUN=0, MON=1, TUE=2, etc.)
+  const DAY_CODES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  
+  // Get properties for a service technician on a specific day based on their visit days
+  const getPropertiesForTechAndDate = (techId: string | number, date: Date): TechPropertyAssignment[] => {
+    const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
+    const dayCode = DAY_CODES[dayOfWeek];
+    
+    return propertyAssignments.filter((prop) => {
+      if (String(prop.technicianId) !== String(techId)) return false;
+      
+      // Check if this day is in the visit days
+      const visitDays = prop.activeSeason === "winter" 
+        ? prop.winterVisitDays 
+        : prop.summerVisitDays;
+      
+      if (!visitDays || visitDays.length === 0) return false;
+      
+      // Visit days are stored as abbreviated day codes like "MON", "TUE", etc.
+      return visitDays.includes(dayCode);
     });
   };
 
@@ -439,6 +486,18 @@ export default function Calendar() {
         newSet.delete(scheduleId);
       } else {
         newSet.add(scheduleId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleRouteBlockExpand = (blockKey: string) => {
+    setExpandedRouteBlocks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(blockKey)) {
+        newSet.delete(blockKey);
+      } else {
+        newSet.add(blockKey);
       }
       return newSet;
     });
@@ -1312,6 +1371,68 @@ export default function Calendar() {
                             </div>
                           </div>
                         );
+                      }
+
+                      // Render route properties for service technicians based on visit days
+                      if (tech.role === "service") {
+                        const propertiesForDay = getPropertiesForTechAndDate(tech.id, date);
+                        if (propertiesForDay.length > 0) {
+                          const routeBlockKey = `${tech.id}-${dayIndex}`;
+                          const isRouteExpanded = expandedRouteBlocks.has(routeBlockKey);
+                          return (
+                            <div
+                              key={dayIndex}
+                              className="flex-1 min-w-[120px] px-2 py-2"
+                              data-testid={`cell-service-${tech.id}-${dayIndex}`}
+                            >
+                              <div
+                                className={cn(
+                                  "rounded-lg p-2 cursor-pointer transition-all border-l-[3px]",
+                                  isRouteExpanded ? "min-h-[160px]" : "min-h-[80px]"
+                                )}
+                                style={{
+                                  backgroundColor: `${techColor}15`,
+                                  borderLeftColor: techColor,
+                                }}
+                                onClick={() => toggleRouteBlockExpand(routeBlockKey)}
+                                data-testid={`route-block-${tech.id}-${dayIndex}`}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-medium text-[#0F172A]" data-testid={`text-stop-count-${tech.id}-${dayIndex}`}>
+                                    {propertiesForDay.length} stops
+                                  </span>
+                                  <span className="text-[10px] text-slate-500">
+                                    0/{propertiesForDay.length}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-[#64748B] flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  08:00 - 16:00
+                                </p>
+                                <span className="inline-block mt-1.5 px-1.5 py-0.5 text-[9px] font-medium rounded bg-slate-200 text-slate-600">
+                                  Pending
+                                </span>
+                                
+                                {isRouteExpanded && (
+                                  <div className="mt-2 space-y-1 border-t border-slate-200 pt-2">
+                                    {propertiesForDay.slice(0, 5).map((prop, idx) => (
+                                      <div key={prop.id} className="flex items-center gap-1 text-[10px] text-[#64748B]">
+                                        <span className="w-4 text-center font-medium">{idx + 1}</span>
+                                        <MapPin className="w-3 h-3 shrink-0" />
+                                        <span className="truncate">{prop.propertyName}</span>
+                                      </div>
+                                    ))}
+                                    {propertiesForDay.length > 5 && (
+                                      <p className="text-[10px] text-[#0077b6] font-medium">
+                                        +{propertiesForDay.length - 5} more
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
                       }
 
                       return (
