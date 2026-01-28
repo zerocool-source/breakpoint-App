@@ -268,7 +268,7 @@ export function registerFleetRoutes(app: any) {
       const alerts = data.result_list.map(event => ({
         id: event.event_id,
         deviceId: event.device_id,
-        type: event.event_type,
+        type: event.event_type as string,
         severity: event.severity,
         timestamp: event.timestamp,
         location: { lat: event.lat, lng: event.lng },
@@ -284,6 +284,26 @@ export function registerFleetRoutes(app: any) {
     } catch (error) {
       console.error('Fleet alerts error:', error);
       res.status(500).json({ error: 'Failed to fetch fleet alerts' });
+    }
+  });
+
+  app.get("/api/fleet/gps/geofences", async (req: Request, res: Response) => {
+    try {
+      const data = await onestepgps.getGeofences();
+      
+      const geofences = data.result_list.map(geofence => ({
+        id: geofence.geofence_id,
+        name: geofence.name,
+        type: geofence.type,
+        coordinates: geofence.coordinates,
+        radius: geofence.radius,
+        createdAt: geofence.created_at,
+      }));
+
+      res.json({ geofences });
+    } catch (error) {
+      console.error('Geofences error:', error);
+      res.status(500).json({ error: 'Failed to fetch geofences' });
     }
   });
 }
