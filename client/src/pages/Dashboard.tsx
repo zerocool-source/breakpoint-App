@@ -30,7 +30,8 @@ import {
   TrendingDown,
   User,
   ClipboardList,
-  AlertCircle
+  AlertCircle,
+  Cog
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -734,8 +735,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Emergency & Alerts Status */}
-        <Card className="shadow-sm bg-white" data-testid="card-emergency-alerts-status">
+        {/* TOP ROW: Emergency & Alerts Status (left) | Estimate Pipeline + Financial Summary (right) */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left Column: Emergency & Alerts Status */}
+          <Card className="shadow-sm bg-white" data-testid="card-emergency-alerts-status">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -1012,11 +1015,9 @@ export default function Dashboard() {
               );
             })()}
           </CardContent>
-        </Card>
+          </Card>
 
-        {/* Two-Column Section: Estimate Pipeline + Financial Summary (Left) | Coverage Calendar (Right) */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left Column: Stacked Estimate Pipeline + Financial Summary */}
+          {/* Right Column: Stacked Estimate Pipeline + Financial Summary */}
           <div className="flex flex-col gap-6">
             <Card className="shadow-sm">
               <CardHeader className="pb-3">
@@ -1163,6 +1164,85 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* BOTTOM ROW: Equipment Tracker (left) | Coverage Calendar (right) */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Left Column: Equipment Tracker */}
+          <Card className="shadow-sm bg-white" data-testid="card-equipment-tracker">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Cog className="w-5 h-5 text-amber-600" />
+                    Equipment Tracker
+                  </CardTitle>
+                  <CardDescription>Equipment needing repair soon</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/equipment")} className="text-amber-600 hover:text-amber-700">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const equipmentItems = [
+                  { id: 'eq1', name: 'Variable Speed Pump', property: 'Sunset Hills HOA', status: 'due_soon', daysUntil: 5 },
+                  { id: 'eq2', name: 'Sand Filter', property: 'Marina Bay Club', status: 'overdue', daysOverdue: 3 },
+                  { id: 'eq3', name: 'Heat Pump', property: 'Desert Springs Resort', status: 'due_soon', daysUntil: 12 },
+                  { id: 'eq4', name: 'Chlorinator', property: 'Palm Gardens Community', status: 'scheduled', scheduledDate: 'Jan 30' },
+                  { id: 'eq5', name: 'Pool Motor', property: 'Lakewood Country Club', status: 'overdue', daysOverdue: 7 },
+                  { id: 'eq6', name: 'Automation System', property: 'Vista Grande HOA', status: 'due_soon', daysUntil: 3 },
+                ];
+                
+                const getStatusBadge = (item: any) => {
+                  if (item.status === 'overdue') {
+                    return (
+                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                        Overdue by {item.daysOverdue} days
+                      </Badge>
+                    );
+                  } else if (item.status === 'scheduled') {
+                    return (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                        Scheduled {item.scheduledDate}
+                      </Badge>
+                    );
+                  } else {
+                    return (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                        Due in {item.daysUntil} days
+                      </Badge>
+                    );
+                  }
+                };
+                
+                const getConditionIndicator = (item: any) => {
+                  if (item.status === 'overdue') return 'bg-red-500';
+                  if (item.status === 'scheduled') return 'bg-green-500';
+                  return 'bg-amber-500';
+                };
+                
+                return (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {equipmentItems.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getConditionIndicator(item)}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>
+                          <p className="text-xs text-slate-500 truncate">{item.property}</p>
+                        </div>
+                        {getStatusBadge(item)}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
 
           {/* Right Column: Coverage Calendar */}
           <Card className="shadow-sm" data-testid="card-coverage-calendar-main">
