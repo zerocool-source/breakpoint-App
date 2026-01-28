@@ -320,6 +320,15 @@ export default function Fleet() {
   // GPS devices list
   const gpsDevices = gpsData?.devices || [];
 
+  // Helper to find GPS device matching a truck by name/number
+  const getGpsDeviceForTruck = (truckNumber: string): GPSDevice | undefined => {
+    return gpsDevices.find(device => {
+      const deviceName = device.name?.toLowerCase() || '';
+      const truckNum = truckNumber.toLowerCase();
+      return deviceName.includes(truckNum) || deviceName.includes(`truck ${truckNum}`) || deviceName.includes(`#${truckNum}`);
+    });
+  };
+
   const maintenanceStats = {
     overdue: trucksWithMaintenance.reduce((acc, truck) => {
       for (const type of FLEET_SERVICE_TYPES) {
@@ -688,6 +697,8 @@ export default function Fleet() {
                       })
                       .map((truck) => {
                         const truckStatus = truck.status || "Active";
+                        const gpsDevice = getGpsDeviceForTruck(String(truck.truckNumber));
+                        const displayMileage = gpsDevice?.odometer || truck.currentMileage;
                         const healthScore = (() => {
                           let score = 100;
                           for (const type of FLEET_SERVICE_TYPES) {
@@ -738,7 +749,12 @@ export default function Fleet() {
                               </Select>
                             </td>
                             <td className="py-3 text-gray-600">
-                              {truck.currentMileage?.toLocaleString() || "—"}
+                              <div className="flex items-center gap-1">
+                                {displayMileage?.toLocaleString() || "—"}
+                                {gpsDevice && (
+                                  <span className="text-[10px] text-[#0077b6] font-medium" title="Live GPS data">●</span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3">
                               <span className={`font-semibold ${healthColor}`}>
