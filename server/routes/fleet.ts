@@ -231,4 +231,24 @@ export function registerFleetRoutes(app: any) {
       });
     }
   });
+
+  app.get("/api/fleet/gps/geofence-events", async (req: Request, res: Response) => {
+    try {
+      const deviceId = req.query.deviceId as string | undefined;
+      const startDate = (req.query.startDate as string) || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const endDate = (req.query.endDate as string) || new Date().toISOString();
+
+      const data = await onestepgps.getGeofenceEvents({
+        deviceId,
+        startDate,
+        endDate,
+        limit: 100,
+      });
+
+      res.json({ events: data.result_list });
+    } catch (error) {
+      console.error('Geofence events error:', error);
+      res.status(500).json({ error: 'Failed to fetch geofence events' });
+    }
+  });
 }
