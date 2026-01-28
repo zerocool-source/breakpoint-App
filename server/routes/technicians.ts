@@ -123,6 +123,23 @@ export function registerTechnicianRoutes(app: any) {
     }
   });
 
+  // PATCH endpoint for updating stored technicians (including routeLocked)
+  app.patch("/api/technicians/stored/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const technician = await storage.updateTechnician(id, updates);
+      if (!technician) {
+        return res.status(404).json({ error: "Technician not found" });
+      }
+      res.json({ success: true, technician });
+    } catch (error: any) {
+      console.error("Error updating stored technician:", error);
+      res.status(500).json({ error: "Failed to update technician", message: error.message });
+    }
+  });
+
   app.post("/api/technicians/add", async (req: Request, res: Response) => {
     try {
       const { firstName, lastName, phone, email, role, active } = req.body;
