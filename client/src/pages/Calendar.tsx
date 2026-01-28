@@ -325,7 +325,7 @@ export default function Calendar() {
 
   // Mutation to toggle route lock
   const toggleRouteLockMutation = useMutation({
-    mutationFn: async ({ techId, locked }: { techId: string; locked: boolean }) => {
+    mutationFn: async ({ techId, locked, techName }: { techId: string; locked: boolean; techName: string }) => {
       const res = await fetch(`/api/technicians/stored/${techId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -334,13 +334,13 @@ export default function Calendar() {
       if (!res.ok) throw new Error("Failed to update route lock");
       return res.json();
     },
-    onSuccess: (_, { locked }) => {
+    onSuccess: (_, { locked, techName }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
       toast({
         title: locked ? "Route Locked" : "Route Unlocked",
         description: locked
-          ? "Technician must follow the scheduled order"
-          : "Technician can adjust their route order",
+          ? `Route locked for ${techName}`
+          : `Route unlocked for ${techName}`,
       });
     },
     onError: () => {
@@ -945,6 +945,7 @@ export default function Calendar() {
                                   toggleRouteLockMutation.mutate({
                                     techId: String(tech.id),
                                     locked: !tech.routeLocked,
+                                    techName: `${tech.firstName} ${tech.lastName}`,
                                   });
                                 }}
                                 className={cn(
