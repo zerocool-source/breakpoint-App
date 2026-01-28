@@ -38,7 +38,7 @@ import {
   Search, ChevronDown, ChevronRight, Plus, Image, Trash2, X, Clock, FileText, 
   MoreHorizontal, Sun, Snowflake, MapPin, Route, Users, CalendarDays, Edit2,
   CheckCircle2, Calendar, GripVertical, Eye, Pencil, Building2, Droplets, Wrench,
-  Shield, Split, AlertCircle, Info
+  Shield, Split, AlertCircle, Info, Lock, Unlock, GitFork
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -1054,6 +1054,424 @@ function SplitRouteModal({
               Confirm Split
             </Button>
           </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Tech-Level Extended Cover Modal - Full Route Coverage
+function TechExtendedCoverModal({
+  open,
+  onClose,
+  technician,
+  allTechnicians,
+}: {
+  open: boolean;
+  onClose: () => void;
+  technician: Technician;
+  allTechnicians: Technician[];
+}) {
+  const [startDate, setStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(() => format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+  const [coveringTechId, setCoveringTechId] = useState("");
+  const [coverageScope, setCoverageScope] = useState<"full" | "specific">("full");
+  const [selectedProperties, setSelectedProperties] = useState<Set<string>>(new Set());
+  const [reason, setReason] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data: propertiesData } = useQuery<{ properties: TechnicianPropertyWithSchedule[] }>({
+    queryKey: [`/api/technician-properties/${technician.id}`],
+    enabled: open,
+  });
+
+  const properties = propertiesData?.properties || [];
+
+  useEffect(() => {
+    if (open) {
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
+      setEndDate(format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+      setCoveringTechId("");
+      setCoverageScope("full");
+      setSelectedProperties(new Set());
+      setReason("");
+    }
+  }, [open]);
+
+  const createCoverageMutation = useMutation({
+    mutationFn: async (data: { propertyId: string; coveringTechId: string }) => {
+      const res = await fetch("/api/route-overrides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalTechnicianId: technician.id,
+          coveringTechnicianId: data.coveringTechId,
+          originalPropertyId: data.propertyId,
+          coverageType: "extended_cover",
+          startDate,
+          endDate,
+          notes: reason,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create coverage");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/route-overrides/technician/${technician.id}`] });
+    },
+  });
+
+  const handleSubmit = async () => {
+    if (!startDate || !endDate || !coveringTechId) return;
+    
+    const propsTocover = coverageScope === "full" 
+      ? properties 
+      : properties.filter(p => selectedProperties.has(p.propertyId));
+    
+    for (const prop of propsTocover) {
+      await createCoverageMutation.mutateAsync({
+        propertyId: prop.propertyId,
+        coveringTechId,
+      });
+    }
+    
+    alert(`Extended coverage created for ${propsTocover.length} properties`);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-lg bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
+            <CalendarDays className="w-5 h-5 text-[#0077b6]" />
+            Extended Coverage Setup
+          </DialogTitle>
+          <DialogDescription className="text-slate-500">
+            Set up coverage for {technician.firstName} {technician.lastName}'s route during their absence.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-slate-700">From Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-700">To Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-slate-700">Who Will Cover</Label>
+            <Select value={coveringTechId} onValueChange={setCoveringTechId}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select covering technician..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allTechnicians.map((tech) => (
+                  <SelectItem key={tech.id} value={tech.id}>
+                    {tech.firstName} {tech.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-slate-700">Coverage Scope</Label>
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={coverageScope === "full"}
+                  onChange={() => setCoverageScope("full")}
+                  className="w-4 h-4 text-[#0077b6]"
+                />
+                <span className="text-sm">Full Route ({properties.length} properties)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={coverageScope === "specific"}
+                  onChange={() => setCoverageScope("specific")}
+                  className="w-4 h-4 text-[#0077b6]"
+                />
+                <span className="text-sm">Select Specific Properties</span>
+              </label>
+            </div>
+          </div>
+
+          {coverageScope === "specific" && (
+            <div className="border rounded-lg p-3 max-h-48 overflow-y-auto bg-slate-50">
+              {properties.map((prop) => (
+                <label key={prop.propertyId} className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-white rounded px-2">
+                  <Checkbox
+                    checked={selectedProperties.has(prop.propertyId)}
+                    onCheckedChange={(checked) => {
+                      const newSet = new Set(selectedProperties);
+                      if (checked) {
+                        newSet.add(prop.propertyId);
+                      } else {
+                        newSet.delete(prop.propertyId);
+                      }
+                      setSelectedProperties(newSet);
+                    }}
+                  />
+                  <span className="text-sm">{prop.propertyName || "Unknown Property"}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div>
+            <Label className="text-slate-700">Reason (optional)</Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g., Vacation, Medical leave..."
+              className="mt-1"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!startDate || !endDate || !coveringTechId || createCoverageMutation.isPending}
+            className="bg-[#0077b6] hover:bg-[#005f8a]"
+          >
+            {createCoverageMutation.isPending ? "Saving..." : "Save Coverage"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Tech-Level Split Route Modal - Split Between Two Technicians
+function TechSplitRouteModal({
+  open,
+  onClose,
+  technician,
+  allTechnicians,
+}: {
+  open: boolean;
+  onClose: () => void;
+  technician: Technician;
+  allTechnicians: Technician[];
+}) {
+  const [startDate, setStartDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [endDate, setEndDate] = useState(() => format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+  const [techAId, setTechAId] = useState("");
+  const [techBId, setTechBId] = useState("");
+  const [propertyAssignments, setPropertyAssignments] = useState<Record<string, "A" | "B">>({});
+  const [reason, setReason] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data: propertiesData } = useQuery<{ properties: TechnicianPropertyWithSchedule[] }>({
+    queryKey: [`/api/technician-properties/${technician.id}`],
+    enabled: open,
+  });
+
+  const properties = propertiesData?.properties || [];
+
+  useEffect(() => {
+    if (open) {
+      setStartDate(format(new Date(), "yyyy-MM-dd"));
+      setEndDate(format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"));
+      setTechAId("");
+      setTechBId("");
+      setPropertyAssignments({});
+      setReason("");
+    }
+  }, [open]);
+
+  const createCoverageMutation = useMutation({
+    mutationFn: async (data: { propertyId: string; coveringTechId: string }) => {
+      const res = await fetch("/api/route-overrides", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalTechnicianId: technician.id,
+          coveringTechnicianId: data.coveringTechId,
+          originalPropertyId: data.propertyId,
+          coverageType: "split_route",
+          startDate,
+          endDate,
+          notes: reason,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create coverage");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/route-overrides/technician/${technician.id}`] });
+    },
+  });
+
+  const handleSubmit = async () => {
+    if (!startDate || !endDate || !techAId || !techBId) return;
+    
+    for (const prop of properties) {
+      const assignment = propertyAssignments[prop.propertyId];
+      if (assignment) {
+        const coverId = assignment === "A" ? techAId : techBId;
+        await createCoverageMutation.mutateAsync({
+          propertyId: prop.propertyId,
+          coveringTechId: coverId,
+        });
+      }
+    }
+    
+    const countA = Object.values(propertyAssignments).filter(v => v === "A").length;
+    const countB = Object.values(propertyAssignments).filter(v => v === "B").length;
+    alert(`Route split: ${countA} properties to Tech A, ${countB} properties to Tech B`);
+    onClose();
+  };
+
+  const techA = allTechnicians.find(t => t.id === techAId);
+  const techB = allTechnicians.find(t => t.id === techBId);
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-2xl bg-white">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
+            <GitFork className="w-5 h-5 text-[#f97316]" />
+            Split Route
+          </DialogTitle>
+          <DialogDescription className="text-slate-500">
+            Split {technician.firstName} {technician.lastName}'s route between two technicians.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="bg-slate-100 p-3 rounded-lg text-center">
+            <p className="text-sm text-slate-600">Technician who is out:</p>
+            <p className="font-semibold text-slate-900">{technician.firstName} {technician.lastName}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-slate-700">From Date</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-slate-700">To Date</Label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-[#0077b6] font-semibold">Technician A</Label>
+              <Select value={techAId} onValueChange={setTechAId}>
+                <SelectTrigger className="mt-1 border-[#0077b6]">
+                  <SelectValue placeholder="Select technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allTechnicians.filter(t => t.id !== techBId).map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[#f97316] font-semibold">Technician B</Label>
+              <Select value={techBId} onValueChange={setTechBId}>
+                <SelectTrigger className="mt-1 border-[#f97316]">
+                  <SelectValue placeholder="Select technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allTechnicians.filter(t => t.id !== techAId).map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {techAId && techBId && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+                Assign Properties ({properties.length} total)
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {properties.map((prop) => (
+                  <div key={prop.propertyId} className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-slate-50">
+                    <span className="text-sm truncate flex-1">{prop.propertyName || "Unknown"}</span>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={propertyAssignments[prop.propertyId] === "A" ? "default" : "outline"}
+                        onClick={() => setPropertyAssignments(prev => ({ ...prev, [prop.propertyId]: "A" }))}
+                        className={propertyAssignments[prop.propertyId] === "A" ? "bg-[#0077b6]" : ""}
+                      >
+                        {techA?.firstName?.charAt(0) || "A"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={propertyAssignments[prop.propertyId] === "B" ? "default" : "outline"}
+                        onClick={() => setPropertyAssignments(prev => ({ ...prev, [prop.propertyId]: "B" }))}
+                        className={propertyAssignments[prop.propertyId] === "B" ? "bg-[#f97316]" : ""}
+                      >
+                        {techB?.firstName?.charAt(0) || "B"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Label className="text-slate-700">Reason (optional)</Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g., Vacation, Medical leave..."
+              className="mt-1"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!startDate || !endDate || !techAId || !techBId || createCoverageMutation.isPending}
+            className="bg-[#f97316] hover:bg-[#ea580c]"
+          >
+            {createCoverageMutation.isPending ? "Splitting..." : "Split Route"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -2578,6 +2996,10 @@ export default function ServiceTechs() {
   const [showRemovePropertyDialog, setShowRemovePropertyDialog] = useState(false);
   const [propertyToRemove, setPropertyToRemove] = useState<TechnicianPropertyWithSchedule | null>(null);
   
+  // Technician-level coverage modals
+  const [showTechExtendedCoverModal, setShowTechExtendedCoverModal] = useState(false);
+  const [showTechSplitRouteModal, setShowTechSplitRouteModal] = useState(false);
+  
   const queryClient = useQueryClient();
 
   const { data: techniciansData, isLoading } = useQuery<{ technicians: Technician[] }>({
@@ -3122,6 +3544,90 @@ export default function ServiceTechs() {
                 </button>
               </div>
 
+              {/* Action Bar */}
+              <div className="flex items-center gap-2 px-6 py-3 bg-slate-50 border-b border-slate-200">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setAddPropertyTech(selectedTech);
+                    setShowAddPropertyModal(true);
+                  }}
+                  className="bg-[#22c55e] hover:bg-[#16a34a] text-white gap-1.5"
+                  data-testid="button-add-property-action"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Property
+                </Button>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowTechExtendedCoverModal(true)}
+                  className="text-[#0077b6] border-[#0077b6] hover:bg-[#0077b6]/10 gap-1.5"
+                  data-testid="button-extended-cover"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Extended Cover
+                </Button>
+                
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowTechSplitRouteModal(true)}
+                  className="text-[#f97316] border-[#f97316] hover:bg-[#f97316]/10 gap-1.5"
+                  data-testid="button-split-route"
+                >
+                  <GitFork className="w-4 h-4" />
+                  Split Route
+                </Button>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant={selectedTech.routeLocked ? "default" : "outline"}
+                        onClick={() => {
+                          updateTechnicianMutation.mutate({
+                            id: selectedTech.id,
+                            data: { routeLocked: !selectedTech.routeLocked }
+                          }, {
+                            onSuccess: () => {
+                              const action = selectedTech.routeLocked ? "unlocked" : "locked";
+                              alert(`Route ${action} for ${selectedTech.firstName} ${selectedTech.lastName}`);
+                            }
+                          });
+                        }}
+                        className={cn(
+                          "gap-1.5",
+                          selectedTech.routeLocked 
+                            ? "bg-red-500 hover:bg-red-600 text-white" 
+                            : "text-slate-600 border-slate-300 hover:bg-slate-100"
+                        )}
+                        data-testid="button-lock-route"
+                      >
+                        {selectedTech.routeLocked ? (
+                          <>
+                            <Lock className="w-4 h-4" />
+                            Route Locked
+                          </>
+                        ) : (
+                          <>
+                            <Unlock className="w-4 h-4" />
+                            Lock Route
+                          </>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {selectedTech.routeLocked 
+                        ? "Click to unlock - tech can reorder their route" 
+                        : "Click to lock - tech must follow exact route order"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
               {/* Tab Content */}
               <ScrollArea className="flex-1">
                 <div className="p-6">
@@ -3208,6 +3714,26 @@ export default function ServiceTechs() {
         technicianName={addStopTechnicianName}
         onAddStop={(data) => createRouteStopMutation.mutate(data)}
       />
+
+      {/* Technician-level Extended Cover Modal */}
+      {selectedTech && (
+        <TechExtendedCoverModal
+          open={showTechExtendedCoverModal}
+          onClose={() => setShowTechExtendedCoverModal(false)}
+          technician={selectedTech}
+          allTechnicians={technicians.filter(t => t.id !== selectedTech.id && t.active)}
+        />
+      )}
+
+      {/* Technician-level Split Route Modal */}
+      {selectedTech && (
+        <TechSplitRouteModal
+          open={showTechSplitRouteModal}
+          onClose={() => setShowTechSplitRouteModal(false)}
+          technician={selectedTech}
+          allTechnicians={technicians.filter(t => t.id !== selectedTech.id && t.active)}
+        />
+      )}
     </AppLayout>
   );
 }

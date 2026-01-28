@@ -1,0 +1,50 @@
+On the Service Technicians page, in the technician detail panel (right side), add three new buttons next to the "+ Add Property" button:
+
+**ADD THESE BUTTONS IN A ROW:**
+
+1. "+ Add Property" (keep existing - green button)
+
+2. "Extended Cover" button:
+   - Ocean blue (#0077b6) outline style with calendar icon
+   - When clicked, open a modal to set up extended coverage:
+     - Select date range (From date - To date)
+     - Select who will cover (dropdown of other technicians)
+     - Select "Full Route" or "Select Specific Properties" (if specific, show checkboxes for each property)
+     - Reason field (text)
+     - "Cancel" and "Save Coverage" buttons
+   - This creates coverage for this technician's route during the selected dates
+
+3. "Split Route" button:
+   - Orange (#f97316) outline style with split/fork icon
+   - When clicked, open a modal to split the route:
+     - Shows the technician who is out at the top
+     - Two columns: "Technician A" and "Technician B" dropdowns to select covering techs
+     - Below, show the properties from this tech's route
+     - Allow dragging/moving properties to assign to Technician A or Technician B
+     - Reason field
+     - "Cancel" and "Split Route" buttons
+   - This divides the route between two other technicians
+
+4. "Lock Route" toggle button:
+   - Toggle switch style or button with lock/unlock icon
+   - When ON/Locked:
+     - Shows locked padlock icon with "Route Locked" text
+     - The technician cannot reorder or adjust their route in their mobile app
+     - They must service properties in the exact order shown
+   - When OFF/Unlocked:
+     - Shows unlocked padlock icon with "Route Unlocked" text
+     - The technician can adjust their route order in their app
+   - Toggle changes status immediately with toast notification: "Route locked for [Tech Name]" or "Route unlocked for [Tech Name]"
+
+**BUTTON STYLING:**
+- Arrange buttons in a row below the "Properties" and "Notes" tabs
+- Keep buttons compact and aligned
+- Use icons to save space:
+  - Add Property: + icon (green)
+  - Extended Cover: calendar icon (ocean blue)
+  - Split Route: split/fork icon (orange)
+  - Lock Route: padlock icon (gray/red when locked, gray when unlocked)
+
+**POSITIONING:**
+- Place the button row above the "X assigned properties" text
+- Or create a small toolbar/action bar with all four options

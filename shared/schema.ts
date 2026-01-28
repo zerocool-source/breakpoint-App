@@ -51,6 +51,7 @@ export const technicians = pgTable("technicians", {
   supervisorId: varchar("supervisor_id"), // Self-referential FK for team hierarchy
   truckNumber: text("truck_number"), // Assigned truck number
   commissionPercent: integer("commission_percent").default(0), // Commission % on parts for service repairs
+  routeLocked: boolean("route_locked").default(false), // When true, technician cannot reorder their route in mobile app
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
