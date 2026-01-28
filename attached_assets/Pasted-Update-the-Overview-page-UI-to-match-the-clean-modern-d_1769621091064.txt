@@ -1,0 +1,38 @@
+Update the Overview page UI to match the clean, modern dashboard style with the following changes:
+
+**COLOR CORRECTIONS - NO PURPLE OR PINK:**
+- Change the sidebar from dark blue to ocean blue (#0077b6)
+- Change the "Awaiting Scheduling" card icon background from purple/blue to ocean blue (#0077b6)
+- Change the "Invoiced Unpaid" card icon background from green to a teal (#14b8a6) or keep green (#22c55e)
+- Make sure NO purple or pink colors appear anywhere
+
+**PIPELINE STATUS CARDS:**
+- Pending Estimates: Orange (#f97316) icon background ✓
+- Awaiting Scheduling: Ocean blue (#0077b6) icon background (not purple)
+- Ready to Invoice: Ocean blue (#0077b6) or teal (#14b8a6) icon background
+- Invoiced Unpaid: Green (#22c55e) icon background
+- Overdue: Red (#ef4444) icon background ✓
+- Add subtle light colored background tint to each card matching its icon color (very light orange, light blue, light green, light red)
+
+**EMERGENCY & ALERTS STATUS:**
+- Change the donut chart colors to: Red for Emergencies, Ocean blue (#0077b6) for Reported Issues
+- Remove any purple from the chart
+- Keep the center showing "44 Total"
+
+**ESTIMATE PIPELINE:**
+- Update the semi-circle gauge to use ocean blue (#0077b6), teal (#14b8a6), green (#22c55e), and orange (#f97316)
+- Remove any purple or pink segments
+- Legend dots should match: gray for Draft, orange for Pending Approval, green for Approved, ocean blue for Scheduled, teal for Ready to Invoice, red for Unpaid
+
+**RECENT ANNOUNCEMENTS:**
+- Keep the clean white card style
+- User avatars can be ocean blue or gray circles
+- "View All Announcements" link in ocean blue (#0077b6)
+
+**GENERAL:**
+- All "View All" links should be ocean blue (#0077b6)
+- All primary buttons (Add Employee) should be ocean blue (#0077b6)
+- Secondary buttons (Add Property) should be white with ocean blue border
+- Progress indicators and highlights: ocean blue, no purple
+
+Ensure the entire Overview page uses only: Ocean blue (#0077b6), Teal (#14b8a6), Green (#22c55e), Orange (#f97316), Red (#ef4444), and neutral grays. NO PURPLE OR PINK.

@@ -722,8 +722,8 @@ export default function Dashboard() {
                   </div>
 
                   {/* Awaiting Scheduling */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-blue-50 to-white border border-blue-100">
-                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mb-3 shadow-lg shadow-blue-200">
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-sky-50 to-white border border-sky-100">
+                    <div className="w-12 h-12 rounded-full bg-[#0077b6] flex items-center justify-center mb-3 shadow-lg shadow-sky-200">
                       <Calendar className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
@@ -736,8 +736,8 @@ export default function Dashboard() {
                   </div>
 
                   {/* Ready to Invoice */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-amber-50 to-white border border-amber-100">
-                    <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center mb-3 shadow-lg shadow-amber-200">
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-teal-50 to-white border border-teal-100">
+                    <div className="w-12 h-12 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3 shadow-lg shadow-teal-200">
                       <Receipt className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
@@ -815,7 +815,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Megaphone className="w-5 h-5 text-purple-600" />
+                      <Megaphone className="w-5 h-5 text-[#0077b6]" />
                       Recent Announcements
                     </CardTitle>
                     <CardDescription>Updates from team chat</CardDescription>
@@ -838,11 +838,11 @@ export default function Dashboard() {
                     ].map((announcement) => (
                       <div 
                         key={announcement.id}
-                        className="p-3 rounded-lg bg-slate-50 hover:bg-purple-50 transition-colors cursor-pointer border border-slate-100"
+                        className="p-3 rounded-lg bg-slate-50 hover:bg-sky-50 transition-colors cursor-pointer border border-slate-100"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                            <User className="w-4 h-4 text-purple-600" />
+                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+                            <User className="w-4 h-4 text-[#0077b6]" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-800 truncate">{announcement.title}</p>
@@ -861,7 +861,7 @@ export default function Dashboard() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                    className="w-full text-[#0077b6] hover:text-[#006299] hover:bg-sky-50"
                     onClick={() => navigate("/chat")}
                   >
                     View All Announcements
@@ -999,14 +999,14 @@ export default function Dashboard() {
                               stroke="#e2e8f0"
                               strokeWidth={strokeWidth}
                             />
-                            {/* Issues segment (blue) */}
+                            {/* Issues segment (ocean blue) */}
                             {issueLength > 0 && (
                               <circle
                                 cx={size / 2}
                                 cy={size / 2}
                                 r={radius}
                                 fill="none"
-                                stroke={selectedStatusCategory === 'issues' ? '#2563eb' : '#3b82f6'}
+                                stroke={selectedStatusCategory === 'issues' ? '#006299' : '#0077b6'}
                                 strokeWidth={selectedStatusCategory === 'issues' ? strokeWidth + 4 : strokeWidth}
                                 strokeDasharray={`${issueLength} ${circumference - issueLength}`}
                                 strokeDashoffset={-issueOffset}
@@ -1060,15 +1060,15 @@ export default function Dashboard() {
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'issues' 
-                            ? 'bg-blue-50 border border-blue-200' 
+                            ? 'bg-sky-50 border border-sky-200' 
                             : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                          <div className="w-3 h-3 rounded-full bg-[#0077b6]"></div>
                           <span className="text-sm font-medium text-slate-700">Reported Issues</span>
                         </div>
-                        <span className="text-sm font-bold text-blue-600">{issueCount}</span>
+                        <span className="text-sm font-bold text-[#0077b6]">{issueCount}</span>
                       </button>
                     </div>
                     
@@ -1192,8 +1192,8 @@ export default function Dashboard() {
                   const pipelineData = [
                     { label: "Draft", value: metrics?.values?.draft || 0, color: "#64748b" },
                     { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#f97316" },
-                    { label: "Approved", value: metrics?.values?.approved || 0, color: "#10b981" },
-                    { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0ea5e9" },
+                    { label: "Approved", value: metrics?.values?.approved || 0, color: "#22c55e" },
+                    { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0077b6" },
                     { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#14b8a6" },
                     { label: "Unpaid", value: metrics?.invoices?.unpaidValue || 0, color: "#ef4444" },
                   ];
@@ -1403,7 +1403,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-purple-600" />
+                    <Calendar className="w-5 h-5 text-[#0077b6]" />
                     Coverage Calendar
                   </CardTitle>
                   <CardDescription>Technician coverage schedule</CardDescription>
@@ -1508,7 +1508,7 @@ export default function Dashboard() {
                               onClick={() => setSelectedDate(new Date(year, month, day))}
                               title={hasCoverage ? tooltipText : undefined}
                               className={`h-9 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors relative group
-                                ${isSelected ? 'bg-purple-600 text-white' : isToday ? 'bg-purple-100 text-purple-700' : 'hover:bg-slate-100 text-slate-700'}
+                                ${isSelected ? 'bg-[#0077b6] text-white' : isToday ? 'bg-sky-100 text-[#0077b6]' : 'hover:bg-slate-100 text-slate-700'}
                               `}
                             >
                               <span>{day}</span>
@@ -1550,8 +1550,8 @@ export default function Dashboard() {
                             const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                             
                             return (
-                              <div key={c.id || idx} className="p-2.5 rounded-lg bg-purple-50 border border-purple-100">
-                                <p className="text-xs text-purple-600 font-medium">{dateStr} - {dayOfWeek}</p>
+                              <div key={c.id || idx} className="p-2.5 rounded-lg bg-sky-50 border border-sky-100">
+                                <p className="text-xs text-[#0077b6] font-medium">{dateStr} - {dayOfWeek}</p>
                                 <p className="text-sm text-slate-700 mt-0.5">
                                   {c.reason === 'Training day' 
                                     ? `${c.reason} - ${c.coveringTechName} at ${c.propertyName}`
@@ -2030,8 +2030,8 @@ export default function Dashboard() {
               className="w-full p-4 flex items-center gap-4 rounded-lg border border-slate-200 hover:border-[#0077b6] hover:bg-[#0077b6]/5 transition-all text-left"
               data-testid="button-employee-type-supervisor"
             >
-              <div className="p-3 rounded-lg bg-purple-100">
-                <HardHat className="w-6 h-6 text-purple-600" />
+              <div className="p-3 rounded-lg bg-slate-100">
+                <HardHat className="w-6 h-6 text-slate-600" />
               </div>
               <div>
                 <p className="font-semibold text-slate-900">Supervisor</p>
@@ -2052,7 +2052,7 @@ export default function Dashboard() {
             <DialogTitle className="flex items-center gap-2">
               {selectedEmployeeType === "service" && <Wrench className="w-5 h-5 text-blue-600" />}
               {selectedEmployeeType === "repair" && <Hammer className="w-5 h-5 text-amber-600" />}
-              {selectedEmployeeType === "supervisor" && <HardHat className="w-5 h-5 text-purple-600" />}
+              {selectedEmployeeType === "supervisor" && <HardHat className="w-5 h-5 text-slate-600" />}
               Add {selectedEmployeeType === "service" ? "Service Technician" : selectedEmployeeType === "repair" ? "Repair Technician" : "Supervisor"}
             </DialogTitle>
           </DialogHeader>
