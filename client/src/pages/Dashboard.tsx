@@ -861,11 +861,11 @@ export default function Dashboard() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="w-full text-[#0077b6] hover:text-[#006299] hover:bg-sky-50"
+                    className="w-full text-[#0077b6] hover:text-[#006299] hover:bg-sky-50 group"
                     onClick={() => navigate("/chat")}
                   >
                     View All Announcements
-                    <ArrowRight className="w-4 h-4 ml-1" />
+                    <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </div>
               </CardContent>
@@ -1272,7 +1272,7 @@ export default function Dashboard() {
             </Card>
 
             <Card className="bg-white rounded-2xl flex-1" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 px-6 pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -1323,7 +1323,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-6">
           {/* Left Column: Equipment Tracker */}
           <Card className="bg-white rounded-2xl" data-testid="card-equipment-tracker" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -1381,9 +1381,11 @@ export default function Dashboard() {
                     {equipmentItems.map((item) => (
                       <div 
                         key={item.id} 
-                        className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className={`flex items-center gap-3 p-3 rounded-lg bg-slate-50 border-l-4 ${
+                          item.status === 'overdue' ? 'border-l-red-500' : 
+                          item.status === 'scheduled' ? 'border-l-green-500' : 'border-l-amber-500'
+                        } hover:bg-slate-100 transition-all hover:scale-[1.01] cursor-pointer`}
                       >
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getConditionIndicator(item)}`} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>
                           <p className="text-xs text-slate-500 truncate">{item.property}</p>
@@ -1399,7 +1401,7 @@ export default function Dashboard() {
 
           {/* Right Column: Coverage Calendar */}
           <Card className="bg-white rounded-2xl" data-testid="card-coverage-calendar-main" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -1574,7 +1576,7 @@ export default function Dashboard() {
         {/* Three-Column Lower Section: Truck Maintenance + Chemical Orders + Top Chemicals */}
         <div className="grid grid-cols-3 gap-6">
           <Card className="bg-white rounded-2xl" data-testid="card-truck-maintenance" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -1631,10 +1633,12 @@ export default function Dashboard() {
                     {truckMaintenanceItems.map((item) => (
                       <div 
                         key={item.id} 
-                        className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer"
+                        className={`flex items-center gap-3 p-3 rounded-lg bg-slate-50 border-l-4 ${
+                          item.status === 'overdue' ? 'border-l-red-500' : 
+                          item.status === 'scheduled' ? 'border-l-green-500' : 'border-l-amber-500'
+                        } hover:bg-slate-100 transition-all hover:scale-[1.01] cursor-pointer`}
                         onClick={() => navigate("/fleet")}
                       >
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getConditionIndicator(item)}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-semibold text-slate-800">Truck #{item.truckNumber}</span>
@@ -1654,7 +1658,7 @@ export default function Dashboard() {
 
           {/* Chemical Orders by Property */}
           <Card className="bg-white rounded-2xl" data-testid="card-chemical-orders-by-property" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
