@@ -227,7 +227,7 @@ function CustomerListItem({
             {zones && onZoneChange && customerZone && (
               <span 
                 className="px-2 py-0.5 rounded-full text-white text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
-                style={{ backgroundColor: customerZone.color || "#0077b6" }}
+                style={{ backgroundColor: "#0077b6" }}
                 data-testid={`zone-badge-${customer.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1238,7 +1238,7 @@ function ManageZonesModal({
                     <div className="flex items-center gap-2">
                       <span 
                         className="px-2 py-1 rounded-full text-white text-xs font-medium"
-                        style={{ backgroundColor: zone.color || "#0077b6" }}
+                        style={{ backgroundColor: "#0077b6" }}
                       >
                         {zone.name}
                       </span>
@@ -1784,7 +1784,7 @@ function CustomerDetailPanel({
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3 rounded-full" 
-                            style={{ backgroundColor: zone.color || "#0077b6" }}
+                            style={{ backgroundColor: "#0077b6" }}
                           />
                           {zone.name}
                         </div>
@@ -3122,7 +3122,7 @@ export default function Customers() {
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: zone.color || "#0077b6" }}
+                          style={{ backgroundColor: "#0077b6" }}
                         />
                         {zone.name}
                       </div>
@@ -3167,7 +3167,7 @@ export default function Customers() {
                   <div key={zone.id} className="border-b border-slate-200">
                     <div 
                       className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50"
-                      style={{ backgroundColor: `${zone.color || "#0077b6"}10` }}
+                      style={{ backgroundColor: "#0077b610" }}
                       onClick={() => toggleZoneCollapse(zone.id)}
                       data-testid={`zone-header-${zone.id}`}
                     >
@@ -3180,7 +3180,7 @@ export default function Customers() {
                         />
                         <span 
                           className="px-2 py-1 rounded-full text-white text-xs font-medium"
-                          style={{ backgroundColor: zone.color || "#0077b6" }}
+                          style={{ backgroundColor: "#0077b6" }}
                         >
                           {zone.name}
                         </span>
