@@ -1162,6 +1162,18 @@ const ZONE_COLORS = [
   { value: "#6b7280", label: "Gray" },
   { value: "#8b5cf6", label: "Purple" },
   { value: "#ec4899", label: "Pink" },
+  { value: "#ef4444", label: "Red" },
+  { value: "#f59e0b", label: "Amber" },
+  { value: "#84cc16", label: "Lime" },
+  { value: "#06b6d4", label: "Cyan" },
+  { value: "#3b82f6", label: "Blue" },
+  { value: "#6366f1", label: "Indigo" },
+  { value: "#a855f7", label: "Violet" },
+  { value: "#f43f5e", label: "Rose" },
+  { value: "#78716c", label: "Stone" },
+  { value: "#0d9488", label: "Emerald" },
+  { value: "#0ea5e9", label: "Sky" },
+  { value: "#d946ef", label: "Fuchsia" },
 ];
 
 function ManageZonesModal({
