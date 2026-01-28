@@ -1,0 +1,84 @@
+Redesign the Repair Queue page to have a clean, minimal QuickBooks-style UI similar to the Overview page:
+
+**HEADER SECTION:**
+- Keep "Repair Queue" title with wrench icon
+- Subtitle: "Manage repairs assigned to Repair Techs"
+- Keep the "Export", "0 Pending", "1 In Progress" buttons on the right but style them:
+  - "Export" - ocean blue (#0077b6) outline button
+  - "0 Pending" - orange (#f97316) outline with orange text
+  - "1 In Progress" - teal (#14b8a6) outline with teal text
+
+**TOP METRIC CARDS (Same style as Overview Pipeline Status):**
+Redesign the colored metric cards to match the Overview page style:
+- White card backgrounds instead of solid colored backgrounds
+- Subtle colored left border (4px) for each card
+- Small colored icon in a light circle at the top
+- Large bold number below
+- Label text in gray
+- Small dollar amount or secondary info below
+
+Cards:
+1. "Total Jobs" - Ocean blue (#0077b6) left border, blue icon - "13" with "$38,860.30"
+2. "Pending" - Orange (#f97316) left border, orange icon - "0" with "$0.00"
+3. "In Progress" - Teal (#14b8a6) left border, teal icon - "1" with "$0.00"
+4. "Completed" - Green (#22c55e) left border, green icon - "12" with "$38,860.30"
+5. "Active Techs" - Gray left border, gray icon - "1" with "with assigned jobs"
+6. "Avg per Tech" - Gray left border, gray icon - "1" with "active jobs"
+
+**TABS SECTION:**
+Style the tabs (By Technician, Active Jobs, Completed, Estimates Log, Emergencies, Parts Ordered) like clean pill buttons:
+- White background for inactive tabs with subtle border
+- Ocean blue (#0077b6) background with white text for active tab
+- Rounded corners
+- Clean spacing between tabs
+- Show counts in parentheses
+
+**REPAIR TECHNICIANS LIST (Left side):**
+Style each technician card like the Overview page containers:
+- White card background
+- Subtle shadow
+- Rounded corners (12-16px)
+- Clean layout:
+  - Avatar with initials (colored circle)
+  - Name in bold
+  - "X active jobs" in gray below
+  - Small badge count on right if has jobs
+
+- Stats row inside each card:
+  - "Pending" count in orange
+  - "In Progress" count in teal (with light teal background box)
+  - "Completed" count in green
+  
+- "Total Value: $XXX.XX" in gray
+- "Completion: XX%" with progress bar
+  - Progress bar: Ocean blue (#0077b6) fill, light gray background, rounded ends
+
+**ALL ACTIVE JOBS (Right side):**
+Style the job cards to match Overview page style:
+- White card background
+- Subtle shadow
+- Rounded corners
+- Clean layout:
+  - Job ID (EST-26-00010) in bold with "In Progress" badge (teal background)
+  - Dollar amount on the right
+  - Property name with location icon
+  - Technician name with person icon
+  - Date with calendar icon
+  - "Service Repairs (X items)" text
+  - "From Estimate" tag in light blue/gray
+
+- Action buttons at bottom:
+  - "Complete" button - green outline with checkmark icon
+  - "View" button - gray outline with eye icon
+  - Three dots menu for more options
+
+**GENERAL STYLING:**
+- Light gray page background (#f9fafb)
+- All cards white with subtle shadows
+- Consistent spacing and padding
+- No heavy colored backgrounds - use white with colored accents (left borders, icons, badges)
+- Orange (#f97316) for pending/warning items
+- Teal (#14b8a6) for in-progress items
+- Green (#22c55e) for completed items
+- Ocean blue (#0077b6) for primary actions and totals
+- Remove any purple or pink colors

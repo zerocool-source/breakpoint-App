@@ -1169,103 +1169,118 @@ export default function RepairQueue() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-[#f9fafb] min-h-screen">
+        {/* Header Section */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-[#FF8000]/10 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-[#D35400]" />
+            <div className="w-12 h-12 rounded-xl bg-[#0077b6]/10 flex items-center justify-center">
+              <Wrench className="w-6 h-6 text-[#0077b6]" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-[#1E293B]" data-testid="text-heading-repairqueue">Repair Queue</h1>
+              <h1 className="text-2xl font-bold text-slate-900" data-testid="text-heading-repairqueue">Repair Queue</h1>
               <p className="text-slate-500 text-sm">Manage repairs assigned to Repair Techs</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={exportToCSV}
-              className="text-[#0078D4] border-[#0078D4] hover:bg-[#0078D4]/10"
+              className="text-[#0077b6] border-[#0077b6] hover:bg-[#0077b6]/10"
               data-testid="button-export"
             >
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33" data-testid="badge-pending-count">
-              <Clock className="w-4 h-4 text-[#D35400]" />
-              <span className="text-sm font-medium text-[#D35400]">{pendingRepairs.length} Pending</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-[#17BEBB]33" data-testid="badge-inprogress-count">
-              <Wrench className="w-4 h-4 text-[#0D9488]" />
-              <span className="text-sm font-medium text-[#0D9488]">{inProgressRepairs.length} In Progress</span>
-            </div>
+            <Button
+              variant="outline"
+              className="text-[#f97316] border-[#f97316] hover:bg-[#f97316]/10"
+              data-testid="badge-pending-count"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              {pendingRepairs.length} Pending
+            </Button>
+            <Button
+              variant="outline"
+              className="text-[#14b8a6] border-[#14b8a6] hover:bg-[#14b8a6]/10"
+              data-testid="badge-inprogress-count"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              {inProgressRepairs.length} In Progress
+            </Button>
           </div>
         </div>
 
-        {/* Dashboard Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" data-testid="dashboard-metrics">
-          <Card className="bg-gradient-to-br from-[#0078D4] to-[#3B82F6] text-white">
+        {/* Dashboard Metric Cards - QuickBooks Style */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" data-testid="dashboard-metrics">
+          {/* Total Jobs */}
+          <Card className="bg-white border-l-4 border-l-[#0077b6] shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 opacity-80" />
-                <span className="text-sm opacity-90">Total Jobs</span>
+              <div className="w-8 h-8 rounded-full bg-[#0077b6]/10 flex items-center justify-center mb-3">
+                <Target className="w-4 h-4 text-[#0077b6]" />
               </div>
-              <div className="text-2xl font-bold">{dashboardMetrics.totalJobs}</div>
-              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.totalValue)}</div>
+              <div className="text-2xl font-bold text-slate-900">{dashboardMetrics.totalJobs}</div>
+              <div className="text-sm text-slate-500">Total Jobs</div>
+              <div className="text-xs text-[#0077b6] font-medium mt-1">{formatCurrency(dashboardMetrics.totalValue)}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-[#FF8000] to-[#FF8000] text-white">
+          {/* Pending */}
+          <Card className="bg-white border-l-4 border-l-[#f97316] shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 opacity-80" />
-                <span className="text-sm opacity-90">Pending</span>
+              <div className="w-8 h-8 rounded-full bg-[#f97316]/10 flex items-center justify-center mb-3">
+                <Clock className="w-4 h-4 text-[#f97316]" />
               </div>
-              <div className="text-2xl font-bold">{dashboardMetrics.pending}</div>
-              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.pendingValue)}</div>
+              <div className="text-2xl font-bold text-slate-900">{dashboardMetrics.pending}</div>
+              <div className="text-sm text-slate-500">Pending</div>
+              <div className="text-xs text-[#f97316] font-medium mt-1">{formatCurrency(dashboardMetrics.pendingValue)}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-[#17BEBB] to-[#17BEBB] text-white">
+          {/* In Progress */}
+          <Card className="bg-white border-l-4 border-l-[#14b8a6] shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Wrench className="w-4 h-4 opacity-80" />
-                <span className="text-sm opacity-90">In Progress</span>
+              <div className="w-8 h-8 rounded-full bg-[#14b8a6]/10 flex items-center justify-center mb-3">
+                <Wrench className="w-4 h-4 text-[#14b8a6]" />
               </div>
-              <div className="text-2xl font-bold">{dashboardMetrics.inProgress}</div>
-              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.inProgressValue)}</div>
+              <div className="text-2xl font-bold text-slate-900">{dashboardMetrics.inProgress}</div>
+              <div className="text-sm text-slate-500">In Progress</div>
+              <div className="text-xs text-[#14b8a6] font-medium mt-1">{formatCurrency(dashboardMetrics.inProgressValue)}</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-[#22D69A] to-[#22D69A] text-white">
+          {/* Completed */}
+          <Card className="bg-white border-l-4 border-l-[#22c55e] shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-4 h-4 opacity-80" />
-                <span className="text-sm opacity-90">Completed</span>
+              <div className="w-8 h-8 rounded-full bg-[#22c55e]/10 flex items-center justify-center mb-3">
+                <CheckCircle className="w-4 h-4 text-[#22c55e]" />
               </div>
-              <div className="text-2xl font-bold">{dashboardMetrics.completed}</div>
-              <div className="text-xs opacity-80">{formatCurrency(dashboardMetrics.completedValue)}</div>
+              <div className="text-2xl font-bold text-slate-900">{dashboardMetrics.completed}</div>
+              <div className="text-sm text-slate-500">Completed</div>
+              <div className="text-xs text-[#22c55e] font-medium mt-1">{formatCurrency(dashboardMetrics.completedValue)}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Active Techs */}
+          <Card className="bg-white border-l-4 border-l-slate-400 shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-[#0078D4]" />
-                <span className="text-sm text-slate-600">Active Techs</span>
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                <Users className="w-4 h-4 text-slate-600" />
               </div>
-              <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.activeTechs}</div>
-              <div className="text-xs text-slate-500">with assigned jobs</div>
+              <div className="text-2xl font-bold text-slate-900">{dashboardMetrics.activeTechs}</div>
+              <div className="text-sm text-slate-500">Active Techs</div>
+              <div className="text-xs text-slate-400 mt-1">with assigned jobs</div>
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Avg per Tech */}
+          <Card className="bg-white border-l-4 border-l-slate-400 shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-[#D35400]" />
-                <span className="text-sm text-slate-600">Avg per Tech</span>
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                <TrendingUp className="w-4 h-4 text-slate-600" />
               </div>
-              <div className="text-2xl font-bold text-[#1E293B]">{dashboardMetrics.avgPerTech}</div>
-              <div className="text-xs text-slate-500">active jobs</div>
+              <div className="text-2xl font-bold text-slate-900">{dashboardMetrics.avgPerTech}</div>
+              <div className="text-sm text-slate-500">Avg per Tech</div>
+              <div className="text-xs text-slate-400 mt-1">active jobs</div>
             </CardContent>
           </Card>
         </div>
