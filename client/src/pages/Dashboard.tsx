@@ -700,7 +700,7 @@ export default function Dashboard() {
             <Card className="shadow-sm bg-white h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  <ClipboardList className="w-5 h-5 text-[#0077b6]" />
                   Pipeline Status
                 </CardTitle>
                 <CardDescription>Work items by status with monthly trends</CardDescription>
@@ -783,8 +783,8 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 gap-4">
                     {/* Total Estimates */}
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-[#0077b6]" />
                       </div>
                       <div>
                         <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.total || 0}</span>
@@ -824,7 +824,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="relative">
                 <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
-                  <Megaphone className="w-full h-full text-purple-500" />
+                  <Megaphone className="w-full h-full text-[#0077b6]" />
                 </div>
                 <ScrollArea className="h-[200px] pr-4">
                   <div className="space-y-3">
@@ -1138,7 +1138,7 @@ export default function Dashboard() {
                                   <Badge className="bg-amber-500 text-white text-[9px] shrink-0">Medium</Badge>
                                 )}
                                 {item.type === 'issue' && item.status && (
-                                  <Badge className="bg-blue-100 text-blue-700 text-[9px] shrink-0">{item.status}</Badge>
+                                  <Badge className="bg-sky-100 text-[#0077b6] text-[9px] shrink-0">{item.status}</Badge>
                                 )}
                               </div>
                               <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
@@ -1742,8 +1742,8 @@ export default function Dashboard() {
               {(() => {
                 const topChemicals = [
                   { name: 'Liquid Chlorine', percentage: 70, color: '#86EFAC', textColor: '#166534' },
-                  { name: 'Muriatic Acid', percentage: 20, color: '#C4B5FD', textColor: '#5B21B6' },
-                  { name: 'pH Increaser', percentage: 10, color: '#FBCFE8', textColor: '#9D174D' },
+                  { name: 'Muriatic Acid', percentage: 20, color: '#fed7aa', textColor: '#c2410c' },
+                  { name: 'pH Increaser', percentage: 10, color: '#99f6e4', textColor: '#0f766e' },
                 ];
                 
                 return (
@@ -1892,14 +1892,14 @@ export default function Dashboard() {
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
           <Card 
-            className="shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 border-l-blue-500 bg-white" 
+            className="shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 border-l-[#0077b6] bg-white" 
             onClick={() => navigate("/repair-queue")}
             data-testid="card-repair-tech-workload"
           >
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Wrench className="w-5 h-5 text-blue-600" />
+                  <Wrench className="w-5 h-5 text-[#0077b6]" />
                   <span className="text-slate-900">Repair Tech Workload</span>
                 </CardTitle>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -1924,7 +1924,7 @@ export default function Dashboard() {
                           ? "bg-red-100 text-red-700" 
                           : tech.jobCount >= 3 
                             ? "bg-amber-100 text-amber-700" 
-                            : "bg-blue-100 text-blue-700"
+                            : "bg-sky-100 text-[#0077b6]"
                     }`}>
                       {tech.jobCount}
                     </Badge>
@@ -2004,8 +2004,8 @@ export default function Dashboard() {
               className="w-full p-4 flex items-center gap-4 rounded-lg border border-slate-200 hover:border-[#0077b6] hover:bg-[#0077b6]/5 transition-all text-left"
               data-testid="button-employee-type-service"
             >
-              <div className="p-3 rounded-lg bg-blue-100">
-                <Wrench className="w-6 h-6 text-blue-600" />
+              <div className="p-3 rounded-lg bg-sky-100">
+                <Wrench className="w-6 h-6 text-[#0077b6]" />
               </div>
               <div>
                 <p className="font-semibold text-slate-900">Service Technician</p>
@@ -2050,7 +2050,7 @@ export default function Dashboard() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedEmployeeType === "service" && <Wrench className="w-5 h-5 text-blue-600" />}
+              {selectedEmployeeType === "service" && <Wrench className="w-5 h-5 text-[#0077b6]" />}
               {selectedEmployeeType === "repair" && <Hammer className="w-5 h-5 text-amber-600" />}
               {selectedEmployeeType === "supervisor" && <HardHat className="w-5 h-5 text-slate-600" />}
               Add {selectedEmployeeType === "service" ? "Service Technician" : selectedEmployeeType === "repair" ? "Repair Technician" : "Supervisor"}
