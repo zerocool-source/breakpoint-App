@@ -25,7 +25,12 @@ import {
   Building2,
   HardHat,
   Hammer,
-  Download
+  Download,
+  Megaphone,
+  TrendingDown,
+  User,
+  ClipboardList,
+  AlertCircle
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -685,6 +690,159 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Pending Approvals Metrics + Recent Announcements Row */}
+        <div className="grid grid-cols-10 gap-6">
+          {/* Pending Approvals Metrics - 70% width */}
+          <div className="col-span-7">
+            <Card className="shadow-sm bg-white h-full">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-blue-600" />
+                  Pipeline Status
+                </CardTitle>
+                <CardDescription>Work items by status with monthly trends</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-5 gap-4">
+                  {/* Pending Estimates */}
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-orange-50 to-white border border-orange-100">
+                    <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center mb-3 shadow-lg shadow-orange-200">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
+                    <span className="text-sm font-medium text-slate-600 mt-1">Pending Estimates</span>
+                    <div className="flex items-center gap-1 mt-2">
+                      <TrendingUp className="w-3 h-3 text-green-500" />
+                      <span className="text-xs text-green-600">+12%</span>
+                      <span className="text-xs text-slate-400">Last Month</span>
+                    </div>
+                  </div>
+
+                  {/* Awaiting Scheduling */}
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-blue-50 to-white border border-blue-100">
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mb-3 shadow-lg shadow-blue-200">
+                      <Calendar className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-3xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
+                    <span className="text-sm font-medium text-slate-600 mt-1">Awaiting Scheduling</span>
+                    <div className="flex items-center gap-1 mt-2">
+                      <TrendingDown className="w-3 h-3 text-red-500" />
+                      <span className="text-xs text-red-600">-8%</span>
+                      <span className="text-xs text-slate-400">Last Month</span>
+                    </div>
+                  </div>
+
+                  {/* Ready to Invoice */}
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-amber-50 to-white border border-amber-100">
+                    <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center mb-3 shadow-lg shadow-amber-200">
+                      <Receipt className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
+                    <span className="text-sm font-medium text-slate-600 mt-1">Ready to Invoice</span>
+                    <div className="flex items-center gap-1 mt-2">
+                      <TrendingUp className="w-3 h-3 text-green-500" />
+                      <span className="text-xs text-green-600">+5%</span>
+                      <span className="text-xs text-slate-400">Last Month</span>
+                    </div>
+                  </div>
+
+                  {/* Invoiced Unpaid */}
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-green-50 to-white border border-green-100">
+                    <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3 shadow-lg shadow-green-200">
+                      <DollarSign className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-3xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
+                    <span className="text-sm font-medium text-slate-600 mt-1">Invoiced Unpaid</span>
+                    <div className="flex items-center gap-1 mt-2">
+                      <TrendingUp className="w-3 h-3 text-green-500" />
+                      <span className="text-xs text-green-600">+3%</span>
+                      <span className="text-xs text-slate-400">Last Month</span>
+                    </div>
+                  </div>
+
+                  {/* Overdue */}
+                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-red-50 to-white border border-red-100">
+                    <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center mb-3 shadow-lg shadow-red-200">
+                      <AlertCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
+                    <span className="text-sm font-medium text-slate-600 mt-1">Overdue</span>
+                    <div className="flex items-center gap-1 mt-2">
+                      <TrendingDown className="w-3 h-3 text-green-500" />
+                      <span className="text-xs text-green-600">-15%</span>
+                      <span className="text-xs text-slate-400">Last Month</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Announcements - 30% width */}
+          <div className="col-span-3">
+            <Card className="shadow-sm bg-white h-full">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Megaphone className="w-5 h-5 text-purple-600" />
+                      Recent Announcements
+                    </CardTitle>
+                    <CardDescription>Updates from team chat</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
+                  <Megaphone className="w-full h-full text-purple-500" />
+                </div>
+                <ScrollArea className="h-[200px] pr-4">
+                  <div className="space-y-3">
+                    {/* Sample announcements - these would pull from chat/announcements */}
+                    {[
+                      { id: 1, title: "New safety protocol for pool chemicals", author: "Sarah Johnson", role: "Operations Manager", time: "2 hours ago" },
+                      { id: 2, title: "Holiday schedule reminder - Memorial Day", author: "Mike Chen", role: "HR", time: "Yesterday" },
+                      { id: 3, title: "Equipment maintenance training next week", author: "Tom Wilson", role: "Training Lead", time: "2 days ago" },
+                      { id: 4, title: "Customer feedback improvements Q1", author: "Lisa Davis", role: "Customer Success", time: "3 days ago" },
+                      { id: 5, title: "New truck assignments for south region", author: "James Brown", role: "Fleet Manager", time: "1 week ago" },
+                    ].map((announcement) => (
+                      <div 
+                        key={announcement.id}
+                        className="p-3 rounded-lg bg-slate-50 hover:bg-purple-50 transition-colors cursor-pointer border border-slate-100"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                            <User className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{announcement.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-slate-500">{announcement.author}</span>
+                              <span className="text-xs text-slate-300">•</span>
+                              <span className="text-xs text-slate-400">{announcement.time}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                    onClick={() => navigate("/chat")}
+                  >
+                    View All Announcements
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Emergency & Alerts Status */}
