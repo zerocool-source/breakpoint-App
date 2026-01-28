@@ -226,8 +226,8 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-96" style={{ background: 'linear-gradient(180deg, #0B1437 0%, #0a1128 100%)' }}>
-          <Loader2 className="w-8 h-8 animate-spin text-[#0077b6]" />
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
         </div>
       </AppLayout>
     );
@@ -235,11 +235,11 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6 min-h-screen" style={{ background: 'linear-gradient(180deg, #0B1437 0%, #0a1128 100%)' }}>
+      <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-white">Overview</h1>
-            <p className="text-white/60 text-sm">Real-time business intelligence dashboard</p>
+            <h1 className="text-2xl font-semibold text-[#1E293B]">Overview</h1>
+            <p className="text-[#64748B] text-sm">Real-time business intelligence dashboard</p>
           </div>
         </div>
 
@@ -247,44 +247,42 @@ export default function Dashboard() {
         <div className="grid grid-cols-6 gap-4">
           {/* Estimates Total */}
           <Card 
-            className="cursor-pointer transition-all rounded-2xl border border-white/10 hover:border-[#0077b6]/50"
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-blue-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-estimates-total"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(0, 119, 182, 0.2)', boxShadow: '0 0 15px rgba(0, 119, 182, 0.3)' }}>
-                  <FileText className="w-5 h-5 text-[#0077b6]" />
+                <div className="p-2 rounded-lg bg-blue-100">
+                  <FileText className="w-5 h-5 text-blue-700" />
                 </div>
-                <span className="text-2xl font-bold text-white">{metrics?.estimates.total || 0}</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.total || 0}</span>
               </div>
-              <p className="text-sm font-medium text-white/70">Estimates</p>
-              <div className="h-1.5 mt-2 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: '100%', background: 'linear-gradient(90deg, #0077b6, #00b4d8)', boxShadow: '0 0 10px rgba(0, 180, 216, 0.5)' }}></div>
+              <p className="text-sm font-medium text-slate-700">Estimates</p>
+              <div className="h-1.5 mt-2 rounded-full bg-blue-100 overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
               </div>
             </CardContent>
           </Card>
 
           {/* Sent for Approval */}
           <Card 
-            className="cursor-pointer transition-all rounded-2xl border border-white/10 hover:border-[#f97316]/50"
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-orange-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-pending-approvals"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(249, 115, 22, 0.2)', boxShadow: '0 0 15px rgba(249, 115, 22, 0.3)' }}>
-                  <Send className="w-5 h-5 text-orange-400" />
+                <div className="p-2 rounded-lg bg-orange-100">
+                  <Send className="w-5 h-5 text-orange-700" />
                 </div>
-                <span className="text-2xl font-bold text-white">{metrics?.estimates.pendingApproval || 0}</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
               </div>
-              <p className="text-sm font-medium text-white/70">Sent for Approval</p>
-              <div className="h-1.5 mt-2 rounded-full bg-white/10 overflow-hidden">
+              <p className="text-sm font-medium text-slate-700">Sent for Approval</p>
+              <div className="h-1.5 mt-2 rounded-full bg-orange-100 overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all" 
-                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.pendingApproval || 0) / metrics?.estimates.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #f97316, #fbbf24)', boxShadow: '0 0 10px rgba(249, 115, 22, 0.5)' }}
+                  className="h-full bg-orange-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.pendingApproval || 0) / metrics?.estimates.total) * 100 : 0}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -292,23 +290,22 @@ export default function Dashboard() {
 
           {/* Needs Scheduling */}
           <Card 
-            className="cursor-pointer transition-all rounded-2xl border border-white/10 hover:border-[#10b981]/50"
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-green-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-needs-scheduling"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.2)', boxShadow: '0 0 15px rgba(16, 185, 129, 0.3)' }}>
-                  <Calendar className="w-5 h-5 text-emerald-400" />
+                <div className="p-2 rounded-lg bg-green-100">
+                  <Calendar className="w-5 h-5 text-green-700" />
                 </div>
-                <span className="text-2xl font-bold text-white">{summary?.needsScheduling || 0}</span>
+                <span className="text-2xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
               </div>
-              <p className="text-sm font-medium text-white/70">Needs Scheduling</p>
-              <div className="h-1.5 mt-2 rounded-full bg-white/10 overflow-hidden">
+              <p className="text-sm font-medium text-slate-700">Needs Scheduling</p>
+              <div className="h-1.5 mt-2 rounded-full bg-green-100 overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all" 
-                  style={{ width: `${metrics?.estimates.total ? ((summary?.needsScheduling || 0) / metrics?.estimates.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', boxShadow: '0 0 10px rgba(16, 185, 129, 0.5)' }}
+                  className="h-full bg-green-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((summary?.needsScheduling || 0) / metrics?.estimates.total) * 100 : 0}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -316,23 +313,22 @@ export default function Dashboard() {
 
           {/* Ready to Invoice */}
           <Card 
-            className="cursor-pointer transition-all rounded-2xl border border-white/10 hover:border-[#00b4d8]/50"
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-teal-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-ready-to-invoice"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(0, 180, 216, 0.2)', boxShadow: '0 0 15px rgba(0, 180, 216, 0.3)' }}>
-                  <Receipt className="w-5 h-5 text-[#00b4d8]" />
+                <div className="p-2 rounded-lg bg-teal-100">
+                  <Receipt className="w-5 h-5 text-teal-700" />
                 </div>
-                <span className="text-2xl font-bold text-white">{metrics?.estimates.readyToInvoice || 0}</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
               </div>
-              <p className="text-sm font-medium text-white/70">Ready to Invoice</p>
-              <div className="h-1.5 mt-2 rounded-full bg-white/10 overflow-hidden">
+              <p className="text-sm font-medium text-slate-700">Ready to Invoice</p>
+              <div className="h-1.5 mt-2 rounded-full bg-teal-100 overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all" 
-                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.readyToInvoice || 0) / metrics?.estimates.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #0077b6, #00b4d8)', boxShadow: '0 0 10px rgba(0, 180, 216, 0.5)' }}
+                  className="h-full bg-teal-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.readyToInvoice || 0) / metrics?.estimates.total) * 100 : 0}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -340,23 +336,22 @@ export default function Dashboard() {
 
           {/* Invoices Unpaid */}
           <Card 
-            className="cursor-pointer transition-all rounded-2xl border border-white/10 hover:border-amber-400/50"
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-amber-400 transition-all bg-white"
             onClick={() => navigate("/invoices")}
             data-testid="card-invoices-unpaid"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(251, 191, 36, 0.2)', boxShadow: '0 0 15px rgba(251, 191, 36, 0.3)' }}>
-                  <DollarSign className="w-5 h-5 text-amber-400" />
+                <div className="p-2 rounded-lg bg-amber-100">
+                  <DollarSign className="w-5 h-5 text-amber-700" />
                 </div>
-                <span className="text-2xl font-bold text-white">{metrics?.invoices?.unpaid || 0}</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
               </div>
-              <p className="text-sm font-medium text-white/70">Invoices Unpaid</p>
-              <div className="h-1.5 mt-2 rounded-full bg-white/10 overflow-hidden">
+              <p className="text-sm font-medium text-slate-700">Invoices Unpaid</p>
+              <div className="h-1.5 mt-2 rounded-full bg-amber-100 overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all" 
-                  style={{ width: `${metrics?.invoices?.total ? ((metrics?.invoices?.unpaid || 0) / metrics?.invoices?.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', boxShadow: '0 0 10px rgba(251, 191, 36, 0.5)' }}
+                  className="h-full bg-amber-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.invoices?.total ? ((metrics?.invoices?.unpaid || 0) / metrics?.invoices?.total) * 100 : 0}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -364,23 +359,22 @@ export default function Dashboard() {
 
           {/* Declined */}
           <Card 
-            className="cursor-pointer transition-all rounded-2xl border border-white/10 hover:border-red-400/50"
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md hover:border-red-400 transition-all bg-white"
             onClick={() => navigate("/estimates")}
             data-testid="card-declined"
           >
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.2)', boxShadow: '0 0 15px rgba(239, 68, 68, 0.3)' }}>
-                  <XCircle className="w-5 h-5 text-red-400" />
+                <div className="p-2 rounded-lg bg-red-100">
+                  <XCircle className="w-5 h-5 text-red-700" />
                 </div>
-                <span className="text-2xl font-bold text-white">{metrics?.estimates.declined || 0}</span>
+                <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
               </div>
-              <p className="text-sm font-medium text-white/70">Declined</p>
-              <div className="h-1.5 mt-2 rounded-full bg-white/10 overflow-hidden">
+              <p className="text-sm font-medium text-slate-700">Declined</p>
+              <div className="h-1.5 mt-2 rounded-full bg-red-100 overflow-hidden">
                 <div 
-                  className="h-full rounded-full transition-all" 
-                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.declined || 0) / metrics?.estimates.total) * 100 : 0}%`, background: 'linear-gradient(90deg, #ef4444, #f87171)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.5)' }}
+                  className="h-full bg-red-500 rounded-full transition-all" 
+                  style={{ width: `${metrics?.estimates.total ? ((metrics?.estimates.declined || 0) / metrics?.estimates.total) * 100 : 0}%` }}
                 ></div>
               </div>
             </CardContent>
@@ -388,17 +382,17 @@ export default function Dashboard() {
         </div>
 
         {/* Emergency & Alerts Status */}
-        <Card className="rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }} data-testid="card-emergency-alerts-status">
+        <Card className="shadow-sm bg-white" data-testid="card-emergency-alerts-status">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2 text-white">
-                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
                   Emergency & Alerts Status
                 </CardTitle>
-                <CardDescription className="text-white/60">Active issues requiring attention</CardDescription>
+                <CardDescription>Active issues requiring attention</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-[#0077b6] hover:text-[#00b4d8] hover:bg-white/5">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700">
                 View All <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
@@ -497,68 +491,50 @@ export default function Dashboard() {
                       return (
                         <div className="relative mb-4">
                           <svg width={size} height={size} className="transform -rotate-90">
-                            <defs>
-                              <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                <feMerge>
-                                  <feMergeNode in="coloredBlur"/>
-                                  <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                              </filter>
-                              <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                                <feMerge>
-                                  <feMergeNode in="coloredBlur"/>
-                                  <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                              </filter>
-                            </defs>
                             {/* Background circle */}
                             <circle
                               cx={size / 2}
                               cy={size / 2}
                               r={radius}
                               fill="none"
-                              stroke="rgba(255,255,255,0.1)"
+                              stroke="#e2e8f0"
                               strokeWidth={strokeWidth}
                             />
-                            {/* Issues segment (aqua/cyan) */}
+                            {/* Issues segment (blue) */}
                             {issueLength > 0 && (
                               <circle
                                 cx={size / 2}
                                 cy={size / 2}
                                 r={radius}
                                 fill="none"
-                                stroke={selectedStatusCategory === 'issues' ? '#00b4d8' : '#0077b6'}
+                                stroke={selectedStatusCategory === 'issues' ? '#2563eb' : '#3b82f6'}
                                 strokeWidth={selectedStatusCategory === 'issues' ? strokeWidth + 4 : strokeWidth}
                                 strokeDasharray={`${issueLength} ${circumference - issueLength}`}
                                 strokeDashoffset={-issueOffset}
                                 className="cursor-pointer transition-all duration-200"
-                                style={{ filter: 'url(#glow-blue)' }}
                                 onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
                               />
                             )}
-                            {/* Emergencies segment (coral red) */}
+                            {/* Emergencies segment (red) */}
                             {emergencyLength > 0 && (
                               <circle
                                 cx={size / 2}
                                 cy={size / 2}
                                 r={radius}
                                 fill="none"
-                                stroke={selectedStatusCategory === 'emergencies' ? '#f87171' : '#ef4444'}
+                                stroke={selectedStatusCategory === 'emergencies' ? '#dc2626' : '#ef4444'}
                                 strokeWidth={selectedStatusCategory === 'emergencies' ? strokeWidth + 4 : strokeWidth}
                                 strokeDasharray={`${emergencyLength} ${circumference - emergencyLength}`}
                                 strokeDashoffset={-emergencyOffset}
                                 className="cursor-pointer transition-all duration-200"
-                                style={{ filter: 'url(#glow-red)' }}
                                 onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
                               />
                             )}
                           </svg>
                           {/* Center text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-2xl font-bold text-white">{centerCount.toLocaleString()}</span>
-                            <span className="text-[10px] font-medium text-white/60">{centerLabel}</span>
+                            <span className="text-2xl font-bold text-slate-800">{centerCount.toLocaleString()}</span>
+                            <span className="text-[10px] font-medium text-slate-500">{centerLabel}</span>
                           </div>
                         </div>
                       );
@@ -570,63 +546,63 @@ export default function Dashboard() {
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'emergencies' 
-                            ? 'bg-red-500/20 border border-red-500/30' 
-                            : 'hover:bg-white/5'
+                            ? 'bg-red-50 border border-red-200' 
+                            : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-red-400" style={{ boxShadow: '0 0 8px rgba(239, 68, 68, 0.6)' }}></div>
-                          <span className="text-sm font-medium text-white/80">Emergencies</span>
+                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                          <span className="text-sm font-medium text-slate-700">Emergencies</span>
                         </div>
-                        <span className="text-sm font-bold text-red-400">{emergencyCount}</span>
+                        <span className="text-sm font-bold text-red-600">{emergencyCount}</span>
                       </button>
                       
                       <button
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'issues' 
-                            ? 'bg-[#0077b6]/20 border border-[#0077b6]/30' 
-                            : 'hover:bg-white/5'
+                            ? 'bg-blue-50 border border-blue-200' 
+                            : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-[#00b4d8]" style={{ boxShadow: '0 0 8px rgba(0, 180, 216, 0.6)' }}></div>
-                          <span className="text-sm font-medium text-white/80">Reported Issues</span>
+                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                          <span className="text-sm font-medium text-slate-700">Reported Issues</span>
                         </div>
-                        <span className="text-sm font-bold text-[#00b4d8]">{issueCount}</span>
+                        <span className="text-sm font-bold text-blue-600">{issueCount}</span>
                       </button>
                     </div>
                     
                     {/* Separate System Alerts metric */}
-                    <div className="mt-4 pt-4 border-t border-white/10">
+                    <div className="mt-4 pt-4 border-t border-slate-100">
                       <button
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'alerts' 
-                            ? 'bg-orange-500/20 border border-orange-500/30' 
-                            : 'bg-white/5 hover:bg-orange-500/10'
+                            ? 'bg-orange-50 border border-orange-200' 
+                            : 'bg-slate-50 hover:bg-orange-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-orange-400" style={{ boxShadow: '0 0 8px rgba(251, 146, 60, 0.6)' }}></div>
-                          <span className="text-sm font-medium text-white/70">System Alerts</span>
+                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                          <span className="text-sm font-medium text-slate-600">System Alerts</span>
                         </div>
-                        <span className="text-sm font-bold text-orange-400">{alertCount.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-orange-600">{alertCount.toLocaleString()}</span>
                       </button>
-                      <p className="text-[10px] text-white/40 mt-1 text-center">Auto-generated system alerts</p>
+                      <p className="text-[10px] text-slate-400 mt-1 text-center">Auto-generated system alerts</p>
                     </div>
                   </div>
                   
                   {/* Right side: Items panel */}
-                  <div className="w-1/2 border-l border-white/10 pl-6">
-                    <p className="text-xs font-medium text-white/60 mb-3">
+                  <div className="w-1/2 border-l border-slate-100 pl-6">
+                    <p className="text-xs font-medium text-slate-500 mb-3">
                       {selectedStatusCategory === 'all' ? 'Recent Items' : 
                        selectedStatusCategory === 'emergencies' ? 'Emergencies' :
                        selectedStatusCategory === 'alerts' ? 'Alerts' : 'Reported Issues'}
                     </p>
                     <div className="space-y-2 max-h-[220px] overflow-y-auto">
                       {filteredItems.length === 0 ? (
-                        <p className="text-sm text-white/40 italic">No items</p>
+                        <p className="text-sm text-slate-400 italic">No items</p>
                       ) : (
                         filteredItems.map((item: any, idx: number) => {
                           // Use timeAgo if provided (sample data), otherwise calculate from createdAt
@@ -636,9 +612,9 @@ export default function Dashboard() {
                             timeDisplay = daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`;
                           }
                           
-                          const bgColor = item.type === 'emergency' ? 'bg-red-500/10 border-red-500/20' :
-                                          item.type === 'alert' ? 'bg-orange-500/10 border-orange-500/20' :
-                                          'bg-[#0077b6]/10 border-[#0077b6]/20';
+                          const bgColor = item.type === 'emergency' ? 'bg-red-50 border-red-100' :
+                                          item.type === 'alert' ? 'bg-orange-50 border-orange-100' :
+                                          'bg-blue-50 border-blue-100';
                           
                           // Get reporter info
                           const reporterName = item.reportedBy || item.submittedByName || item.technicianName || 'Unknown';
@@ -648,29 +624,29 @@ export default function Dashboard() {
                           return (
                             <div 
                               key={item.id || idx} 
-                              className={`p-2.5 rounded-lg border ${bgColor} cursor-pointer hover:bg-white/5 transition-all`}
+                              className={`p-2.5 rounded-lg border ${bgColor} cursor-pointer hover:shadow-sm transition-all`}
                               onClick={() => navigate(item.type === 'emergency' ? '/emergencies' : item.type === 'alert' ? '/alerts' : '/tech-ops')}
                             >
                               <div className="flex items-start justify-between gap-2 mb-1">
-                                <span className="text-sm font-medium text-white truncate flex-1">{item.propertyName}</span>
+                                <span className="text-sm font-medium text-slate-800 truncate flex-1">{item.propertyName}</span>
                                 {item.type === 'emergency' && item.priority === 'critical' && (
-                                  <Badge className="bg-red-500 text-white text-[9px] shrink-0" style={{ boxShadow: '0 0 8px rgba(239, 68, 68, 0.4)' }}>Critical</Badge>
+                                  <Badge className="bg-red-600 text-white text-[9px] shrink-0">Critical</Badge>
                                 )}
                                 {item.type === 'emergency' && item.priority === 'high' && (
-                                  <Badge className="bg-orange-500 text-white text-[9px] shrink-0" style={{ boxShadow: '0 0 8px rgba(249, 115, 22, 0.4)' }}>High</Badge>
+                                  <Badge className="bg-orange-500 text-white text-[9px] shrink-0">High</Badge>
                                 )}
                                 {item.type === 'emergency' && item.priority === 'medium' && (
                                   <Badge className="bg-amber-500 text-white text-[9px] shrink-0">Medium</Badge>
                                 )}
                                 {item.type === 'issue' && item.status && (
-                                  <Badge className="bg-[#0077b6]/30 text-[#00b4d8] text-[9px] shrink-0">{item.status}</Badge>
+                                  <Badge className="bg-blue-100 text-blue-700 text-[9px] shrink-0">{item.status}</Badge>
                                 )}
                               </div>
-                              <p className="text-xs text-white/60 line-clamp-1 mb-1">{item.description}</p>
-                              <div className="flex items-center justify-between text-[10px] text-white/50 mb-1">
-                                <span className="font-medium text-white/60">Reported by: {reporterDisplay}</span>
+                              <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+                                <span className="font-medium text-slate-600">Reported by: {reporterDisplay}</span>
                               </div>
-                              <div className="flex items-center justify-end text-[10px] text-white/40">
+                              <div className="flex items-center justify-end text-[10px] text-slate-400">
                                 <span>{timeDisplay}</span>
                               </div>
                             </div>
@@ -689,17 +665,17 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-6">
           {/* Left Column: Stacked Estimate Pipeline + Financial Summary */}
           <div className="flex flex-col gap-6">
-            <Card className="rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}>
+            <Card className="shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2 text-white">
-                      <FileText className="w-5 h-5 text-[#0077b6]" />
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-600" />
                       Estimate Pipeline
                     </CardTitle>
-                    <CardDescription className="text-white/60">Job estimates by status</CardDescription>
+                    <CardDescription>Job estimates by status</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#0077b6] hover:text-[#00b4d8] hover:bg-white/5">
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-blue-600 hover:text-blue-700">
                     View All <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
@@ -710,8 +686,8 @@ export default function Dashboard() {
                     { label: "Draft", value: metrics?.values?.draft || 0, color: "#64748b" },
                     { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#f97316" },
                     { label: "Approved", value: metrics?.values?.approved || 0, color: "#10b981" },
-                    { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0077b6" },
-                    { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#00b4d8" },
+                    { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0ea5e9" },
+                    { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#14b8a6" },
                     { label: "Unpaid", value: metrics?.invoices?.unpaidValue || 0, color: "#ef4444" },
                   ];
                   
@@ -748,23 +724,10 @@ export default function Dashboard() {
                     <div className="flex items-center gap-4">
                       <div className="relative flex-shrink-0">
                         <svg width="200" height="110" viewBox="0 0 200 110">
-                          <defs>
-                            <filter id="glow-gauge" x="-50%" y="-50%" width="200%" height="200%">
-                              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                              <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                              </feMerge>
-                            </filter>
-                            <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#0077b6" />
-                              <stop offset="100%" stopColor="#48cae4" />
-                            </linearGradient>
-                          </defs>
                           <path
                             d={`M ${centerX - radius} ${centerY} A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY}`}
                             fill="none"
-                            stroke="rgba(255,255,255,0.1)"
+                            stroke="#e2e8f0"
                             strokeWidth={strokeWidth}
                             strokeLinecap="round"
                           />
@@ -776,23 +739,22 @@ export default function Dashboard() {
                               stroke={seg.color}
                               strokeWidth={strokeWidth}
                               strokeLinecap="butt"
-                              style={{ filter: 'url(#glow-gauge)' }}
                             />
                           ))}
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
-                          <span className="text-xl font-bold text-white">{formatCurrency(totalValue)}</span>
-                          <span className="text-[10px] text-white/60">Total Pipeline Value</span>
+                          <span className="text-xl font-bold text-slate-900">{formatCurrency(totalValue)}</span>
+                          <span className="text-[10px] text-slate-500">Total Pipeline Value</span>
                         </div>
                       </div>
                       <div className="flex-1 space-y-1.5">
                         {pipelineData.map((item, idx) => (
                           <div key={idx} className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color, boxShadow: `0 0 6px ${item.color}` }}></div>
-                              <span className="text-white/70">{item.label}</span>
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
+                              <span className="text-slate-700">{item.label}</span>
                             </div>
-                            <span className="text-white/80 font-medium tabular-nums">{formatCurrency(item.value)}</span>
+                            <span className="text-slate-600 font-medium tabular-nums">{formatCurrency(item.value)}</span>
                           </div>
                         ))}
                       </div>
@@ -802,38 +764,38 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="flex-1 rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}>
+            <Card className="shadow-sm flex-1">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2 text-white">
-                      <DollarSign className="w-5 h-5 text-emerald-400" />
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-600" />
                       Financial Summary
                     </CardTitle>
-                    <CardDescription className="text-white/60">Values across pipeline stages</CardDescription>
+                    <CardDescription>Values across pipeline stages</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 rounded-lg border border-white/10" style={{ background: 'rgba(16, 185, 129, 0.1)' }}>
+                  <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-white/70">Total Pipeline Value</span>
-                      <span className="text-2xl font-bold text-emerald-400" style={{ textShadow: '0 0 10px rgba(16, 185, 129, 0.4)' }}>{formatCurrency(metrics?.values.total || 0)}</span>
+                      <span className="text-sm font-medium text-slate-700">Total Pipeline Value</span>
+                      <span className="text-2xl font-bold text-emerald-700">{formatCurrency(metrics?.values.total || 0)}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg border border-white/10 text-center" style={{ background: 'rgba(17, 25, 54, 0.9)' }}>
-                      <p className="text-xs font-medium text-white/60">Pending Approval</p>
-                      <p className="text-lg font-bold text-[#0077b6]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                    <div className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-center">
+                      <p className="text-xs font-medium text-slate-600">Pending Approval</p>
+                      <p className="text-lg font-bold text-orange-700">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                     </div>
-                    <div className="p-3 rounded-lg border border-white/10 text-center" style={{ background: 'rgba(17, 25, 54, 0.9)' }}>
-                      <p className="text-xs font-medium text-white/60">Scheduled</p>
-                      <p className="text-lg font-bold text-white/70">{formatCurrency(metrics?.values.scheduled || 0)}</p>
+                    <div className="p-3 rounded-lg bg-sky-50 border border-sky-100 text-center">
+                      <p className="text-xs font-medium text-slate-600">Scheduled</p>
+                      <p className="text-lg font-bold text-sky-700">{formatCurrency(metrics?.values.scheduled || 0)}</p>
                     </div>
-                    <div className="p-3 rounded-lg border border-white/10 text-center" style={{ background: 'rgba(17, 25, 54, 0.9)' }}>
-                      <p className="text-xs font-medium text-white/60">Ready to Invoice</p>
-                      <p className="text-lg font-bold text-emerald-400">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                    <div className="p-3 rounded-lg bg-teal-50 border border-teal-100 text-center">
+                      <p className="text-xs font-medium text-slate-600">Ready to Invoice</p>
+                      <p className="text-lg font-bold text-teal-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                     </div>
                   </div>
                 </div>
@@ -842,15 +804,15 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column: Coverage Calendar */}
-          <Card className="rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }} data-testid="card-coverage-calendar-main">
+          <Card className="shadow-sm" data-testid="card-coverage-calendar-main">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2 text-white">
-                    <Calendar className="w-5 h-5 text-[#0077b6]" />
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-purple-600" />
                     Coverage Calendar
                   </CardTitle>
-                  <CardDescription className="text-white/60">Technician coverage schedule</CardDescription>
+                  <CardDescription>Technician coverage schedule</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -904,22 +866,22 @@ export default function Dashboard() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-7 w-7 text-white/70 hover:text-white hover:bg-white/10"
+                          className="h-7 w-7"
                           onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        <span className="text-sm font-semibold text-white">{monthName}</span>
+                        <span className="text-sm font-semibold text-slate-800">{monthName}</span>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-7 w-7 text-white/70 hover:text-white hover:bg-white/10"
+                          className="h-7 w-7"
                           onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
                         >
                           <ChevronRight className="w-4 h-4" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-white/50 mb-1">
+                      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-slate-500 mb-1">
                         {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
                           <div key={d}>{d}</div>
                         ))}
@@ -941,13 +903,12 @@ export default function Dashboard() {
                               key={idx}
                               onClick={() => setSelectedDate(new Date(year, month, day))}
                               className={`h-9 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors
-                                ${isSelected ? 'text-white' : isToday ? 'text-white' : 'hover:bg-white/10 text-white/70'}
+                                ${isSelected ? 'bg-purple-600 text-white' : isToday ? 'bg-purple-100 text-purple-700' : 'hover:bg-slate-100 text-slate-700'}
                               `}
-                              style={isSelected ? { background: '#0077b6', boxShadow: '0 0 15px rgba(0, 119, 182, 0.5)' } : isToday ? { background: 'rgba(0, 119, 182, 0.3)' } : undefined}
                             >
                               <span>{day}</span>
                               {hasCoverage && !isSelected && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#48cae4] mt-0.5" style={{ boxShadow: '0 0 6px rgba(72, 202, 228, 0.6)' }} />
+                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-0.5" />
                               )}
                             </button>
                           );
@@ -956,8 +917,8 @@ export default function Dashboard() {
                     </div>
                     
                     {/* Coverage Activities List */}
-                    <div className="border-t border-white/10 pt-4">
-                      <p className="text-xs font-medium text-white/60 mb-3">
+                    <div className="border-t border-slate-100 pt-4">
+                      <p className="text-xs font-medium text-slate-500 mb-3">
                         {selectedDate 
                           ? `Coverage on ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
                           : 'Upcoming Coverage'
@@ -965,7 +926,7 @@ export default function Dashboard() {
                       </p>
                       <div className="space-y-2 max-h-[180px] overflow-y-auto">
                         {selectedCoverages.length === 0 ? (
-                          <p className="text-sm text-white/40 italic">No coverage scheduled</p>
+                          <p className="text-sm text-slate-400 italic">No coverage scheduled</p>
                         ) : (
                           selectedCoverages.map((c: any, idx: number) => {
                             const startDate = new Date(c.startDate);
@@ -973,9 +934,9 @@ export default function Dashboard() {
                             const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                             
                             return (
-                              <div key={c.id || idx} className="p-2.5 rounded-lg border border-white/10" style={{ background: 'rgba(0, 119, 182, 0.1)' }}>
-                                <p className="text-xs text-[#0077b6] font-medium">{dateStr} - {dayOfWeek}</p>
-                                <p className="text-sm text-white/80 mt-0.5">
+                              <div key={c.id || idx} className="p-2.5 rounded-lg bg-purple-50 border border-purple-100">
+                                <p className="text-xs text-purple-600 font-medium">{dateStr} - {dayOfWeek}</p>
+                                <p className="text-sm text-slate-700 mt-0.5">
                                   {c.reason === 'Training day' 
                                     ? `${c.reason} - ${c.coveringTechName} at ${c.propertyName}`
                                     : `${c.coveringTechName} covering for ${c.originalTechName} at ${c.propertyName}`
@@ -996,22 +957,22 @@ export default function Dashboard() {
 
         {/* Three-Column Lower Section: Recent Activity + Chemical Orders + Top Chemicals */}
         <div className="grid grid-cols-3 gap-6">
-          <Card className="rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}>
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2 text-white">
-                    <Activity className="w-5 h-5 text-[#0077b6]" />
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-[#60A5FA]" />
                     Recent Activity
                   </CardTitle>
-                  <CardDescription className="text-white/60">Latest estimates and service repairs</CardDescription>
+                  <CardDescription>Latest estimates and service repairs</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[280px]">
                 {recentActivity.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-white/50">
+                  <div className="flex items-center justify-center h-full text-[#64748B]">
                     <p>No recent activity</p>
                   </div>
                 ) : (
@@ -1019,31 +980,30 @@ export default function Dashboard() {
                     {recentActivity.map((item, index) => (
                       <div 
                         key={`${item.type}-${item.id}-${index}`}
-                        className="flex items-center justify-between p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
-                        style={{ background: 'rgba(17, 25, 54, 0.5)' }}
+                        className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
                         onClick={() => navigate(item.type === "estimate" ? "/estimates" : "/service-repairs")}
                         data-testid={`activity-item-${item.id}`}
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`p-2 rounded-lg shrink-0`} style={{ background: item.type === "estimate" ? 'rgba(0, 119, 182, 0.2)' : 'rgba(249, 115, 22, 0.2)' }}>
+                          <div className={`p-2 rounded-lg shrink-0 ${item.type === "estimate" ? "bg-blue-100" : "bg-orange-100"}`}>
                             {item.type === "estimate" ? (
-                              <FileText className="w-4 h-4 text-[#0077b6]" />
+                              <FileText className="w-4 h-4 text-blue-700" />
                             ) : (
-                              <Wrench className="w-4 h-4 text-orange-400" />
+                              <Wrench className="w-4 h-4 text-orange-700" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-white truncate">{item.property}</p>
-                            <p className="text-xs text-white/60 truncate">{item.title}</p>
+                            <p className="text-sm font-medium text-slate-900 truncate">{item.property}</p>
+                            <p className="text-xs text-slate-500 truncate">{item.title}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30" style={{ boxShadow: '0 0 8px rgba(251, 146, 60, 0.3)' }}>{item.status?.replace(/_/g, " ")}</Badge>
+                          <Badge className={getStatusColor(item.status)}>{item.status?.replace(/_/g, " ")}</Badge>
                           {item.amount > 0 && (
-                            <span className="text-sm font-semibold text-emerald-400">{formatCurrency(item.amount)}</span>
+                            <span className="text-sm font-semibold text-slate-800">{formatCurrency(item.amount)}</span>
                           )}
                           {item.timestamp && (
-                            <span className="text-xs text-white/40">
+                            <span className="text-xs text-slate-400">
                               {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
                             </span>
                           )}
@@ -1057,17 +1017,17 @@ export default function Dashboard() {
           </Card>
 
           {/* Chemical Orders by Property */}
-          <Card className="rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }} data-testid="card-chemical-orders-by-property">
+          <Card className="shadow-sm" data-testid="card-chemical-orders-by-property">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2 text-white">
-                    <Droplets className="w-5 h-5 text-[#00b4d8]" />
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-cyan-600" />
                     Chemical Orders by Property
                   </CardTitle>
-                  <CardDescription className="text-white/60">Pending orders that need to be sent</CardDescription>
+                  <CardDescription>Pending orders that need to be sent</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-[#0077b6] hover:text-[#00b4d8] hover:bg-white/5">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-cyan-600 hover:text-cyan-700">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -1098,21 +1058,21 @@ export default function Dashboard() {
                         return (
                           <div key={idx} className="space-y-1">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-white font-medium truncate flex-1 mr-4">{property.propertyName}</span>
-                              <span className="text-white/70 tabular-nums shrink-0">{property.count} ({percentOfTotal}%)</span>
+                              <span className="text-slate-700 font-medium truncate flex-1 mr-4">{property.propertyName}</span>
+                              <span className="text-slate-600 tabular-nums shrink-0">{property.count} ({percentOfTotal}%)</span>
                             </div>
-                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                               <div 
-                                className="h-full rounded-full transition-all"
-                                style={{ width: `${percentage}%`, background: 'linear-gradient(90deg, #0077b6, #00b4d8)', boxShadow: '0 0 8px rgba(0, 180, 216, 0.5)' }}
+                                className="h-full bg-cyan-500 rounded-full transition-all"
+                                style={{ width: `${percentage}%` }}
                               />
                             </div>
                           </div>
                         );
                       })}
-                      <div className="pt-2 mt-2 border-t border-white/10 flex items-center justify-between text-sm">
-                        <span className="text-white/60">Total Pending Orders</span>
-                        <span className="font-semibold text-white">{totalOrders}</span>
+                      <div className="pt-2 mt-2 border-t border-slate-100 flex items-center justify-between text-sm">
+                        <span className="text-slate-600">Total Pending Orders</span>
+                        <span className="font-semibold text-slate-900">{totalOrders}</span>
                       </div>
                     </div>
                   );
@@ -1122,20 +1082,20 @@ export default function Dashboard() {
           </Card>
 
           {/* Top Chemicals Ordered Card */}
-          <Card className="rounded-2xl border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}>
+          <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2 text-white">
-                    <Droplets className="w-5 h-5 text-[#0077b6]" />
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-[#60A5FA]" />
                     Top Chemicals Ordered
                   </CardTitle>
-                  <CardDescription className="text-white/60">Most frequently ordered chemicals</CardDescription>
+                  <CardDescription>Most frequently ordered chemicals</CardDescription>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="text-[#0077b6] hover:text-[#00b4d8] hover:bg-white/5"
+                  className="text-blue-600 hover:text-blue-700"
                   onClick={() => navigate("/chemicals")}
                 >
                   View All
@@ -1145,9 +1105,9 @@ export default function Dashboard() {
             <CardContent>
               {(() => {
                 const topChemicals = [
-                  { name: 'Liquid Chlorine', percentage: 70, color: '#0077b6', glowColor: 'rgba(0, 119, 182, 0.5)' },
-                  { name: 'Muriatic Acid', percentage: 20, color: '#00b4d8', glowColor: 'rgba(0, 180, 216, 0.5)' },
-                  { name: 'pH Increaser', percentage: 10, color: '#90e0ef', glowColor: 'rgba(144, 224, 239, 0.5)' },
+                  { name: 'Liquid Chlorine', percentage: 70, color: '#86EFAC', textColor: '#166534' },
+                  { name: 'Muriatic Acid', percentage: 20, color: '#C4B5FD', textColor: '#5B21B6' },
+                  { name: 'pH Increaser', percentage: 10, color: '#FBCFE8', textColor: '#9D174D' },
                 ];
                 
                 return (
@@ -1155,29 +1115,6 @@ export default function Dashboard() {
                     {/* Overlapping Bubble Chart */}
                     <div className="relative h-[180px] w-full flex items-center justify-center">
                       <svg viewBox="0 0 300 180" className="w-full h-full max-w-[280px]">
-                        <defs>
-                          <filter id="glow-bubble-1" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
-                            <feMerge>
-                              <feMergeNode in="coloredBlur"/>
-                              <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                          </filter>
-                          <filter id="glow-bubble-2" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
-                            <feMerge>
-                              <feMergeNode in="coloredBlur"/>
-                              <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                          </filter>
-                          <filter id="glow-bubble-3" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                            <feMerge>
-                              <feMergeNode in="coloredBlur"/>
-                              <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                          </filter>
-                        </defs>
                         {/* Largest circle - Liquid Chlorine (70%) */}
                         <circle 
                           cx="100" 
@@ -1185,7 +1122,7 @@ export default function Dashboard() {
                           r="70" 
                           fill={topChemicals[0].color}
                           opacity="0.85"
-                          style={{ filter: 'url(#glow-bubble-1)' }}
+                          className="drop-shadow-sm"
                         />
                         <text 
                           x="100" 
@@ -1193,7 +1130,7 @@ export default function Dashboard() {
                           textAnchor="middle" 
                           dominantBaseline="middle"
                           className="text-2xl font-bold"
-                          fill="white"
+                          fill={topChemicals[0].textColor}
                         >
                           {topChemicals[0].percentage}%
                         </text>
@@ -1205,7 +1142,7 @@ export default function Dashboard() {
                           r="50" 
                           fill={topChemicals[1].color}
                           opacity="0.85"
-                          style={{ filter: 'url(#glow-bubble-2)' }}
+                          className="drop-shadow-sm"
                         />
                         <text 
                           x="190" 
@@ -1213,7 +1150,7 @@ export default function Dashboard() {
                           textAnchor="middle" 
                           dominantBaseline="middle"
                           className="text-xl font-bold"
-                          fill="white"
+                          fill={topChemicals[1].textColor}
                         >
                           {topChemicals[1].percentage}%
                         </text>
@@ -1225,7 +1162,7 @@ export default function Dashboard() {
                           r="35" 
                           fill={topChemicals[2].color}
                           opacity="0.85"
-                          style={{ filter: 'url(#glow-bubble-3)' }}
+                          className="drop-shadow-sm"
                         />
                         <text 
                           x="230" 
@@ -1233,7 +1170,7 @@ export default function Dashboard() {
                           textAnchor="middle" 
                           dominantBaseline="middle"
                           className="text-base font-bold"
-                          fill="#0B1437"
+                          fill={topChemicals[2].textColor}
                         >
                           {topChemicals[2].percentage}%
                         </text>
@@ -1241,15 +1178,15 @@ export default function Dashboard() {
                     </div>
                     
                     {/* Legend */}
-                    <div className="w-full pt-4 border-t border-white/10 mt-2 space-y-2">
+                    <div className="w-full pt-4 border-t border-slate-100 mt-2 space-y-2">
                       {topChemicals.map((chemical, idx) => (
                         <div key={idx} className="flex items-center gap-2">
                           <span 
                             className="w-3 h-3 rounded-full shrink-0" 
-                            style={{ backgroundColor: chemical.color, boxShadow: `0 0 8px ${chemical.glowColor}` }}
+                            style={{ backgroundColor: chemical.color }}
                           />
-                          <span className="text-sm text-white flex-1">{chemical.name}</span>
-                          <span className="text-sm font-medium text-white">{chemical.percentage}%</span>
+                          <span className="text-sm text-slate-700 flex-1">{chemical.name}</span>
+                          <span className="text-sm font-medium text-slate-900">{chemical.percentage}%</span>
                         </div>
                       ))}
                     </div>
@@ -1262,25 +1199,25 @@ export default function Dashboard() {
 
         {/* Inactive Technicians Section */}
         {(metrics?.technicians?.inactive?.length || 0) > 0 && (
-          <Card className="rounded-2xl border-l-4 border-l-amber-500 border border-white/10" style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }} data-testid="card-inactive-technicians">
+          <Card className="shadow-sm border-l-4 border-l-amber-500 bg-white" data-testid="card-inactive-technicians">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <UserX className="w-5 h-5 text-amber-400" />
-                  <span className="text-white">Inactive Technicians</span>
-                  <Badge className="bg-amber-500/20 text-amber-400 ml-2">{metrics?.technicians?.inactive?.length || 0}</Badge>
+                  <UserX className="w-5 h-5 text-amber-600" />
+                  <span className="text-slate-900">Inactive Technicians</span>
+                  <Badge className="bg-amber-100 text-amber-800 ml-2">{metrics?.technicians?.inactive?.length || 0}</Badge>
                 </CardTitle>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => setShowThresholdSettings(true)}
-                  className="text-white/60 hover:text-white hover:bg-white/10"
+                  className="text-slate-600 hover:text-slate-800"
                   data-testid="btn-threshold-settings"
                 >
                   <Settings className="w-4 h-4" />
                 </Button>
               </div>
-              <CardDescription className="text-white/60">
+              <CardDescription className="text-slate-600">
                 Technicians who haven't clocked in after {thresholdTime}
               </CardDescription>
             </CardHeader>
@@ -1294,20 +1231,19 @@ export default function Dashboard() {
                   return (
                     <div 
                       key={tech.id}
-                      className="p-3 rounded-lg border border-amber-500/30 hover:bg-white/5 transition-colors"
-                      style={{ background: 'rgba(251, 191, 36, 0.1)' }}
+                      className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-50 transition-colors"
                       data-testid={`inactive-tech-${tech.id}`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="text-sm font-medium text-white">{tech.name}</span>
-                        <Badge className="bg-amber-500/30 text-amber-400 text-[10px] shrink-0">{lateText}</Badge>
+                        <span className="text-sm font-medium text-slate-900">{tech.name}</span>
+                        <Badge className="bg-amber-200 text-amber-800 text-[10px] shrink-0">{lateText}</Badge>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1 text-white/60">
+                        <div className="flex items-center gap-1 text-slate-600">
                           <Clock className="w-3 h-3" />
                           <span>Expected: {tech.expectedStartTime}</span>
                         </div>
-                        <span className="text-white/50 capitalize">{tech.role?.replace(/_/g, " ")}</span>
+                        <span className="text-slate-500 capitalize">{tech.role?.replace(/_/g, " ")}</span>
                       </div>
                     </div>
                   );
@@ -1320,20 +1256,19 @@ export default function Dashboard() {
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
           <Card 
-            className="rounded-2xl cursor-pointer hover:border-[#0077b6]/50 transition-all border-l-4 border-l-[#0077b6] border border-white/10" 
-            style={{ background: 'rgba(17, 25, 54, 0.7)', backdropFilter: 'blur(10px)' }}
+            className="shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 border-l-blue-500 bg-white" 
             onClick={() => navigate("/repair-queue")}
             data-testid="card-repair-tech-workload"
           >
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Wrench className="w-5 h-5 text-[#0077b6]" />
-                  <span className="text-white">Repair Tech Workload</span>
+                  <Wrench className="w-5 h-5 text-blue-600" />
+                  <span className="text-slate-900">Repair Tech Workload</span>
                 </CardTitle>
-                <ChevronRight className="w-5 h-5 text-white/40" />
+                <ChevronRight className="w-5 h-5 text-slate-400" />
               </div>
-              <CardDescription className="text-white/60">
+              <CardDescription className="text-slate-600">
                 Jobs scheduled for today by repair technician
               </CardDescription>
             </CardHeader>
@@ -1342,19 +1277,18 @@ export default function Dashboard() {
                 {metrics?.technicians?.repairTechWorkload?.map((tech) => (
                   <div 
                     key={tech.id}
-                    className="p-3 rounded-lg border border-white/10 hover:bg-white/5 transition-colors flex items-center justify-between"
-                    style={{ background: 'rgba(0, 119, 182, 0.1)' }}
+                    className="p-3 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 transition-colors flex items-center justify-between"
                     data-testid={`workload-tech-${tech.id}`}
                   >
-                    <span className="text-sm font-medium text-white truncate mr-2">{tech.name}</span>
+                    <span className="text-sm font-medium text-slate-800 truncate mr-2">{tech.name}</span>
                     <Badge className={`shrink-0 ${
                       tech.jobCount === 0 
-                        ? "bg-white/10 text-white/60" 
+                        ? "bg-slate-100 text-slate-600" 
                         : tech.jobCount >= 5 
-                          ? "bg-red-500/20 text-red-400" 
+                          ? "bg-red-100 text-red-700" 
                           : tech.jobCount >= 3 
-                            ? "bg-amber-500/20 text-amber-400" 
-                            : "bg-[#0077b6]/30 text-[#00b4d8]"
+                            ? "bg-amber-100 text-amber-700" 
+                            : "bg-blue-100 text-blue-700"
                     }`}>
                       {tech.jobCount}
                     </Badge>
@@ -1362,7 +1296,7 @@ export default function Dashboard() {
                 ))}
               </div>
               {metrics?.technicians?.repairTechWorkload?.every(t => t.jobCount === 0) && (
-                <p className="text-sm text-white/50 mt-2 text-center">No jobs scheduled for today</p>
+                <p className="text-sm text-slate-500 mt-2 text-center">No jobs scheduled for today</p>
               )}
             </CardContent>
           </Card>
