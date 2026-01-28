@@ -1723,58 +1723,6 @@ export default function Estimates() {
           ))}
         </div>
 
-        {/* Estimate Source Metrics */}
-        <div className="grid grid-cols-3 gap-4">
-          <div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-#0078D4 p-4 cursor-pointer hover:shadow-md transition-all"
-            onClick={() => setSourceFilter("repair_tech")}
-            data-testid="metric-repair-tech"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-[#0078D4]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.repairTech.count}</p>
-                <p className="text-sm text-[#6B7280] mt-1">Repair Tech Estimates</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold text-[#1E293B]">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-[#6B7280]">Total Value</p>
-              </div>
-            </div>
-          </div>
-          <div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-#17BEBB p-4 cursor-pointer hover:shadow-md transition-all"
-            onClick={() => setSourceFilter("service_tech")}
-            data-testid="metric-service-tech"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.serviceTech.count}</p>
-                <p className="text-sm text-[#6B7280] mt-1">Service Tech Estimates</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold text-[#1E293B]">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-[#6B7280]">Total Value</p>
-              </div>
-            </div>
-          </div>
-          <div 
-            className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-gray-400 p-4 cursor-pointer hover:shadow-md transition-all"
-            onClick={() => setSourceFilter("office_staff")}
-            data-testid="metric-office-staff"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-gray-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{sourceMetrics.officeStaff.count}</p>
-                <p className="text-sm text-[#6B7280] mt-1">Office Staff Estimates</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold text-[#1E293B]">${(sourceMetrics.officeStaff.totalValue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-[#6B7280]">Total Value</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* QuickBooks-style Workflow Metrics */}
         {metrics && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
