@@ -293,6 +293,7 @@ export default function Estimates() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [valueFilter, setValueFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [revenueFlowPeriod, setRevenueFlowPeriod] = useState<"today" | "week" | "month" | "30days">("30days");
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
@@ -557,6 +558,62 @@ export default function Estimates() {
       },
     };
   }, [estimates]);
+
+  // Calculate revenue flow values based on selected time period
+  const revenueFlowValues = useMemo(() => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    let cutoffDate: Date;
+    switch (revenueFlowPeriod) {
+      case "today":
+        cutoffDate = startOfDay;
+        break;
+      case "week":
+        cutoffDate = startOfWeek;
+        break;
+      case "month":
+        cutoffDate = startOfMonth;
+        break;
+      case "30days":
+      default:
+        cutoffDate = thirtyDaysAgo;
+        break;
+    }
+
+    const isInPeriod = (dateStr: string | null) => {
+      if (!dateStr) return false;
+      const date = new Date(dateStr);
+      return date >= cutoffDate;
+    };
+
+    // Calculate values for each stage based on when they entered that stage
+    const approvedValue = estimates
+      .filter((e: Estimate) => (e.status === "approved" || e.status === "needs_scheduling") && isInPeriod(e.approvedAt))
+      .reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0);
+
+    const scheduledValue = estimates
+      .filter((e: Estimate) => e.status === "scheduled" && isInPeriod(e.scheduledDate))
+      .reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0);
+
+    const readyValue = estimates
+      .filter((e: Estimate) => (e.status === "completed" || e.status === "ready_to_invoice") && isInPeriod(e.completedAt))
+      .reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0);
+
+    const invoicedValue = estimates
+      .filter((e: Estimate) => e.status === "invoiced" && isInPeriod(e.invoicedAt))
+      .reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0);
+
+    const paidValue = estimates
+      .filter((e: Estimate) => e.status === "paid" && isInPeriod(e.invoicedAt))
+      .reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0);
+
+    return { approvedValue, scheduledValue, readyValue, invoicedValue, paidValue };
+  }, [estimates, revenueFlowPeriod]);
 
   // Get unique customer names for filter dropdown - combine customers from API and estimates
   const uniqueCustomers = useMemo(() => {
@@ -1773,15 +1830,37 @@ export default function Estimates() {
 
               {/* Revenue Flow */}
               <div className="bg-white rounded-2xl shadow-sm p-5 col-span-2">
-                <h4 className="text-sm font-medium text-slate-700 mb-4">Revenue Flow</h4>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-slate-700">Revenue Flow</h4>
+                  <div className="flex gap-1">
+                    {[
+                      { key: "today", label: "Today" },
+                      { key: "week", label: "This Week" },
+                      { key: "month", label: "This Month" },
+                      { key: "30days", label: "Last 30 Days" },
+                    ].map((period) => (
+                      <button
+                        key={period.key}
+                        onClick={() => setRevenueFlowPeriod(period.key as typeof revenueFlowPeriod)}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
+                          revenueFlowPeriod === period.key
+                            ? "bg-[#0077b6] text-white"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="relative flex items-center justify-between">
                   <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-slate-200 -translate-y-1/2" />
                   {[
-                    { label: "Approved", value: metrics.approvedValue, color: "#f97316" },
-                    { label: "Scheduled", value: metrics.scheduledValue, color: "#0077b6" },
-                    { label: "Ready", value: metrics.readyToInvoiceValue, color: "#14b8a6" },
-                    { label: "Invoiced", value: metrics.invoicedValue, color: "#0077b6" },
-                    { label: "Paid", value: metrics.paidValue, color: "#22c55e" },
+                    { label: "Approved", value: revenueFlowValues.approvedValue, color: "#f97316" },
+                    { label: "Scheduled", value: revenueFlowValues.scheduledValue, color: "#0077b6" },
+                    { label: "Ready", value: revenueFlowValues.readyValue, color: "#14b8a6" },
+                    { label: "Invoiced", value: revenueFlowValues.invoicedValue, color: "#0077b6" },
+                    { label: "Paid", value: revenueFlowValues.paidValue, color: "#22c55e" },
                   ].map((item, idx) => (
                     <div key={idx} className="relative z-10 flex flex-col items-center">
                       <div 
