@@ -166,6 +166,39 @@ export default function Fleet() {
     },
   });
 
+  // GPS Tracking data from OneStepGPS
+  interface GPSDevice {
+    id: string;
+    name: string;
+    online: boolean;
+    status: string;
+    location: { lat: number; lng: number };
+    speed: number;
+    heading: number;
+    odometer: number;
+    engineHours: number;
+    fuelLevel?: number;
+    ignition: boolean;
+    lastUpdate: string;
+  }
+
+  interface GPSSummary {
+    total: number;
+    active: number;
+    inShop: number;
+    inactive: number;
+  }
+
+  const { data: gpsData, isLoading: gpsLoading } = useQuery<{ devices: GPSDevice[]; summary: GPSSummary }>({
+    queryKey: ["/api/fleet/gps/devices"],
+    queryFn: async () => {
+      const res = await fetch("/api/fleet/gps/devices");
+      const data = await res.json();
+      return data.devices ? data : { devices: [], summary: { total: 0, active: 0, inShop: 0, inactive: 0 } };
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds for live tracking
+  });
+
   const trucksWithMaintenance: TruckWithMaintenance[] = trucks.map(truck => {
     const records = allRecords.filter(r => r.truckNumber === truck.truckNumber);
     const latestByType: Record<string, FleetMaintenanceRecord> = {};
@@ -271,13 +304,21 @@ export default function Fleet() {
     return allInventory.filter(item => item.truckId === truckId);
   };
 
-  // Calculate stats
-  const stats = {
+  // Calculate stats - use GPS data if available, fallback to truck records
+  const stats = gpsData?.summary ? {
+    active: gpsData.summary.active,
+    inShop: gpsData.summary.inShop,
+    inactive: gpsData.summary.inactive,
+    total: gpsData.summary.total,
+  } : {
     active: trucks.filter(t => t.status === "Active" || !t.status).length,
     inShop: trucks.filter(t => t.status === "In Shop").length,
     inactive: trucks.filter(t => t.status === "Inactive").length,
     total: trucks.length,
   };
+
+  // GPS devices list
+  const gpsDevices = gpsData?.devices || [];
 
   const maintenanceStats = {
     overdue: trucksWithMaintenance.reduce((acc, truck) => {
