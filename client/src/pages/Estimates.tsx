@@ -1725,85 +1725,98 @@ export default function Estimates() {
 
         {/* QuickBooks-style Workflow Metrics */}
         {metrics && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-[#1E293B]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Workflow Metrics</h3>
-              <span className="text-xs bg-[#f9fafb] text-[#6B7280] px-2 py-1 rounded-full border border-gray-200">Last 30 days</span>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-slate-900">Workflow Metrics</h3>
+              <span className="text-xs bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full">Last 30 days</span>
             </div>
-            <div className="grid grid-cols-8 gap-4">
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#2CA01C]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.conversionRate}%</p>
-                <p className="text-xs text-[#6B7280] mt-1">Approval Rate</p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#22c55e] p-4">
+                <p className="text-2xl font-bold text-[#22c55e]">{metrics.conversionRate}%</p>
+                <p className="text-xs text-slate-500 mt-1">Approval Rate</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#2CA01C]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.approvedValue || 0).toLocaleString()}</p>
-                <p className="text-xs text-[#6B7280] mt-1">Approved Value</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#22c55e] p-4">
+                <p className="text-2xl font-bold text-[#22c55e]">${(metrics.approvedValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 mt-1">Approved Value</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#0077C5]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.scheduledValue || 0).toLocaleString()}</p>
-                <p className="text-xs text-[#6B7280] mt-1">Scheduled Value</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#0077b6] p-4">
+                <p className="text-2xl font-bold text-[#0077b6]">${(metrics.scheduledValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 mt-1">Scheduled Value</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#FF6A00]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.readyToInvoiceValue || 0).toLocaleString()}</p>
-                <p className="text-xs text-[#6B7280] mt-1">Ready to Invoice</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#14b8a6] p-4">
+                <p className="text-2xl font-bold text-[#14b8a6]">${(metrics.readyToInvoiceValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 mt-1">Ready to Invoice</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.invoicedValue || 0).toLocaleString()}</p>
-                <p className="text-xs text-[#6B7280] mt-1">Invoiced Value</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#f97316] p-4">
+                <p className="text-2xl font-bold text-[#f97316]">${(metrics.invoicedValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 mt-1">Invoiced Value</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-green-600" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>${(metrics.paidValue || 0).toLocaleString()}</p>
-                <p className="text-xs text-[#6B7280] mt-1">Paid Value</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#22c55e] p-4">
+                <p className="text-2xl font-bold text-[#22c55e]">${(metrics.paidValue || 0).toLocaleString()}</p>
+                <p className="text-xs text-slate-500 mt-1">Paid Value</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#FF6A00]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgApprovalTime}h</p>
-                <p className="text-xs text-[#6B7280] mt-1">Avg Approval Time</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-slate-400 p-4">
+                <p className="text-2xl font-bold text-slate-600">{metrics.avgApprovalTime}h</p>
+                <p className="text-xs text-slate-500 mt-1">Avg Approval Time</p>
               </div>
-              <div className="text-center">
-                <p className="text-xl font-bold text-[#0077C5]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{metrics.avgCompletionTime}h</p>
-                <p className="text-xs text-[#6B7280] mt-1">Avg Completion</p>
+              <div className="bg-white rounded-xl shadow-sm border-l-4 border-l-slate-400 p-4">
+                <p className="text-2xl font-bold text-slate-600">{metrics.avgCompletionTime}h</p>
+                <p className="text-xs text-slate-500 mt-1">Avg Completion</p>
               </div>
-              <a href="/tech-ops/windy-day-cleanup" className="text-center hover:bg-[#17BEBB1A] rounded-lg p-2 -m-2 transition-colors cursor-pointer" data-testid="metric-windy-cleanup">
-                <div className="flex items-center justify-center gap-1">
-                  <Wind className="w-4 h-4 text-[#0D9488]" />
-                  <p className="text-xl font-bold text-[#0D9488]" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{windyDayPending}</p>
+              <a 
+                href="/tech-ops/windy-day-cleanup" 
+                className="bg-white rounded-xl shadow-sm border-l-4 border-l-[#14b8a6] p-4 hover:shadow-md transition-shadow cursor-pointer" 
+                data-testid="metric-windy-cleanup"
+              >
+                <div className="flex items-center gap-2">
+                  <Wind className="w-5 h-5 text-[#14b8a6]" />
+                  <p className="text-2xl font-bold text-[#14b8a6]">{windyDayPending}</p>
                 </div>
-                <p className="text-xs text-[#6B7280] mt-1">Windy Cleanup</p>
+                <p className="text-xs text-slate-500 mt-1">Windy Cleanup</p>
               </a>
             </div>
             
-            {/* Source Breakdown Row */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-[#6B7280] mb-3">By Source</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex items-center justify-between p-2 bg-[#0078D4]1A rounded-lg border border-[#0078D4]1A">
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-3">By Source</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div 
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                  onClick={() => setSourceFilter("repair_tech")}
+                >
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#0078D4]" />
-                    <span className="text-sm text-[#1E293B]">Repair Tech</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#0077b6]" />
+                    <span className="text-sm font-medium text-slate-700">Repair Tech</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-semibold text-[#0078D4]">{sourceMetrics.repairTech.count}</span>
-                    <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-[#0077b6]">{sourceMetrics.repairTech.count}</span>
+                    <span className="text-xs text-slate-500">${(sourceMetrics.repairTech.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-purple-50 rounded-lg border border-[#17BEBB]1A">
+                <div 
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                  onClick={() => setSourceFilter("service_tech")}
+                >
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-[#17BEBB]" />
-                    <span className="text-sm text-[#1E293B]">Service Tech</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#14b8a6]" />
+                    <span className="text-sm font-medium text-slate-700">Service Tech</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-semibold text-[#0D9488]">{sourceMetrics.serviceTech.count}</span>
-                    <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-[#14b8a6]">{sourceMetrics.serviceTech.count}</span>
+                    <span className="text-xs text-slate-500">${(sourceMetrics.serviceTech.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg border border-gray-200">
+                <div 
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-slate-100 transition-colors"
+                  onClick={() => setSourceFilter("office_staff")}
+                >
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-gray-400" />
-                    <span className="text-sm text-[#1E293B]">Office Staff</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                    <span className="text-sm font-medium text-slate-700">Office Staff</span>
                   </div>
-                  <div className="text-right">
-                    <span className="text-sm font-semibold text-gray-600">{sourceMetrics.officeStaff.count}</span>
-                    <span className="text-xs text-[#6B7280] ml-2">${(sourceMetrics.officeStaff.totalValue / 100).toLocaleString()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-slate-600">{sourceMetrics.officeStaff.count}</span>
+                    <span className="text-xs text-slate-500">${(sourceMetrics.officeStaff.totalValue / 100).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
