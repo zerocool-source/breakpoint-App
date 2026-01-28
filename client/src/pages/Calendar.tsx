@@ -398,7 +398,9 @@ export default function Calendar() {
   // Get properties for a service technician on a specific day based on their visit days
   const getPropertiesForTechAndDate = (techId: string | number, date: Date): TechPropertyAssignment[] => {
     const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
-    const dayCode = DAY_CODES[dayOfWeek];
+    const dayCode = DAY_CODES[dayOfWeek].toLowerCase(); // "mon", "tue", etc.
+    const fullDayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const fullDayName = fullDayNames[dayOfWeek];
     
     return propertyAssignments.filter((prop) => {
       if (String(prop.technicianId) !== String(techId)) return false;
@@ -410,8 +412,10 @@ export default function Calendar() {
       
       if (!visitDays || visitDays.length === 0) return false;
       
-      // Visit days are stored as abbreviated day codes like "MON", "TUE", etc.
-      return visitDays.includes(dayCode);
+      // Visit days can be stored in various formats: "Mon", "MON", "monday", etc.
+      // Normalize to lowercase and check for matches
+      const normalizedVisitDays = visitDays.map(d => d.toLowerCase());
+      return normalizedVisitDays.includes(dayCode) || normalizedVisitDays.includes(fullDayName);
     });
   };
 
