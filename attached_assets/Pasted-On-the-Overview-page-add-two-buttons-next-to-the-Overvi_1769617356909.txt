@@ -1,0 +1,48 @@
+On the Overview page, add two buttons next to the "Overview" title in the header area:
+
+**BUTTON 1 - "Add Employee":**
+- Add a button with a person/plus icon labeled "Add Employee"
+- Style it with ocean blue (#0077b6) background, white text, rounded corners
+- When clicked, open a small popup modal asking "Select Employee Type" with three clickable options:
+  - "Service Technician" (with a service/wrench icon)
+  - "Repair Technician" (with a repair/tools icon)
+  - "Supervisor" (with a supervisor/hard hat icon)
+
+- After selecting the employee type, show a form with these fields:
+  - First Name *
+  - Last Name *
+  - Phone Number *
+  - Email *
+  - Truck # (optional for Supervisors)
+  - Status dropdown (Active/Inactive)
+  
+- Include "Cancel" and "Save Employee" buttons at the bottom
+- When saved, the employee is added to the appropriate page:
+  - Service Technician → goes to Service Technicians page
+  - Repair Technician → goes to Repair Technicians page
+  - Supervisor → goes to Supervisor Team Management page
+- Show a success toast message: "Employee added successfully"
+
+**BUTTON 2 - "Add Property":**
+- Add a button with a building/property plus icon labeled "Add Property"
+- Style it with a lighter/secondary style (outline or lighter blue)
+- When clicked, open a popup form modal titled "Add New Property" with fields:
+  - Property Name *
+  - Customer/Company Name *
+  - Status dropdown (Active/Inactive)
+  - Email
+  - Phone
+  - Address *
+  - City *
+  - State *
+  - ZIP Code *
+  - Service Type dropdown (Weekly, Bi-Weekly, Monthly, On-Call)
+  - Assigned Technician dropdown (list of service techs)
+  - Tags (comma-separated)
+  - Notes (text area)
+
+- Include "Cancel" and "Add Property" buttons at the bottom
+- When saved, add the property to the Properties page
+- Show a success toast message: "Property added successfully"
+
+Position both buttons in the top right area of the Overview page header, next to or below the "Sync Pool Brain" button. Make sure they match the app's styling.

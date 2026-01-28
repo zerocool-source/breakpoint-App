@@ -20,7 +20,11 @@ import {
   UserX,
   ChevronRight,
   ChevronLeft,
-  Droplets
+  Droplets,
+  UserPlus,
+  Building2,
+  HardHat,
+  Hammer
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,6 +34,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -154,6 +160,37 @@ export default function Dashboard() {
     localStorage.setItem('inactive_tech_threshold', time);
   };
 
+  // Add Employee Modal State
+  const [showEmployeeTypeModal, setShowEmployeeTypeModal] = useState(false);
+  const [showEmployeeFormModal, setShowEmployeeFormModal] = useState(false);
+  const [selectedEmployeeType, setSelectedEmployeeType] = useState<"service" | "repair" | "supervisor" | null>(null);
+  const [employeeForm, setEmployeeForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    truckNumber: "",
+    active: true,
+  });
+
+  // Add Property Modal State
+  const [showPropertyModal, setShowPropertyModal] = useState(false);
+  const [propertyForm, setPropertyForm] = useState({
+    name: "",
+    customerName: "",
+    status: "active",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    serviceLevel: "weekly",
+    assignedTechnicianId: "",
+    tags: "",
+    notes: "",
+  });
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/overview"],
     queryFn: async () => {
@@ -188,6 +225,118 @@ export default function Dashboard() {
       });
     },
   });
+
+  // Fetch service technicians for property assignment dropdown
+  const { data: serviceTechnicians = [] } = useQuery<Array<{ id: string; firstName: string; lastName: string }>>({
+    queryKey: ["/api/technicians", "service"],
+    queryFn: async () => {
+      const res = await fetch("/api/technicians?role=service");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Create Employee Mutation
+  const createEmployeeMutation = useMutation({
+    mutationFn: async (data: { 
+      firstName: string; 
+      lastName: string; 
+      phone: string; 
+      email: string; 
+      truckNumber?: string; 
+      role: string;
+      active: boolean;
+    }) => {
+      const res = await fetch("/api/technicians", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create employee");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians"] });
+      setShowEmployeeFormModal(false);
+      setSelectedEmployeeType(null);
+      setEmployeeForm({ firstName: "", lastName: "", phone: "", email: "", truckNumber: "", active: true });
+      toast({ title: "Employee added successfully", description: "The new employee has been created." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Create Property Mutation
+  const createPropertyMutation = useMutation({
+    mutationFn: async (data: {
+      name: string;
+      customerName: string;
+      status: string;
+      email?: string;
+      phone?: string;
+      address: string;
+      city: string;
+      state: string;
+      zip: string;
+      serviceLevel: string;
+      assignedTechnicianId?: string;
+      tags?: string;
+      notes?: string;
+    }) => {
+      const res = await fetch("/api/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create property");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      setShowPropertyModal(false);
+      setPropertyForm({
+        name: "", customerName: "", status: "active", email: "", phone: "",
+        address: "", city: "", state: "", zip: "", serviceLevel: "weekly",
+        assignedTechnicianId: "", tags: "", notes: "",
+      });
+      toast({ title: "Property added successfully", description: "The new property has been created." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleEmployeeTypeSelect = (type: "service" | "repair" | "supervisor") => {
+    setSelectedEmployeeType(type);
+    setShowEmployeeTypeModal(false);
+    setShowEmployeeFormModal(true);
+  };
+
+  const handleEmployeeSubmit = () => {
+    if (!selectedEmployeeType) return;
+    createEmployeeMutation.mutate({
+      ...employeeForm,
+      role: selectedEmployeeType,
+    });
+  };
+
+  const handlePropertySubmit = () => {
+    createPropertyMutation.mutate({
+      ...propertyForm,
+      email: propertyForm.email || undefined,
+      phone: propertyForm.phone || undefined,
+      assignedTechnicianId: propertyForm.assignedTechnicianId || undefined,
+      tags: propertyForm.tags || undefined,
+      notes: propertyForm.notes || undefined,
+    });
+  };
 
   const metrics = dashboardData?.metrics;
   const summary = dashboardData?.summary;
@@ -240,6 +389,25 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-semibold text-[#1E293B]">Overview</h1>
             <p className="text-[#64748B] text-sm">Real-time business intelligence dashboard</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowEmployeeTypeModal(true)}
+              className="gap-2 bg-[#0077b6] hover:bg-[#006299] text-white rounded-lg"
+              data-testid="button-add-employee"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Employee
+            </Button>
+            <Button
+              onClick={() => setShowPropertyModal(true)}
+              variant="outline"
+              className="gap-2 border-[#0077b6] text-[#0077b6] hover:bg-[#0077b6]/10 rounded-lg"
+              data-testid="button-add-property"
+            >
+              <Building2 className="w-4 h-4" />
+              Add Property
+            </Button>
           </div>
         </div>
 
@@ -1345,6 +1513,362 @@ export default function Dashboard() {
               }}
             >
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Type Selection Modal */}
+      <Dialog open={showEmployeeTypeModal} onOpenChange={setShowEmployeeTypeModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-[#0077b6]" />
+              Select Employee Type
+            </DialogTitle>
+            <DialogDescription>
+              Choose the type of employee you want to add
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-3">
+            <button
+              onClick={() => handleEmployeeTypeSelect("service")}
+              className="w-full p-4 flex items-center gap-4 rounded-lg border border-slate-200 hover:border-[#0077b6] hover:bg-[#0077b6]/5 transition-all text-left"
+              data-testid="button-employee-type-service"
+            >
+              <div className="p-3 rounded-lg bg-blue-100">
+                <Wrench className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">Service Technician</p>
+                <p className="text-sm text-slate-500">Regular pool maintenance and service</p>
+              </div>
+            </button>
+            <button
+              onClick={() => handleEmployeeTypeSelect("repair")}
+              className="w-full p-4 flex items-center gap-4 rounded-lg border border-slate-200 hover:border-[#0077b6] hover:bg-[#0077b6]/5 transition-all text-left"
+              data-testid="button-employee-type-repair"
+            >
+              <div className="p-3 rounded-lg bg-amber-100">
+                <Hammer className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">Repair Technician</p>
+                <p className="text-sm text-slate-500">Equipment repairs and installations</p>
+              </div>
+            </button>
+            <button
+              onClick={() => handleEmployeeTypeSelect("supervisor")}
+              className="w-full p-4 flex items-center gap-4 rounded-lg border border-slate-200 hover:border-[#0077b6] hover:bg-[#0077b6]/5 transition-all text-left"
+              data-testid="button-employee-type-supervisor"
+            >
+              <div className="p-3 rounded-lg bg-purple-100">
+                <HardHat className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-900">Supervisor</p>
+                <p className="text-sm text-slate-500">Team lead and operations oversight</p>
+              </div>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Form Modal */}
+      <Dialog open={showEmployeeFormModal} onOpenChange={(open) => {
+        setShowEmployeeFormModal(open);
+        if (!open) setSelectedEmployeeType(null);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedEmployeeType === "service" && <Wrench className="w-5 h-5 text-blue-600" />}
+              {selectedEmployeeType === "repair" && <Hammer className="w-5 h-5 text-amber-600" />}
+              {selectedEmployeeType === "supervisor" && <HardHat className="w-5 h-5 text-purple-600" />}
+              Add {selectedEmployeeType === "service" ? "Service Technician" : selectedEmployeeType === "repair" ? "Repair Technician" : "Supervisor"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="emp-first-name">First Name *</Label>
+                <Input
+                  id="emp-first-name"
+                  value={employeeForm.firstName}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
+                  placeholder="John"
+                  data-testid="input-employee-firstname"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emp-last-name">Last Name *</Label>
+                <Input
+                  id="emp-last-name"
+                  value={employeeForm.lastName}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
+                  placeholder="Doe"
+                  data-testid="input-employee-lastname"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emp-phone">Phone Number *</Label>
+              <Input
+                id="emp-phone"
+                type="tel"
+                value={employeeForm.phone}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
+                placeholder="(555) 123-4567"
+                data-testid="input-employee-phone"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emp-email">Email *</Label>
+              <Input
+                id="emp-email"
+                type="email"
+                value={employeeForm.email}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                placeholder="john.doe@example.com"
+                data-testid="input-employee-email"
+              />
+            </div>
+            {selectedEmployeeType !== "supervisor" && (
+              <div className="space-y-2">
+                <Label htmlFor="emp-truck">Truck #</Label>
+                <Input
+                  id="emp-truck"
+                  value={employeeForm.truckNumber}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, truckNumber: e.target.value })}
+                  placeholder="T-001"
+                  data-testid="input-employee-truck"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="emp-status">Status</Label>
+              <Select value={employeeForm.active ? "active" : "inactive"} onValueChange={(v) => setEmployeeForm({ ...employeeForm, active: v === "active" })}>
+                <SelectTrigger data-testid="select-employee-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowEmployeeFormModal(false);
+              setSelectedEmployeeType(null);
+            }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEmployeeSubmit}
+              disabled={!employeeForm.firstName || !employeeForm.lastName || !employeeForm.phone || !employeeForm.email || createEmployeeMutation.isPending}
+              className="bg-[#0077b6] hover:bg-[#006299]"
+              data-testid="button-save-employee"
+            >
+              {createEmployeeMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Employee"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Property Modal */}
+      <Dialog open={showPropertyModal} onOpenChange={setShowPropertyModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-[#0077b6]" />
+              Add New Property
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="prop-name">Property Name *</Label>
+                <Input
+                  id="prop-name"
+                  value={propertyForm.name}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, name: e.target.value })}
+                  placeholder="Sunset Plaza Pool"
+                  data-testid="input-property-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prop-customer">Customer/Company Name *</Label>
+                <Input
+                  id="prop-customer"
+                  value={propertyForm.customerName}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, customerName: e.target.value })}
+                  placeholder="Sunset HOA"
+                  data-testid="input-property-customer"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="prop-status">Status</Label>
+                <Select value={propertyForm.status} onValueChange={(v) => setPropertyForm({ ...propertyForm, status: v })}>
+                  <SelectTrigger data-testid="select-property-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prop-service">Service Type</Label>
+                <Select value={propertyForm.serviceLevel} onValueChange={(v) => setPropertyForm({ ...propertyForm, serviceLevel: v })}>
+                  <SelectTrigger data-testid="select-property-service">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="biweekly">Bi-Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="oncall">On-Call</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="prop-email">Email</Label>
+                <Input
+                  id="prop-email"
+                  type="email"
+                  value={propertyForm.email}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, email: e.target.value })}
+                  placeholder="contact@sunset-hoa.com"
+                  data-testid="input-property-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prop-phone">Phone</Label>
+                <Input
+                  id="prop-phone"
+                  type="tel"
+                  value={propertyForm.phone}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, phone: e.target.value })}
+                  placeholder="(555) 123-4567"
+                  data-testid="input-property-phone"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prop-address">Address *</Label>
+              <Input
+                id="prop-address"
+                value={propertyForm.address}
+                onChange={(e) => setPropertyForm({ ...propertyForm, address: e.target.value })}
+                placeholder="123 Main Street"
+                data-testid="input-property-address"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="prop-city">City *</Label>
+                <Input
+                  id="prop-city"
+                  value={propertyForm.city}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, city: e.target.value })}
+                  placeholder="Miami"
+                  data-testid="input-property-city"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prop-state">State *</Label>
+                <Input
+                  id="prop-state"
+                  value={propertyForm.state}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, state: e.target.value })}
+                  placeholder="FL"
+                  data-testid="input-property-state"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="prop-zip">ZIP Code *</Label>
+                <Input
+                  id="prop-zip"
+                  value={propertyForm.zip}
+                  onChange={(e) => setPropertyForm({ ...propertyForm, zip: e.target.value })}
+                  placeholder="33101"
+                  data-testid="input-property-zip"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prop-tech">Assigned Technician</Label>
+              <Select value={propertyForm.assignedTechnicianId} onValueChange={(v) => setPropertyForm({ ...propertyForm, assignedTechnicianId: v })}>
+                <SelectTrigger data-testid="select-property-technician">
+                  <SelectValue placeholder="Select a technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceTechnicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prop-tags">Tags (comma-separated)</Label>
+              <Input
+                id="prop-tags"
+                value={propertyForm.tags}
+                onChange={(e) => setPropertyForm({ ...propertyForm, tags: e.target.value })}
+                placeholder="HOA, commercial, heated pool"
+                data-testid="input-property-tags"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="prop-notes">Notes</Label>
+              <Textarea
+                id="prop-notes"
+                value={propertyForm.notes}
+                onChange={(e) => setPropertyForm({ ...propertyForm, notes: e.target.value })}
+                placeholder="Any additional notes about this property..."
+                rows={3}
+                data-testid="input-property-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPropertyModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePropertySubmit}
+              disabled={
+                !propertyForm.name || !propertyForm.customerName || !propertyForm.address ||
+                !propertyForm.city || !propertyForm.state || !propertyForm.zip ||
+                createPropertyMutation.isPending
+              }
+              className="bg-[#0077b6] hover:bg-[#006299]"
+              data-testid="button-save-property"
+            >
+              {createPropertyMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Property"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
