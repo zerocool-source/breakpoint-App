@@ -215,6 +215,19 @@ export default function Dashboard() {
     paid: true,
   });
 
+  // Emergency Report Modal State
+  const [showEmergencyReportModal, setShowEmergencyReportModal] = useState(false);
+  const [emergencyReportLoading, setEmergencyReportLoading] = useState(false);
+  const [emergencyReportDateRange, setEmergencyReportDateRange] = useState({
+    from: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd"),
+    to: format(new Date(), "yyyy-MM-dd"),
+  });
+  const [emergencyReportFilters, setEmergencyReportFilters] = useState({
+    emergencies: true,
+    reportedIssues: true,
+    systemAlerts: false,
+  });
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/overview"],
     queryFn: async () => {
@@ -479,6 +492,130 @@ export default function Dashboard() {
       });
     } finally {
       setReportLoading(false);
+    }
+  };
+
+  const setEmergencyQuickDateRange = (range: "week" | "month" | "quarter") => {
+    const now = new Date();
+    let from: Date;
+    
+    switch (range) {
+      case "week":
+        from = new Date(now);
+        from.setDate(now.getDate() - 7);
+        break;
+      case "month":
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "quarter":
+        const quarterStart = Math.floor(now.getMonth() / 3) * 3;
+        from = new Date(now.getFullYear(), quarterStart, 1);
+        break;
+    }
+    
+    setEmergencyReportDateRange({
+      from: format(from, "yyyy-MM-dd"),
+      to: format(now, "yyyy-MM-dd"),
+    });
+  };
+
+  const handleDownloadEmergencyReport = async () => {
+    setEmergencyReportLoading(true);
+    try {
+      // Generate sample data for the report (in production, this would come from API)
+      const allItems: any[] = [];
+      
+      // Sample emergencies
+      if (emergencyReportFilters.emergencies) {
+        allItems.push(
+          { date: '2026-01-14', type: 'Emergency', property: 'Sunset Hills HOA', description: 'Major pump motor failure', reportedBy: 'Mike Johnson (Service Tech)', status: 'Critical', daysOpen: 14 },
+          { date: '2026-01-15', type: 'Emergency', property: 'Desert Springs Resort', description: 'Heater exchanger leaking', reportedBy: 'Sarah Williams (Repair Tech)', status: 'High', daysOpen: 13 },
+          { date: '2026-01-16', type: 'Emergency', property: 'Palm Gardens Community', description: 'Control panel error codes', reportedBy: 'James Wilson (Supervisor)', status: 'High', daysOpen: 12 },
+          { date: '2026-01-25', type: 'Emergency', property: 'Lakewood Country Club', description: 'Filter system completely failed', reportedBy: 'Jorge Martinez (Repair Tech)', status: 'Critical', daysOpen: 3 },
+        );
+      }
+      
+      // Sample reported issues
+      if (emergencyReportFilters.reportedIssues) {
+        allItems.push(
+          { date: '2026-01-06', type: 'Reported Issue', property: 'Pool', description: 'Alert', reportedBy: 'Unassigned', status: 'Pending review', daysOpen: 22 },
+          { date: '2026-01-27', type: 'Reported Issue', property: 'Marina Bay Club', description: 'Customer reported cloudy water', reportedBy: 'John Smith (Customer)', status: 'Pending review', daysOpen: 1 },
+          { date: '2026-01-25', type: 'Reported Issue', property: 'Sunset Marina', description: 'Tile damage reported', reportedBy: 'Jane Doe (Customer)', status: 'Pending review', daysOpen: 3 },
+          { date: '2026-01-23', type: 'Reported Issue', property: 'Desert Springs Resort', description: 'Heater malfunction', reportedBy: 'Mike Johnson (Tech)', status: 'Critical', daysOpen: 5 },
+          { date: '2026-01-26', type: 'Reported Issue', property: 'Palm Gardens Community', description: 'Control panel error', reportedBy: 'Sarah Williams (Tech)', status: 'High', daysOpen: 2 },
+          { date: '2026-01-24', type: 'Reported Issue', property: 'Lakewood Country Club', description: 'Pump noise issue', reportedBy: 'Customer', status: 'Pending review', daysOpen: 4 },
+        );
+      }
+      
+      // Sample system alerts
+      if (emergencyReportFilters.systemAlerts) {
+        allItems.push(
+          { date: '2026-01-28', type: 'System Alert', property: 'Ocean View Resort', description: 'Chemical levels out of range', reportedBy: 'System Auto-Alert', status: 'Active', daysOpen: 0 },
+          { date: '2026-01-28', type: 'System Alert', property: 'Vista Grande HOA', description: 'Pump pressure high', reportedBy: 'System Auto-Alert', status: 'Active', daysOpen: 0 },
+          { date: '2026-01-27', type: 'System Alert', property: 'Cypress Creek HOA', description: 'Scheduled maintenance due', reportedBy: 'System Auto-Alert', status: 'Active', daysOpen: 1 },
+        );
+      }
+      
+      // Filter by date range
+      const fromDate = new Date(emergencyReportDateRange.from);
+      const toDate = new Date(emergencyReportDateRange.to);
+      toDate.setHours(23, 59, 59, 999);
+      
+      const filteredItems = allItems.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= fromDate && itemDate <= toDate;
+      });
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Prepare data rows
+      const rows = filteredItems.map((item: any) => ({
+        "Date": item.date ? format(new Date(item.date), "MM/dd/yyyy") : "",
+        "Type": item.type,
+        "Property": item.property,
+        "Description": item.description,
+        "Reported By": item.reportedBy,
+        "Status": item.status,
+        "Days Open": item.daysOpen,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      
+      // Set column widths
+      ws["!cols"] = [
+        { wch: 12 }, // Date
+        { wch: 15 }, // Type
+        { wch: 25 }, // Property
+        { wch: 35 }, // Description
+        { wch: 25 }, // Reported By
+        { wch: 15 }, // Status
+        { wch: 10 }, // Days Open
+      ];
+
+      XLSX.utils.book_append_sheet(wb, ws, "Emergency Report");
+
+      // Generate filename
+      const fromDateStr = emergencyReportDateRange.from.replace(/-/g, "");
+      const toDateStr = emergencyReportDateRange.to.replace(/-/g, "");
+      const fileName = `Breakpoint_Emergency_Report_${fromDateStr}_to_${toDateStr}.xlsx`;
+
+      // Download
+      XLSX.writeFile(wb, fileName);
+      
+      toast({
+        title: "Report downloaded successfully",
+        description: `${filteredItems.length} records exported to Excel`,
+      });
+      setShowEmergencyReportModal(false);
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Could not generate the report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setEmergencyReportLoading(false);
     }
   };
 
@@ -784,8 +921,12 @@ export default function Dashboard() {
               ];
               
               const sampleIssues = [
-                { id: 'si1', propertyName: 'Marina Bay Club', description: 'Customer reported cloudy water', reportedBy: 'John Smith', reporterRole: 'Customer', status: 'Pending review', timeAgo: '1 day ago', type: 'issue' },
-                { id: 'si2', propertyName: 'Sunset Marina', description: 'Tile damage reported', reportedBy: 'Jane Doe', reporterRole: 'Customer', status: 'Pending review', timeAgo: '3 days ago', type: 'issue' },
+                { id: 'si1', propertyName: 'Pool', description: 'Alert', reportedBy: 'Unassigned', reporterRole: '', status: 'Pending review', timeAgo: '22 days', type: 'issue' },
+                { id: 'si2', propertyName: 'Marina Bay Club', description: 'Customer reported cloudy water', reportedBy: 'John Smith', reporterRole: 'Customer', status: 'Pending review', timeAgo: '1 day ago', type: 'issue' },
+                { id: 'si3', propertyName: 'Sunset Marina', description: 'Tile damage reported', reportedBy: 'Jane Doe', reporterRole: 'Customer', status: 'Pending review', timeAgo: '3 days ago', type: 'issue' },
+                { id: 'si4', propertyName: 'Desert Springs Resort', description: 'Heater malfunction', reportedBy: 'Mike Johnson', reporterRole: 'Tech', status: 'Critical', timeAgo: '5 days ago', type: 'issue' },
+                { id: 'si5', propertyName: 'Palm Gardens Community', description: 'Control panel error', reportedBy: 'Sarah Williams', reporterRole: 'Tech', status: 'High', timeAgo: '2 days ago', type: 'issue' },
+                { id: 'si6', propertyName: 'Lakewood Country Club', description: 'Pump noise issue', reportedBy: 'Customer', reporterRole: '', status: 'Pending review', timeAgo: '4 days ago', type: 'issue' },
               ];
               
               // Use real data if available, otherwise show sample data
@@ -807,10 +948,11 @@ export default function Dashboard() {
                 if (selectedStatusCategory === 'emergencies') return emergencyItems;
                 if (selectedStatusCategory === 'alerts') return alertItems;
                 if (selectedStatusCategory === 'issues') return issueItems;
+                // Show more items when "all" is selected - mix of all types
                 return [
                   ...emergencyItems.slice(0, 2),
+                  ...issueItems.slice(0, 3),
                   ...alertItems.slice(0, 2),
-                  ...issueItems.slice(0, 2),
                 ];
               };
               
@@ -950,13 +1092,13 @@ export default function Dashboard() {
                   </div>
                   
                   {/* Right side: Items panel */}
-                  <div className="w-1/2 border-l border-slate-100 pl-6">
+                  <div className="w-1/2 border-l border-slate-100 pl-6 flex flex-col">
                     <p className="text-xs font-medium text-slate-500 mb-3">
                       {selectedStatusCategory === 'all' ? 'Recent Items' : 
                        selectedStatusCategory === 'emergencies' ? 'Emergencies' :
                        selectedStatusCategory === 'alerts' ? 'Alerts' : 'Reported Issues'}
                     </p>
-                    <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                    <div className="space-y-2 max-h-[280px] overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent hover:scrollbar-thumb-slate-300" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
                       {filteredItems.length === 0 ? (
                         <p className="text-sm text-slate-400 italic">No items</p>
                       ) : (
@@ -1010,6 +1152,16 @@ export default function Dashboard() {
                         })
                       )}
                     </div>
+                    
+                    {/* Download Report Button */}
+                    <Button
+                      onClick={() => setShowEmergencyReportModal(true)}
+                      className="w-full mt-4 gap-2 bg-[#0077b6] hover:bg-[#006299] text-white rounded-lg shadow-sm hover:shadow-md transition-all"
+                      data-testid="button-download-emergency-report"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Report
+                    </Button>
                   </div>
                 </div>
               );
@@ -2298,6 +2450,140 @@ export default function Dashboard() {
               data-testid="button-download-excel"
             >
               {reportLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download Excel
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Emergency & Issues Report Modal */}
+      <Dialog open={showEmergencyReportModal} onOpenChange={setShowEmergencyReportModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              Download Emergency & Issues Report
+            </DialogTitle>
+            <DialogDescription>
+              Select date range and filters for your report
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="emergency-report-from">From Date</Label>
+                <Input
+                  id="emergency-report-from"
+                  type="date"
+                  value={emergencyReportDateRange.from}
+                  onChange={(e) => setEmergencyReportDateRange({ ...emergencyReportDateRange, from: e.target.value })}
+                  data-testid="input-emergency-report-from-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emergency-report-to">To Date</Label>
+                <Input
+                  id="emergency-report-to"
+                  type="date"
+                  value={emergencyReportDateRange.to}
+                  onChange={(e) => setEmergencyReportDateRange({ ...emergencyReportDateRange, to: e.target.value })}
+                  data-testid="input-emergency-report-to-date"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEmergencyQuickDateRange("week")}
+                className="text-xs"
+                data-testid="button-emergency-quick-week"
+              >
+                This Week
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEmergencyQuickDateRange("month")}
+                className="text-xs"
+                data-testid="button-emergency-quick-month"
+              >
+                This Month
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEmergencyQuickDateRange("quarter")}
+                className="text-xs"
+                data-testid="button-emergency-quick-quarter"
+              >
+                This Quarter
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Include in Report:</Label>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-emergencies"
+                    checked={emergencyReportFilters.emergencies}
+                    onCheckedChange={(checked) => setEmergencyReportFilters({ ...emergencyReportFilters, emergencies: !!checked })}
+                    data-testid="checkbox-emergencies"
+                  />
+                  <Label htmlFor="filter-emergencies" className="text-sm text-slate-600 cursor-pointer">
+                    Emergencies
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-reported-issues"
+                    checked={emergencyReportFilters.reportedIssues}
+                    onCheckedChange={(checked) => setEmergencyReportFilters({ ...emergencyReportFilters, reportedIssues: !!checked })}
+                    data-testid="checkbox-reported-issues"
+                  />
+                  <Label htmlFor="filter-reported-issues" className="text-sm text-slate-600 cursor-pointer">
+                    Reported Issues
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="filter-system-alerts"
+                    checked={emergencyReportFilters.systemAlerts}
+                    onCheckedChange={(checked) => setEmergencyReportFilters({ ...emergencyReportFilters, systemAlerts: !!checked })}
+                    data-testid="checkbox-system-alerts"
+                  />
+                  <Label htmlFor="filter-system-alerts" className="text-sm text-slate-600 cursor-pointer">
+                    System Alerts (optional)
+                  </Label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmergencyReportModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDownloadEmergencyReport}
+              disabled={emergencyReportLoading}
+              className="gap-2 bg-[#0077b6] hover:bg-[#006299]"
+              data-testid="button-download-emergency-excel"
+            >
+              {emergencyReportLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Generating...
