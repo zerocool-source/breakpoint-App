@@ -150,7 +150,7 @@ function AddSupervisorModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] p-0 gap-0">
         <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
-          <DialogTitle className="text-lg font-semibold">Add Supervisor</DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-white">Add Supervisor</DialogTitle>
         </DialogHeader>
         
         <div className="p-6 bg-slate-100">
@@ -286,7 +286,7 @@ function EditSupervisorModal({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-[700px] p-0 gap-0">
           <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
-            <DialogTitle className="text-lg font-semibold">Edit Supervisor</DialogTitle>
+            <DialogTitle className="text-lg font-semibold text-white">Edit Supervisor</DialogTitle>
           </DialogHeader>
           
           <div className="p-6 bg-slate-100">
@@ -438,14 +438,14 @@ function SupervisorTeamModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0 gap-0 max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
-          <DialogTitle className="text-lg font-semibold flex items-center gap-3">
+          <DialogTitle className="text-lg font-semibold flex items-center gap-3 text-white">
             <div className={cn(
               "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold",
               avatarColor
             )}>
               {initials}
             </div>
-            {fullName}'s Team
+            <span className="text-white">{fullName}'s Team</span>
           </DialogTitle>
         </DialogHeader>
         
