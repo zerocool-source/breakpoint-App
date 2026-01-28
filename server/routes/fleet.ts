@@ -251,4 +251,39 @@ export function registerFleetRoutes(app: any) {
       res.status(500).json({ error: 'Failed to fetch geofence events' });
     }
   });
+
+  app.get("/api/fleet/gps/alerts", async (req: Request, res: Response) => {
+    try {
+      const deviceId = req.query.deviceId as string | undefined;
+      const startDate = (req.query.startDate as string) || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const endDate = (req.query.endDate as string) || new Date().toISOString();
+
+      const data = await onestepgps.getDriveEvents({
+        deviceId,
+        startDate,
+        endDate,
+        limit: 100,
+      });
+
+      const alerts = data.result_list.map(event => ({
+        id: event.event_id,
+        deviceId: event.device_id,
+        type: event.event_type,
+        severity: event.severity,
+        timestamp: event.timestamp,
+        location: { lat: event.lat, lng: event.lng },
+        details: event.details,
+      }));
+
+      const maintenanceAlerts = {
+        overdue: alerts.filter(a => a.type === 'maintenance_overdue').length,
+        dueThisWeek: alerts.filter(a => a.type === 'maintenance_due').length,
+      };
+
+      res.json({ alerts, maintenanceAlerts });
+    } catch (error) {
+      console.error('Fleet alerts error:', error);
+      res.status(500).json({ error: 'Failed to fetch fleet alerts' });
+    }
+  });
 }
