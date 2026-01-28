@@ -116,14 +116,17 @@ export default function RepairQueue() {
     },
   });
 
-  const { data: technicians = [] } = useQuery<Technician[]>({
-    queryKey: ["technicians"],
+  // Fetch repair technicians from stored technicians database
+  const { data: repairTechniciansData } = useQuery<{ technicians: Technician[] }>({
+    queryKey: ["/api/technicians/stored", "repair"],
     queryFn: async () => {
-      const response = await fetch("/api/technicians?role=repair_tech");
-      if (!response.ok) throw new Error("Failed to fetch technicians");
+      const response = await fetch("/api/technicians/stored?role=repair");
+      if (!response.ok) throw new Error("Failed to fetch repair technicians");
       return response.json();
     },
   });
+  
+  const repairTechnicians = repairTechniciansData?.technicians || [];
 
   const { data: emergencies = [] } = useQuery<Emergency[]>({
     queryKey: ["emergencies"],
@@ -295,26 +298,67 @@ export default function RepairQueue() {
   };
 
   const repairsByTech = useMemo(() => {
-    const grouped: Record<string, { tech: string; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number }> = {};
+    const grouped: Record<string, { 
+      tech: string; 
+      techId: string | null;
+      repairs: ServiceRepairJob[]; 
+      pending: number; 
+      inProgress: number; 
+      completed: number; 
+      totalValue: number;
+      initials: string;
+    }> = {};
     
+    // First, add all repair technicians from the database
+    repairTechnicians.filter(t => t.active !== false).forEach(tech => {
+      const fullName = `${tech.firstName} ${tech.lastName}`;
+      const initials = `${tech.firstName?.charAt(0) || ''}${tech.lastName?.charAt(0) || ''}`.toUpperCase();
+      grouped[fullName] = { 
+        tech: fullName, 
+        techId: tech.id,
+        repairs: [], 
+        pending: 0, 
+        inProgress: 0, 
+        completed: 0, 
+        totalValue: 0,
+        initials,
+      };
+    });
+    
+    // Add Unassigned bucket
+    grouped["Unassigned"] = { 
+      tech: "Unassigned", 
+      techId: null,
+      repairs: [], 
+      pending: 0, 
+      inProgress: 0, 
+      completed: 0, 
+      totalValue: 0,
+      initials: "UA",
+    };
+    
+    // Now populate with repairs data
     filteredRepairs.forEach(repair => {
       const techName = repair.technicianName || "Unassigned";
-      if (!grouped[techName]) {
-        grouped[techName] = { tech: techName, repairs: [], pending: 0, inProgress: 0, completed: 0, totalValue: 0 };
-      }
-      grouped[techName].repairs.push(repair);
-      grouped[techName].totalValue += repair.totalAmount || 0;
-      if (repair.status === "pending" || repair.status === "assigned") grouped[techName].pending++;
-      else if (repair.status === "in_progress") grouped[techName].inProgress++;
-      else if (repair.status === "completed") grouped[techName].completed++;
+      // If tech exists in our list, add to their stats; otherwise add to Unassigned
+      const targetGroup = grouped[techName] || grouped["Unassigned"];
+      targetGroup.repairs.push(repair);
+      targetGroup.totalValue += repair.totalAmount || 0;
+      if (repair.status === "pending" || repair.status === "assigned") targetGroup.pending++;
+      else if (repair.status === "in_progress") targetGroup.inProgress++;
+      else if (repair.status === "completed") targetGroup.completed++;
     });
 
     return Object.values(grouped).sort((a, b) => {
       if (a.tech === "Unassigned") return 1;
       if (b.tech === "Unassigned") return -1;
-      return (b.pending + b.inProgress) - (a.pending + a.inProgress);
+      // Sort by active jobs first, then alphabetically
+      const aActive = a.pending + a.inProgress;
+      const bActive = b.pending + b.inProgress;
+      if (aActive !== bActive) return bActive - aActive;
+      return a.tech.localeCompare(b.tech);
     });
-  }, [filteredRepairs]);
+  }, [filteredRepairs, repairTechnicians]);
 
   const dashboardMetrics = useMemo(() => {
     // Compute filtered status arrays inline to avoid dependency issues
@@ -479,14 +523,13 @@ export default function RepairQueue() {
     },
   });
 
-  const { data: repairTechs = [] } = useQuery<any[]>({
-    queryKey: ["repair-technicians"],
-    queryFn: async () => {
-      const response = await fetch("/api/technicians/repair");
-      if (!response.ok) throw new Error("Failed to fetch repair technicians");
-      return response.json();
-    },
-  });
+  // Use repairTechnicians from stored database for assignment dropdown
+  const repairTechs = useMemo(() => {
+    return repairTechnicians.filter(t => t.active !== false).map(tech => ({
+      id: tech.id,
+      name: `${tech.firstName} ${tech.lastName}`,
+    }));
+  }, [repairTechnicians]);
 
   const { data: estimates = [] } = useQuery<any[]>({
     queryKey: ["estimates-for-repair-queue"],
@@ -624,7 +667,7 @@ export default function RepairQueue() {
   };
 
   const reassignMutation = useMutation({
-    mutationFn: async ({ repairId, estimateId, techId, techName }: { repairId: string; estimateId: string | null; techId: number; techName: string }) => {
+    mutationFn: async ({ repairId, estimateId, techId, techName }: { repairId: string; estimateId: string | null; techId: string; techName: string }) => {
       const repairResponse = await fetch(`/api/service-repairs/${repairId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -697,13 +740,13 @@ export default function RepairQueue() {
 
   const handleReassign = () => {
     if (!selectedRepairForReassign || !newTechId) return;
-    const tech = repairTechs.find(t => t.id.toString() === newTechId);
+    const tech = repairTechs.find(t => t.id === newTechId);
     if (!tech) return;
     
     reassignMutation.mutate({
       repairId: selectedRepairForReassign.id,
       estimateId: selectedRepairForReassign.estimateId,
-      techId: parseInt(newTechId),
+      techId: newTechId,
       techName: tech.name,
     });
   };
@@ -841,7 +884,7 @@ export default function RepairQueue() {
     );
   };
 
-  const renderTechCard = (techData: { tech: string; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number }) => {
+  const renderTechCard = (techData: { tech: string; techId: string | null; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number; initials: string }) => {
     const totalActive = techData.pending + techData.inProgress;
     const completionRate = techData.repairs.length > 0 ? Math.round((techData.completed / techData.repairs.length) * 100) : 0;
 
@@ -856,7 +899,7 @@ export default function RepairQueue() {
           <div className="flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
               <AvatarFallback className={techData.tech === "Unassigned" ? "bg-slate-200 text-slate-600" : "bg-[#0077b6] text-white"}>
-                {getInitials(techData.tech)}
+                {techData.initials}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
@@ -2229,7 +2272,7 @@ export default function RepairQueue() {
                 </SelectTrigger>
                 <SelectContent>
                   {repairTechs.map((tech) => (
-                    <SelectItem key={tech.id} value={tech.id.toString()}>
+                    <SelectItem key={tech.id} value={tech.id}>
                       {tech.name}
                     </SelectItem>
                   ))}
