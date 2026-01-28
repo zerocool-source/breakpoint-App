@@ -232,7 +232,8 @@ export default function Dashboard() {
     queryFn: async () => {
       const res = await fetch("/api/technicians?role=service");
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      return data.technicians || [];
     },
   });
 
