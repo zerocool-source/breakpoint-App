@@ -2957,7 +2957,7 @@ export default function ServiceTechs() {
                         </div>
 
                         {/* County Badge */}
-                        <div className="flex-shrink-0">
+                        <div className="flex-shrink-0" data-testid={`county-badge-${tech.id}`}>
                           {tech.region === 'south' ? (
                             <span className="px-2 py-1 bg-[#f97316] text-white text-xs font-medium rounded-full">
                               South County
