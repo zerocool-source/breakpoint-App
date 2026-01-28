@@ -93,6 +93,8 @@ interface Technician {
   commissionPercent: number | null;
   active: boolean;
   role: string;
+  region: string | null;
+  supervisorId: string | null;
 }
 
 interface RouteStop {
@@ -2952,6 +2954,27 @@ export default function ServiceTechs() {
                             {tech.phone && <span>{tech.phone}</span>}
                             {tech.email && <span className="truncate">{tech.email}</span>}
                           </div>
+                        </div>
+
+                        {/* County Badge */}
+                        <div className="flex-shrink-0">
+                          {tech.region === 'south' ? (
+                            <span className="px-2 py-1 bg-[#f97316] text-white text-xs font-medium rounded-full">
+                              South County
+                            </span>
+                          ) : tech.region === 'mid' ? (
+                            <span className="px-2 py-1 bg-[#0077b6] text-white text-xs font-medium rounded-full">
+                              Mid County
+                            </span>
+                          ) : tech.region === 'north' ? (
+                            <span className="px-2 py-1 bg-[#14b8a6] text-white text-xs font-medium rounded-full">
+                              North County
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-[#6b7280] text-white text-xs font-medium rounded-full">
+                              Unassigned
+                            </span>
+                          )}
                         </div>
 
                         {/* Stats */}

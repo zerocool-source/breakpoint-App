@@ -1,0 +1,69 @@
+Connect the Service Technicians page and Supervisors & Teams page with synced data and county assignments:
+
+**PART 1 - SUPERVISORS & TEAMS PAGE (Team Assignment Popup):**
+
+1. CONNECT TO SERVICE TECHNICIANS DATA:
+   - The "Available Technicians" list should dynamically pull from the Service Technicians page/database
+   - When a new service technician is added via "Add Employee" on the Overview page (as Service Technician), they should automatically appear in this Available Technicians list
+   - Show all service technicians who are NOT already assigned to a supervisor
+
+2. DISPLAY FOR EACH TECHNICIAN:
+   - Initials avatar (colored circle with initials)
+   - Full name
+   - Phone number
+   - "+ Add" button to assign them to the supervisor's team
+
+3. ASSIGNED TECHNICIANS SIDE:
+   - When a technician is added to a supervisor's team, move them from "Available Technicians" to "Assigned Technicians"
+   - Show a "Remove" or "X" button to unassign them
+   - When removed, they go back to the Available Technicians list
+
+4. REAL-TIME SYNC:
+   - The count badges (0, 18, etc.) should update dynamically
+   - Changes should persist to the database
+   - The supervisor's "X Technicians" count on the main page should update when technicians are assigned/removed
+
+5. SEARCH FUNCTIONALITY:
+   - The search bar should filter technicians by name or phone number
+   - Search should work in real-time as you type
+
+**PART 2 - SERVICE TECHNICIANS PAGE (County Badge):**
+
+1. ADD COUNTY BADGE TO EACH ROW:
+   - Display a colored badge showing which county the technician is assigned to
+   - Position it after the email or on the right side of the row (before the percentage)
+   - Badge styles matching the Supervisors page:
+     - "South County" - Orange/coral badge (#f97316)
+     - "Mid County" - Purple badge (use ocean blue #0077b6 instead)
+     - "North County" - Blue/teal badge (#14b8a6)
+     - "Unassigned" - Gray badge (#6b7280) for techs not yet assigned to a supervisor
+
+2. COUNTY DATA SOURCE:
+   - The county should be pulled from the supervisor team assignment
+   - When a technician is assigned to a supervisor (e.g., Paul Fuhrman - South County), they inherit that supervisor's county
+   - If not assigned to any supervisor, show "Unassigned" in gray
+
+3. BADGE STYLING:
+   - Small rounded pill/badge shape
+   - Colored background with white text
+   - Compact size that fits nicely in the row
+
+**PART 3 - DATA SYNC BETWEEN BOTH PAGES:**
+
+1. When a technician is assigned to a supervisor's team:
+   - They are removed from "Available Technicians" in the popup
+   - They appear in "Assigned Technicians" for that supervisor
+   - Their county badge on the Service Technicians page updates to match the supervisor's county
+   - The supervisor's technician count updates
+
+2. When a technician is removed from a supervisor's team:
+   - They go back to "Available Technicians"
+   - Their county badge changes to "Unassigned" (gray)
+   - The supervisor's technician count decreases
+
+3. Ensure this is connected to the same data source as:
+   - The Service Technicians page
+   - The "Add Employee" form when adding a Service Technician
+   - The technician dropdowns elsewhere in the app (coverage, assignments, etc.)
+
+This creates a fully synced system where technicians can be assigned to supervisors and their county affiliation is visible across the app.
