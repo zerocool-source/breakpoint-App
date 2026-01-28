@@ -196,16 +196,18 @@ function CustomerListItem({
   onClick,
   zones,
   onZoneChange,
+  onToggleStatus,
 }: { 
   customer: Customer; 
   isSelected: boolean;
   onClick: () => void;
   zones?: Zone[];
   onZoneChange?: (customerId: string, zoneId: string | null) => void;
+  onToggleStatus?: (customerId: string, active: boolean) => void;
 }) {
-  const status = STATUS_OPTIONS.find(s => s.value === customer.status) || STATUS_OPTIONS[0];
   const tags = customer.tags ? customer.tags.split(",").filter(Boolean) : [];
   const customerZone = zones?.find(z => z.id === customer.zoneId);
+  const isActive = customer.status === "active";
 
   return (
     <div
@@ -220,9 +222,17 @@ function CustomerListItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-slate-900 truncate">{customer.name}</h3>
-            <Badge className={cn("text-white text-xs", status.color)}>
-              {status.label}
-            </Badge>
+            {/* Active/Inactive Toggle Switch */}
+            {onToggleStatus && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={(checked) => onToggleStatus(customer.id, checked)}
+                  className="data-[state=checked]:bg-[#0077b6] data-[state=unchecked]:bg-slate-300"
+                  data-testid={`switch-status-${customer.id}`}
+                />
+              </div>
+            )}
             {/* Zone Badge */}
             {zones && onZoneChange && customerZone && (
               <span 
@@ -3199,6 +3209,12 @@ export default function Customers() {
                         onZoneChange={(customerId, zoneId) => 
                           assignZoneMutation.mutate({ customerId, zoneId })
                         }
+                        onToggleStatus={(customerId, active) => 
+                          updateCustomerMutation.mutate({ 
+                            id: customerId, 
+                            data: { status: active ? "active" : "inactive" } 
+                          })
+                        }
                       />
                     ))}
                   </div>
@@ -3215,6 +3231,12 @@ export default function Customers() {
                   zones={zones}
                   onZoneChange={(customerId, zoneId) => 
                     assignZoneMutation.mutate({ customerId, zoneId })
+                  }
+                  onToggleStatus={(customerId, active) => 
+                    updateCustomerMutation.mutate({ 
+                      id: customerId, 
+                      data: { status: active ? "active" : "inactive" } 
+                    })
                   }
                 />
               ))
