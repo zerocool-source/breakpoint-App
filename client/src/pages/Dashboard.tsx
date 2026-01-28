@@ -810,8 +810,8 @@ export default function Dashboard() {
 
           {/* Recent Announcements - 30% width */}
           <div className="col-span-3">
-            <Card className="shadow-sm bg-white h-full">
-              <CardHeader className="pb-3">
+            <Card className="bg-white h-full rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
+              <CardHeader className="pb-3 px-6 pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -876,8 +876,8 @@ export default function Dashboard() {
         {/* TOP ROW: Emergency & Alerts Status (left) | Estimate Pipeline + Financial Summary (right) */}
         <div className="grid grid-cols-2 gap-6">
           {/* Left Column: Emergency & Alerts Status */}
-          <Card className="shadow-sm bg-white" data-testid="card-emergency-alerts-status">
-          <CardHeader className="pb-3">
+          <Card className="bg-white rounded-2xl" data-testid="card-emergency-alerts-status" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
+          <CardHeader className="pb-3 px-6 pt-6">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -886,8 +886,8 @@ export default function Dashboard() {
                 </CardTitle>
                 <CardDescription>Active issues requiring attention</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700">
-                View All <ArrowRight className="w-4 h-4 ml-1" />
+              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700 group">
+                View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
           </CardHeader>
@@ -1172,8 +1172,8 @@ export default function Dashboard() {
 
           {/* Right Column: Stacked Estimate Pipeline + Financial Summary */}
           <div className="flex flex-col gap-6">
-            <Card className="shadow-sm">
-              <CardHeader className="pb-3">
+            <Card className="bg-white rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
+              <CardHeader className="pb-3 px-6 pt-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -1182,8 +1182,8 @@ export default function Dashboard() {
                     </CardTitle>
                     <CardDescription>Job estimates by status</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#0077b6] hover:text-[#006299]">
-                    View All <ArrowRight className="w-4 h-4 ml-1" />
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#0077b6] hover:text-[#006299] group">
+                    View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </div>
               </CardHeader>
@@ -1271,7 +1271,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-sm flex-1">
+            <Card className="bg-white rounded-2xl flex-1" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1322,7 +1322,7 @@ export default function Dashboard() {
         {/* BOTTOM ROW: Equipment Tracker (left) | Coverage Calendar (right) */}
         <div className="grid grid-cols-2 gap-6">
           {/* Left Column: Equipment Tracker */}
-          <Card className="shadow-sm bg-white" data-testid="card-equipment-tracker">
+          <Card className="bg-white rounded-2xl" data-testid="card-equipment-tracker" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -1332,8 +1332,8 @@ export default function Dashboard() {
                   </CardTitle>
                   <CardDescription>Equipment needing repair soon</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/equipment")} className="text-amber-600 hover:text-amber-700">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                <Button variant="ghost" size="sm" onClick={() => navigate("/equipment")} className="text-amber-600 hover:text-amber-700 group">
+                  View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
             </CardHeader>
@@ -1398,7 +1398,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Right Column: Coverage Calendar */}
-          <Card className="shadow-sm" data-testid="card-coverage-calendar-main">
+          <Card className="bg-white rounded-2xl" data-testid="card-coverage-calendar-main" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -1573,7 +1573,7 @@ export default function Dashboard() {
 
         {/* Three-Column Lower Section: Truck Maintenance + Chemical Orders + Top Chemicals */}
         <div className="grid grid-cols-3 gap-6">
-          <Card className="shadow-sm bg-white" data-testid="card-truck-maintenance">
+          <Card className="bg-white rounded-2xl" data-testid="card-truck-maintenance" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -1583,8 +1583,8 @@ export default function Dashboard() {
                   </CardTitle>
                   <CardDescription>Vehicles needing service soon</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/fleet")} className="text-slate-600 hover:text-slate-700">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                <Button variant="ghost" size="sm" onClick={() => navigate("/fleet")} className="text-slate-600 hover:text-slate-700 group">
+                  View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
             </CardHeader>
@@ -1653,7 +1653,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Chemical Orders by Property */}
-          <Card className="shadow-sm" data-testid="card-chemical-orders-by-property">
+          <Card className="bg-white rounded-2xl" data-testid="card-chemical-orders-by-property" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -1663,8 +1663,8 @@ export default function Dashboard() {
                   </CardTitle>
                   <CardDescription>Pending orders that need to be sent</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-[#0077b6] hover:text-[#006299]">
-                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-[#0077b6] hover:text-[#006299] group">
+                  View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
             </CardHeader>
@@ -1718,8 +1718,8 @@ export default function Dashboard() {
           </Card>
 
           {/* Top Chemicals Ordered Card */}
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
+          <Card className="bg-white rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
+            <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -1731,19 +1731,20 @@ export default function Dashboard() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="text-[#0077b6] hover:text-[#006299]"
+                  className="text-[#0077b6] hover:text-[#006299] group"
                   onClick={() => navigate("/chemicals")}
                 >
                   View All
+                  <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               {(() => {
                 const topChemicals = [
-                  { name: 'Liquid Chlorine', percentage: 70, color: '#86EFAC', textColor: '#166534' },
-                  { name: 'Muriatic Acid', percentage: 20, color: '#fed7aa', textColor: '#c2410c' },
-                  { name: 'pH Increaser', percentage: 10, color: '#99f6e4', textColor: '#0f766e' },
+                  { name: 'Liquid Chlorine', percentage: 70, color: '#0077b6', textColor: '#ffffff' },
+                  { name: 'Muriatic Acid', percentage: 20, color: '#14b8a6', textColor: '#ffffff' },
+                  { name: 'pH Increaser', percentage: 10, color: '#f97316', textColor: '#ffffff' },
                 ];
                 
                 return (
@@ -1835,7 +1836,7 @@ export default function Dashboard() {
 
         {/* Inactive Technicians Section */}
         {(metrics?.technicians?.inactive?.length || 0) > 0 && (
-          <Card className="shadow-sm border-l-4 border-l-amber-500 bg-white" data-testid="card-inactive-technicians">
+          <Card className="bg-white rounded-2xl border-l-4 border-l-amber-500" data-testid="card-inactive-technicians" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -1892,7 +1893,7 @@ export default function Dashboard() {
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
           <Card 
-            className="shadow-sm cursor-pointer hover:shadow-md transition-all border-l-4 border-l-[#0077b6] bg-white" 
+            className="bg-white rounded-2xl cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-[#0077b6]" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }} 
             onClick={() => navigate("/repair-queue")}
             data-testid="card-repair-tech-workload"
           >
