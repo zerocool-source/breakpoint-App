@@ -697,109 +697,84 @@ export default function Dashboard() {
         <div className="grid grid-cols-10 gap-6">
           {/* Pending Approvals Metrics - 70% width */}
           <div className="col-span-7">
-            <Card className="bg-white h-full rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-              <CardHeader className="pb-3 px-6 pt-6">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-[#0077b6]" />
+            <Card className="bg-white h-full rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-5 pt-5">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-[#6b7280]" />
                   Pipeline Status
                 </CardTitle>
-                <CardDescription>Work items by status with monthly trends</CardDescription>
+                <CardDescription className="text-xs">Work items by status</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-5 gap-4">
-                  {/* Pending Estimates - Light orange gradient with left border */}
-                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#f97316] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' }}>
-                    <div className="w-14 h-14 rounded-full bg-[#f97316] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)' }}>
-                      <FileText className="w-7 h-7 text-white" />
+              <CardContent className="px-5 pb-5">
+                <div className="grid grid-cols-5 gap-3">
+                  {/* Pending Estimates */}
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#f97316] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center mb-2">
+                      <FileText className="w-4 h-4 text-[#f97316]" />
                     </div>
-                    <span className="text-4xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
-                    <span className="text-sm font-medium text-slate-600 mt-1">Pending Estimates</span>
-                    <div className="flex items-center gap-1 mt-2">
-                      <TrendingUp className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-green-600">+12%</span>
-                      <span className="text-xs text-slate-400">Last Month</span>
-                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">{metrics?.estimates.pendingApproval || 0}</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Pending Estimates</span>
                   </div>
 
-                  {/* Awaiting Scheduling - Light ocean blue gradient with left border */}
-                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#0077b6] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)' }}>
-                    <div className="w-14 h-14 rounded-full bg-[#0077b6] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(0, 119, 182, 0.4)' }}>
-                      <Calendar className="w-7 h-7 text-white" />
+                  {/* Awaiting Scheduling */}
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#0077b6] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center mb-2">
+                      <Calendar className="w-4 h-4 text-[#0077b6]" />
                     </div>
-                    <span className="text-4xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
-                    <span className="text-sm font-medium text-slate-600 mt-1">Awaiting Scheduling</span>
-                    <div className="flex items-center gap-1 mt-2">
-                      <TrendingDown className="w-3 h-3 text-red-500" />
-                      <span className="text-xs text-red-600">-8%</span>
-                      <span className="text-xs text-slate-400">Last Month</span>
-                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">{summary?.needsScheduling || 0}</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Awaiting Scheduling</span>
                   </div>
 
-                  {/* Ready to Invoice - Light teal gradient with left border */}
-                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#14b8a6] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%)' }}>
-                    <div className="w-14 h-14 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(20, 184, 166, 0.4)' }}>
-                      <Receipt className="w-7 h-7 text-white" />
+                  {/* Ready to Invoice */}
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#14b8a6] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center mb-2">
+                      <Receipt className="w-4 h-4 text-[#14b8a6]" />
                     </div>
-                    <span className="text-4xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
-                    <span className="text-sm font-medium text-slate-600 mt-1">Ready to Invoice</span>
-                    <div className="flex items-center gap-1 mt-2">
-                      <TrendingUp className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-green-600">+5%</span>
-                      <span className="text-xs text-slate-400">Last Month</span>
-                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">{metrics?.estimates.readyToInvoice || 0}</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Ready to Invoice</span>
                   </div>
 
-                  {/* Invoiced Unpaid - Light green gradient with left border */}
-                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#22c55e] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)' }}>
-                    <div className="w-14 h-14 rounded-full bg-[#22c55e] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(34, 197, 94, 0.4)' }}>
-                      <DollarSign className="w-7 h-7 text-white" />
+                  {/* Invoiced Unpaid */}
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#22c55e] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mb-2">
+                      <DollarSign className="w-4 h-4 text-[#22c55e]" />
                     </div>
-                    <span className="text-4xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
-                    <span className="text-sm font-medium text-slate-600 mt-1">Invoiced Unpaid</span>
-                    <div className="flex items-center gap-1 mt-2">
-                      <TrendingUp className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-green-600">+3%</span>
-                      <span className="text-xs text-slate-400">Last Month</span>
-                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">{metrics?.invoices?.unpaid || 0}</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Invoiced Unpaid</span>
                   </div>
 
-                  {/* Overdue - Light red gradient with left border */}
-                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#ef4444] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)' }}>
-                    <div className="w-14 h-14 rounded-full bg-[#ef4444] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(239, 68, 68, 0.4)' }}>
-                      <AlertCircle className="w-7 h-7 text-white" />
+                  {/* Overdue */}
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#ef4444] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                      <AlertCircle className="w-4 h-4 text-[#ef4444]" />
                     </div>
-                    <span className="text-4xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
-                    <span className="text-sm font-medium text-slate-600 mt-1">Overdue</span>
-                    <div className="flex items-center gap-1 mt-2">
-                      <TrendingDown className="w-3 h-3 text-green-500" />
-                      <span className="text-xs text-green-600">-15%</span>
-                      <span className="text-xs text-slate-400">Last Month</span>
-                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">{metrics?.estimates.declined || 0}</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Overdue</span>
                   </div>
                 </div>
 
                 {/* Summary Row */}
-                <div className="border-t border-slate-200 mt-4 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="border-t border-slate-100 mt-4 pt-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {/* Total Estimates */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-[#0077b6]" />
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-[#6b7280]" />
                       </div>
                       <div>
-                        <span className="text-2xl font-bold text-slate-900">{metrics?.estimates.total || 0}</span>
-                        <p className="text-sm text-slate-500">Total Estimates</p>
+                        <span className="text-xl font-bold text-[#1f2937]">{metrics?.estimates.total || 0}</span>
+                        <p className="text-xs text-[#6b7280]">Total Estimates</p>
                       </div>
                     </div>
 
                     {/* Declined */}
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-100">
-                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                        <XCircle className="w-5 h-5 text-red-600" />
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200">
+                      <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+                        <XCircle className="w-4 h-4 text-[#ef4444]" />
                       </div>
                       <div>
-                        <span className="text-2xl font-bold text-red-600">{metrics?.estimates.declined || 0}</span>
-                        <p className="text-sm text-slate-500">{metrics?.estimates.declined || 0} declined</p>
+                        <span className="text-xl font-bold text-[#ef4444]">{metrics?.estimates.declined || 0}</span>
+                        <p className="text-xs text-[#6b7280]">Declined</p>
                       </div>
                     </div>
                   </div>
@@ -810,46 +785,42 @@ export default function Dashboard() {
 
           {/* Recent Announcements - 30% width */}
           <div className="col-span-3">
-            <Card className="bg-white h-full rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-              <CardHeader className="pb-3 px-6 pt-6">
+            <Card className="bg-white h-full rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-5 pt-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Megaphone className="w-5 h-5 text-[#0077b6]" />
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Megaphone className="w-4 h-4 text-[#6b7280]" />
                       Recent Announcements
                     </CardTitle>
-                    <CardDescription>Updates from team chat</CardDescription>
+                    <CardDescription className="text-xs">Updates from team chat</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="relative">
-                <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
-                  <Megaphone className="w-full h-full text-[#0077b6]" />
-                </div>
-                <ScrollArea className="h-[200px] pr-4">
-                  <div className="space-y-3">
-                    {/* Sample announcements - these would pull from chat/announcements */}
+              <CardContent className="px-5 pb-5">
+                <ScrollArea className="h-[200px] pr-2">
+                  <div className="space-y-2">
                     {[
-                      { id: 1, title: "New safety protocol for pool chemicals", author: "Sarah Johnson", role: "Operations Manager", time: "2 hours ago" },
-                      { id: 2, title: "Holiday schedule reminder - Memorial Day", author: "Mike Chen", role: "HR", time: "Yesterday" },
-                      { id: 3, title: "Equipment maintenance training next week", author: "Tom Wilson", role: "Training Lead", time: "2 days ago" },
-                      { id: 4, title: "Customer feedback improvements Q1", author: "Lisa Davis", role: "Customer Success", time: "3 days ago" },
-                      { id: 5, title: "New truck assignments for south region", author: "James Brown", role: "Fleet Manager", time: "1 week ago" },
+                      { id: 1, title: "New safety protocol for pool chemicals", author: "Sarah Johnson", time: "2 hours ago" },
+                      { id: 2, title: "Holiday schedule reminder - Memorial Day", author: "Mike Chen", time: "Yesterday" },
+                      { id: 3, title: "Equipment maintenance training next week", author: "Tom Wilson", time: "2 days ago" },
+                      { id: 4, title: "Customer feedback improvements Q1", author: "Lisa Davis", time: "3 days ago" },
+                      { id: 5, title: "New truck assignments for south region", author: "James Brown", time: "1 week ago" },
                     ].map((announcement) => (
                       <div 
                         key={announcement.id}
-                        className="p-3 rounded-lg bg-slate-50 hover:bg-sky-50 transition-colors cursor-pointer border border-slate-100"
+                        className="p-2 hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-100 last:border-b-0"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
-                            <User className="w-4 h-4 text-[#0077b6]" />
+                        <div className="flex items-start gap-2">
+                          <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                            <User className="w-3 h-3 text-[#6b7280]" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800 truncate">{announcement.title}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-slate-500">{announcement.author}</span>
+                            <p className="text-sm font-medium text-[#1f2937] truncate">{announcement.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-[#6b7280]">{announcement.author}</span>
                               <span className="text-xs text-slate-300">•</span>
-                              <span className="text-xs text-slate-400">{announcement.time}</span>
+                              <span className="text-xs text-[#6b7280]">{announcement.time}</span>
                             </div>
                           </div>
                         </div>
@@ -857,11 +828,11 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </ScrollArea>
-                <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="mt-3 pt-2 border-t border-slate-100">
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="w-full text-[#0077b6] hover:text-[#006299] hover:bg-sky-50 group"
+                    className="w-full text-[#f97316] hover:text-[#ea580c] hover:bg-orange-50 group"
                     onClick={() => navigate("/chat")}
                   >
                     View All Announcements
@@ -876,17 +847,17 @@ export default function Dashboard() {
         {/* TOP ROW: Emergency & Alerts Status (left) | Estimate Pipeline + Financial Summary (right) */}
         <div className="grid grid-cols-2 gap-6">
           {/* Left Column: Emergency & Alerts Status */}
-          <Card className="bg-white rounded-2xl" data-testid="card-emergency-alerts-status" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-          <CardHeader className="pb-3 px-6 pt-6">
+          <Card className="bg-white rounded-lg" data-testid="card-emergency-alerts-status" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <CardHeader className="pb-2 px-5 pt-5">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
                   Emergency & Alerts Status
                 </CardTitle>
-                <CardDescription>Active issues requiring attention</CardDescription>
+                <CardDescription className="text-xs">Active issues requiring attention</CardDescription>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-red-600 hover:text-red-700 group">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/emergencies")} className="text-[#f97316] hover:text-[#ea580c] group">
                 View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
               </Button>
             </div>
@@ -1172,17 +1143,17 @@ export default function Dashboard() {
 
           {/* Right Column: Stacked Estimate Pipeline + Financial Summary */}
           <div className="flex flex-col gap-6">
-            <Card className="bg-white rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-              <CardHeader className="pb-3 px-6 pt-6">
+            <Card className="bg-white rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-5 pt-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-[#0077b6]" />
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#6b7280]" />
                       Estimate Pipeline
                     </CardTitle>
-                    <CardDescription>Job estimates by status</CardDescription>
+                    <CardDescription className="text-xs">Job estimates by status</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#0077b6] hover:text-[#006299] group">
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#f97316] hover:text-[#ea580c] group">
                     View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </div>
@@ -1271,43 +1242,43 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white rounded-2xl flex-1" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-              <CardHeader className="pb-3 px-6 pt-6">
+            <Card className="bg-white rounded-lg flex-1" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-5 pt-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-emerald-600" />
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-[#6b7280]" />
                       Financial Summary
                     </CardTitle>
-                    <CardDescription>Values across pipeline stages</CardDescription>
+                    <CardDescription className="text-xs">Values across pipeline stages</CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                  <div className="p-3 rounded-lg bg-white border border-slate-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-700">Total Pipeline Value</span>
-                      <span className="text-2xl font-bold text-emerald-700">{formatCurrency(metrics?.values.total || 0)}</span>
+                      <span className="text-sm font-medium text-[#6b7280]">Total Pipeline Value</span>
+                      <span className="text-2xl font-bold text-[#22c55e]">{formatCurrency(metrics?.values.total || 0)}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-center">
-                      <p className="text-xs font-medium text-slate-600">Pending Approval</p>
-                      <p className="text-lg font-bold text-orange-700">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                    <div className="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                      <p className="text-xs font-medium text-[#6b7280]">Pending Approval</p>
+                      <p className="text-base font-bold text-[#f97316]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-sky-50 border border-sky-100 text-center">
-                      <p className="text-xs font-medium text-slate-600">Scheduled</p>
-                      <p className="text-lg font-bold text-sky-700">{formatCurrency(metrics?.values.scheduled || 0)}</p>
+                    <div className="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                      <p className="text-xs font-medium text-[#6b7280]">Scheduled</p>
+                      <p className="text-base font-bold text-[#0077b6]">{formatCurrency(metrics?.values.scheduled || 0)}</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-teal-50 border border-teal-100 text-center">
-                      <p className="text-xs font-medium text-slate-600">Ready to Invoice</p>
-                      <p className="text-lg font-bold text-teal-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                    <div className="p-2 rounded-lg bg-white border border-slate-200 text-center">
+                      <p className="text-xs font-medium text-[#6b7280]">Ready to Invoice</p>
+                      <p className="text-base font-bold text-[#14b8a6]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                     </div>
                   </div>
                   <Button
                     onClick={() => setShowReportModal(true)}
-                    className="w-full gap-2 bg-[#0077b6] hover:bg-[#006299] text-white rounded-lg shadow-sm hover:shadow-md transition-all"
+                    className="w-full gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white rounded-lg transition-all"
                     data-testid="button-download-report"
                   >
                     <Download className="w-4 h-4" />
@@ -1322,17 +1293,17 @@ export default function Dashboard() {
         {/* BOTTOM ROW: Equipment Tracker (left) | Coverage Calendar (right) */}
         <div className="grid grid-cols-2 gap-6">
           {/* Left Column: Equipment Tracker */}
-          <Card className="bg-white rounded-2xl" data-testid="card-equipment-tracker" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3 px-6 pt-6">
+          <Card className="bg-white rounded-lg" data-testid="card-equipment-tracker" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Cog className="w-5 h-5 text-amber-600" />
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Cog className="w-4 h-4 text-[#6b7280]" />
                     Equipment Tracker
                   </CardTitle>
-                  <CardDescription>Equipment needing repair soon</CardDescription>
+                  <CardDescription className="text-xs">Equipment needing repair soon</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/equipment")} className="text-amber-600 hover:text-amber-700 group">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/equipment")} className="text-[#f97316] hover:text-[#ea580c] group">
                   View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
@@ -1377,18 +1348,15 @@ export default function Dashboard() {
                 };
                 
                 return (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {equipmentItems.map((item) => (
                       <div 
                         key={item.id} 
-                        className={`flex items-center gap-3 p-3 rounded-lg bg-slate-50 border-l-4 ${
-                          item.status === 'overdue' ? 'border-l-red-500' : 
-                          item.status === 'scheduled' ? 'border-l-green-500' : 'border-l-amber-500'
-                        } hover:bg-slate-100 transition-all hover:scale-[1.01] cursor-pointer`}
+                        className="flex items-center gap-3 p-2 bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>
-                          <p className="text-xs text-slate-500 truncate">{item.property}</p>
+                          <p className="text-sm font-medium text-[#1f2937] truncate">{item.name}</p>
+                          <p className="text-xs text-[#6b7280] truncate">{item.property}</p>
                         </div>
                         {getStatusBadge(item)}
                       </div>
@@ -1400,15 +1368,15 @@ export default function Dashboard() {
           </Card>
 
           {/* Right Column: Coverage Calendar */}
-          <Card className="bg-white rounded-2xl" data-testid="card-coverage-calendar-main" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3 px-6 pt-6">
+          <Card className="bg-white rounded-lg" data-testid="card-coverage-calendar-main" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-[#0077b6]" />
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#6b7280]" />
                     Coverage Calendar
                   </CardTitle>
-                  <CardDescription>Technician coverage schedule</CardDescription>
+                  <CardDescription className="text-xs">Technician coverage schedule</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -1510,21 +1478,21 @@ export default function Dashboard() {
                               onClick={() => setSelectedDate(new Date(year, month, day))}
                               title={hasCoverage ? tooltipText : undefined}
                               className={`h-9 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors relative group
-                                ${isSelected ? 'bg-[#0077b6] text-white' : isToday ? 'bg-sky-100 text-[#0077b6]' : 'hover:bg-slate-100 text-slate-700'}
+                                ${isSelected ? 'bg-[#f97316] text-white' : isToday ? 'bg-orange-100 text-[#f97316] ring-1 ring-[#f97316]' : 'hover:bg-slate-50 text-[#1f2937]'}
                               `}
                             >
                               <span>{day}</span>
                               {hasCoverage && (
                                 <div className="flex items-center gap-0.5 mt-0.5">
                                   {dayCoverages.length === 1 ? (
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#0077b6]'}`} />
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#f97316]'}`} />
                                   ) : dayCoverages.length === 2 ? (
                                     <>
+                                      <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#f97316]'}`} />
                                       <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#0077b6]'}`} />
-                                      <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#48cae4]'}`} />
                                     </>
                                   ) : (
-                                    <div className={`w-2.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#0077b6]'}`} />
+                                    <div className={`w-2.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#f97316]'}`} />
                                   )}
                                 </div>
                               )}
@@ -1536,7 +1504,7 @@ export default function Dashboard() {
                     
                     {/* Coverage Activities List */}
                     <div className="border-t border-slate-100 pt-4">
-                      <p className="text-xs font-medium text-slate-500 mb-3">
+                      <p className="text-xs font-medium text-[#6b7280] mb-3">
                         {selectedDate 
                           ? `Coverage on ${selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
                           : 'Upcoming Coverage'
@@ -1544,7 +1512,7 @@ export default function Dashboard() {
                       </p>
                       <div className="space-y-2 max-h-[180px] overflow-y-auto">
                         {selectedCoverages.length === 0 ? (
-                          <p className="text-sm text-slate-400 italic">No coverage scheduled</p>
+                          <p className="text-sm text-[#6b7280] italic">No coverage scheduled</p>
                         ) : (
                           selectedCoverages.map((c: any, idx: number) => {
                             const startDate = new Date(c.startDate);
@@ -1552,9 +1520,9 @@ export default function Dashboard() {
                             const dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                             
                             return (
-                              <div key={c.id || idx} className="p-2.5 rounded-lg bg-sky-50 border border-sky-100">
-                                <p className="text-xs text-[#0077b6] font-medium">{dateStr} - {dayOfWeek}</p>
-                                <p className="text-sm text-slate-700 mt-0.5">
+                              <div key={c.id || idx} className="p-2 border-b border-slate-100 last:border-b-0">
+                                <p className="text-xs text-[#f97316] font-medium">{dateStr} - {dayOfWeek}</p>
+                                <p className="text-sm text-[#1f2937] mt-0.5">
                                   {c.reason === 'Training day' 
                                     ? `${c.reason} - ${c.coveringTechName} at ${c.propertyName}`
                                     : `${c.coveringTechName} covering for ${c.originalTechName} at ${c.propertyName}`
@@ -1575,17 +1543,17 @@ export default function Dashboard() {
 
         {/* Three-Column Lower Section: Truck Maintenance + Chemical Orders + Top Chemicals */}
         <div className="grid grid-cols-3 gap-6">
-          <Card className="bg-white rounded-2xl" data-testid="card-truck-maintenance" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3 px-6 pt-6">
+          <Card className="bg-white rounded-lg" data-testid="card-truck-maintenance" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Truck className="w-5 h-5 text-slate-700" />
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-[#6b7280]" />
                     Truck Maintenance
                   </CardTitle>
-                  <CardDescription>Vehicles needing service soon</CardDescription>
+                  <CardDescription className="text-xs">Vehicles needing service soon</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/fleet")} className="text-slate-600 hover:text-slate-700 group">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/fleet")} className="text-[#f97316] hover:text-[#ea580c] group">
                   View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
@@ -1629,23 +1597,19 @@ export default function Dashboard() {
                 };
                 
                 return (
-                  <div className="space-y-2 max-h-[280px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
+                  <div className="space-y-0" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
                     {truckMaintenanceItems.map((item) => (
                       <div 
                         key={item.id} 
-                        className={`flex items-center gap-3 p-3 rounded-lg bg-slate-50 border-l-4 ${
-                          item.status === 'overdue' ? 'border-l-red-500' : 
-                          item.status === 'scheduled' ? 'border-l-green-500' : 'border-l-amber-500'
-                        } hover:bg-slate-100 transition-all hover:scale-[1.01] cursor-pointer`}
+                        className="flex items-center gap-3 p-2 bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
                         onClick={() => navigate("/fleet")}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-800">Truck #{item.truckNumber}</span>
-                            <span className="text-xs text-slate-500">•</span>
-                            <span className="text-xs text-slate-600 truncate">{item.technicianName}</span>
+                            <span className="text-sm font-semibold text-[#1f2937]">Truck #{item.truckNumber}</span>
+                            <span className="text-xs text-[#6b7280]">{item.technicianName}</span>
                           </div>
-                          <p className="text-xs text-slate-500">{item.maintenanceType}</p>
+                          <p className="text-xs text-[#6b7280]">{item.maintenanceType}</p>
                         </div>
                         {getStatusBadge(item)}
                       </div>
@@ -1657,17 +1621,17 @@ export default function Dashboard() {
           </Card>
 
           {/* Chemical Orders by Property */}
-          <Card className="bg-white rounded-2xl" data-testid="card-chemical-orders-by-property" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3 px-6 pt-6">
+          <Card className="bg-white rounded-lg" data-testid="card-chemical-orders-by-property" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-[#0077b6]" />
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Droplets className="w-4 h-4 text-[#6b7280]" />
                     Chemical Orders by Property
                   </CardTitle>
-                  <CardDescription>Pending orders that need to be sent</CardDescription>
+                  <CardDescription className="text-xs">Pending orders that need to be sent</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-[#0077b6] hover:text-[#006299] group">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-[#f97316] hover:text-[#ea580c] group">
                   View All <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
@@ -1703,7 +1667,7 @@ export default function Dashboard() {
                             </div>
                             <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                               <div 
-                                className="h-full bg-cyan-500 rounded-full transition-all"
+                                className="h-full bg-[#0077b6] rounded-full transition-all"
                                 style={{ width: `${percentage}%` }}
                               />
                             </div>
@@ -1722,20 +1686,20 @@ export default function Dashboard() {
           </Card>
 
           {/* Top Chemicals Ordered Card */}
-          <Card className="bg-white rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-3 px-6 pt-6">
+          <Card className="bg-white rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-[#0077b6]" />
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Droplets className="w-4 h-4 text-[#6b7280]" />
                     Top Chemicals Ordered
                   </CardTitle>
-                  <CardDescription>Most frequently ordered chemicals</CardDescription>
+                  <CardDescription className="text-xs">Most frequently ordered chemicals</CardDescription>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="text-[#0077b6] hover:text-[#006299] group"
+                  className="text-[#f97316] hover:text-[#ea580c] group"
                   onClick={() => navigate("/chemicals")}
                 >
                   View All
@@ -1746,9 +1710,9 @@ export default function Dashboard() {
             <CardContent>
               {(() => {
                 const topChemicals = [
-                  { name: 'Liquid Chlorine', percentage: 70, color: '#0077b6', textColor: '#ffffff' },
-                  { name: 'Muriatic Acid', percentage: 20, color: '#14b8a6', textColor: '#ffffff' },
-                  { name: 'pH Increaser', percentage: 10, color: '#f97316', textColor: '#ffffff' },
+                  { name: 'Liquid Chlorine', percentage: 70, color: '#f97316', textColor: '#ffffff' },
+                  { name: 'Muriatic Acid', percentage: 20, color: '#0077b6', textColor: '#ffffff' },
+                  { name: 'pH Increaser', percentage: 10, color: '#14b8a6', textColor: '#ffffff' },
                 ];
                 
                 return (
@@ -1840,13 +1804,13 @@ export default function Dashboard() {
 
         {/* Inactive Technicians Section */}
         {(metrics?.technicians?.inactive?.length || 0) > 0 && (
-          <Card className="bg-white rounded-2xl border-l-4 border-l-amber-500" data-testid="card-inactive-technicians" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
-            <CardHeader className="pb-2">
+          <Card className="bg-white rounded-lg border-l-4 border-l-[#f97316]" data-testid="card-inactive-technicians" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <UserX className="w-5 h-5 text-amber-600" />
-                  <span className="text-slate-900">Inactive Technicians</span>
-                  <Badge className="bg-amber-100 text-amber-800 ml-2">{metrics?.technicians?.inactive?.length || 0}</Badge>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UserX className="w-4 h-4 text-[#f97316]" />
+                  <span className="text-[#1f2937]">Inactive Technicians</span>
+                  <Badge className="bg-orange-100 text-[#f97316] ml-2 text-xs">{metrics?.technicians?.inactive?.length || 0}</Badge>
                 </CardTitle>
                 <Button 
                   variant="ghost" 
@@ -1897,19 +1861,19 @@ export default function Dashboard() {
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
           <Card 
-            className="bg-white rounded-2xl cursor-pointer hover:shadow-lg transition-all border-l-4 border-l-[#0077b6]" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }} 
+            className="bg-white rounded-lg cursor-pointer hover:shadow-md transition-all border-l-4 border-l-[#0077b6]" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} 
             onClick={() => navigate("/repair-queue")}
             data-testid="card-repair-tech-workload"
           >
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-2 px-5 pt-5">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Wrench className="w-5 h-5 text-[#0077b6]" />
-                  <span className="text-slate-900">Repair Tech Workload</span>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-[#0077b6]" />
+                  <span className="text-[#1f2937]">Repair Tech Workload</span>
                 </CardTitle>
-                <ChevronRight className="w-5 h-5 text-slate-400" />
+                <ChevronRight className="w-4 h-4 text-[#6b7280]" />
               </div>
-              <CardDescription className="text-slate-600">
+              <CardDescription className="text-xs text-[#6b7280]">
                 Jobs scheduled for today by repair technician
               </CardDescription>
             </CardHeader>

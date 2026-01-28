@@ -1,0 +1,81 @@
+Redesign the ENTIRE Overview page with a clean, minimal QuickBooks-style UI. Use orange (#f97316) as the primary accent color and reduce heavy colors throughout:
+
+**GLOBAL CHANGES:**
+- Use white or very light gray (#f9fafb) backgrounds for all cards
+- Remove heavy colored gradients and backgrounds
+- Add only subtle left borders (3-4px) for color accents
+- Reduce padding and make components more compact
+- Use subtle shadows (box-shadow: 0 1px 3px rgba(0,0,0,0.1))
+- Clean, minimal, professional look with lots of white space
+
+**PIPELINE STATUS CARDS:**
+- White background for all cards
+- Small colored left border only (orange, blue, teal, green, red)
+- Smaller icons (32px) in light circular backgrounds
+- Compact height and padding
+- Bold numbers, gray labels
+
+**EMERGENCY & ALERTS STATUS:**
+- White card background
+- Simpler donut chart with just red and ocean blue (#0077b6)
+- Clean list items with minimal styling
+- Subtle row borders, no heavy backgrounds
+- "Download Report" button: Orange (#f97316) background, white text
+
+**ESTIMATE PIPELINE:**
+- White card background
+- Cleaner gauge chart with muted colors
+- Simple legend with small dots
+- Remove heavy styling
+
+**FINANCIAL SUMMARY:**
+- White card background
+- Large green dollar amount for Total Pipeline Value
+- Three boxes below: white backgrounds with subtle borders
+- "Download Report" button: Orange (#f97316) background
+
+**EQUIPMENT TRACKER & TRUCK MAINTENANCE:**
+- White card backgrounds
+- Simple list rows with subtle borders
+- Small colored status badges (orange for "Due Soon", red for "Overdue", green for "Scheduled")
+- No heavy row backgrounds
+
+**COVERAGE CALENDAR:**
+- White card background
+- Clean calendar grid with subtle borders
+- Current day: Orange (#f97316) circle highlight
+- Coverage dots: Small orange dots
+- Upcoming Coverage list: Clean rows with orange date text
+
+**CHEMICAL ORDERS BY PROPERTY:**
+- White card background
+- Simple progress bars in ocean blue (#0077b6)
+- Clean minimal styling
+
+**TOP CHEMICALS ORDERED:**
+- White card background
+- Bubble chart colors: Orange (#f97316) for largest, Ocean blue (#0077b6) for second, Teal (#14b8a6) for third
+- No pink or purple
+
+**RECENT ANNOUNCEMENTS:**
+- White card background
+- Simple list with subtle row dividers
+- Gray avatar circles
+- Clean typography
+
+**BUTTONS:**
+- Primary buttons: Orange (#f97316) background with white text
+- Secondary buttons: White with orange border and orange text
+- "View All" links: Orange (#f97316) text
+
+**COLOR PALETTE - USE ONLY:**
+- Primary: Orange (#f97316)
+- Secondary: Ocean blue (#0077b6)
+- Accent: Teal (#14b8a6)
+- Success: Green (#22c55e)
+- Error: Red (#ef4444)
+- Backgrounds: White (#ffffff), Light gray (#f9fafb)
+- Text: Dark gray (#1f2937), Medium gray (#6b7280)
+- NO purple, pink, indigo, or violet anywhere
+
+Make the entire page feel clean, professional, and minimal like QuickBooks with orange as the standout accent color.
