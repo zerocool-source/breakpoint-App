@@ -229,6 +229,96 @@ export default function Dashboard() {
     systemAlerts: false,
   });
 
+  // Equipment Tracker Selection State
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
+  const [showServiceRepairModal, setShowServiceRepairModal] = useState(false);
+  const [serviceRepairForm, setServiceRepairForm] = useState({
+    technicianId: '',
+    priority: 'medium',
+    notes: '',
+  });
+  const [serviceRepairLoading, setServiceRepairLoading] = useState(false);
+
+  // Sample equipment data (moved outside IIFE for state access)
+  const equipmentItems = [
+    { id: 'eq1', name: 'Variable Speed Pump', property: 'Sunset Hills HOA', propertyId: 'prop1', status: 'due_soon', daysUntil: 5 },
+    { id: 'eq2', name: 'Sand Filter', property: 'Marina Bay Club', propertyId: 'prop2', status: 'overdue', daysOverdue: 3 },
+    { id: 'eq3', name: 'Heat Pump', property: 'Desert Springs Resort', propertyId: 'prop3', status: 'due_soon', daysUntil: 12 },
+    { id: 'eq4', name: 'Chlorinator', property: 'Palm Gardens Community', propertyId: 'prop4', status: 'scheduled', scheduledDate: 'Jan 30' },
+    { id: 'eq5', name: 'Pool Motor', property: 'Lakewood Country Club', propertyId: 'prop5', status: 'overdue', daysOverdue: 7 },
+    { id: 'eq6', name: 'Automation System', property: 'Vista Grande HOA', propertyId: 'prop6', status: 'due_soon', daysUntil: 3 },
+  ];
+
+  // Sample repair technicians
+  const repairTechnicians = [
+    { id: 'tech1', name: 'Mike Johnson' },
+    { id: 'tech2', name: 'Sarah Williams' },
+    { id: 'tech3', name: 'David Chen' },
+    { id: 'tech4', name: 'Emily Rodriguez' },
+  ];
+
+  const handleSelectEquipment = (equipmentId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedEquipment(prev => [...prev, equipmentId]);
+    } else {
+      setSelectedEquipment(prev => prev.filter(id => id !== equipmentId));
+    }
+  };
+
+  const handleSelectAllEquipment = (checked: boolean) => {
+    if (checked) {
+      setSelectedEquipment(equipmentItems.map(item => item.id));
+    } else {
+      setSelectedEquipment([]);
+    }
+  };
+
+  const handleCreateEstimate = () => {
+    const selectedItems = equipmentItems.filter(item => selectedEquipment.includes(item.id));
+    if (selectedItems.length > 0) {
+      const itemNames = selectedItems.map(item => item.name).join(', ');
+      toast({
+        title: "Estimate Created",
+        description: `Estimate created for ${itemNames}`,
+      });
+      setSelectedEquipment([]);
+      navigate('/estimates');
+    }
+  };
+
+  const handleCreateServiceRepair = () => {
+    setShowServiceRepairModal(true);
+  };
+
+  const handleSubmitServiceRepair = async () => {
+    if (!serviceRepairForm.technicianId) {
+      toast({
+        title: "Error",
+        description: "Please select a repair technician",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setServiceRepairLoading(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const selectedTech = repairTechnicians.find(t => t.id === serviceRepairForm.technicianId);
+    const selectedItems = equipmentItems.filter(item => selectedEquipment.includes(item.id));
+    
+    toast({
+      title: "Service Repair Created",
+      description: `Service Repair created and assigned to ${selectedTech?.name}`,
+    });
+    
+    setServiceRepairLoading(false);
+    setShowServiceRepairModal(false);
+    setSelectedEquipment([]);
+    setServiceRepairForm({ technicianId: '', priority: 'medium', notes: '' });
+  };
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard/overview"],
     queryFn: async () => {
@@ -1309,98 +1399,113 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              {(() => {
-                const equipmentMetrics = {
-                  dueSoon: 3,
-                  overdue: 2,
-                  convertedToJobs: 5,
-                };
-
-                const equipmentItems = [
-                  { id: 'eq1', name: 'Variable Speed Pump', property: 'Sunset Hills HOA', status: 'due_soon', daysUntil: 5 },
-                  { id: 'eq2', name: 'Sand Filter', property: 'Marina Bay Club', status: 'overdue', daysOverdue: 3 },
-                  { id: 'eq3', name: 'Heat Pump', property: 'Desert Springs Resort', status: 'due_soon', daysUntil: 12 },
-                  { id: 'eq4', name: 'Chlorinator', property: 'Palm Gardens Community', status: 'scheduled', scheduledDate: 'Jan 30' },
-                  { id: 'eq5', name: 'Pool Motor', property: 'Lakewood Country Club', status: 'overdue', daysOverdue: 7 },
-                  { id: 'eq6', name: 'Automation System', property: 'Vista Grande HOA', status: 'due_soon', daysUntil: 3 },
-                ];
-                
-                const getStatusBadge = (item: any) => {
-                  if (item.status === 'overdue') {
-                    return (
-                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
-                        Overdue by {item.daysOverdue} days
-                      </Badge>
-                    );
-                  } else if (item.status === 'scheduled') {
-                    return (
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                        Scheduled {item.scheduledDate}
-                      </Badge>
-                    );
-                  } else {
-                    return (
-                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
-                        Due in {item.daysUntil} days
-                      </Badge>
-                    );
-                  }
-                };
-                
-                const getConditionIndicator = (item: any) => {
-                  if (item.status === 'overdue') return 'bg-red-500';
-                  if (item.status === 'scheduled') return 'bg-green-500';
-                  return 'bg-amber-500';
-                };
-                
-                return (
-                  <div className="space-y-4">
-                    {/* Equipment Metrics Row */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#f97316] hover:bg-slate-50 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center mb-2">
-                          <Clock className="w-4 h-4 text-[#f97316]" />
-                        </div>
-                        <span className="text-2xl font-bold text-[#1f2937]">{equipmentMetrics.dueSoon}</span>
-                        <span className="text-xs text-[#6b7280] mt-1">Due Soon</span>
-                        <span className="text-[10px] text-[#9ca3af] mt-1">+1 this week</span>
-                      </div>
-                      <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#ef4444] hover:bg-slate-50 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mb-2">
-                          <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
-                        </div>
-                        <span className="text-2xl font-bold text-[#1f2937]">{equipmentMetrics.overdue}</span>
-                        <span className="text-xs text-[#6b7280] mt-1">Overdue</span>
-                        <span className="text-[10px] text-[#9ca3af] mt-1">Needs attention</span>
-                      </div>
-                      <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#22c55e] hover:bg-slate-50 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mb-2">
-                          <Wrench className="w-4 h-4 text-[#22c55e]" />
-                        </div>
-                        <span className="text-2xl font-bold text-[#1f2937]">{equipmentMetrics.convertedToJobs}</span>
-                        <span className="text-xs text-[#6b7280] mt-1">Converted to Jobs</span>
-                        <span className="text-[10px] text-[#9ca3af] mt-1">+2 this month</span>
-                      </div>
+              <div className="space-y-4">
+                {/* Equipment Metrics Row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#f97316] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center mb-2">
+                      <Clock className="w-4 h-4 text-[#f97316]" />
                     </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">3</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Due Soon</span>
+                    <span className="text-[10px] text-[#9ca3af] mt-1">+1 this week</span>
+                  </div>
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#ef4444] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center mb-2">
+                      <AlertTriangle className="w-4 h-4 text-[#ef4444]" />
+                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">2</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Overdue</span>
+                    <span className="text-[10px] text-[#9ca3af] mt-1">Needs attention</span>
+                  </div>
+                  <div className="flex flex-col p-3 rounded-lg bg-white border border-slate-200 border-l-4 border-l-[#22c55e] hover:bg-slate-50 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center mb-2">
+                      <Wrench className="w-4 h-4 text-[#22c55e]" />
+                    </div>
+                    <span className="text-2xl font-bold text-[#1f2937]">5</span>
+                    <span className="text-xs text-[#6b7280] mt-1">Converted to Jobs</span>
+                    <span className="text-[10px] text-[#9ca3af] mt-1">+2 this month</span>
+                  </div>
+                </div>
 
-                    {/* Equipment List */}
-                    <div className="space-y-2 max-h-[320px] overflow-y-auto">
-                      {equipmentItems.map((item) => (
-                        <div 
-                          key={item.id} 
-                          className="flex items-center gap-3 p-2 bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#1f2937] truncate">{item.name}</p>
-                            <p className="text-xs text-[#6b7280] truncate">{item.property}</p>
-                          </div>
-                          {getStatusBadge(item)}
+                {/* Select All Header */}
+                <div className="flex items-center gap-3 p-2 border-b border-slate-200 bg-slate-50 rounded-t-lg">
+                  <Checkbox
+                    id="select-all-equipment"
+                    checked={selectedEquipment.length === equipmentItems.length && equipmentItems.length > 0}
+                    onCheckedChange={(checked) => handleSelectAllEquipment(!!checked)}
+                    data-testid="checkbox-select-all-equipment"
+                  />
+                  <Label htmlFor="select-all-equipment" className="text-xs font-medium text-[#6b7280] cursor-pointer">
+                    Select All
+                  </Label>
+                </div>
+
+                {/* Equipment List */}
+                <div className="space-y-0 max-h-[280px] overflow-y-auto">
+                  {equipmentItems.map((item: any) => {
+                    const isSelected = selectedEquipment.includes(item.id);
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`flex items-center gap-3 p-2 border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer ${
+                          isSelected ? 'bg-orange-50' : 'bg-white hover:bg-slate-50'
+                        }`}
+                        data-testid={`equipment-row-${item.id}`}
+                      >
+                        <Checkbox
+                          id={`equipment-${item.id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleSelectEquipment(item.id, !!checked)}
+                          data-testid={`checkbox-equipment-${item.id}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#1f2937] truncate">{item.name}</p>
+                          <p className="text-xs text-[#6b7280] truncate">{item.property}</p>
                         </div>
-                      ))}
+                        {item.status === 'overdue' ? (
+                          <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                            Overdue by {item.daysOverdue} days
+                          </Badge>
+                        ) : item.status === 'scheduled' ? (
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                            Scheduled {item.scheduledDate}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                            Due in {item.daysUntil} days
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Action Buttons - Only show when items are selected */}
+                {selectedEquipment.length > 0 && (
+                  <div className="pt-3 border-t border-slate-200 space-y-3">
+                    <p className="text-xs text-[#6b7280]">{selectedEquipment.length} item{selectedEquipment.length > 1 ? 's' : ''} selected</p>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleCreateEstimate}
+                        className="flex-1 bg-[#f97316] hover:bg-[#ea580c] text-white rounded-lg"
+                        data-testid="btn-create-estimate"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Create Estimate
+                      </Button>
+                      <Button
+                        onClick={handleCreateServiceRepair}
+                        className="flex-1 bg-[#0077b6] hover:bg-[#006299] text-white rounded-lg"
+                        data-testid="btn-create-service-repair"
+                      >
+                        <Wrench className="w-4 h-4 mr-2" />
+                        Create Service Repair
+                      </Button>
                     </div>
                   </div>
-                );
-              })()}
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -2342,6 +2447,100 @@ export default function Dashboard() {
                 </>
               ) : (
                 "Add Property"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Repair Assignment Modal */}
+      <Dialog open={showServiceRepairModal} onOpenChange={setShowServiceRepairModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-[#0077b6]" />
+              Create Service Repair
+            </DialogTitle>
+            <DialogDescription>
+              Assign equipment repair to a technician
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="repair-technician">Assign Repair Technician *</Label>
+              <Select 
+                value={serviceRepairForm.technicianId} 
+                onValueChange={(v) => setServiceRepairForm({ ...serviceRepairForm, technicianId: v })}
+              >
+                <SelectTrigger data-testid="select-repair-technician">
+                  <SelectValue placeholder="Select technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {repairTechnicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>{tech.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="repair-priority">Priority</Label>
+              <Select 
+                value={serviceRepairForm.priority} 
+                onValueChange={(v) => setServiceRepairForm({ ...serviceRepairForm, priority: v })}
+              >
+                <SelectTrigger data-testid="select-repair-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="repair-notes">Notes (optional)</Label>
+              <Textarea
+                id="repair-notes"
+                value={serviceRepairForm.notes}
+                onChange={(e) => setServiceRepairForm({ ...serviceRepairForm, notes: e.target.value })}
+                placeholder="Add any additional notes about the repair..."
+                rows={3}
+                data-testid="textarea-repair-notes"
+              />
+            </div>
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+              <p className="text-xs font-medium text-[#6b7280] mb-2">Selected Equipment ({selectedEquipment.length})</p>
+              <div className="space-y-1">
+                {equipmentItems
+                  .filter(item => selectedEquipment.includes(item.id))
+                  .map(item => (
+                    <p key={item.id} className="text-sm text-[#1f2937]">
+                      {item.name} - {item.property}
+                    </p>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowServiceRepairModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitServiceRepair}
+              disabled={!serviceRepairForm.technicianId || serviceRepairLoading}
+              className="bg-[#0077b6] hover:bg-[#006299]"
+              data-testid="button-assign-create-repair"
+            >
+              {serviceRepairLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Assign & Create"
               )}
             </Button>
           </DialogFooter>
