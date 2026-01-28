@@ -70,9 +70,9 @@ class OneStepGPSClient {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${BASE_URL}${endpoint}`;
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${BASE_URL}${endpoint}${separator}api-key=${this.apiKey}`;
     const headers = {
-      'Authorization': `Bearer ${this.apiKey}`,
       'Content-Type': 'application/json',
       ...options.headers,
     };

@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { storage } from "../storage";
+import { onestepgps } from "../lib/onestepgps";
 
 export function registerFleetRoutes(app: any) {
   // ==================== FLEET MANAGEMENT ====================
@@ -187,6 +188,47 @@ export function registerFleetRoutes(app: any) {
     } catch (error: any) {
       console.error("Error deleting inventory item:", error);
       res.status(500).json({ error: "Failed to delete inventory item" });
+    }
+  });
+
+  // ==================== GPS TRACKING (OneStepGPS) ====================
+
+  app.get("/api/fleet/gps/devices", async (req: Request, res: Response) => {
+    try {
+      const data = await onestepgps.getDevices();
+      
+      const devices = data.result_list.map(device => ({
+        id: device.device_id,
+        name: device.display_name,
+        online: device.online,
+        status: device.active_state === 'active' ? 'Active' : device.active_state === 'inactive' ? 'Inactive' : 'In Shop',
+        location: {
+          lat: device.latest_device_point?.lat,
+          lng: device.latest_device_point?.lng,
+        },
+        speed: device.latest_device_point?.speed || 0,
+        heading: device.latest_device_point?.heading || 0,
+        odometer: device.latest_device_point?.params?.odometer || 0,
+        engineHours: device.latest_device_point?.params?.engine_hours || 0,
+        fuelLevel: device.latest_device_point?.params?.fuel_level,
+        ignition: device.latest_device_point?.params?.ignition || false,
+        lastUpdate: device.latest_device_point?.dt_tracker,
+      }));
+
+      const summary = {
+        total: devices.length,
+        active: devices.filter(d => d.online && d.status === 'Active').length,
+        inShop: devices.filter(d => d.status === 'In Shop').length,
+        inactive: devices.filter(d => !d.online || d.status === 'Inactive').length,
+      };
+
+      res.json({ devices, summary });
+    } catch (error) {
+      console.error('Fleet GPS devices error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch fleet GPS devices', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   });
 }
