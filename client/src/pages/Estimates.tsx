@@ -1769,11 +1769,6 @@ export default function Estimates() {
         {/* Light Theme Workflow Metrics */}
         {metrics && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-800">Estimate Pipeline</h3>
-              <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">Last 30 days</span>
-            </div>
-            
             {/* Pipeline Status Row */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <div className="relative">
