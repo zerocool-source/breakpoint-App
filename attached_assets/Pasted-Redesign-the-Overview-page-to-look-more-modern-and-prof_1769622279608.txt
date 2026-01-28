@@ -1,0 +1,53 @@
+Redesign the Overview page to look more modern and professional, using the icon colors to guide the design:
+
+**OVERALL STYLING:**
+- Add subtle shadows to all cards (box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1))
+- Increase border-radius on all cards to 16px for a softer look
+- Add more padding inside cards for breathing room
+- Use a very light gray background (#f8fafc) for the main page area behind the cards
+
+**PIPELINE STATUS CARDS:**
+- Give each card a gradient or soft colored background based on its icon:
+  - Pending Estimates: Light orange gradient background (#fff7ed to #ffedd5)
+  - Awaiting Scheduling: Light ocean blue gradient (#e0f7fa to #b2ebf2)
+  - Ready to Invoice: Light teal gradient (#e0f2f1 to #b2dfdb)
+  - Invoiced Unpaid: Light green gradient (#e8f5e9 to #c8e6c9)
+  - Overdue: Light red gradient (#ffebee to #ffcdd2)
+- Make the numbers larger and bolder
+- Add a subtle left border (4px) matching the icon color on each card
+
+**EMERGENCY & ALERTS STATUS:**
+- Add depth with a subtle inner shadow or gradient background
+- Make the donut chart slightly larger
+- Add a soft glow effect around the chart
+- Style the Recent Items list with alternating subtle backgrounds
+
+**EQUIPMENT TRACKER & TRUCK MAINTENANCE:**
+- Add colored left border to each row based on status:
+  - Orange left border for "Due Soon" items
+  - Red left border for "Overdue" items
+  - Green left border for "Scheduled" items
+- Add subtle hover effect on rows
+
+**FINANCIAL SUMMARY:**
+- Make the Total Pipeline Value stand out more with larger text
+- Add subtle colored backgrounds to the three boxes (Pending Approval: light orange, Scheduled: light gray, Ready to Invoice: light green)
+
+**COVERAGE CALENDAR:**
+- Make the current day more prominent with ocean blue (#0077b6) circle
+- Add subtle colored dots on days with coverage
+- Style the Upcoming Coverage list with clean card-like rows
+
+**CHEMICAL ORDERS & TOP CHEMICALS:**
+- Progress bars should have rounded ends and subtle gradients
+- The bubble chart circles should use: Ocean blue (#0077b6) for 70%, Teal (#14b8a6) for 20%, Orange (#f97316) for 10%
+
+**BUTTONS:**
+- "Download Report" buttons: Ocean blue (#0077b6) with subtle gradient and shadow
+- Hover state: Slightly lighter with increased shadow
+
+**VIEW ALL LINKS:**
+- Ocean blue (#0077b6) color
+- Add arrow icon animation on hover
+
+Make everything feel cohesive, clean, and premium. Use consistent spacing, rounded corners, and the color palette: Ocean blue (#0077b6), Teal (#14b8a6), Green (#22c55e), Orange (#f97316), Red (#ef4444).

@@ -666,7 +666,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-[#f8fafc] min-h-screen">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-[#1E293B]">Overview</h1>
@@ -697,8 +697,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-10 gap-6">
           {/* Pending Approvals Metrics - 70% width */}
           <div className="col-span-7">
-            <Card className="shadow-sm bg-white h-full">
-              <CardHeader className="pb-3">
+            <Card className="bg-white h-full rounded-2xl" style={{ boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)' }}>
+              <CardHeader className="pb-3 px-6 pt-6">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <ClipboardList className="w-5 h-5 text-[#0077b6]" />
                   Pipeline Status
@@ -707,12 +707,12 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-5 gap-4">
-                  {/* Pending Estimates - Light orange background */}
-                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#fff7ed' }}>
-                    <div className="w-12 h-12 rounded-full bg-[#f97316] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)' }}>
-                      <FileText className="w-6 h-6 text-white" />
+                  {/* Pending Estimates - Light orange gradient with left border */}
+                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#f97316] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' }}>
+                    <div className="w-14 h-14 rounded-full bg-[#f97316] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(249, 115, 22, 0.4)' }}>
+                      <FileText className="w-7 h-7 text-white" />
                     </div>
-                    <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
+                    <span className="text-4xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
                     <span className="text-sm font-medium text-slate-600 mt-1">Pending Estimates</span>
                     <div className="flex items-center gap-1 mt-2">
                       <TrendingUp className="w-3 h-3 text-green-500" />
@@ -721,12 +721,12 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Awaiting Scheduling - Light blue background */}
-                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#e0f2fe' }}>
-                    <div className="w-12 h-12 rounded-full bg-[#0077b6] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(0, 119, 182, 0.3)' }}>
-                      <Calendar className="w-6 h-6 text-white" />
+                  {/* Awaiting Scheduling - Light ocean blue gradient with left border */}
+                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#0077b6] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)' }}>
+                    <div className="w-14 h-14 rounded-full bg-[#0077b6] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(0, 119, 182, 0.4)' }}>
+                      <Calendar className="w-7 h-7 text-white" />
                     </div>
-                    <span className="text-3xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
+                    <span className="text-4xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
                     <span className="text-sm font-medium text-slate-600 mt-1">Awaiting Scheduling</span>
                     <div className="flex items-center gap-1 mt-2">
                       <TrendingDown className="w-3 h-3 text-red-500" />
@@ -735,12 +735,12 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Ready to Invoice - Light teal background */}
-                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#ccfbf1' }}>
-                    <div className="w-12 h-12 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(20, 184, 166, 0.3)' }}>
-                      <Receipt className="w-6 h-6 text-white" />
+                  {/* Ready to Invoice - Light teal gradient with left border */}
+                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#14b8a6] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%)' }}>
+                    <div className="w-14 h-14 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(20, 184, 166, 0.4)' }}>
+                      <Receipt className="w-7 h-7 text-white" />
                     </div>
-                    <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
+                    <span className="text-4xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
                     <span className="text-sm font-medium text-slate-600 mt-1">Ready to Invoice</span>
                     <div className="flex items-center gap-1 mt-2">
                       <TrendingUp className="w-3 h-3 text-green-500" />
@@ -749,12 +749,12 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Invoiced Unpaid - Light green background */}
-                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#dcfce7' }}>
-                    <div className="w-12 h-12 rounded-full bg-[#22c55e] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(34, 197, 94, 0.3)' }}>
-                      <DollarSign className="w-6 h-6 text-white" />
+                  {/* Invoiced Unpaid - Light green gradient with left border */}
+                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#22c55e] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)' }}>
+                    <div className="w-14 h-14 rounded-full bg-[#22c55e] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(34, 197, 94, 0.4)' }}>
+                      <DollarSign className="w-7 h-7 text-white" />
                     </div>
-                    <span className="text-3xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
+                    <span className="text-4xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
                     <span className="text-sm font-medium text-slate-600 mt-1">Invoiced Unpaid</span>
                     <div className="flex items-center gap-1 mt-2">
                       <TrendingUp className="w-3 h-3 text-green-500" />
@@ -763,12 +763,12 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Overdue - Light red background */}
-                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#fef2f2' }}>
-                    <div className="w-12 h-12 rounded-full bg-[#ef4444] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.3)' }}>
-                      <AlertCircle className="w-6 h-6 text-white" />
+                  {/* Overdue - Light red gradient with left border */}
+                  <div className="flex flex-col items-center p-5 rounded-xl border-l-4 border-l-[#ef4444] transition-transform hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)' }}>
+                    <div className="w-14 h-14 rounded-full bg-[#ef4444] flex items-center justify-center mb-3" style={{ boxShadow: '0 8px 16px -4px rgba(239, 68, 68, 0.4)' }}>
+                      <AlertCircle className="w-7 h-7 text-white" />
                     </div>
-                    <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
+                    <span className="text-4xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
                     <span className="text-sm font-medium text-slate-600 mt-1">Overdue</span>
                     <div className="flex items-center gap-1 mt-2">
                       <TrendingDown className="w-3 h-3 text-green-500" />
