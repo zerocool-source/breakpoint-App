@@ -2780,7 +2780,6 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [zoneFilter, setZoneFilter] = useState<string>("all");
-  const [groupByZone, setGroupByZone] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -2788,7 +2787,6 @@ export default function Customers() {
   const [showSeasonSwitch, setShowSeasonSwitch] = useState(false);
   const [showZonesModal, setShowZonesModal] = useState(false);
   const [pendingSeason, setPendingSeason] = useState<"summer" | "winter">("summer");
-  const [collapsedZones, setCollapsedZones] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -2956,20 +2954,9 @@ export default function Customers() {
       // Zone filtering
       const matchesZone = zoneFilter === "all" || customer.zoneId === zoneFilter;
       
-      // When groupByZone is enabled, only show customers with zones
-      const hasZoneForGrouping = !groupByZone || customer.zoneId;
-      
-      return matchesSearch && matchesStatus && matchesZone && hasZoneForGrouping;
+      return matchesSearch && matchesStatus && matchesZone;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
-
-  // Group customers by zone for grouped view
-  const customersByZone = groupByZone 
-    ? zones.reduce((acc, zone) => {
-        acc[zone.id] = filteredCustomers.filter(c => c.zoneId === zone.id);
-        return acc;
-      }, {} as Record<string, Customer[]>)
-    : {};
 
   const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -2978,22 +2965,9 @@ export default function Customers() {
   // Helper to get zone by id
   const getZoneById = (zoneId: string | null) => zones.find(z => z.id === zoneId);
 
-  // Toggle zone collapse
-  const toggleZoneCollapse = (zoneId: string) => {
-    setCollapsedZones(prev => {
-      const next = new Set(prev);
-      if (next.has(zoneId)) {
-        next.delete(zoneId);
-      } else {
-        next.add(zoneId);
-      }
-      return next;
-    });
-  };
-
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, zoneFilter, groupByZone]);
+  }, [searchQuery, statusFilter, zoneFilter]);
 
   return (
     <AppLayout>
@@ -3089,15 +3063,6 @@ export default function Customers() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant={groupByZone ? "default" : "outline"}
-                onClick={() => setGroupByZone(!groupByZone)}
-                className={groupByZone ? "bg-[#0077b6] hover:bg-[#005f8a]" : "border-slate-300"}
-                data-testid="button-group-by-zone"
-              >
-                <Map className="h-4 w-4 mr-2" />
-                Group by Zone
-              </Button>
             </div>
           </div>
 
@@ -3116,61 +3081,7 @@ export default function Customers() {
                   </Button>
                 )}
               </div>
-            ) : groupByZone ? (
-              // Group by Zone view
-              zones.filter(zone => customersByZone[zone.id]?.length > 0).map((zone) => {
-                const zoneCustomers = customersByZone[zone.id] || [];
-                const isCollapsed = collapsedZones.has(zone.id);
-                
-                return (
-                  <div key={zone.id} className="border-b border-slate-200">
-                    <div 
-                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50"
-                      style={{ backgroundColor: "#0077b610" }}
-                      onClick={() => toggleZoneCollapse(zone.id)}
-                      data-testid={`zone-header-${zone.id}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <ChevronDown 
-                          className={cn(
-                            "h-4 w-4 text-slate-500 transition-transform",
-                            isCollapsed && "-rotate-90"
-                          )}
-                        />
-                        <span 
-                          className="px-2 py-1 rounded-full text-white text-xs font-medium"
-                          style={{ backgroundColor: "#0077b6" }}
-                        >
-                          {zone.name}
-                        </span>
-                        <span className="text-sm font-medium text-slate-700">
-                          ({zoneCustomers.length} customer{zoneCustomers.length !== 1 ? "s" : ""})
-                        </span>
-                      </div>
-                    </div>
-                    {!isCollapsed && zoneCustomers.map((customer) => (
-                      <CustomerListItem
-                        key={customer.id}
-                        customer={customer}
-                        isSelected={selectedCustomer?.id === customer.id}
-                        onClick={() => setSelectedCustomer(customer)}
-                        zones={zones}
-                        onZoneChange={(customerId, zoneId) => 
-                          assignZoneMutation.mutate({ customerId, zoneId })
-                        }
-                        onToggleStatus={(customerId, active) => 
-                          updateCustomerMutation.mutate({ 
-                            id: customerId, 
-                            data: { status: active ? "active" : "inactive" } 
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                );
-              })
             ) : (
-              // Normal list view
               paginatedCustomers.map((customer) => (
                 <CustomerListItem
                   key={customer.id}
