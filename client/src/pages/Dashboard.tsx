@@ -641,15 +641,15 @@ export default function Dashboard() {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       draft: "bg-gray-100 text-gray-700",
-      pending_approval: "bg-[#FF8000]1A text-[#D35400]",
-      approved: "bg-[#22D69A]1A text-[#22D69A]",
-      scheduled: "bg-[#0078D4]1A text-[#0078D4]",
-      completed: "bg-[#0078D41A] text-sky-700",
-      ready_to_invoice: "bg-[#17BEBB]1A text-[#0D9488]",
-      invoiced: "bg-[#22D69A]1A text-[#22D69A]",
-      pending: "bg-[#FF8000]1A text-[#D35400]",
-      open: "bg-[#0078D4]1A text-[#0078D4]",
-      in_progress: "bg-[#0078D41A] text-sky-700",
+      pending_approval: "bg-orange-100 text-[#f97316]",
+      approved: "bg-emerald-100 text-emerald-700",
+      scheduled: "bg-blue-100 text-[#0077b6]",
+      completed: "bg-emerald-100 text-emerald-700",
+      ready_to_invoice: "bg-teal-100 text-teal-700",
+      invoiced: "bg-emerald-100 text-emerald-700",
+      pending: "bg-orange-100 text-[#f97316]",
+      open: "bg-blue-100 text-[#0077b6]",
+      in_progress: "bg-blue-100 text-[#0077b6]",
     };
     return colors[status] || "bg-gray-100 text-gray-700";
   };
@@ -658,7 +658,7 @@ export default function Dashboard() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#f97316]" />
         </div>
       </AppLayout>
     );
@@ -675,7 +675,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setShowEmployeeTypeModal(true)}
-              className="gap-2 bg-[#0077b6] hover:bg-[#006299] text-white rounded-lg"
+              className="gap-2 bg-[#f97316] hover:bg-[#ea580c] text-white rounded-lg"
               data-testid="button-add-employee"
             >
               <UserPlus className="w-4 h-4" />
@@ -684,7 +684,7 @@ export default function Dashboard() {
             <Button
               onClick={() => setShowPropertyModal(true)}
               variant="outline"
-              className="gap-2 border-[#0077b6] text-[#0077b6] hover:bg-[#0077b6]/10 rounded-lg"
+              className="gap-2 border-[#f97316] text-[#f97316] hover:bg-[#f97316]/10 rounded-lg"
               data-testid="button-add-property"
             >
               <Building2 className="w-4 h-4" />
