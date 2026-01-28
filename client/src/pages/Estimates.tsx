@@ -1709,53 +1709,54 @@ export default function Estimates() {
           </div>
         </div>
 
-        {/* Dark Dashboard Workflow Metrics */}
+        {/* Light Theme Workflow Metrics */}
         {metrics && (
-          <div className="bg-[#0f172a] rounded-2xl p-6 space-y-6">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">Estimate Pipeline</h3>
-              <span className="text-xs bg-[#1e293b] text-slate-400 px-3 py-1.5 rounded-full">Last 30 days</span>
+              <h3 className="text-lg font-semibold text-slate-800">Estimate Pipeline</h3>
+              <span className="text-xs bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">Last 30 days</span>
             </div>
             
             {/* Pipeline Status Row */}
-            <div className="relative">
-              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-[#1e293b] -translate-y-1/2 z-0" />
-              <div className="relative z-10 flex items-center justify-between">
-                {[
-                  { key: "draft", label: "Draft", count: statusCounts.draft, color: "bg-[#374151]", textColor: "text-white", active: statusCounts.draft > 0 },
-                  { key: "pending_approval", label: "Pending", count: statusCounts.pending_approval, color: "bg-[#f97316]", textColor: "text-white", active: true, glow: true },
-                  { key: "approved", label: "Approved", count: statusCounts.approved, color: "bg-[#374151]", textColor: "text-white", active: statusCounts.approved > 0 },
-                  { key: "rejected", label: "Rejected", count: statusCounts.rejected, color: "bg-[#374151]", textColor: "text-slate-400", active: false },
-                  { key: "scheduled", label: "Scheduled", count: statusCounts.scheduled, color: "bg-[#14b8a6]", textColor: "text-white", active: true, glow: true },
-                  { key: "completed", label: "Completed", count: statusCounts.completed, color: "bg-[#14b8a6]", textColor: "text-white", active: statusCounts.completed > 0 },
-                  { key: "invoiced", label: "Invoiced", count: statusCounts.invoiced, color: "bg-[#0077b6]", textColor: "text-white", active: statusCounts.invoiced > 0 },
-                  { key: "paid", label: "Paid", count: statusCounts.paid, color: "bg-[#22c55e]", textColor: "text-white", active: true, glow: true },
-                  { key: "archived", label: "Archived", count: statusCounts.archived, color: "bg-[#374151]", textColor: "text-slate-400", active: false },
-                ].map((stage, idx) => (
-                  <div key={stage.key} className="flex flex-col items-center">
-                    <div 
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${stage.color} ${stage.textColor} ${stage.glow ? 'shadow-lg' : ''} transition-all cursor-pointer hover:scale-105`}
-                      style={stage.glow ? { boxShadow: `0 0 20px ${stage.color === 'bg-[#f97316]' ? '#f9731640' : stage.color === 'bg-[#14b8a6]' ? '#14b8a640' : stage.color === 'bg-[#22c55e]' ? '#22c55e40' : 'transparent'}` } : {}}
-                      onClick={() => setActiveTab(stage.key)}
-                    >
-                      {stage.count}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              <div className="relative">
+                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 -translate-y-1/2 z-0" />
+                <div className="relative z-10 flex items-center justify-between">
+                  {[
+                    { key: "draft", label: "Draft", count: statusCounts.draft, bgColor: "bg-slate-100", textColor: "text-slate-600", activeBg: "bg-slate-200" },
+                    { key: "pending_approval", label: "Pending", count: statusCounts.pending_approval, bgColor: "bg-[#f97316]", textColor: "text-white", highlight: true },
+                    { key: "approved", label: "Approved", count: statusCounts.approved, bgColor: "bg-slate-100", textColor: "text-slate-600", activeBg: "bg-slate-200" },
+                    { key: "rejected", label: "Rejected", count: statusCounts.rejected, bgColor: "bg-slate-100", textColor: "text-slate-400", activeBg: "bg-slate-200" },
+                    { key: "scheduled", label: "Scheduled", count: statusCounts.scheduled, bgColor: statusCounts.scheduled > 0 ? "bg-[#0077b6]" : "border-2 border-[#0077b6] bg-white", textColor: statusCounts.scheduled > 0 ? "text-white" : "text-[#0077b6]" },
+                    { key: "completed", label: "Completed", count: statusCounts.completed, bgColor: "bg-[#14b8a6]", textColor: "text-white", highlight: statusCounts.completed > 0 },
+                    { key: "invoiced", label: "Invoiced", count: statusCounts.invoiced, bgColor: statusCounts.invoiced > 0 ? "bg-[#0077b6]" : "bg-slate-100", textColor: statusCounts.invoiced > 0 ? "text-white" : "text-slate-600" },
+                    { key: "paid", label: "Paid", count: statusCounts.paid, bgColor: "bg-[#22c55e]", textColor: "text-white", highlight: statusCounts.paid > 0 },
+                    { key: "archived", label: "Archived", count: statusCounts.archived, bgColor: "bg-slate-100", textColor: "text-slate-400" },
+                  ].map((stage) => (
+                    <div key={stage.key} className="flex flex-col items-center">
+                      <div 
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${stage.bgColor} ${stage.textColor} transition-all cursor-pointer hover:scale-105 hover:shadow-md`}
+                        onClick={() => setActiveTab(stage.key)}
+                      >
+                        {stage.count}
+                      </div>
+                      <span className="text-xs text-slate-500 mt-2">{stage.label}</span>
+                      {stage.highlight && stage.count > 0 && (
+                        <div className={`w-1.5 h-1.5 rounded-full mt-1 ${stage.bgColor}`} />
+                      )}
                     </div>
-                    <span className="text-xs text-slate-400 mt-2">{stage.label}</span>
-                    {stage.active && stage.count > 0 && (
-                      <div className={`w-1.5 h-1.5 rounded-full mt-1 ${stage.color}`} />
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-4 gap-4">
               {/* Approval Rate Gauge */}
-              <div className="bg-[#1e293b] rounded-2xl p-5 flex flex-col items-center justify-center">
+              <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center justify-center">
                 <div className="relative w-28 h-28">
                   <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="none" stroke="#374151" strokeWidth="8" />
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
                     <circle 
                       cx="50" cy="50" r="40" fill="none" stroke="#22c55e" strokeWidth="8"
                       strokeDasharray={`${(metrics.conversionRate / 100) * 251.2} 251.2`}
@@ -1766,55 +1767,55 @@ export default function Estimates() {
                     <span className="text-2xl font-bold text-[#22c55e]">{metrics.conversionRate}%</span>
                   </div>
                 </div>
-                <p className="text-sm text-white mt-3 font-medium">Approval Rate</p>
+                <p className="text-sm text-slate-700 mt-3 font-medium">Approval Rate</p>
                 <p className="text-xs text-slate-400">Target: 75%</p>
               </div>
 
               {/* Revenue Flow */}
-              <div className="bg-[#1e293b] rounded-2xl p-5 col-span-2">
-                <h4 className="text-sm font-medium text-white mb-4">Revenue Flow</h4>
+              <div className="bg-white rounded-2xl shadow-sm p-5 col-span-2">
+                <h4 className="text-sm font-medium text-slate-700 mb-4">Revenue Flow</h4>
                 <div className="relative flex items-center justify-between">
-                  <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-[#374151] -translate-y-1/2" />
+                  <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-slate-200 -translate-y-1/2" />
                   {[
                     { label: "Approved", value: metrics.approvedValue, color: "#f97316" },
-                    { label: "Scheduled", value: metrics.scheduledValue, color: "#14b8a6" },
-                    { label: "Ready", value: metrics.readyToInvoiceValue, color: "#0077b6" },
-                    { label: "Invoiced", value: metrics.invoicedValue, color: "#64748b" },
+                    { label: "Scheduled", value: metrics.scheduledValue, color: "#0077b6" },
+                    { label: "Ready", value: metrics.readyToInvoiceValue, color: "#14b8a6" },
+                    { label: "Invoiced", value: metrics.invoicedValue, color: "#0077b6" },
                     { label: "Paid", value: metrics.paidValue, color: "#22c55e" },
                   ].map((item, idx) => (
                     <div key={idx} className="relative z-10 flex flex-col items-center">
                       <div 
-                        className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xs font-bold border-2"
-                        style={{ backgroundColor: `${item.color}20`, borderColor: item.color }}
+                        className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                        style={{ backgroundColor: item.color }}
                       >
                         ${Math.round((item.value || 0) / 1000)}k
                       </div>
-                      <span className="text-xs text-slate-400 mt-2">{item.label}</span>
+                      <span className="text-xs text-slate-500 mt-2">{item.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Time Metrics */}
-              <div className="bg-[#1e293b] rounded-2xl p-5">
-                <h4 className="text-sm font-medium text-white mb-4">Time Metrics</h4>
+              <div className="bg-white rounded-2xl shadow-sm p-5">
+                <h4 className="text-sm font-medium text-slate-700 mb-4">Time Metrics</h4>
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-slate-400">Avg Approval</span>
+                      <span className="text-slate-500">Avg Approval</span>
                       <span className="text-[#f97316] font-semibold">{metrics.avgApprovalTime}h</span>
                     </div>
-                    <div className="h-2 bg-[#374151] rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-[#f97316] rounded-full" style={{ width: `${Math.min((metrics.avgApprovalTime || 0) / 48 * 100, 100)}%` }} />
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-slate-400">Avg Completion</span>
-                      <span className="text-slate-500 font-semibold">{metrics.avgCompletionTime}h</span>
+                      <span className="text-slate-500">Avg Completion</span>
+                      <span className="text-slate-400 font-semibold">{metrics.avgCompletionTime}h</span>
                     </div>
-                    <div className="h-2 bg-[#374151] rounded-full overflow-hidden">
-                      <div className="h-full bg-slate-500 rounded-full" style={{ width: `${Math.min((metrics.avgCompletionTime || 0) / 48 * 100, 100)}%` }} />
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-slate-400 rounded-full" style={{ width: `${Math.min((metrics.avgCompletionTime || 0) / 48 * 100, 100)}%` }} />
                     </div>
                   </div>
                 </div>
@@ -1826,22 +1827,22 @@ export default function Estimates() {
               {/* Windy Cleanup Jobs */}
               <a 
                 href="/tech-ops/windy-day-cleanup"
-                className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] rounded-2xl p-5 flex flex-col items-center justify-center hover:from-[#252d3d] hover:to-[#1e293b] transition-all cursor-pointer"
+                className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center justify-center hover:shadow-md transition-all cursor-pointer"
                 data-testid="metric-windy-cleanup"
               >
                 <Wind className="w-8 h-8 text-[#14b8a6] mb-2" />
-                <span className="text-4xl font-bold text-white">{windyDayPending}</span>
-                <span className="text-sm text-slate-400 mt-1">Windy Cleanup Jobs</span>
+                <span className="text-4xl font-bold text-slate-700">{windyDayPending}</span>
+                <span className="text-sm text-slate-500 mt-1">Windy Cleanup Jobs</span>
                 <div className="flex gap-1.5 mt-3">
-                  <div className="w-2 h-2 rounded-full bg-[#0077b6]" />
-                  <div className="w-2 h-2 rounded-full bg-[#0077b6]" />
-                  <div className="w-2 h-2 rounded-full bg-[#0077b6]" />
+                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]" />
+                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]" />
+                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]" />
                 </div>
               </a>
 
               {/* By Source - Donut Chart */}
-              <div className="bg-[#1e293b] rounded-2xl p-5 col-span-2">
-                <h4 className="text-sm font-medium text-white mb-4">By Source</h4>
+              <div className="bg-white rounded-2xl shadow-sm p-5 col-span-2">
+                <h4 className="text-sm font-medium text-slate-700 mb-4">By Source</h4>
                 <div className="flex items-center gap-6">
                   {/* Donut Chart */}
                   <div className="relative w-28 h-28 flex-shrink-0">
@@ -1854,17 +1855,17 @@ export default function Estimates() {
                         const circumference = 251.2;
                         return (
                           <>
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#374151" strokeWidth="12" />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="12" />
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#0077b6" strokeWidth="12" strokeDasharray={`${(repairPct / 100) * circumference} ${circumference}`} strokeDashoffset="0" />
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#14b8a6" strokeWidth="12" strokeDasharray={`${(servicePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-(repairPct / 100) * circumference}`} />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#64748b" strokeWidth="12" strokeDasharray={`${(officePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((repairPct + servicePct) / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#6b7280" strokeWidth="12" strokeDasharray={`${(officePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((repairPct + servicePct) / 100) * circumference}`} />
                           </>
                         );
                       })()}
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
-                        <span className="text-xl font-bold text-white">{sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count}</span>
+                        <span className="text-xl font-bold text-slate-700">{sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count}</span>
                         <p className="text-xs text-slate-400">total</p>
                       </div>
                     </div>
@@ -1873,41 +1874,41 @@ export default function Estimates() {
                   {/* Legend */}
                   <div className="flex-1 space-y-3">
                     <div 
-                      className="flex items-center justify-between cursor-pointer hover:bg-[#374151] rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                       onClick={() => setSourceFilter("repair_tech")}
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#0077b6]" />
-                        <span className="text-sm text-white">Repair Tech</span>
+                        <span className="text-sm text-slate-700">Repair Tech</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-white">{sourceMetrics.repairTech.count}</span>
+                        <span className="text-sm font-semibold text-slate-700">{sourceMetrics.repairTech.count}</span>
                         <span className="text-xs text-slate-400 ml-2">${(sourceMetrics.repairTech.totalValue / 100 / 1000).toFixed(1)}k</span>
                       </div>
                     </div>
                     <div 
-                      className="flex items-center justify-between cursor-pointer hover:bg-[#374151] rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                       onClick={() => setSourceFilter("service_tech")}
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#14b8a6]" />
-                        <span className="text-sm text-white">Service Tech</span>
+                        <span className="text-sm text-slate-700">Service Tech</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-white">{sourceMetrics.serviceTech.count}</span>
+                        <span className="text-sm font-semibold text-slate-700">{sourceMetrics.serviceTech.count}</span>
                         <span className="text-xs text-slate-400 ml-2">${(sourceMetrics.serviceTech.totalValue / 100 / 1000).toFixed(1)}k</span>
                       </div>
                     </div>
                     <div 
-                      className="flex items-center justify-between cursor-pointer hover:bg-[#374151] rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                       onClick={() => setSourceFilter("office_staff")}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-slate-500" />
-                        <span className="text-sm text-white">Office Staff</span>
+                        <div className="w-3 h-3 rounded-full bg-[#6b7280]" />
+                        <span className="text-sm text-slate-700">Office Staff</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-semibold text-white">{sourceMetrics.officeStaff.count}</span>
+                        <span className="text-sm font-semibold text-slate-700">{sourceMetrics.officeStaff.count}</span>
                         <span className="text-xs text-slate-400 ml-2">${(sourceMetrics.officeStaff.totalValue / 100 / 1000).toFixed(1)}k</span>
                       </div>
                     </div>

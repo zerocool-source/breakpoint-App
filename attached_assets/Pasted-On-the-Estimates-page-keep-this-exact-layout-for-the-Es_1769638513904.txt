@@ -1,0 +1,64 @@
+On the Estimates page, keep this exact layout for the Estimate Pipeline section but change the colors to match the Overview page (light/white theme):
+
+**BACKGROUND:**
+- Change the dark navy background to white (#ffffff)
+- Cards should have white backgrounds with subtle shadows
+- Use light gray (#f9fafb) for any secondary backgrounds if needed
+
+**ESTIMATE PIPELINE ROW (Top):**
+- Keep the same circular status layout
+- Change dark circles to light gray (#e5e7eb) backgrounds with dark text
+- Active/highlighted statuses use colored backgrounds:
+  - Pending (12): Orange (#f97316) background with white text
+  - Scheduled (0): Ocean blue (#0077b6) outline
+  - Completed (13): Teal (#14b8a6) background with white text
+  - Invoiced (1): Ocean blue (#0077b6) background with white text
+  - Paid (4): Green (#22c55e) background with white text
+- Inactive statuses: Light gray background with dark gray text
+- Labels below in dark gray text
+
+**APPROVAL RATE CARD:**
+- White card background with subtle shadow
+- Green (#22c55e) progress ring
+- "60%" in green text
+- "Approval Rate" and "Target: 75%" in dark gray text
+
+**REVENUE FLOW CARD:**
+- White card background with subtle shadow
+- Colored circles:
+  - Approved: Orange (#f97316)
+  - Scheduled: Ocean blue (#0077b6)
+  - Ready: Teal (#14b8a6)
+  - Invoiced: Light gray outline or ocean blue outline
+  - Paid: Green (#22c55e)
+- White text inside circles for dollar amounts
+- Dark gray labels below
+
+**TIME METRICS CARD:**
+- White card background
+- "Avg Approval" with orange (#f97316) progress bar
+- "Avg Completion" with gray progress bar
+- Dark gray text, colored values (20h in orange)
+
+**WINDY CLEANUP JOBS CARD:**
+- White card background (not dark)
+- Teal (#14b8a6) wind icon
+- Large "3" in dark gray or teal
+- Dark gray label text
+- Teal dots at bottom
+
+**BY SOURCE CARD:**
+- White card background
+- Donut chart with:
+  - Ocean blue (#0077b6) for Repair Tech
+  - Teal (#14b8a6) for Service Tech
+  - Gray (#6b7280) for Office Staff
+- "28 total" in center with dark text
+- Legend with dark gray text, counts and dollar amounts
+
+**GENERAL:**
+- All text should be dark gray (#1f2937) or medium gray (#6b7280)
+- No dark backgrounds - keep everything light and clean
+- Subtle shadows on cards (box-shadow: 0 1px 3px rgba(0,0,0,0.1))
+- Rounded corners (12-16px) on all cards
+- Match the clean, minimal QuickBooks style of the Overview page
