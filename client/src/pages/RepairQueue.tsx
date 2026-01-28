@@ -36,13 +36,13 @@ import {
 import type { ServiceRepairJob, Technician, Emergency } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
-  pending: { color: "bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33", icon: Clock, label: "Pending" },
-  assigned: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: User, label: "Assigned" },
-  in_progress: { color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: Wrench, label: "In Progress" },
-  completed: { color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle, label: "Completed" },
+  pending: { color: "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20", icon: Clock, label: "Pending" },
+  assigned: { color: "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20", icon: User, label: "Assigned" },
+  in_progress: { color: "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20", icon: Wrench, label: "In Progress" },
+  completed: { color: "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20", icon: CheckCircle, label: "Completed" },
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
-  estimated: { color: "bg-[#17BEBB]1A text-[#0D9488] border-[#17BEBB]33", icon: DollarSign, label: "Estimated" },
-  batched: { color: "bg-[#0078D4]1A text-[#0078D4] border-[#0078D4]33", icon: Target, label: "Batched" },
+  estimated: { color: "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20", icon: DollarSign, label: "Estimated" },
+  batched: { color: "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20", icon: Target, label: "Batched" },
 };
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
@@ -933,7 +933,7 @@ export default function RepairQueue() {
               {statusCfg.label}
             </Badge>
           </div>
-          <span className="text-lg font-bold text-[#1E293B]">
+          <span className="text-lg font-bold text-slate-900">
             {formatCurrency(emergency.totalAmount)}
           </span>
         </div>
@@ -964,7 +964,7 @@ export default function RepairQueue() {
   const FiltersPanel = () => (
     <Card className="bg-white border border-slate-200 shadow-sm sticky top-6">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-[#1E293B] flex items-center gap-2">
+        <CardTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
           <Filter className="w-4 h-4" />
           Filters
         </CardTitle>
@@ -1357,20 +1357,20 @@ export default function RepairQueue() {
           <TabsContent value="by-tech" className="mt-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0077b6]" />
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1">
-                  <h3 className="font-semibold text-[#1E293B] mb-3">Repair Technicians</h3>
+                  <h3 className="font-semibold text-slate-900 mb-3">Repair Technicians</h3>
                   <div className="space-y-3">
                     {repairsByTech.map(renderTechCard)}
                   </div>
                 </div>
                 <div className="lg:col-span-2">
-                  <Card className="bg-white border border-slate-200 shadow-sm">
+                  <Card className="bg-white shadow-sm rounded-xl">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg font-semibold text-[#1E293B]">
+                      <CardTitle className="text-lg font-semibold text-slate-900">
                         {selectedTech ? `${selectedTech}'s Jobs` : "All Active Jobs"}
                       </CardTitle>
                     </CardHeader>
@@ -1405,7 +1405,7 @@ export default function RepairQueue() {
             <HorizontalFiltersPanel />
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0078D4]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#0077b6]" />
               </div>
             ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").length === 0 ? (
               <Card>
@@ -1426,7 +1426,7 @@ export default function RepairQueue() {
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Completed Jobs Log</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Completed Jobs Log</CardTitle>
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -1513,7 +1513,7 @@ export default function RepairQueue() {
                                     <span className="text-xs text-slate-400">—</span>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right font-semibold text-[#22D69A]">
+                                <TableCell className="text-right font-semibold text-[#22c55e]">
                                   {formatCurrency(repair.totalAmount)}
                                 </TableCell>
                                 <TableCell>
@@ -1525,32 +1525,32 @@ export default function RepairQueue() {
                                   <TableCell colSpan={8} className="p-0">
                                     <div className="flex flex-col">
                                       {/* Section 1: Estimate Details - Light Blue Tint */}
-                                      <div className="p-4" style={{ backgroundColor: "#0078D41A" }}>
+                                      <div className="p-4 bg-[#0077b6]/10">
                                         <div className="flex items-center gap-2 mb-3">
-                                          <FileText className="w-5 h-5 text-[#0078D4]" />
-                                          <h4 className="font-bold text-sm text-[#0078D4] uppercase tracking-wide">Estimate Details</h4>
+                                          <FileText className="w-5 h-5 text-[#0077b6]" />
+                                          <h4 className="font-bold text-sm text-[#0077b6] uppercase tracking-wide">Estimate Details</h4>
                                         </div>
                                         
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Quote Description</p>
-                                            <p className="text-sm font-medium text-[#1E293B]">{repair.description || "—"}</p>
+                                            <p className="text-sm font-medium text-slate-900">{repair.description || "—"}</p>
                                           </div>
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Property & Customer</p>
-                                            <p className="text-sm font-medium text-[#1E293B]">{repair.propertyName || "—"}</p>
+                                            <p className="text-sm font-medium text-slate-900">{repair.propertyName || "—"}</p>
                                             <p className="text-xs text-slate-500">{repair.customerName || "—"}</p>
                                             <p className="text-xs text-slate-400">{repair.address || "—"}</p>
                                           </div>
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Estimate Date</p>
-                                            <p className="text-sm text-[#1E293B]">{formatDate(repair.jobDate)}</p>
+                                            <p className="text-sm text-slate-900">{formatDate(repair.jobDate)}</p>
                                             <p className="text-xs text-slate-500 mt-1">Created</p>
                                             <p className="text-xs text-slate-400">{formatDateTime(repair.createdAt)}</p>
                                           </div>
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Service Tech (Reported)</p>
-                                            <p className="text-sm text-[#1E293B]">{repair.technicianName || "—"}</p>
+                                            <p className="text-sm text-slate-900">{repair.technicianName || "—"}</p>
                                           </div>
                                         </div>
 
@@ -1600,7 +1600,7 @@ export default function RepairQueue() {
                                             </div>
                                             <div className="flex justify-between text-xs border-t pt-1 mt-1">
                                               <span className="font-semibold">Total:</span>
-                                              <span className="font-bold text-[#22D69A]">{formatCurrency(repair.totalAmount)}</span>
+                                              <span className="font-bold text-[#22c55e]">{formatCurrency(repair.totalAmount)}</span>
                                             </div>
                                           </div>
                                         </div>
@@ -1615,7 +1615,7 @@ export default function RepairQueue() {
                                                   key={idx} 
                                                   src={photo} 
                                                   alt={`Estimate Photo ${idx + 1}`}
-                                                  className="w-16 h-16 object-cover rounded border cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-[#0078D4]"
+                                                  className="w-16 h-16 object-cover rounded border cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-[#0077b6]"
                                                   onClick={(e) => { e.stopPropagation(); setPhotoPreviewUrl(photo); }}
                                                 />
                                               ))}
@@ -1630,20 +1630,20 @@ export default function RepairQueue() {
                                       <div className="h-1 bg-slate-300" />
 
                                       {/* Section 2: Completion Details - Light Green Tint */}
-                                      <div className="p-4" style={{ backgroundColor: "#22D69A1A" }}>
+                                      <div className="p-4 bg-[#22c55e]/10">
                                         <div className="flex items-center gap-2 mb-3">
-                                          <CheckCircle className="w-5 h-5 text-[#22D69A]" />
-                                          <h4 className="font-bold text-sm text-[#22D69A] uppercase tracking-wide">Completion Details</h4>
+                                          <CheckCircle className="w-5 h-5 text-[#22c55e]" />
+                                          <h4 className="font-bold text-sm text-[#22c55e] uppercase tracking-wide">Completion Details</h4>
                                         </div>
 
                                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Repair Tech(s)</p>
-                                            <p className="text-sm font-medium text-[#1E293B]">{repair.technicianName || "Not assigned"}</p>
+                                            <p className="text-sm font-medium text-slate-900">{repair.technicianName || "Not assigned"}</p>
                                           </div>
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Date & Time Completed</p>
-                                            <p className="text-sm text-[#1E293B]">{formatDateTime(repair.updatedAt)}</p>
+                                            <p className="text-sm text-slate-900">{formatDateTime(repair.updatedAt)}</p>
                                           </div>
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Time Spent</p>
@@ -1658,12 +1658,12 @@ export default function RepairQueue() {
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Technicians Present</p>
-                                            <p className="text-sm text-[#1E293B]">{repair.technicianName || "Not recorded"}</p>
+                                            <p className="text-sm text-slate-900">{repair.technicianName || "Not recorded"}</p>
                                           </div>
                                           <div>
                                             <p className="text-xs text-slate-500 mb-1">Completion Notes</p>
                                             <div className="bg-white/50 rounded p-2 border border-slate-200">
-                                              <p className="text-sm text-[#1E293B] whitespace-pre-wrap">{repair.notes || "No notes recorded"}</p>
+                                              <p className="text-sm text-slate-900 whitespace-pre-wrap">{repair.notes || "No notes recorded"}</p>
                                             </div>
                                           </div>
                                         </div>
@@ -1724,7 +1724,7 @@ export default function RepairQueue() {
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Estimates Log</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Estimates Log</CardTitle>
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -1849,7 +1849,7 @@ export default function RepairQueue() {
                                   <TableCell>
                                     <span className="text-xs text-slate-500">{sourceLabels[estimate.sourceType] || "Office"}</span>
                                   </TableCell>
-                                  <TableCell className="text-right font-semibold text-[#1E293B]">
+                                  <TableCell className="text-right font-semibold text-slate-900">
                                     {formatCurrency(estimate.totalAmount)}
                                   </TableCell>
                                   <TableCell>
@@ -1944,7 +1944,7 @@ export default function RepairQueue() {
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Emergencies Log</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Emergencies Log</CardTitle>
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
@@ -2136,7 +2136,7 @@ export default function RepairQueue() {
             <Card>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-[#1E293B]">Parts Orders Log</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-slate-900">Parts Orders Log</CardTitle>
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
