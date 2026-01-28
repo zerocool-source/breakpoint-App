@@ -1,0 +1,77 @@
+On the Estimates page, redesign the Workflow Metrics section to match the dark dashboard style from the reference screenshot:
+
+**OVERALL STYLING:**
+- Dark navy/charcoal background (#1a1f2e or #0f172a) for the entire metrics section
+- Cards with slightly lighter dark backgrounds (#252d3d or #1e293b)
+- Rounded corners on all cards (16px)
+- Subtle glow effects on active/highlighted elements
+
+**ESTIMATE PIPELINE ROW (Top):**
+- Horizontal row of status cards connected by a flow line
+- Each status as a rounded square/circle:
+  - Draft: Dark gray circle with white number
+  - Pending Approval: Orange (#f97316) highlighted card with glow, white number, show "+X" indicator below
+  - Approved: Dark gray
+  - Rejected: Dark gray
+  - Scheduled: Dark gray
+  - Completed: Teal/cyan (#14b8a6) highlighted with glow
+  - Invoiced: Purple/blue (#8b5cf6 - or use ocean blue #0077b6) highlighted
+  - Paid: Green (#22c55e) highlighted with glow
+  - Archived: Dark gray
+- Connect the cards with a horizontal line showing the flow
+- Active stages are highlighted with colored backgrounds and subtle glow
+- Show small dot indicators below cards with activity
+
+**APPROVAL RATE CARD (Left):**
+- Large circular gauge/progress ring
+- Green (#22c55e) progress arc showing 60%
+- Large "60%" text in the center in green
+- "Target: 75%" text below in gray
+- Dark card background
+
+**REVENUE FLOW CARD (Center):**
+- Horizontal flow of colored circles connected by lines
+- Each circle shows dollar amount inside:
+  - Approved: Orange circle - "$7.1k"
+  - Scheduled: Teal circle - "$7.1k"
+  - Ready to Invoice: Purple/blue circle - "$5.8k"
+  - Invoiced: Small outlined circle - "$0.7k"
+  - Paid: Green circle - "$0.6k"
+- Labels below each circle
+- Connecting lines between circles showing the flow
+
+**TIME METRICS CARD (Bottom Left):**
+- Dark card background
+- "Avg Approval Time: 20h" with orange progress bar
+- "Avg Completion: 0h" with gray/empty progress bar
+- Clean minimal layout
+
+**WINDY CLEANUP JOBS CARD (Bottom Center):**
+- Dark card with slight gradient
+- Cloud/wind icon at top
+- Large "3" number
+- "Windy Cleanup Jobs" label
+- Three blue dots below as indicators
+
+**BY SOURCE CARD (Bottom Right):**
+- Donut chart showing distribution:
+  - Blue segment: Repair Tech
+  - Green segment: Service Tech
+  - Gray segment: Office Staff
+- "28 total" in center of donut
+- Legend on the right:
+  - "Repair Tech: 5 - $8.9k"
+  - "Service Tech: 17 - $6.0k"
+  - "Office Staff: 6 - $7.1k"
+
+**COLOR PALETTE:**
+- Background: Dark navy (#1a1f2e)
+- Cards: Slightly lighter (#252d3d)
+- Orange: #f97316 (Pending, Approved value)
+- Teal/Cyan: #14b8a6 (Scheduled, Completed)
+- Green: #22c55e (Paid, Approval rate)
+- Blue: #0077b6 (Repair Tech, general accents)
+- Purple: Use ocean blue (#0077b6) instead to avoid purple
+- Text: White for numbers, gray (#9ca3af) for labels
+
+This creates a modern, visually striking dashboard section that stands out while showing the estimate workflow clearly.
