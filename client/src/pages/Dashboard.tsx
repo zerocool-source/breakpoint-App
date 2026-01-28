@@ -1080,16 +1080,6 @@ export default function Dashboard() {
                     </CardTitle>
                     <CardDescription>Values across pipeline stages</CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowReportModal(true)}
-                    className="gap-1.5 text-xs text-slate-600 border-slate-200 hover:bg-slate-50"
-                    data-testid="button-download-report"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download Report
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1114,6 +1104,14 @@ export default function Dashboard() {
                       <p className="text-lg font-bold text-teal-700">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                     </div>
                   </div>
+                  <Button
+                    onClick={() => setShowReportModal(true)}
+                    className="w-full gap-2 bg-[#0077b6] hover:bg-[#006299] text-white rounded-lg shadow-sm hover:shadow-md transition-all"
+                    data-testid="button-download-report"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Report
+                  </Button>
                 </div>
               </CardContent>
             </Card>
