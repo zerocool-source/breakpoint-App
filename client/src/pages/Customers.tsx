@@ -1211,6 +1211,7 @@ function ManageZonesModal({
               <Map className="w-5 h-5" />
               Manage Zones
             </DialogTitle>
+            <p className="text-sm text-white/80 sr-only">Create and manage customer zones for geographic grouping</p>
           </DialogHeader>
           
           <div className="p-6 space-y-4">
