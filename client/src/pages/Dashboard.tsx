@@ -31,7 +31,8 @@ import {
   User,
   ClipboardList,
   AlertCircle,
-  Cog
+  Cog,
+  Truck
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1548,64 +1549,84 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Three-Column Lower Section: Recent Activity + Chemical Orders + Top Chemicals */}
+        {/* Three-Column Lower Section: Truck Maintenance + Chemical Orders + Top Chemicals */}
         <div className="grid grid-cols-3 gap-6">
-          <Card className="shadow-sm">
+          <Card className="shadow-sm bg-white" data-testid="card-truck-maintenance">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-[#60A5FA]" />
-                    Recent Activity
+                    <Truck className="w-5 h-5 text-slate-700" />
+                    Truck Maintenance
                   </CardTitle>
-                  <CardDescription>Latest estimates and service repairs</CardDescription>
+                  <CardDescription>Vehicles needing service soon</CardDescription>
                 </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/fleet")} className="text-slate-600 hover:text-slate-700">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[280px]">
-                {recentActivity.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-[#64748B]">
-                    <p>No recent activity</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {recentActivity.map((item, index) => (
+              {(() => {
+                const truckMaintenanceItems = [
+                  { id: 'tm1', truckNumber: '07', technicianName: 'Mike Johnson', maintenanceType: 'Oil Change', status: 'due_soon', daysUntil: 3 },
+                  { id: 'tm2', truckNumber: '12', technicianName: 'Jorge Martinez', maintenanceType: 'Tire Rotation', status: 'overdue', daysOverdue: 5 },
+                  { id: 'tm3', truckNumber: '03', technicianName: 'Sarah Chen', maintenanceType: 'Brake Inspection', status: 'due_soon', daysUntil: 10 },
+                  { id: 'tm4', truckNumber: '15', technicianName: 'David Wilson', maintenanceType: 'Full Service', status: 'scheduled', scheduledDate: 'Jan 30' },
+                  { id: 'tm5', truckNumber: '09', technicianName: 'Kevin Enriquez', maintenanceType: 'Oil Change', status: 'overdue', daysOverdue: 2 },
+                ];
+                
+                const getStatusBadge = (item: any) => {
+                  if (item.status === 'overdue') {
+                    return (
+                      <Badge className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px]">
+                        Overdue {item.daysOverdue}d
+                      </Badge>
+                    );
+                  } else if (item.status === 'scheduled') {
+                    return (
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">
+                        Scheduled
+                      </Badge>
+                    );
+                  } else {
+                    return (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px]">
+                        Due in {item.daysUntil}d
+                      </Badge>
+                    );
+                  }
+                };
+                
+                const getConditionIndicator = (item: any) => {
+                  if (item.status === 'overdue') return 'bg-red-500';
+                  if (item.status === 'scheduled') return 'bg-green-500';
+                  return 'bg-amber-500';
+                };
+                
+                return (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
+                    {truckMaintenanceItems.map((item) => (
                       <div 
-                        key={`${item.type}-${item.id}-${index}`}
-                        className="flex items-center justify-between p-3 rounded-lg bg-white border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
-                        onClick={() => navigate(item.type === "estimate" ? "/estimates" : "/service-repairs")}
-                        data-testid={`activity-item-${item.id}`}
+                        key={item.id} 
+                        className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors cursor-pointer"
+                        onClick={() => navigate("/fleet")}
                       >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className={`p-2 rounded-lg shrink-0 ${item.type === "estimate" ? "bg-blue-100" : "bg-orange-100"}`}>
-                            {item.type === "estimate" ? (
-                              <FileText className="w-4 h-4 text-blue-700" />
-                            ) : (
-                              <Wrench className="w-4 h-4 text-orange-700" />
-                            )}
+                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getConditionIndicator(item)}`} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-800">Truck #{item.truckNumber}</span>
+                            <span className="text-xs text-slate-500">•</span>
+                            <span className="text-xs text-slate-600 truncate">{item.technicianName}</span>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-slate-900 truncate">{item.property}</p>
-                            <p className="text-xs text-slate-500 truncate">{item.title}</p>
-                          </div>
+                          <p className="text-xs text-slate-500">{item.maintenanceType}</p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <Badge className={getStatusColor(item.status)}>{item.status?.replace(/_/g, " ")}</Badge>
-                          {item.amount > 0 && (
-                            <span className="text-sm font-semibold text-slate-800">{formatCurrency(item.amount)}</span>
-                          )}
-                          {item.timestamp && (
-                            <span className="text-xs text-slate-400">
-                              {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
-                            </span>
-                          )}
-                        </div>
+                        {getStatusBadge(item)}
                       </div>
                     ))}
                   </div>
-                )}
-              </ScrollArea>
+                );
+              })()}
             </CardContent>
           </Card>
 
