@@ -33,6 +33,8 @@ import {
   Search,
   ArrowRight,
   Clock,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,33 @@ interface Technician {
   active: boolean;
   photoUrl?: string;
   region?: string;
+  routeLocked?: boolean;
+  summerVisitDays?: string[];
+  winterVisitDays?: string[];
+}
+
+interface QcInspection {
+  id: string;
+  supervisorId: string;
+  supervisorName: string | null;
+  propertyId: string | null;
+  propertyName: string;
+  propertyAddress: string | null;
+  title: string | null;
+  notes: string | null;
+  status: string;
+  dueDate: string | null;
+  completedAt: string | null;
+}
+
+interface ScheduledRepair {
+  id: string;
+  propertyName: string;
+  title: string;
+  status: string;
+  scheduledDate: string | null;
+  repairTechId: string | null;
+  repairTechName: string | null;
 }
 
 interface TechSchedule {
@@ -181,8 +210,47 @@ export default function Calendar() {
 
   const weekDates = useMemo(() => getWeekDates(currentWeekStart), [currentWeekStart]);
 
+  // Fetch technicians from stored technicians database (syncs with ServiceTechs, RepairQueue, Supervisors pages)
   const { data: techniciansData } = useQuery<{ technicians: Technician[] }>({
-    queryKey: ["/api/technicians"],
+    queryKey: ["/api/technicians/stored"],
+    queryFn: async () => {
+      const res = await fetch("/api/technicians/stored");
+      if (!res.ok) return { technicians: [] };
+      return res.json();
+    },
+  });
+
+  // Fetch QC Inspections for supervisors tab
+  const { data: qcInspectionsData } = useQuery<{ inspections: QcInspection[] }>({
+    queryKey: ["/api/qc-inspections", weekDates[0]?.toISOString()],
+    queryFn: async () => {
+      const startDate = weekDates[0]?.toISOString().split("T")[0];
+      const endDate = weekDates[6]?.toISOString().split("T")[0];
+      const res = await fetch(`/api/qc-inspections?startDate=${startDate}&endDate=${endDate}`);
+      if (!res.ok) return { inspections: [] };
+      return res.json();
+    },
+    enabled: weekDates.length === 7 && roleFilter === "supervisor",
+  });
+
+  // Fetch scheduled estimates for repair technicians
+  const { data: scheduledEstimatesData } = useQuery<{ estimates: ScheduledRepair[] }>({
+    queryKey: ["/api/estimates/scheduled", weekDates[0]?.toISOString()],
+    queryFn: async () => {
+      const startDate = weekDates[0]?.toISOString().split("T")[0];
+      const endDate = weekDates[6]?.toISOString().split("T")[0];
+      const res = await fetch(`/api/estimates?status=scheduled`);
+      if (!res.ok) return { estimates: [] };
+      const data = await res.json();
+      // Filter by date range
+      const filtered = (data.estimates || []).filter((e: any) => {
+        if (!e.scheduledDate) return false;
+        const schedDate = e.scheduledDate.split("T")[0];
+        return schedDate >= startDate && schedDate <= endDate;
+      });
+      return { estimates: filtered };
+    },
+    enabled: weekDates.length === 7 && roleFilter === "repair",
   });
 
   const { data: schedulesData } = useQuery<{ schedules: TechSchedule[] }>({
@@ -230,6 +298,53 @@ export default function Calendar() {
   const coverages = coveragesData?.coverages || [];
   const timeOffs = timeOffData?.timeOffs || [];
   const customers = customersData?.customers || [];
+  const qcInspections = qcInspectionsData?.inspections || [];
+  const scheduledEstimates = scheduledEstimatesData?.estimates || [];
+
+  // Mutation to toggle route lock
+  const toggleRouteLockMutation = useMutation({
+    mutationFn: async ({ techId, locked }: { techId: string; locked: boolean }) => {
+      const res = await fetch(`/api/technicians/stored/${techId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ routeLocked: locked }),
+      });
+      if (!res.ok) throw new Error("Failed to update route lock");
+      return res.json();
+    },
+    onSuccess: (_, { locked }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
+      toast({
+        title: locked ? "Route Locked" : "Route Unlocked",
+        description: locked
+          ? "Technician must follow the scheduled order"
+          : "Technician can adjust their route order",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update route lock", variant: "destructive" });
+    },
+  });
+
+  // Get QC inspections for a supervisor and date
+  const getQcInspectionsForTechAndDate = (techId: string | number, date: Date): QcInspection[] => {
+    const dateStr = date.toISOString().split("T")[0];
+    return qcInspections.filter((insp) => {
+      if (String(insp.supervisorId) !== String(techId)) return false;
+      if (!insp.dueDate) return false;
+      return insp.dueDate.startsWith(dateStr);
+    });
+  };
+
+  // Get scheduled repairs for a repair tech and date
+  const getScheduledRepairsForTechAndDate = (techId: string | number, date: Date): ScheduledRepair[] => {
+    const dateStr = date.toISOString().split("T")[0];
+    return scheduledEstimates.filter((est) => {
+      if (String(est.repairTechId) !== String(techId)) return false;
+      if (!est.scheduledDate) return false;
+      return est.scheduledDate.startsWith(dateStr);
+    });
+  };
 
   const allFilteredTechnicians = useMemo(() => {
     return technicians.filter((tech) => {
@@ -787,6 +902,36 @@ export default function Calendar() {
                             <p className="text-sm font-semibold text-[#0F172A] truncate">
                               {tech.firstName} {tech.lastName}
                             </p>
+                            {/* Lock Route Icon - only for service technicians */}
+                            {tech.role === "service" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRouteLockMutation.mutate({
+                                    techId: String(tech.id),
+                                    locked: !tech.routeLocked,
+                                  });
+                                }}
+                                className={cn(
+                                  "p-1 rounded transition-colors",
+                                  tech.routeLocked
+                                    ? "text-[#f97316] hover:bg-orange-50"
+                                    : "text-slate-400 hover:bg-slate-100"
+                                )}
+                                title={
+                                  tech.routeLocked
+                                    ? "Route Locked - Tech must follow scheduled order"
+                                    : "Route Unlocked - Tech can adjust order"
+                                }
+                                data-testid={`button-lock-route-${tech.id}`}
+                              >
+                                {tech.routeLocked ? (
+                                  <Lock className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Unlock className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
                             {isOnLeaveThisWeek && (
                               <span className="px-1.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-600 rounded">
                                 ON LEAVE
@@ -830,6 +975,16 @@ export default function Calendar() {
                       const coverage = getCoverageForTechAndDate(tech.id, date);
                       const timeOff = getTimeOffForTechAndDate(tech.id, date);
                       const isExpanded = schedule && expandedSchedules.has(schedule.id);
+                      
+                      // For supervisors - get QC inspections
+                      const qcInspectionsForDay = tech.role === "supervisor" || tech.role === "foreman"
+                        ? getQcInspectionsForTechAndDate(tech.id, date)
+                        : [];
+                      
+                      // For repair technicians - get scheduled repairs
+                      const scheduledRepairsForDay = tech.role === "repair"
+                        ? getScheduledRepairsForTechAndDate(tech.id, date)
+                        : [];
 
                       if (timeOff) {
                         const coveringTech = getCoveringTechForTimeOff(timeOff);
@@ -1010,6 +1165,114 @@ export default function Calendar() {
                                   {coverage.propertyName}
                                 </p>
                               )}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Render QC Inspections for supervisors (always show even without schedule)
+                      if ((tech.role === "supervisor" || tech.role === "foreman") && qcInspectionsForDay.length > 0) {
+                        return (
+                          <div
+                            key={dayIndex}
+                            className="flex-1 min-w-[120px] px-2 py-2"
+                            data-testid={`cell-supervisor-${tech.id}-${dayIndex}`}
+                          >
+                            <div className="space-y-2">
+                              {qcInspectionsForDay.map((insp) => (
+                                <div
+                                  key={insp.id}
+                                  data-testid={`card-qc-inspection-${insp.id}`}
+                                  className={cn(
+                                    "rounded-lg p-2 border-l-[3px]",
+                                    insp.status === "completed"
+                                      ? "bg-[#22c55e15] border-l-[#22c55e]"
+                                      : insp.status === "in_progress"
+                                      ? "bg-[#14b8a615] border-l-[#14b8a6]"
+                                      : "bg-[#8B5CF615] border-l-[#8B5CF6]"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
+                                    <UserCheck className="w-3 h-3" />
+                                    <span className="truncate" data-testid={`text-qc-title-${insp.id}`}>{insp.title || "QC Inspection"}</span>
+                                  </div>
+                                  <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-qc-property-${insp.id}`}>
+                                    <MapPin className="w-3 h-3 shrink-0" />
+                                    {insp.propertyName}
+                                  </p>
+                                  <span
+                                    data-testid={`status-qc-${insp.id}`}
+                                    className={cn(
+                                      "inline-block mt-1.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                      insp.status === "completed"
+                                        ? "bg-[#22c55e] text-white"
+                                        : insp.status === "in_progress"
+                                        ? "bg-[#14b8a6] text-white"
+                                        : "bg-slate-200 text-slate-600"
+                                    )}
+                                  >
+                                    {insp.status === "completed"
+                                      ? "Completed"
+                                      : insp.status === "in_progress"
+                                      ? "In Progress"
+                                      : "Assigned"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // Render scheduled repairs for repair technicians (always show even without schedule)
+                      if (tech.role === "repair" && scheduledRepairsForDay.length > 0) {
+                        return (
+                          <div
+                            key={dayIndex}
+                            className="flex-1 min-w-[120px] px-2 py-2"
+                            data-testid={`cell-repair-${tech.id}-${dayIndex}`}
+                          >
+                            <div className="space-y-2">
+                              {scheduledRepairsForDay.map((repair) => (
+                                <div
+                                  key={repair.id}
+                                  data-testid={`card-repair-job-${repair.id}`}
+                                  className={cn(
+                                    "rounded-lg p-2 border-l-[3px]",
+                                    repair.status === "completed"
+                                      ? "bg-[#22c55e15] border-l-[#22c55e]"
+                                      : repair.status === "in_progress"
+                                      ? "bg-[#14b8a615] border-l-[#14b8a6]"
+                                      : "bg-[#f9731615] border-l-[#f97316]"
+                                  )}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
+                                    <Wrench className="w-3 h-3" />
+                                    <span className="truncate" data-testid={`text-repair-title-${repair.id}`}>{repair.title}</span>
+                                  </div>
+                                  <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-repair-property-${repair.id}`}>
+                                    <MapPin className="w-3 h-3 shrink-0" />
+                                    {repair.propertyName}
+                                  </p>
+                                  <span
+                                    data-testid={`status-repair-${repair.id}`}
+                                    className={cn(
+                                      "inline-block mt-1.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                      repair.status === "completed"
+                                        ? "bg-[#22c55e] text-white"
+                                        : repair.status === "in_progress"
+                                        ? "bg-[#14b8a6] text-white"
+                                        : "bg-[#f97316] text-white"
+                                    )}
+                                  >
+                                    {repair.status === "completed"
+                                      ? "Completed"
+                                      : repair.status === "in_progress"
+                                      ? "In Progress"
+                                      : "Scheduled"}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         );

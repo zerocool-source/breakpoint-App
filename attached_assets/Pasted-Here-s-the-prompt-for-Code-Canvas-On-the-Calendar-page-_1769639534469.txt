@@ -1,0 +1,79 @@
+Here's the prompt for Code Canvas:
+
+```
+On the Calendar page, connect it to the Service Technicians, Repair Technicians, and Supervisor pages so all data syncs properly:
+
+**PART 1 - CONNECT TECHNICIAN DATA:**
+
+1. SERVICE TECHNICIANS TAB:
+   - Only show technicians that exist on the Service Technicians page
+   - Pull technician names, avatars, and county assignments from Service Technicians database
+   - For each service technician, automatically show:
+     - Their assigned properties with service days (M, T, W, T, F, S, S) from their route
+     - Any service repairs scheduled to them from the office
+     - Any coverage assignments (when covering for another tech)
+   - When a property is assigned to a tech on the Service Technicians page, it automatically appears on their calendar row
+
+2. REPAIR TECHNICIANS TAB:
+   - Only show technicians that exist on the Repair Technicians page
+   - Pull from the same database as Repair Technicians page and Repair Queue
+   - Show all jobs/repairs scheduled to each repair tech
+   - Display job details: property, job type, scheduled time
+
+3. SUPERVISORS TAB:
+   - Only show supervisors that exist on the Supervisor Team Management page
+   - Show any QC Inspections assigned to them (from the "Assign QC Inspection" form)
+   - Show their scheduled inspections on the calendar with property and date
+
+**PART 2 - ADD LOCK ROUTE FEATURE:**
+
+1. Add a small lock icon (🔒) next to each SERVICE TECHNICIAN's name on the calendar:
+   - Unlocked icon (open padlock): Tech can service their route in any order they want
+   - Locked icon (closed padlock, highlighted in red or orange): Tech MUST complete their route in the exact order shown
+
+2. Lock icon functionality:
+   - Click the lock icon to toggle locked/unlocked
+   - When LOCKED:
+     - The icon shows a closed padlock (red/orange color)
+     - Tooltip: "Route Locked - Tech must follow scheduled order"
+     - On the technician's mobile app, they cannot skip or reorder stops
+     - They must complete each stop in sequence before moving to the next
+   - When UNLOCKED:
+     - The icon shows an open padlock (gray color)
+     - Tooltip: "Route Unlocked - Tech can adjust order"
+     - Tech has flexibility to service in their preferred order
+
+3. This lock status should sync with:
+   - The "Lock Route" toggle on the Service Technicians page (technician detail panel)
+   - The technician's mobile app
+
+**PART 3 - CALENDAR DISPLAY:**
+
+1. For SERVICE TECHNICIANS:
+   - Show property stops as cards on their calendar row for each service day
+   - Card shows: "X stops", time range, completion status (0/X)
+   - "Click to view properties" expands to show the list
+   - Color code: Green = Completed, Orange = In Progress, Gray = Pending
+
+2. For REPAIR TECHNICIANS:
+   - Show scheduled repair jobs on their calendar
+   - Card shows: Job ID, property name, job type
+   - Color code by status: Pending, In Progress, Completed
+
+3. For SUPERVISORS:
+   - Show scheduled QC Inspections
+   - Card shows: Inspection title, property, time
+   - Color code by completion status
+
+**PART 4 - DATA SYNC:**
+
+Ensure these pages all share the same data:
+- Service Technicians page ↔ Calendar (Service tab)
+- Repair Technicians page ↔ Calendar (Repair tab) ↔ Repair Queue
+- Supervisor Team Management page ↔ Calendar (Supervisors tab)
+- Property assignments ↔ Calendar stops
+- Job assignments ↔ Calendar jobs
+- QC Inspections ↔ Calendar inspections
+
+When data is added/changed on any page, it should reflect on the Calendar automatically.
+```
