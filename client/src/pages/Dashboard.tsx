@@ -707,9 +707,9 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-5 gap-4">
-                  {/* Pending Estimates */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-orange-50 to-white border border-orange-100">
-                    <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center mb-3 shadow-lg shadow-orange-200">
+                  {/* Pending Estimates - Light orange background */}
+                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#fff7ed' }}>
+                    <div className="w-12 h-12 rounded-full bg-[#f97316] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)' }}>
                       <FileText className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.pendingApproval || 0}</span>
@@ -721,9 +721,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Awaiting Scheduling */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-sky-50 to-white border border-sky-100">
-                    <div className="w-12 h-12 rounded-full bg-[#0077b6] flex items-center justify-center mb-3 shadow-lg shadow-sky-200">
+                  {/* Awaiting Scheduling - Light blue background */}
+                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#e0f2fe' }}>
+                    <div className="w-12 h-12 rounded-full bg-[#0077b6] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(0, 119, 182, 0.3)' }}>
                       <Calendar className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{summary?.needsScheduling || 0}</span>
@@ -735,9 +735,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Ready to Invoice */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-teal-50 to-white border border-teal-100">
-                    <div className="w-12 h-12 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3 shadow-lg shadow-teal-200">
+                  {/* Ready to Invoice - Light teal background */}
+                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#e0f7fa' }}>
+                    <div className="w-12 h-12 rounded-full bg-[#14b8a6] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(20, 184, 166, 0.3)' }}>
                       <Receipt className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.readyToInvoice || 0}</span>
@@ -749,9 +749,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Invoiced Unpaid */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-green-50 to-white border border-green-100">
-                    <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center mb-3 shadow-lg shadow-green-200">
+                  {/* Invoiced Unpaid - Light green background */}
+                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#dcfce7' }}>
+                    <div className="w-12 h-12 rounded-full bg-[#22c55e] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(34, 197, 94, 0.3)' }}>
                       <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{metrics?.invoices?.unpaid || 0}</span>
@@ -763,9 +763,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Overdue */}
-                  <div className="flex flex-col items-center p-4 rounded-xl bg-gradient-to-b from-red-50 to-white border border-red-100">
-                    <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center mb-3 shadow-lg shadow-red-200">
+                  {/* Overdue - Light red background */}
+                  <div className="flex flex-col items-center p-4 rounded-xl" style={{ backgroundColor: '#fef2f2' }}>
+                    <div className="w-12 h-12 rounded-full bg-[#ef4444] flex items-center justify-center mb-3 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.3)' }}>
                       <AlertCircle className="w-6 h-6 text-white" />
                     </div>
                     <span className="text-3xl font-bold text-slate-900">{metrics?.estimates.declined || 0}</span>
@@ -1177,12 +1177,12 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-blue-600" />
+                      <FileText className="w-5 h-5 text-[#0077b6]" />
                       Estimate Pipeline
                     </CardTitle>
                     <CardDescription>Job estimates by status</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-blue-600 hover:text-blue-700">
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/estimates")} className="text-[#0077b6] hover:text-[#006299]">
                     View All <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
@@ -1658,12 +1658,12 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-cyan-600" />
+                    <Droplets className="w-5 h-5 text-[#0077b6]" />
                     Chemical Orders by Property
                   </CardTitle>
                   <CardDescription>Pending orders that need to be sent</CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-cyan-600 hover:text-cyan-700">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/chemicals")} className="text-[#0077b6] hover:text-[#006299]">
                   View All <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -1723,7 +1723,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Droplets className="w-5 h-5 text-[#60A5FA]" />
+                    <Droplets className="w-5 h-5 text-[#0077b6]" />
                     Top Chemicals Ordered
                   </CardTitle>
                   <CardDescription>Most frequently ordered chemicals</CardDescription>
@@ -1731,7 +1731,7 @@ export default function Dashboard() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-[#0077b6] hover:text-[#006299]"
                   onClick={() => navigate("/chemicals")}
                 >
                   View All
