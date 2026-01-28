@@ -1423,12 +1423,13 @@ export default function Dashboard() {
                 for (let i = 0; i < startDayOfWeek; i++) days.push(null);
                 for (let i = 1; i <= daysInMonth; i++) days.push(i);
                 
-                // Sample coverage activities with specific dates
+                // Sample coverage activities with specific dates (2026)
                 const sampleCoverages = [
-                  { id: 'sample1', startDate: '2025-01-28', endDate: '2025-01-28', coveringTechName: 'Mike Johnson', originalTechName: 'Jorge Martinez', propertyName: 'Sunset Hills HOA', reason: null },
-                  { id: 'sample2', startDate: '2025-01-30', endDate: '2025-01-30', coveringTechName: 'Sarah Chen', originalTechName: 'David Wilson', propertyName: 'Palm Gardens Community', reason: null },
-                  { id: 'sample3', startDate: '2025-02-03', endDate: '2025-02-03', coveringTechName: 'Jorge Martinez', originalTechName: 'Mike Johnson', propertyName: 'Desert Springs Resort', reason: null },
-                  { id: 'sample4', startDate: '2025-02-05', endDate: '2025-02-05', coveringTechName: 'All techs', originalTechName: '', propertyName: 'main office', reason: 'Training day' },
+                  { id: 'sample1', startDate: '2026-01-27', endDate: '2026-01-27', coveringTechName: 'Mike Johnson', originalTechName: 'Jorge Martinez', propertyName: 'Sunset Hills HOA', reason: null },
+                  { id: 'sample2', startDate: '2026-01-29', endDate: '2026-01-29', coveringTechName: 'Sarah Chen', originalTechName: 'David Wilson', propertyName: 'Palm Gardens Community', reason: null },
+                  { id: 'sample3', startDate: '2026-02-02', endDate: '2026-02-02', coveringTechName: 'Jorge Martinez', originalTechName: 'Mike Johnson', propertyName: 'Desert Springs Resort', reason: null },
+                  { id: 'sample4', startDate: '2026-02-04', endDate: '2026-02-04', coveringTechName: 'All techs', originalTechName: '', propertyName: 'main office', reason: 'Training day' },
+                  { id: 'sample5', startDate: '2026-01-29', endDate: '2026-01-29', coveringTechName: 'Kevin Enriquez', originalTechName: 'Sarah Chen', propertyName: 'Vista Grande HOA', reason: null },
                 ];
                 
                 // Combine real coverages with sample coverages
@@ -1492,17 +1493,38 @@ export default function Dashboard() {
                             new Date().getMonth() === month && 
                             new Date().getFullYear() === year;
                           
+                          // Generate tooltip text for coverage preview
+                          const tooltipText = hasCoverage 
+                            ? dayCoverages.map((c: any) => 
+                                c.reason === 'Training day' 
+                                  ? `Training day at ${c.propertyName}`
+                                  : `${c.coveringTechName} covering for ${c.originalTechName}`
+                              ).join('\n')
+                            : '';
+                          
                           return (
                             <button
                               key={idx}
                               onClick={() => setSelectedDate(new Date(year, month, day))}
-                              className={`h-9 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors
+                              title={hasCoverage ? tooltipText : undefined}
+                              className={`h-9 w-full rounded-md text-xs font-medium flex flex-col items-center justify-center transition-colors relative group
                                 ${isSelected ? 'bg-purple-600 text-white' : isToday ? 'bg-purple-100 text-purple-700' : 'hover:bg-slate-100 text-slate-700'}
                               `}
                             >
                               <span>{day}</span>
-                              {hasCoverage && !isSelected && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-0.5" />
+                              {hasCoverage && (
+                                <div className="flex items-center gap-0.5 mt-0.5">
+                                  {dayCoverages.length === 1 ? (
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#0077b6]'}`} />
+                                  ) : dayCoverages.length === 2 ? (
+                                    <>
+                                      <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#0077b6]'}`} />
+                                      <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#48cae4]'}`} />
+                                    </>
+                                  ) : (
+                                    <div className={`w-2.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#0077b6]'}`} />
+                                  )}
+                                </div>
                               )}
                             </button>
                           );
