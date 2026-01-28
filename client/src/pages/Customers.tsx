@@ -218,21 +218,10 @@ function CustomerListItem({
       )}
       data-testid={`customer-row-${customer.id}`}
     >
-      <div className="flex items-start justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-slate-900 truncate">{customer.name}</h3>
-            {/* Active/Inactive Toggle Switch */}
-            {onToggleStatus && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <Switch
-                  checked={isActive}
-                  onCheckedChange={(checked) => onToggleStatus(customer.id, checked)}
-                  className="data-[state=checked]:bg-[#0077b6] data-[state=unchecked]:bg-slate-300"
-                  data-testid={`switch-status-${customer.id}`}
-                />
-              </div>
-            )}
             {/* Zone Badge */}
             {zones && onZoneChange && customerZone && (
               <span 
@@ -282,7 +271,8 @@ function CustomerListItem({
             </div>
           )}
         </div>
-        <div className="text-right text-sm text-slate-500">
+        {/* Pool count in center-right */}
+        <div className="text-sm text-slate-500 flex-shrink-0">
           {customer.poolCount !== null && customer.poolCount > 0 && (
             <span className="flex items-center gap-1">
               <Building2 className="h-4 w-4" />
@@ -290,6 +280,17 @@ function CustomerListItem({
             </span>
           )}
         </div>
+        {/* Active/Inactive Toggle Switch - far right */}
+        {onToggleStatus && (
+          <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+            <Switch
+              checked={isActive}
+              onCheckedChange={(checked) => onToggleStatus(customer.id, checked)}
+              className="data-[state=checked]:bg-[#0077b6] data-[state=unchecked]:bg-slate-300"
+              data-testid={`switch-status-${customer.id}`}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
