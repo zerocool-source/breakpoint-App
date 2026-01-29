@@ -1,0 +1,80 @@
+```
+Redesign the Chat/Property Channels page with a Slack-style interface:
+
+**LAYOUT:**
+- Left sidebar: Property Channels list (dark navy background)
+- Center: Main chat area (white background)
+- Right sidebar: Thread details panel (light gray, shows when channel is open)
+
+**LEFT SIDEBAR - CHANNELS:**
+- Keep dark navy background
+- Add "ANNOUNCEMENTS" channel at the TOP (default for everyone, only Office Admin can post, others read-only)
+- List all property channels with # icon (orange)
+- Show unread message count badge (orange)
+- Search channels input
+
+**CENTER - CHAT AREA:**
+- Channel name header with pin icon, members count, search
+- Messages styled like the reference image:
+  - Profile photo/avatar on the left (circular)
+  - Name (bold) on top right of avatar
+  - Role tag below name with colored dot (e.g., "● Product Manager", "● Service Technician")
+  - Timestamp on the far right (e.g., "Today 10:03AM")
+  - Message content in a light gray rounded bubble below
+- Support images and videos (display inline)
+- "Reply in thread" button on each message
+- "Pin" bookmark icon on each message
+
+**MESSAGE EDITING:**
+- Users can edit their own messages
+- Show "Edit" option when hovering over own message
+- After editing, show "(edited)" label next to the message
+- Show edit timestamp on hover: "Edited at 10:15AM"
+- Edit history preserved but only "edited" indicator visible
+
+**THREADING SYSTEM:**
+- Replies to a message create a thread
+- Show "X replies" indicator with participant avatars
+- Thread replies appear as collapsible bubble/card under original message
+- Collapse/Expand button to show/hide thread replies
+- Threads are indented or contained in a subtle card
+
+**@ MENTIONS:**
+- Type @ to trigger dropdown of all users (Service Techs, Repair Techs, Supervisors, Office Staff)
+- Mentioned users highlighted in message and get notification
+
+**MESSAGE INPUT:**
+- Text field with formatting options
+- Attachment button for images, videos, files
+- @ mention button, emoji picker
+- Send button (orange #f97316)
+
+**RIGHT SIDEBAR - THREAD DETAILS:**
+- "X active threads" count
+- List of active threads with preview, reply count, last activity
+- Pinned messages section for this channel
+- Channel members list
+
+**PINNED CONVERSATIONS:**
+- Users can pin messages for themselves
+- Pinned messages show in right sidebar
+- Pin icon indicator on pinned messages
+
+**ANNOUNCEMENTS CHANNEL:**
+- Always at top, separate from property channels
+- Only Office Admin can post/reply
+- Others read-only with lock icon
+
+**ROLE TAGS WITH COLORED DOTS:**
+- Office Admin: Blue dot (#0077b6)
+- Supervisor: Orange dot (#f97316)
+- Service Technician: Teal dot (#14b8a6)
+- Repair Technician: Green dot (#22c55e)
+
+**STYLING:**
+- Orange (#f97316) for actions, send button, badges
+- Ocean Blue (#0077b6) for links, mentions
+- Light gray message bubbles (#f1f5f9)
+- Clean QuickBooks-style UI
+- NO purple or pink
+```
