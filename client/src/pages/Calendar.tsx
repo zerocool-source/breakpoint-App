@@ -1099,7 +1099,7 @@ export default function Calendar() {
                             <p className="text-sm font-semibold text-[#0F172A] truncate">
                               {tech.firstName} {tech.lastName}
                             </p>
-                            {/* Lock Route Icon - only for service technicians */}
+                            {/* Lock Route Icon with label - only for service technicians */}
                             {tech.role === "service" && (
                               <TooltipProvider>
                                 <Tooltip>
@@ -1114,22 +1114,25 @@ export default function Calendar() {
                                         });
                                       }}
                                       className={cn(
-                                        "p-1.5 rounded-md transition-all cursor-pointer",
+                                        "flex flex-col items-center px-1.5 py-1 rounded-md transition-all cursor-pointer",
                                         tech.routeLocked
                                           ? "text-[#ef4444] bg-red-50 hover:bg-red-100 shadow-sm"
-                                          : "text-[#6b7280] hover:bg-slate-100"
+                                          : "text-[#9ca3af] hover:bg-slate-100"
                                       )}
                                       data-testid={`button-lock-route-${tech.id}`}
                                     >
                                       {tech.routeLocked ? (
-                                        <Lock className="w-5 h-5" />
+                                        <>
+                                          <Lock className="w-4 h-4" />
+                                          <span className="text-[10px] font-medium leading-tight mt-0.5">Locked</span>
+                                        </>
                                       ) : (
-                                        <Unlock className="w-5 h-5" />
+                                        <Unlock className="w-4 h-4" />
                                       )}
                                     </button>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="text-xs">
-                                    {tech.routeLocked ? "Route Locked" : "Route Unlocked"}
+                                    {tech.routeLocked ? "Click to unlock route" : "Click to lock route"}
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
