@@ -973,8 +973,8 @@ export default function Calendar() {
         
         <div className="px-6 py-4 overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="min-w-[1200px]">
-            <div className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
-              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-[#64748B] sticky left-0 bg-white z-30">
+            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] sticky top-0 z-20 shadow-md">
+              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white sticky left-0 bg-[#0077b6] z-30">
                 TECHNICIAN
               </div>
               {weekDates.map((date, i) => {
@@ -984,11 +984,11 @@ export default function Calendar() {
                     key={i}
                     className="flex-1 min-w-[120px] px-2 py-3 text-center"
                   >
-                    <div className="text-xs font-semibold text-[#64748B]">{DAYS_OF_WEEK[i]}</div>
+                    <div className="text-xs font-semibold text-white/80">{DAYS_OF_WEEK[i]}</div>
                     <div
                       className={cn(
                         "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium mt-1",
-                        isToday ? "bg-[#0078D4] text-white" : "text-[#0F172A]"
+                        isToday ? "bg-white text-[#0077b6] font-bold" : "text-white"
                       )}
                     >
                       {date.getDate()}
