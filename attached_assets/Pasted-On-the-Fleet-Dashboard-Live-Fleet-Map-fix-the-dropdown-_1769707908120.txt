@@ -1,0 +1,54 @@
+On the Fleet Dashboard Live Fleet Map, fix the dropdown buttons that are not working:
+
+**1. FIX "Find Vehicle..." DROPDOWN:**
+- Currently not responding when clicked
+- Make it a functional dropdown that:
+  - Opens when clicked
+  - Shows a searchable list of all 30 vehicles
+  - Each item shows: Truck # + Technician Name (e.g., "#15 - Mike Johnson")
+  - Has a search/filter input at the top to type and filter vehicles
+  - When a vehicle is selected:
+    - Close the dropdown
+    - Center/zoom the map to that vehicle's location
+    - Open the vehicle's info popup
+
+**2. FIX "All Geofences" DROPDOWN:**
+- Currently not responding when clicked
+- Make it a functional dropdown that:
+  - Opens when clicked
+  - Shows options:
+    - "All Geofences" (show all geofence polygons)
+    - "Hide Geofences" (hide all geofence polygons)
+    - List of individual geofences from OneStepGPS by name
+  - When a geofence is selected:
+    - Close the dropdown
+    - Show/highlight that geofence polygon on the map
+    - Zoom to that geofence location
+
+**3. FIX "All" STATUS DROPDOWN:**
+- Currently not responding when clicked
+- Make it a functional dropdown that:
+  - Opens when clicked
+  - Shows options:
+    - "All" (show all vehicles)
+    - "Active" (show only green/active vehicles)
+    - "In Transit" (show only orange/moving vehicles)
+    - "Inactive" (show only gray/offline vehicles)
+  - When an option is selected:
+    - Filter the map markers to show only matching vehicles
+    - Update the vehicle count
+
+**4. DEBUG THE ISSUE:**
+- Check if click event handlers are attached to the dropdowns
+- Check for JavaScript errors in the console
+- Make sure the dropdown components have proper onClick handlers
+- Verify the state is updating when dropdowns are clicked
+- Check if there's a z-index issue preventing clicks
+
+**5. DROPDOWN STYLING:**
+- Dropdowns should have a visible down arrow indicator
+- On hover, show pointer cursor
+- When open, show the dropdown menu below the button
+- Clicking outside should close the dropdown
+
+Please check the console for any errors and fix the click handlers for all three dropdowns so they open and function properly.

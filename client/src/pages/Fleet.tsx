@@ -473,7 +473,8 @@ export default function Fleet() {
       if (!isValidCoordinate(device.location.lat, device.location.lng)) return false;
       
       if (mapFilter === "all") return true;
-      if (mapFilter === "active") return device.online && device.ignition;
+      if (mapFilter === "active") return device.online && device.ignition && device.speed <= 5;
+      if (mapFilter === "transit") return device.online && device.speed > 5;
       if (mapFilter === "inshop") return !device.online;
       if (mapFilter === "south") return device.name.toLowerCase().includes("south");
       if (mapFilter === "mid") return device.name.toLowerCase().includes("mid");
@@ -856,7 +857,7 @@ export default function Fleet() {
                       <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-56 p-0" align="start">
+                  <PopoverContent className="w-56 p-0 z-[9999]" align="start">
                     <Command>
                       <CommandInput 
                         placeholder="Search trucks..." 
@@ -897,7 +898,7 @@ export default function Fleet() {
                   <SelectTrigger className="w-36 h-8 text-xs" data-testid="geofence-dropdown">
                     <SelectValue placeholder="Geofences" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="all">All Geofences</SelectItem>
                     <SelectItem value="hide">Hide Geofences</SelectItem>
                     {geofences.map(gf => (
@@ -916,12 +917,13 @@ export default function Fleet() {
 
                 {/* Filter */}
                 <Select value={mapFilter} onValueChange={setMapFilter}>
-                  <SelectTrigger className="w-28 h-8 text-xs">
+                  <SelectTrigger className="w-28 h-8 text-xs" data-testid="status-filter-dropdown">
                     <SelectValue placeholder="Filter" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="transit">In Transit</SelectItem>
                     <SelectItem value="inshop">Offline</SelectItem>
                   </SelectContent>
                 </Select>
