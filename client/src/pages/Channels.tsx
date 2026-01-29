@@ -21,12 +21,14 @@ import {
   Reply,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   MapPin,
   Megaphone,
   Lock,
   Paperclip,
   AtSign,
-  X
+  X,
+  CalendarDays
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -139,8 +141,11 @@ export default function Channels() {
   const [replyInput, setReplyInput] = useState("");
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7days" | "30days">("all");
+  const [showDateDropdown, setShowDateDropdown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
+  const dateDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: channelsData, isLoading: channelsLoading } = useQuery({
     queryKey: ["propertyChannels"],
@@ -278,8 +283,53 @@ export default function Channels() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target as Node)) {
+        setShowDateDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const channelMembers = selectedChannel ? getChannelMembers(selectedChannel.id) : [];
   const onlineMembers = channelMembers.filter(m => m.isOnline);
+
+  const getDateFilterLabel = () => {
+    switch (dateFilter) {
+      case "today": return "Today";
+      case "7days": return "Last 7 Days";
+      case "30days": return "Last 30 Days";
+      default: return "All Time";
+    }
+  };
+
+  const filterMessagesByDate = (msgs: ChannelMessage[]) => {
+    if (dateFilter === "all") return msgs;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    return msgs.filter(msg => {
+      const msgDate = new Date(msg.createdAt);
+      switch (dateFilter) {
+        case "today":
+          return msgDate >= startOfToday;
+        case "7days":
+          const sevenDaysAgo = new Date(startOfToday);
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          return msgDate >= sevenDaysAgo;
+        case "30days":
+          const thirtyDaysAgo = new Date(startOfToday);
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          return msgDate >= thirtyDaysAgo;
+        default:
+          return true;
+      }
+    });
+  };
+
+  const filteredMessages = filterMessagesByDate(messages);
 
   const filteredChannels = channels.filter(ch =>
     ch.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -649,6 +699,55 @@ export default function Channels() {
                         </div>
                       )}
                     </div>
+                    
+                    {/* Date Filter Dropdown */}
+                    <div className="relative" ref={dateDropdownRef}>
+                      <button
+                        onClick={() => setShowDateDropdown(!showDateDropdown)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2 py-1 rounded border text-sm transition-colors",
+                          dateFilter !== "all"
+                            ? "bg-[#fff7ed] border-[#f97316] text-[#f97316]"
+                            : "border-slate-200 hover:bg-slate-100 text-[#6b7280]"
+                        )}
+                        data-testid="button-date-filter"
+                      >
+                        <CalendarDays className="w-4 h-4" />
+                        <span>{getDateFilterLabel()}</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      
+                      {showDateDropdown && (
+                        <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg border border-[#e5e7eb] z-50">
+                          <div className="py-1">
+                            {[
+                              { value: "all" as const, label: "All Time" },
+                              { value: "today" as const, label: "Today" },
+                              { value: "7days" as const, label: "Last 7 Days" },
+                              { value: "30days" as const, label: "Last 30 Days" },
+                            ].map(option => (
+                              <button
+                                key={option.value}
+                                onClick={() => {
+                                  setDateFilter(option.value);
+                                  setShowDateDropdown(false);
+                                }}
+                                className={cn(
+                                  "w-full text-left px-3 py-2 text-sm transition-colors",
+                                  dateFilter === option.value
+                                    ? "bg-[#0077b6] text-white"
+                                    : "hover:bg-slate-100 text-[#1f2937]"
+                                )}
+                                data-testid={`button-date-${option.value}`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -670,14 +769,29 @@ export default function Channels() {
                   <div className="p-4 space-y-2">
                     {messagesLoading ? (
                       <div className="text-center py-8 text-[#6b7280]">Loading messages...</div>
-                    ) : messages.length === 0 ? (
+                    ) : filteredMessages.length === 0 ? (
                       <div className="text-center py-16 text-[#6b7280]">
                         <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium text-[#1f2937]">No messages yet</p>
-                        <p className="text-sm mt-1">Start the conversation for this property</p>
+                        {messages.length === 0 ? (
+                          <>
+                            <p className="font-medium text-[#1f2937]">No messages yet</p>
+                            <p className="text-sm mt-1">Start the conversation for this property</p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium text-[#1f2937]">No messages in this time period</p>
+                            <p className="text-sm mt-1">Try selecting a different date range</p>
+                            <button 
+                              onClick={() => setDateFilter("all")}
+                              className="mt-3 text-sm text-[#0077b6] hover:underline"
+                            >
+                              Show all messages
+                            </button>
+                          </>
+                        )}
                       </div>
                     ) : (
-                      groupMessagesByDate(messages).map(group => (
+                      groupMessagesByDate(filteredMessages).map(group => (
                         <div key={group.date}>
                           <div className="flex items-center gap-4 my-6">
                             <Separator className="flex-1 bg-[#e5e7eb]" />
