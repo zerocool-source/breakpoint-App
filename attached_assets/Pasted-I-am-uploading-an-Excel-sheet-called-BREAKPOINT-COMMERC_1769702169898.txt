@@ -1,0 +1,63 @@
+I am uploading an Excel sheet called "BREAKPOINT COMMERCIAL POOL SYSTEMS - SERVICE SCHEDULES". 
+
+DO NOT change any UI, layout, or design. ONLY update the data/assignments based on this Excel sheet.
+
+**TASK: Assign properties to service technicians with their summer and winter schedules based on the Excel data.**
+
+**EXCEL SHEET COLUMNS:**
+- Column A: Supervisor (e.g., "Alfred - Mid County", "Paul - S. County")
+- Column B: Technician (e.g., "Rodrigo H.", "Eric G.", "Sean", "Justin", "Daniel P.")
+- Column C: Zone (e.g., "S. Corona", "Lake Elsinore/West", "Temecula/West", "Moreno Valley")
+- Column D: Property Name (e.g., "Horsethief 1 & 2 Canyon", "Amberwalk", "Belcaro")
+- Column E: Summer Schedule (e.g., "6 Days", "M. W. F. Year-Round", "M. W. F. S.", "Mon - Fri")
+- Column F: Winter Schedule (e.g., "M. W. Th. F.", "M. W. F.", "Mon & Fri.")
+
+**WHAT TO DO:**
+
+1. READ the Excel sheet data
+
+2. MATCH each technician name in the Excel to the Service Technicians in the app:
+   - "Rodrigo H." = Rodrigo (find by first name match)
+   - "Eric G." = Eric Gritzke
+   - "Sean" = Sean Darden
+   - "Justin" = Justin (find by first name)
+   - "Daniel P." = Daniel Pynn or Daniel (find by first name)
+   - Match other technicians similarly by first name
+
+3. For EACH property listed under a technician in the Excel:
+   - Find or create the property in the Properties database
+   - Assign it to that technician on the Service Technicians page
+   - Set the SUMMER SCHEDULE service days based on Column E:
+     - "6 Days" = M, T, W, T, F, S (Monday through Saturday)
+     - "M. W. F. Year-Round" or "M. W. F." = M, W, F (Monday, Wednesday, Friday)
+     - "M. W. F. S." = M, W, F, S (Monday, Wednesday, Friday, Saturday)
+     - "Mon - Fri" = M, T, W, T, F (Monday through Friday)
+     - "M. W. Th. F." = M, W, Th, F (Monday, Wednesday, Thursday, Friday)
+     - "M. F. Year-Round" = M, F (Monday, Friday)
+     - "Mon & Fri." = M, F (Monday, Friday)
+   - Set the WINTER SCHEDULE service days based on Column F (same logic)
+
+4. The property cards under each technician should show:
+   - Property Name
+   - Zone (from Column C)
+   - Service days as colored circles (M, T, W, T, F, S, S) - filled/highlighted for active days
+   - Summer schedule when "Summer" mode is selected
+   - Winter schedule when "Winter" mode is selected
+
+5. ALSO assign the technician to the correct SUPERVISOR based on Column A:
+   - "Alfred - Mid County" = Alfred Pena (Mid County)
+   - "Paul - S. County" = Paul Fuhrman (South County)
+   - "Richard - North County" = Richard Holley (North County)
+
+**IMPORTANT - DO NOT:**
+- Change any UI design or layout
+- Change any colors or styling
+- Modify any page structure
+- Remove any existing features
+
+**ONLY:**
+- Add/update property assignments to technicians
+- Set summer and winter service day schedules
+- Assign technicians to their supervisors/counties
+
+After this update, when I click on "Eric Gritzke" in the Service Technicians page, I should see all his properties from the Excel (Amberwalk, Bearcreek, Belcaro, Madison Park, Ridge At Cal Oaks, River's Edge, Solera At Murrieta, etc.) with their correct M, W, F service day schedules.
