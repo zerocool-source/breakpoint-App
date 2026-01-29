@@ -843,10 +843,6 @@ export default function Fleet() {
                 </Badge>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-500">
-                  Updated: {lastMapRefresh.toLocaleTimeString()}
-                </span>
-                
                 {/* Vehicle Search Dropdown */}
                 <Popover open={vehicleSearchOpen} onOpenChange={setVehicleSearchOpen}>
                   <PopoverTrigger asChild>
