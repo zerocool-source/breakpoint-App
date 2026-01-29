@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +23,15 @@ import {
   Package,
   PackagePlus,
   Minus,
-  Trash2
+  Trash2,
+  MapPin,
+  RefreshCw,
+  Maximize2,
+  Layers
 } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { FleetTruck, FleetMaintenanceRecord, TruckInventory } from "@shared/schema";
 import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES, TRUCK_INVENTORY_CATEGORIES } from "@shared/schema";
@@ -102,6 +109,68 @@ const MOCK_ACTIVITY = [
   { id: 4, user: "DP", name: "David P.", action: "completed service for", vehicle: "TRK-005", comment: "Oil change and tire rotation complete", time: "1 day ago" },
 ];
 
+// Custom vehicle markers for the map
+const createVehicleIcon = (status: string) => {
+  const colors: Record<string, string> = {
+    active: "#22c55e",
+    transit: "#f97316",
+    inactive: "#6b7280",
+    inshop: "#eab308",
+  };
+  const color = colors[status] || colors.inactive;
+  
+  return L.divIcon({
+    className: "custom-vehicle-marker",
+    html: `
+      <div style="
+        background-color: ${color};
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 17h4V5H2v12h3"/>
+          <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/>
+          <circle cx="7.5" cy="17.5" r="2.5"/>
+          <circle cx="17.5" cy="17.5" r="2.5"/>
+        </svg>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
+  });
+};
+
+// Fix default Leaflet marker icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+// Map auto-fit bounds component
+function MapBoundsUpdater({ devices }: { devices: Array<{ location: { lat: number; lng: number } }> }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (devices.length > 0) {
+      const bounds = L.latLngBounds(devices.map(d => [d.location.lat, d.location.lng]));
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }
+  }, [devices, map]);
+  
+  return null;
+}
+
 export default function Fleet() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -129,6 +198,12 @@ export default function Fleet() {
     minQuantity: 0,
     notes: "",
   });
+  
+  // Map state
+  const [mapFilter, setMapFilter] = useState("all");
+  const [mapExpanded, setMapExpanded] = useState(false);
+  const [mapStyle, setMapStyle] = useState<"street" | "satellite">("street");
+  const [lastMapRefresh, setLastMapRefresh] = useState(new Date());
 
   const { data: trucks = [], isLoading: trucksLoading } = useQuery<FleetTruck[]>({
     queryKey: ["/api/fleet/trucks"],
@@ -189,15 +264,38 @@ export default function Fleet() {
     inactive: number;
   }
 
-  const { data: gpsData, isLoading: gpsLoading } = useQuery<{ devices: GPSDevice[]; summary: GPSSummary }>({
+  const { data: gpsData, isLoading: gpsLoading, refetch: refetchGps } = useQuery<{ devices: GPSDevice[]; summary: GPSSummary }>({
     queryKey: ["/api/fleet/gps/devices"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/gps/devices");
       const data = await res.json();
+      setLastMapRefresh(new Date());
       return data.devices ? data : { devices: [], summary: { total: 0, active: 0, inShop: 0, inactive: 0 } };
     },
     refetchInterval: 30000, // Refresh every 30 seconds for live tracking
   });
+
+  // Filtered GPS devices for the map
+  const filteredMapDevices = useMemo(() => {
+    const devices = gpsData?.devices || [];
+    return devices.filter(device => {
+      if (mapFilter === "all") return true;
+      if (mapFilter === "active") return device.online && device.ignition;
+      if (mapFilter === "inshop") return !device.online;
+      if (mapFilter === "south") return device.name.toLowerCase().includes("south");
+      if (mapFilter === "mid") return device.name.toLowerCase().includes("mid");
+      if (mapFilter === "north") return device.name.toLowerCase().includes("north");
+      return true;
+    });
+  }, [gpsData?.devices, mapFilter]);
+
+  // Get vehicle status for map markers
+  const getVehicleMapStatus = (device: GPSDevice) => {
+    if (!device.online) return "inactive";
+    if (device.speed > 5) return "transit";
+    if (device.ignition) return "active";
+    return "inactive";
+  };
 
   const trucksWithMaintenance: TruckWithMaintenance[] = trucks.map(truck => {
     const records = allRecords.filter(r => r.truckNumber === truck.truckNumber);
@@ -523,6 +621,166 @@ export default function Fleet() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Live Fleet Map Section */}
+        <Card className={`bg-white shadow-sm hover:shadow-md transition-shadow ${mapExpanded ? 'fixed inset-4 z-50' : ''}`}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[#0077b6]" />
+                <CardTitle className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Live Fleet Map</CardTitle>
+                <Badge className="bg-green-100 text-green-700 text-xs">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse inline-block" />
+                  LIVE
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  Last updated: {lastMapRefresh.toLocaleTimeString()}
+                </span>
+                <Select value={mapFilter} onValueChange={setMapFilter}>
+                  <SelectTrigger className="w-32 h-8 text-xs">
+                    <SelectValue placeholder="Filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Vehicles</SelectItem>
+                    <SelectItem value="active">Active Only</SelectItem>
+                    <SelectItem value="inshop">In Shop</SelectItem>
+                    <SelectItem value="south">South County</SelectItem>
+                    <SelectItem value="mid">Mid County</SelectItem>
+                    <SelectItem value="north">North County</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMapStyle(s => s === "street" ? "satellite" : "street")}
+                  className="h-8"
+                >
+                  <Layers className="w-4 h-4 mr-1" />
+                  {mapStyle === "street" ? "Satellite" : "Street"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchGps()}
+                  className="h-8"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMapExpanded(!mapExpanded)}
+                  className="h-8"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className={`relative ${mapExpanded ? 'h-[calc(100vh-180px)]' : 'h-[450px]'} rounded-b-lg overflow-hidden`}>
+              {gpsLoading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <div className="flex flex-col items-center gap-2">
+                    <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
+                    <p className="text-sm text-gray-500">Loading GPS data...</p>
+                  </div>
+                </div>
+              ) : filteredMapDevices.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <div className="flex flex-col items-center gap-2">
+                    <MapPin className="w-8 h-8 text-gray-400" />
+                    <p className="text-sm text-gray-500">No vehicles found</p>
+                  </div>
+                </div>
+              ) : (
+                <MapContainer
+                  center={[33.7, -117.2]}
+                  zoom={10}
+                  style={{ height: "100%", width: "100%" }}
+                  scrollWheelZoom={true}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url={mapStyle === "satellite" 
+                      ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                      : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    }
+                  />
+                  <MapBoundsUpdater devices={filteredMapDevices} />
+                  {filteredMapDevices.map((device) => (
+                    <Marker
+                      key={device.id}
+                      position={[device.location.lat, device.location.lng]}
+                      icon={createVehicleIcon(getVehicleMapStatus(device))}
+                    >
+                      <Popup>
+                        <div className="min-w-[200px]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-3 h-3 rounded-full ${
+                              getVehicleMapStatus(device) === "active" ? "bg-green-500" :
+                              getVehicleMapStatus(device) === "transit" ? "bg-orange-500" : "bg-gray-500"
+                            }`} />
+                            <span className="font-semibold">{device.name}</span>
+                          </div>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Status:</span>
+                              <span className={`font-medium ${
+                                device.online ? "text-green-600" : "text-gray-600"
+                              }`}>
+                                {device.online ? (device.speed > 5 ? "In Transit" : "Active") : "Offline"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Speed:</span>
+                              <span>{Math.round(device.speed)} mph</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Odometer:</span>
+                              <span>{device.odometer.toLocaleString()} mi</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Engine:</span>
+                              <span>{device.ignition ? "On" : "Off"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Last Update:</span>
+                              <span>{new Date(device.lastUpdate).toLocaleTimeString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              )}
+              {/* Map Legend */}
+              <div className="absolute bottom-4 left-4 bg-white/95 rounded-lg shadow-md px-3 py-2 z-[1000]">
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span>Active</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                    <span>In Transit</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-gray-500" />
+                    <span>Inactive</span>
+                  </div>
+                </div>
+              </div>
+              {/* Vehicle count badge */}
+              <div className="absolute top-4 right-4 bg-white/95 rounded-lg shadow-md px-3 py-1.5 z-[1000]">
+                <span className="text-sm font-medium">{filteredMapDevices.length} vehicles</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Row 2 - Activity & Issues */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
