@@ -889,28 +889,6 @@ export default function Fleet() {
                   </PopoverContent>
                 </Popover>
 
-                {/* Geofence Dropdown */}
-                <Select value={selectedGeofence} onValueChange={setSelectedGeofence}>
-                  <SelectTrigger className="w-36 h-8 text-xs" data-testid="geofence-dropdown">
-                    <SelectValue placeholder="Geofences" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999]">
-                    <SelectItem value="all">All Geofences</SelectItem>
-                    <SelectItem value="hide">Hide Geofences</SelectItem>
-                    {geofences.map(gf => (
-                      <SelectItem key={gf.id} value={gf.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded" 
-                            style={{ backgroundColor: getGeofenceColor(gf.name) }}
-                          />
-                          {gf.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
                 {/* Filter */}
                 <Select value={mapFilter} onValueChange={setMapFilter}>
                   <SelectTrigger className="w-28 h-8 text-xs" data-testid="status-filter-dropdown">
