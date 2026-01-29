@@ -1937,7 +1937,7 @@ export default function Estimates() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#0077b6]" />
-                        <span className="text-sm text-slate-700">Repair Tech</span>
+                        <span className="text-sm text-slate-700">Repair Technician</span>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold text-slate-700">{sourceMetrics.repairTech.count}</span>
@@ -1950,7 +1950,7 @@ export default function Estimates() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#14b8a6]" />
-                        <span className="text-sm text-slate-700">Service Tech</span>
+                        <span className="text-sm text-slate-700">Service Technician</span>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold text-slate-700">{sourceMetrics.serviceTech.count}</span>
@@ -1963,7 +1963,7 @@ export default function Estimates() {
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-[#6b7280]" />
-                        <span className="text-sm text-slate-700">Office Staff</span>
+                        <span className="text-sm text-slate-700">Office Entry</span>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold text-slate-700">{sourceMetrics.officeStaff.count}</span>
@@ -2010,9 +2010,9 @@ export default function Estimates() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="repair_tech">Repair Tech</SelectItem>
-                  <SelectItem value="service_tech">Service Tech</SelectItem>
-                  <SelectItem value="office_staff">Office Staff</SelectItem>
+                  <SelectItem value="repair_tech">Repair Technician</SelectItem>
+                  <SelectItem value="service_tech">Service Technician</SelectItem>
+                  <SelectItem value="office_staff">Office Entry</SelectItem>
                 </SelectContent>
               </Select>
 
