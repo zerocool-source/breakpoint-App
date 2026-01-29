@@ -971,10 +971,10 @@ export default function Calendar() {
           </div>
         </div>
         
-        <div className="px-6 py-4 overflow-x-auto">
+        <div className="px-6 py-4 overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="min-w-[1200px]">
-            <div className="flex border-b border-slate-200 bg-slate-50">
-              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-[#64748B] sticky left-0 bg-slate-50 z-10">
+            <div className="flex border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
+              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-[#64748B] sticky left-0 bg-white z-30">
                 TECHNICIAN
               </div>
               {weekDates.map((date, i) => {
