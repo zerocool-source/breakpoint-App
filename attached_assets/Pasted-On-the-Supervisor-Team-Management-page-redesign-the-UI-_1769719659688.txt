@@ -1,0 +1,70 @@
+On the Supervisor Team Management page, redesign the UI with a clean QuickBooks style using orange (#f97316) as the primary accent color:
+
+**1. AVATAR COLORS - NO PURPLE OR PINK:**
+- Paul Fuhrman (South County): Orange (#f97316)
+- Richard Holley (North County): Ocean Blue (#0077b6)
+- Alfred Pena (Mid County): Teal (#14b8a6)
+- Unassigned Technicians: Rotate through Ocean Blue (#0077b6), Teal (#14b8a6), Green (#22c55e), Gray (#6b7280)
+- Remove all purple, pink, magenta colors
+
+**2. SUPERVISORS & TEAMS CARD:**
+- White card background with subtle shadow
+- Each supervisor row: White background with subtle bottom border
+- County badges:
+  - South County: Orange (#f97316) background, white text
+  - North County: Ocean Blue (#0077b6) background, white text
+  - Mid County: Teal (#14b8a6) background, white text
+- "3 Technicians" badge: Light gray background, dark text
+- "+" add button: Orange (#f97316) icon
+- Hover state: Light orange tint (#fff7ed)
+
+**3. UNASSIGNED TECHNICIANS CARD:**
+- White card background with subtle shadow
+- Search bar: Light gray background, subtle border
+- Each technician row: Clean with subtle bottom border
+- "+ Assign" button: Orange (#f97316) text, or orange outline button
+- Hover state: Light orange tint
+
+**4. ASSIGN QC INSPECTION FORM:**
+- White card background with subtle shadow
+- Form labels: Dark gray text
+- Required asterisk: Red (#ef4444)
+- Input fields: White background, light gray border (#e5e7eb), rounded corners
+- Focus state: Orange (#f97316) border
+- "Cancel" button: Gray outline
+- "+ Assign Inspection" button: Orange (#f97316) background, white text
+
+**5. FILTER RESULTS BAR:**
+- Light gray background (#f9fafb)
+- Filter dropdowns: White background, subtle border, rounded pill shape
+- Active filter: Orange (#f97316) border or background tint
+- "Date Range" button: White with calendar icon
+
+**6. TABS (Report Issue, QC Inspection Log):**
+- Inactive tab: Gray text, no background
+- Active tab: Orange (#f97316) text with orange bottom border (2-3px)
+- Or pill style: Active tab has light orange background (#fff7ed) with orange text
+
+**7. REPORT ISSUE SECTION:**
+- "0 Issues" badge: Green (#22c55e) if zero, Orange if has issues
+- Warning icon: Orange (#f97316)
+
+**8. GENERAL STYLING:**
+- Page background: Light gray (#f9fafb)
+- All cards: White background, subtle shadow, rounded corners (12px)
+- Primary buttons: Orange (#f97316) background, white text
+- Secondary buttons: White background, gray or orange border
+- Links: Ocean blue (#0077b6)
+- Borders: Light gray (#e5e7eb)
+- Text: Dark gray (#1f2937) primary, Medium gray (#6b7280) secondary
+
+**COLOR PALETTE - ONLY USE:**
+- Orange: #f97316 (primary accent)
+- Ocean Blue: #0077b6 (links, secondary)
+- Teal: #14b8a6 (accents)
+- Green: #22c55e (success)
+- Red: #ef4444 (errors, required)
+- Gray: #6b7280, #9ca3af (text, icons)
+- Light Gray: #f9fafb, #e5e7eb (backgrounds, borders)
+- White: #ffffff
+- NO purple, pink, magenta, indigo, violet

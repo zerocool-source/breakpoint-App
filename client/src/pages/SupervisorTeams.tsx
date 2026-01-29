@@ -63,13 +63,21 @@ function getInitials(firstName: string, lastName: string): string {
 function getAvatarColor(name: string): string {
   const colors = [
     "bg-[#0077b6]", // Ocean Blue
-    "bg-[#f97316]", // Orange
     "bg-[#14b8a6]", // Teal
     "bg-[#22c55e]", // Green
     "bg-[#6b7280]", // Gray
   ];
   const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
+}
+
+function getRegionAvatarColor(region: string | null | undefined): string {
+  switch (region) {
+    case "south": return "bg-[#f97316]"; // Orange for South County
+    case "north": return "bg-[#0077b6]"; // Ocean Blue for North County
+    case "mid": return "bg-[#14b8a6]"; // Teal for Mid County
+    default: return "bg-[#6b7280]"; // Gray for unassigned
+  }
 }
 
 function getRegionLabel(region: string | null | undefined): string {
@@ -134,8 +142,8 @@ function AddSupervisorModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[700px] p-0 gap-0">
-        <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
-          <DialogTitle className="text-lg font-semibold">Add Supervisor</DialogTitle>
+        <DialogHeader className="bg-[#f97316] text-white px-4 py-3 rounded-t-lg">
+          <DialogTitle className="text-lg font-semibold text-white">Add Supervisor</DialogTitle>
         </DialogHeader>
 
         <div className="p-6 bg-slate-100">
@@ -144,7 +152,7 @@ function AddSupervisorModal({
               <div className="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-300">
                 <Image className="w-8 h-8 text-slate-400" />
               </div>
-              <button className="text-[#0078D4] text-sm font-medium hover:underline">
+              <button className="text-[#f97316] text-sm font-medium hover:underline">
                 Add Photo
               </button>
             </div>
@@ -202,7 +210,7 @@ function AddSupervisorModal({
             <Button
               onClick={handleSubmit}
               disabled={!firstName.trim() || !lastName.trim()}
-              className="bg-[#0078D4] hover:bg-[#0078D4]/90 text-white px-8"
+              className="bg-[#f97316] hover:bg-[#f97316]/90 text-white px-8"
               data-testid="button-add-supervisor-submit"
             >
               ADD SUPERVISOR
@@ -282,7 +290,7 @@ function EditSupervisorModal({
     <>
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-[700px] p-0 gap-0">
-          <DialogHeader className="bg-[#0078D4] text-white px-4 py-3 rounded-t-lg">
+          <DialogHeader className="bg-[#f97316] text-white px-4 py-3 rounded-t-lg">
             <DialogTitle className="text-lg font-semibold">Edit Supervisor</DialogTitle>
           </DialogHeader>
 
@@ -297,7 +305,7 @@ function EditSupervisorModal({
                 >
                   {initials}
                 </div>
-                <button className="text-[#0078D4] text-sm font-medium hover:underline">
+                <button className="text-[#f97316] text-sm font-medium hover:underline">
                   Change Photo
                 </button>
               </div>
@@ -377,7 +385,7 @@ function EditSupervisorModal({
               <Button
                 onClick={handleSubmit}
                 disabled={!firstName.trim() || !lastName.trim()}
-                className="bg-[#0078D4] hover:bg-[#0078D4]/90 text-white px-8"
+                className="bg-[#f97316] hover:bg-[#f97316]/90 text-white px-8"
                 data-testid="button-save-supervisor"
               >
                 SAVE CHANGES
@@ -467,7 +475,7 @@ function TeamMembersSidebar({
   return (
     <Sheet open={!!supervisor} onOpenChange={() => onClose()}>
       <SheetContent className="w-[450px] sm:w-[500px] p-0">
-        <SheetHeader className="bg-[#0078D4] text-white px-6 py-4">
+        <SheetHeader className="bg-[#f97316] text-white px-6 py-4">
           <div className="flex items-center gap-3">
             <div
               className={cn(
@@ -746,7 +754,7 @@ export default function SupervisorTeams() {
           </DropdownMenu>
 
           <Button
-            className="bg-[#0078D4] hover:bg-[#0078D4]/90 text-white gap-2"
+            className="bg-[#f97316] hover:bg-[#f97316]/90 text-white gap-2 shadow-sm"
             onClick={() => setShowAddModal(true)}
             data-testid="button-add-supervisor"
           >
@@ -784,13 +792,13 @@ export default function SupervisorTeams() {
                 paginatedSupervisors.map((supervisor) => {
                   const fullName = `${supervisor.firstName} ${supervisor.lastName}`.trim();
                   const initials = getInitials(supervisor.firstName, supervisor.lastName);
-                  const avatarColor = getAvatarColor(fullName);
+                  const avatarColor = getRegionAvatarColor(supervisor.region);
                   const teamCount = getTeamMemberCount(supervisor.id);
 
                   return (
                     <TableRow
                       key={supervisor.id}
-                      className="hover:bg-slate-50 cursor-pointer"
+                      className="hover:bg-[#fff7ed] cursor-pointer transition-colors"
                       onClick={() => setEditingSupervisor(supervisor)}
                       data-testid={`supervisor-row-${supervisor.id}`}
                     >
@@ -798,25 +806,30 @@ export default function SupervisorTeams() {
                         <div className="flex items-center gap-3">
                           <div
                             className={cn(
-                              "w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0",
+                              "w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0 shadow-sm",
                               avatarColor
                             )}
                           >
                             {initials}
                           </div>
-                          <span className="font-medium text-slate-700">{fullName}</span>
+                          <span className="font-medium text-[#1f2937]">{fullName}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="text-[#6b7280]">
                         {supervisor.phone || "-"}
                       </TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="text-[#6b7280]">
                         {supervisor.email || "-"}
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant="outline"
-                          className={cn("font-medium", getRegionBadgeStyle(supervisor.region))}
+                          className={cn(
+                            "font-medium border",
+                            supervisor.region === "south" && "bg-[#f97316] text-white border-[#f97316]",
+                            supervisor.region === "north" && "bg-[#0077b6] text-white border-[#0077b6]",
+                            supervisor.region === "mid" && "bg-[#14b8a6] text-white border-[#14b8a6]",
+                            !supervisor.region && "bg-slate-100 text-slate-600 border-slate-200"
+                          )}
                         >
                           {getRegionLabel(supervisor.region)}
                         </Badge>
@@ -825,7 +838,7 @@ export default function SupervisorTeams() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-[#0078D4] hover:text-[#0078D4]/80 gap-1"
+                          className="text-[#f97316] hover:text-[#f97316] hover:bg-[#fff7ed] gap-1"
                           onClick={(e) => {
                             e.stopPropagation();
                             setViewingTeam(supervisor);
@@ -838,8 +851,7 @@ export default function SupervisorTeams() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant="outline"
-                          className="bg-green-100 text-green-700 border-green-200"
+                          className="bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20"
                         >
                           Active
                         </Badge>
