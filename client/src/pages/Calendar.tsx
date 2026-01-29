@@ -218,6 +218,7 @@ export default function Calendar() {
     d.setDate(d.getDate() - d.getDay());
     return d;
   });
+  const [viewMode, setViewMode] = useState<"5day" | "7day">("5day");
   const [roleFilter, setRoleFilter] = useState<"service" | "repair" | "supervisor">("service");
   const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
@@ -278,6 +279,22 @@ export default function Calendar() {
   });
 
   const weekDates = useMemo(() => getWeekDates(currentWeekStart), [currentWeekStart]);
+
+  // Display dates based on view mode (5-day or 7-day) - includes original weekDates index
+  const displayDatesWithIndex = useMemo(() => {
+    if (viewMode === "5day") {
+      // Show Monday through Friday (indices 1-5)
+      return weekDates.slice(1, 6).map((date, i) => ({ date, originalIndex: i + 1 }));
+    }
+    return weekDates.map((date, i) => ({ date, originalIndex: i }));
+  }, [weekDates, viewMode]);
+
+  const displayDaysOfWeek = useMemo(() => {
+    if (viewMode === "5day") {
+      return DAYS_OF_WEEK.slice(1, 6);
+    }
+    return DAYS_OF_WEEK;
+  }, [viewMode]);
 
   // Fetch technicians from stored technicians database (syncs with ServiceTechs, RepairQueue, Supervisors pages)
   const { data: techniciansData } = useQuery<{ technicians: Technician[] }>({
@@ -705,6 +722,33 @@ export default function Calendar() {
                 Today
               </Button>
               
+              <div className="flex gap-0.5 p-0.5 bg-slate-100 rounded-full">
+                <button
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium transition-all rounded-full",
+                    viewMode === "5day"
+                      ? "bg-white text-slate-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  )}
+                  onClick={() => setViewMode("5day")}
+                  data-testid="button-view-5day"
+                >
+                  5 Day
+                </button>
+                <button
+                  className={cn(
+                    "px-3 py-1 text-xs font-medium transition-all rounded-full",
+                    viewMode === "7day"
+                      ? "bg-white text-slate-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  )}
+                  onClick={() => setViewMode("7day")}
+                  data-testid="button-view-7day"
+                >
+                  7 Day
+                </button>
+              </div>
+              
               <div className="flex gap-1 p-1 bg-slate-100 rounded-full">
                 <button
                   className={cn(
@@ -977,14 +1021,14 @@ export default function Calendar() {
               <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white sticky left-0 bg-[#0077b6] z-30">
                 TECHNICIAN
               </div>
-              {weekDates.map((date, i) => {
+              {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
                 const isToday = isSameDay(date, today);
                 return (
                   <div
-                    key={i}
-                    className="flex-1 min-w-[120px] px-2 py-3 text-center"
+                    key={originalIndex}
+                    className="flex-1 min-w-[140px] px-2 py-3 text-center"
                   >
-                    <div className="text-xs font-semibold text-white/80">{DAYS_OF_WEEK[i]}</div>
+                    <div className="text-xs font-semibold text-white/80">{displayDaysOfWeek[i]}</div>
                     <div
                       className={cn(
                         "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium mt-1",
@@ -1128,7 +1172,7 @@ export default function Calendar() {
                       </div>
                     </div>
                     
-                    {weekDates.map((date, dayIndex) => {
+                    {displayDatesWithIndex.map(({ date, originalIndex: dayIndex }, displayIndex) => {
                       const schedule = getScheduleForTechAndDate(tech.id, date);
                       const coverage = getCoverageForTechAndDate(tech.id, date);
                       const timeOff = getTimeOffForTechAndDate(tech.id, date);
@@ -1148,8 +1192,8 @@ export default function Calendar() {
                         const coveringTech = getCoveringTechForTimeOff(timeOff);
                         return (
                           <div
-                            key={dayIndex}
-                            className="flex-1 min-w-[120px] px-2 py-2"
+                            key={displayIndex}
+                            className="flex-1 min-w-[140px] px-2 py-2"
                           >
                             <div
                               className="h-full min-h-[80px] rounded-lg p-2"
@@ -1174,8 +1218,8 @@ export default function Calendar() {
 
                         return (
                           <div
-                            key={dayIndex}
-                            className="flex-1 min-w-[120px] px-2 py-2"
+                            key={displayIndex}
+                            className="flex-1 min-w-[140px] px-2 py-2"
                           >
                             <div
                               className={cn(
@@ -1297,8 +1341,8 @@ export default function Calendar() {
                       if (coverage && !schedule) {
                         return (
                           <div
-                            key={dayIndex}
-                            className="flex-1 min-w-[120px] px-2 py-2"
+                            key={displayIndex}
+                            className="flex-1 min-w-[140px] px-2 py-2"
                           >
                             <div
                               className="min-h-[80px] rounded-lg p-2 border-l-[3px]"
@@ -1332,8 +1376,8 @@ export default function Calendar() {
                       if ((tech.role === "supervisor" || tech.role === "foreman") && qcInspectionsForDay.length > 0) {
                         return (
                           <div
-                            key={dayIndex}
-                            className="flex-1 min-w-[120px] px-2 py-2"
+                            key={displayIndex}
+                            className="flex-1 min-w-[140px] px-2 py-2"
                             data-testid={`cell-supervisor-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
@@ -1386,8 +1430,8 @@ export default function Calendar() {
                       if (tech.role === "repair" && scheduledRepairsForDay.length > 0) {
                         return (
                           <div
-                            key={dayIndex}
-                            className="flex-1 min-w-[120px] px-2 py-2"
+                            key={displayIndex}
+                            className="flex-1 min-w-[140px] px-2 py-2"
                             data-testid={`cell-repair-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
@@ -1445,8 +1489,8 @@ export default function Calendar() {
                           const routeCoverage = routeCoverages.get(routeBlockKey);
                           return (
                             <div
-                              key={dayIndex}
-                              className="flex-1 min-w-[120px] px-2 py-2"
+                              key={displayIndex}
+                              className="flex-1 min-w-[140px] px-2 py-2"
                               data-testid={`cell-service-${tech.id}-${dayIndex}`}
                             >
                               <div
@@ -1461,26 +1505,27 @@ export default function Calendar() {
                                 {routeCoverage && (
                                   <div className="mb-2 -mx-2 -mt-2 px-2 py-1.5 bg-[#f97316] rounded-t-lg">
                                     {routeCoverage.type === 'extended' && (
-                                      <div>
-                                        <p className="text-[9px] font-bold text-white">Extended Coverage</p>
-                                        <p className="text-[8px] text-white/90 mt-0.5">Covered by: {routeCoverage.coveringTechName}</p>
+                                      <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-white uppercase tracking-wide">Extended Coverage</p>
+                                        <p className="text-[9px] text-white">
+                                          Covered by: <span className="font-bold">{routeCoverage.coveringTechName}</span>
+                                        </p>
                                         {routeCoverage.fromDate && routeCoverage.toDate && (
-                                          <p className="text-[8px] text-white/80">
+                                          <p className="text-[9px] text-white/90">
                                             Dates: {new Date(routeCoverage.fromDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(routeCoverage.toDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                           </p>
                                         )}
-                                        <p className="text-[8px] text-white/80">Covering: All {routeCoverage.propertyCount} properties</p>
                                       </div>
                                     )}
                                     {routeCoverage.type === 'split' && (
-                                      <div>
-                                        <p className="text-[9px] font-bold text-white">Split Route</p>
-                                        <div className="mt-0.5 space-y-0.5">
-                                          <p className="text-[8px] text-white/90">
-                                            <span className="font-medium">{routeCoverage.techAName}:</span> {routeCoverage.techAProperties?.filter(Boolean).join(', ') || 'None'}
+                                      <div className="space-y-1">
+                                        <p className="text-[10px] font-bold text-white uppercase tracking-wide">Split Route</p>
+                                        <div className="space-y-0.5">
+                                          <p className="text-[9px] text-white">
+                                            <span className="font-bold">{routeCoverage.techAName}:</span> {routeCoverage.techAProperties?.filter(Boolean).join(', ') || 'None'}
                                           </p>
-                                          <p className="text-[8px] text-white/90">
-                                            <span className="font-medium">{routeCoverage.techBName}:</span> {routeCoverage.techBProperties?.filter(Boolean).join(', ') || 'None'}
+                                          <p className="text-[9px] text-white">
+                                            <span className="font-bold">{routeCoverage.techBName}:</span> {routeCoverage.techBProperties?.filter(Boolean).join(', ') || 'None'}
                                           </p>
                                         </div>
                                       </div>
@@ -1514,13 +1559,26 @@ export default function Calendar() {
                                 
                                 {isRouteExpanded && (
                                   <div className="mt-2 space-y-1 border-t border-slate-200 pt-2">
-                                    {propertiesForDay.slice(0, 5).map((prop, idx) => (
-                                      <div key={prop.id} className="flex items-center gap-1 text-[10px] text-[#64748B]">
-                                        <span className="w-4 text-center font-medium">{idx + 1}</span>
-                                        <MapPin className="w-3 h-3 shrink-0" />
-                                        <span className="truncate">{prop.propertyName}</span>
-                                      </div>
-                                    ))}
+                                    {propertiesForDay.slice(0, 5).map((prop, idx) => {
+                                      // For split routes, determine which tech covers this property
+                                      let techBadge = null;
+                                      if (routeCoverage?.type === 'split') {
+                                        const propName = prop.propertyName || '';
+                                        if (routeCoverage.techAProperties?.includes(propName)) {
+                                          techBadge = <span className="ml-1 px-1 py-0.5 text-[8px] font-medium bg-[#0077b6] text-white rounded">({routeCoverage.techAName?.charAt(0)})</span>;
+                                        } else if (routeCoverage.techBProperties?.includes(propName)) {
+                                          techBadge = <span className="ml-1 px-1 py-0.5 text-[8px] font-medium bg-[#22c55e] text-white rounded">({routeCoverage.techBName?.charAt(0)})</span>;
+                                        }
+                                      }
+                                      return (
+                                        <div key={prop.id} className="flex items-center gap-1 text-[10px] text-[#64748B]">
+                                          <span className="w-4 text-center font-medium">{idx + 1}</span>
+                                          <MapPin className="w-3 h-3 shrink-0" />
+                                          <span className="truncate">{prop.propertyName}</span>
+                                          {techBadge}
+                                        </div>
+                                      );
+                                    })}
                                     {propertiesForDay.length > 5 && (
                                       <p className="text-[10px] text-[#0077b6] font-medium">
                                         +{propertiesForDay.length - 5} more
@@ -1623,8 +1681,8 @@ export default function Calendar() {
 
                       return (
                         <div
-                          key={dayIndex}
-                          className="flex-1 min-w-[120px] px-2 py-2 group/cell"
+                          key={displayIndex}
+                          className="flex-1 min-w-[140px] px-2 py-2 group/cell"
                         >
                           <div className="h-full min-h-[80px] border-2 border-dashed border-transparent group-hover/cell:border-slate-200 rounded-lg flex items-center justify-center">
                             <Button
