@@ -1897,25 +1897,9 @@ export default function Estimates() {
             </div>
 
             {/* Bottom Row */}
-            <div className="grid grid-cols-3 gap-4">
-              {/* Windy Cleanup Jobs */}
-              <a 
-                href="/tech-ops/windy-day-cleanup"
-                className="bg-white rounded-2xl shadow-sm p-5 flex flex-col items-center justify-center hover:shadow-md transition-all cursor-pointer"
-                data-testid="metric-windy-cleanup"
-              >
-                <Wind className="w-8 h-8 text-[#14b8a6] mb-2" />
-                <span className="text-4xl font-bold text-slate-700">{windyDayPending}</span>
-                <span className="text-sm text-slate-500 mt-1">Windy Cleanup Jobs</span>
-                <div className="flex gap-1.5 mt-3">
-                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]" />
-                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]" />
-                  <div className="w-2 h-2 rounded-full bg-[#14b8a6]" />
-                </div>
-              </a>
-
+            <div className="grid grid-cols-1 gap-4">
               {/* By Source - Donut Chart */}
-              <div className="bg-white rounded-2xl shadow-sm p-5 col-span-2">
+              <div className="bg-white rounded-2xl shadow-sm p-5">
                 <h4 className="text-sm font-medium text-slate-700 mb-4">By Source</h4>
                 <div className="flex items-center gap-6">
                   {/* Donut Chart */}
