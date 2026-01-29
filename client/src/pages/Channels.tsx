@@ -97,6 +97,38 @@ const ANNOUNCEMENTS_CHANNEL = {
   updatedAt: new Date().toISOString()
 };
 
+interface ChannelUser {
+  id: string;
+  name: string;
+  role: string;
+  isOnline: boolean;
+  avatar?: string;
+}
+
+const getChannelMembers = (channelId: string): ChannelUser[] => {
+  if (channelId === "announcements") {
+    return [
+      { id: "1", name: "Sarah Johnson", role: "office_admin", isOnline: true },
+      { id: "2", name: "Mike Chen", role: "supervisor", isOnline: true },
+      { id: "3", name: "David Rodriguez", role: "supervisor", isOnline: false },
+      { id: "4", name: "Emily Williams", role: "service_technician", isOnline: true },
+      { id: "5", name: "James Brown", role: "service_technician", isOnline: false },
+      { id: "6", name: "Amanda Smith", role: "repair_technician", isOnline: true },
+      { id: "7", name: "Robert Taylor", role: "repair_technician", isOnline: false },
+      { id: "8", name: "Lisa Davis", role: "service_technician", isOnline: true },
+    ];
+  }
+  const memberCount = 3 + Math.floor(Math.random() * 5);
+  const roles = ["supervisor", "service_technician", "repair_technician"];
+  const names = ["John Smith", "Maria Garcia", "Chris Lee", "Pat Wilson", "Alex Turner", "Sam Rivera", "Jordan Blake"];
+  return Array.from({ length: memberCount }, (_, i) => ({
+    id: `member-${i}`,
+    name: names[i % names.length],
+    role: roles[i % roles.length],
+    isOnline: Math.random() > 0.5
+  }));
+};
+
 export default function Channels() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -106,7 +138,9 @@ export default function Channels() {
   const [showThread, setShowThread] = useState<string | null>(null);
   const [replyInput, setReplyInput] = useState("");
   const [showRightSidebar, setShowRightSidebar] = useState(false);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const memberDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: channelsData, isLoading: channelsLoading } = useQuery({
     queryKey: ["propertyChannels"],
@@ -233,6 +267,19 @@ export default function Channels() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (memberDropdownRef.current && !memberDropdownRef.current.contains(event.target as Node)) {
+        setShowMemberDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const channelMembers = selectedChannel ? getChannelMembers(selectedChannel.id) : [];
+  const onlineMembers = channelMembers.filter(m => m.isOnline);
 
   const filteredChannels = channels.filter(ch =>
     ch.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -544,12 +591,70 @@ export default function Channels() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="relative" ref={memberDropdownRef}>
+                      <button
+                        onClick={() => setShowMemberDropdown(!showMemberDropdown)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                        data-testid="button-member-count"
+                      >
+                        <Users className="w-4 h-4 text-[#0077b6]" />
+                        <span className="text-sm text-[#6b7280]">{channelMembers.length}</span>
+                        <span className="w-2 h-2 rounded-full bg-[#22c55e]" title={`${onlineMembers.length} online`} />
+                      </button>
+                      
+                      {showMemberDropdown && (
+                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-lg border border-[#e5e7eb] z-50">
+                          <div className="p-3 border-b border-[#e5e7eb]">
+                            <h4 className="font-semibold text-[#1f2937] text-sm">Channel Members</h4>
+                            <p className="text-xs text-[#6b7280]">{channelMembers.length} members · {onlineMembers.length} online</p>
+                          </div>
+                          <ScrollArea className="max-h-64">
+                            <div className="p-2">
+                              {channelMembers.map(member => {
+                                const roleInfo = getRoleInfo(member.role);
+                                return (
+                                  <div key={member.id} className="flex items-center gap-3 p-2 rounded hover:bg-slate-50">
+                                    <div className="relative">
+                                      <Avatar className="w-8 h-8">
+                                        <AvatarFallback className="bg-[#0077b6] text-white text-xs">
+                                          {getInitials(member.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span 
+                                        className={cn(
+                                          "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white",
+                                          member.isOnline ? "bg-[#22c55e]" : "bg-[#9ca3af]"
+                                        )} 
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-[#1f2937] truncate">{member.name}</p>
+                                      <div className="flex items-center gap-1">
+                                        <span className={cn("w-1.5 h-1.5 rounded-full", roleInfo.dot)} />
+                                        <span className="text-xs text-[#6b7280]">{roleInfo.label}</span>
+                                      </div>
+                                    </div>
+                                    <span className={cn(
+                                      "text-xs",
+                                      member.isOnline ? "text-[#22c55e]" : "text-[#9ca3af]"
+                                    )}>
+                                      {member.isOnline ? "Online" : "Offline"}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      )}
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       className="text-[#6b7280] hover:text-[#1f2937] hover:bg-slate-100"
                       onClick={() => setShowRightSidebar(!showRightSidebar)}
+                      data-testid="button-details"
                     >
                       <Users className="w-4 h-4 mr-1" />
                       Details
