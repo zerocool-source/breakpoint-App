@@ -1017,8 +1017,8 @@ export default function Calendar() {
         
         <div className="px-6 py-4 overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="min-w-[1200px]">
-            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] sticky top-0 z-20 shadow-md">
-              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white sticky left-0 bg-[#0077b6] z-30">
+            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] sticky top-0 z-50 shadow-md">
+              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white sticky left-0 bg-[#0077b6] z-[60]">
                 TECHNICIAN
               </div>
               {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
