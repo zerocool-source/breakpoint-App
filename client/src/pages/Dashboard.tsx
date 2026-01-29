@@ -20,6 +20,7 @@ import {
   UserX,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Droplets,
   UserPlus,
   Building2,
@@ -32,7 +33,11 @@ import {
   ClipboardList,
   AlertCircle,
   Cog,
-  Truck
+  Truck,
+  MapPin,
+  Layers,
+  Target,
+  Maximize2
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -51,7 +56,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip as LeafletTooltip } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface OpenEmergency {
   id: string;
@@ -149,6 +159,155 @@ interface DashboardData {
     pendingApprovals: number;
     activeRepairs: number;
   };
+}
+
+// GPS Device interface for fleet map
+interface GPSDevice {
+  id: string;
+  name: string;
+  online: boolean;
+  ignition: boolean;
+  speed: number;
+  location: { lat: number; lng: number };
+  lastUpdate: string;
+  odometer: number;
+}
+
+// Helper to validate GPS coordinates
+const isValidCoordinate = (lat: number, lng: number): boolean => {
+  if (lat === 0 && lng === 0) return false;
+  if (lat < -90 || lat > 90) return false;
+  if (lng < -180 || lng > 180) return false;
+  return true;
+};
+
+// Helper to extract truck number from device name
+const extractTruckNumber = (name: string): string => {
+  const match = name.match(/(?:Truck\s*#?\s*)(\d+)/i);
+  return match ? match[1] : "";
+};
+
+// Helper to format time ago
+const formatTimeAgo = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Unknown";
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  } catch {
+    return "Unknown";
+  }
+};
+
+// Custom vehicle icon for dashboard map
+const createDashboardVehicleIcon = (status: string, truckNumber: string = "") => {
+  const colors: Record<string, string> = {
+    active: "#22c55e",
+    transit: "#f97316",
+    inactive: "#6b7280",
+  };
+  const color = colors[status] || colors.inactive;
+  
+  return L.divIcon({
+    className: "custom-vehicle-marker",
+    html: `
+      <div style="position: relative;">
+        <div style="
+          background-color: ${color};
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          border: 2px solid white;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 17h4V5H2v12h3"/>
+            <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/>
+            <circle cx="7.5" cy="17.5" r="2.5"/>
+            <circle cx="17.5" cy="17.5" r="2.5"/>
+          </svg>
+        </div>
+        ${truckNumber ? `
+        <div style="
+          position: absolute;
+          top: -6px;
+          right: -6px;
+          background-color: #1e3a5f;
+          color: white;
+          font-size: 9px;
+          font-weight: bold;
+          padding: 1px 4px;
+          border-radius: 6px;
+          border: 1px solid white;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+          white-space: nowrap;
+        ">#${truckNumber}</div>
+        ` : ''}
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+};
+
+// Dashboard map controller
+function DashboardMapController({ 
+  devices, 
+  fitAll, 
+  setFitAll,
+  focusVehicleId,
+  setFocusVehicleId,
+  markerRefs
+}: { 
+  devices: Array<{ id: string; location: { lat: number; lng: number } }>;
+  fitAll: boolean;
+  setFitAll: (v: boolean) => void;
+  focusVehicleId: string | null;
+  setFocusVehicleId: (v: string | null) => void;
+  markerRefs?: React.MutableRefObject<{ [key: string]: L.Marker | null }>;
+}) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (fitAll && devices.length > 0) {
+      const validDevices = devices.filter(d => isValidCoordinate(d.location.lat, d.location.lng));
+      if (validDevices.length > 0) {
+        const bounds = L.latLngBounds(validDevices.map(d => [d.location.lat, d.location.lng]));
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
+        }
+      }
+      setFitAll(false);
+    }
+  }, [fitAll, devices, map, setFitAll]);
+  
+  useEffect(() => {
+    if (focusVehicleId) {
+      const device = devices.find(d => d.id === focusVehicleId);
+      if (device && isValidCoordinate(device.location.lat, device.location.lng)) {
+        map.setView([device.location.lat, device.location.lng], 14, { animate: true });
+        setTimeout(() => {
+          if (markerRefs?.current[focusVehicleId]) {
+            markerRefs.current[focusVehicleId]?.openPopup();
+          }
+        }, 300);
+      }
+      setFocusVehicleId(null);
+    }
+  }, [focusVehicleId, devices, map, setFocusVehicleId, markerRefs]);
+  
+  return null;
 }
 
 export default function Dashboard() {
@@ -328,6 +487,60 @@ export default function Dashboard() {
     },
     refetchInterval: 30000,
   });
+
+  // Fleet Map State
+  const [dashboardMapFilter, setDashboardMapFilter] = useState("all");
+  const [dashboardSatelliteView, setDashboardSatelliteView] = useState(false);
+  const [dashboardFitAll, setDashboardFitAll] = useState(false);
+  const [dashboardFocusVehicle, setDashboardFocusVehicle] = useState<string | null>(null);
+  const [dashboardVehicleSearchOpen, setDashboardVehicleSearchOpen] = useState(false);
+  const [dashboardVehicleSearchQuery, setDashboardVehicleSearchQuery] = useState("");
+  const dashboardMarkerRefs = useRef<{ [key: string]: L.Marker | null }>({});
+  
+  // Fleet GPS Data Query
+  const { data: gpsData } = useQuery<{ devices: GPSDevice[] }>({
+    queryKey: ["/api/fleet/gps/devices"],
+    queryFn: async () => {
+      const res = await fetch("/api/fleet/gps/devices");
+      if (!res.ok) return { devices: [] };
+      return res.json();
+    },
+    refetchInterval: 30000,
+  });
+
+  // Filtered GPS devices for dashboard map
+  const dashboardMapDevices = useMemo(() => {
+    const devices = gpsData?.devices || [];
+    return devices.filter(device => {
+      if (!isValidCoordinate(device.location.lat, device.location.lng)) return false;
+      if (dashboardMapFilter === "all") return true;
+      if (dashboardMapFilter === "active") return device.online && device.ignition && device.speed <= 5;
+      if (dashboardMapFilter === "transit") return device.online && device.speed > 5;
+      if (dashboardMapFilter === "inactive") return !device.online;
+      return true;
+    });
+  }, [gpsData?.devices, dashboardMapFilter]);
+
+  // Searchable vehicle list for dashboard
+  const dashboardVehicleList = useMemo(() => {
+    const devices = gpsData?.devices || [];
+    return devices
+      .filter(d => isValidCoordinate(d.location.lat, d.location.lng))
+      .filter(d => dashboardVehicleSearchQuery === "" || d.name.toLowerCase().includes(dashboardVehicleSearchQuery.toLowerCase()))
+      .sort((a, b) => {
+        const numA = parseInt(a.name.match(/#(\d+)/)?.[1] || "999");
+        const numB = parseInt(b.name.match(/#(\d+)/)?.[1] || "999");
+        return numA - numB;
+      });
+  }, [gpsData?.devices, dashboardVehicleSearchQuery]);
+
+  // Get vehicle status for dashboard map
+  const getDashboardVehicleStatus = (device: GPSDevice) => {
+    if (!device.online) return "inactive";
+    if (device.speed > 5) return "transit";
+    if (device.ignition) return "active";
+    return "inactive";
+  };
 
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -1999,6 +2212,293 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Live Fleet Map + Truck Activity Section */}
+        <div className="grid grid-cols-10 gap-6">
+          {/* Live Fleet Map - 60% width */}
+          <div className="col-span-6">
+            <Card className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#0077b6]" />
+                    <CardTitle className="text-base">Live Fleet Map</CardTitle>
+                    <Badge className="bg-green-100 text-green-700 text-xs">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse inline-block" />
+                      LIVE
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Vehicle Search Dropdown */}
+                    <Popover open={dashboardVehicleSearchOpen} onOpenChange={setDashboardVehicleSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 w-36 justify-between text-xs" data-testid="dashboard-vehicle-search">
+                          <span className="truncate">Find Vehicle...</span>
+                          <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-0 z-[9999]" align="end">
+                        <Command>
+                          <CommandInput 
+                            placeholder="Search trucks..." 
+                            value={dashboardVehicleSearchQuery}
+                            onValueChange={setDashboardVehicleSearchQuery}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No vehicles found</CommandEmpty>
+                            <CommandGroup>
+                              <ScrollArea className="h-[180px]">
+                                {dashboardVehicleList.map(vehicle => (
+                                  <CommandItem
+                                    key={vehicle.id}
+                                    onSelect={() => {
+                                      setDashboardFocusVehicle(vehicle.id);
+                                      setDashboardVehicleSearchOpen(false);
+                                    }}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${
+                                      vehicle.online && vehicle.ignition ? 'bg-green-500' :
+                                      vehicle.online ? 'bg-orange-500' : 'bg-gray-400'
+                                    }`} />
+                                    <span className="text-xs">{vehicle.name}</span>
+                                  </CommandItem>
+                                ))}
+                              </ScrollArea>
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    {/* Status Filter */}
+                    <Select value={dashboardMapFilter} onValueChange={setDashboardMapFilter}>
+                      <SelectTrigger className="w-24 h-7 text-xs">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="transit">In Transit</SelectItem>
+                        <SelectItem value="inactive">Offline</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Fit All */}
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setDashboardFitAll(true)} title="Fit all vehicles">
+                      <Target className="w-3.5 h-3.5" />
+                    </Button>
+                    
+                    {/* Satellite Toggle */}
+                    <Button 
+                      variant={dashboardSatelliteView ? "default" : "outline"} 
+                      size="sm" 
+                      className={`h-7 px-2 text-xs ${dashboardSatelliteView ? 'bg-[#0077b6]' : ''}`}
+                      onClick={() => setDashboardSatelliteView(!dashboardSatelliteView)}
+                    >
+                      <Layers className="w-3.5 h-3.5 mr-1" />
+                      Satellite
+                    </Button>
+                    
+                    {/* View Full Map */}
+                    <Button variant="ghost" size="sm" className="h-7 text-[#0077b6] hover:text-[#006299]" onClick={() => navigate("/fleet")}>
+                      <Maximize2 className="w-3.5 h-3.5 mr-1" />
+                      Full
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="relative h-[320px]">
+                  {gpsData?.devices && gpsData.devices.length > 0 ? (
+                    <MapContainer
+                      center={[33.9533, -117.3962]}
+                      zoom={10}
+                      className="h-full w-full"
+                      scrollWheelZoom={true}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url={
+                          dashboardSatelliteView
+                            ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        }
+                      />
+                      <DashboardMapController 
+                        devices={dashboardMapDevices}
+                        fitAll={dashboardFitAll}
+                        setFitAll={setDashboardFitAll}
+                        focusVehicleId={dashboardFocusVehicle}
+                        setFocusVehicleId={setDashboardFocusVehicle}
+                        markerRefs={dashboardMarkerRefs}
+                      />
+                      {dashboardMapDevices.map((device) => (
+                        <Marker
+                          key={device.id}
+                          position={[device.location.lat, device.location.lng]}
+                          icon={createDashboardVehicleIcon(getDashboardVehicleStatus(device), extractTruckNumber(device.name))}
+                          ref={(ref) => {
+                            if (ref) dashboardMarkerRefs.current[device.id] = ref;
+                          }}
+                        >
+                          <LeafletTooltip direction="top" offset={[0, -16]} opacity={0.95}>
+                            <div className="text-xs font-medium">{device.name}</div>
+                            <div className="text-[10px] text-gray-500">
+                              {device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}
+                            </div>
+                          </LeafletTooltip>
+                          <Popup>
+                            <div className="min-w-[180px] text-sm">
+                              <div className="font-semibold mb-2">{device.name}</div>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Status:</span>
+                                  <span>{device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Speed:</span>
+                                  <span>{Math.round(device.speed)} mph</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Updated:</span>
+                                  <span>{formatTimeAgo(device.lastUpdate)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-slate-50">
+                      <div className="text-center text-slate-500">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Loading fleet data...</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Vehicle count badge */}
+                  <div className="absolute top-3 right-3 bg-white/95 rounded-md shadow px-2 py-1 z-[1000]">
+                    <span className="text-xs font-medium">{dashboardMapDevices.length} vehicles</span>
+                  </div>
+                  {/* Map Legend */}
+                  <div className="absolute bottom-3 left-3 bg-white/95 rounded-md shadow px-2 py-1 z-[1000]">
+                    <div className="flex items-center gap-3 text-[10px]">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span>Active</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span>In Transit</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-gray-400" />
+                        <span>Offline</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Truck Activity Tracker - 40% width */}
+          <div className="col-span-4">
+            <Card className="bg-white rounded-lg h-full" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#0077b6]" />
+                      Truck Activity Today
+                    </CardTitle>
+                    <CardDescription className="text-xs">Daily start times and status</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-[#0077b6] hover:text-[#006299]" onClick={() => navigate("/fleet")}>
+                    View All <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <ScrollArea className="h-[280px]">
+                  <div className="space-y-2">
+                    {(gpsData?.devices || [])
+                      .filter(d => isValidCoordinate(d.location.lat, d.location.lng))
+                      .sort((a, b) => {
+                        const numA = parseInt(a.name.match(/#(\d+)/)?.[1] || "999");
+                        const numB = parseInt(b.name.match(/#(\d+)/)?.[1] || "999");
+                        return numA - numB;
+                      })
+                      .map(device => {
+                        const status = getDashboardVehicleStatus(device);
+                        const isActive = device.online && device.ignition;
+                        const isTransit = device.online && device.speed > 5;
+                        
+                        // Calculate activity time (simulated based on last update)
+                        let activityText = "Not started";
+                        let startTime = "";
+                        if (isActive || isTransit) {
+                          const lastUpdate = new Date(device.lastUpdate);
+                          if (!isNaN(lastUpdate.getTime())) {
+                            const now = new Date();
+                            const diffMs = now.getTime() - lastUpdate.getTime();
+                            const hours = Math.floor(diffMs / 3600000);
+                            const mins = Math.floor((diffMs % 3600000) / 60000);
+                            activityText = hours > 0 ? `Active ${hours}h ${mins}m` : `Active ${mins}m`;
+                            
+                            // Estimate start time (assuming active for a while)
+                            const startDate = new Date(now.getTime() - Math.min(diffMs, 8 * 3600000));
+                            startTime = format(startDate, "h:mm a");
+                          }
+                        }
+                        
+                        return (
+                          <div 
+                            key={device.id}
+                            className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                status === "transit" ? "bg-orange-100" :
+                                status === "active" ? "bg-green-100" : "bg-slate-100"
+                              }`}>
+                                <Truck className={`w-4 h-4 ${
+                                  status === "transit" ? "text-orange-600" :
+                                  status === "active" ? "text-green-600" : "text-slate-400"
+                                }`} />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-slate-900">{device.name}</div>
+                                <div className="text-[10px] text-slate-500">
+                                  {startTime ? `Started: ${startTime}` : "Not started today"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge className={`text-[10px] ${
+                                status === "transit" ? "bg-orange-100 text-orange-700 hover:bg-orange-100" :
+                                status === "active" ? "bg-green-100 text-green-700 hover:bg-green-100" : 
+                                "bg-slate-100 text-slate-600 hover:bg-slate-100"
+                              }`}>
+                                {status === "transit" ? "In Transit" : status === "active" ? "Active" : "Inactive"}
+                              </Badge>
+                              <div className={`text-[10px] mt-0.5 ${
+                                isActive || isTransit ? "text-green-600" : "text-slate-400"
+                              }`}>
+                                {activityText}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
