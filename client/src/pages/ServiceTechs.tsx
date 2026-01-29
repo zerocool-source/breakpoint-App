@@ -3208,6 +3208,11 @@ export default function ServiceTechs() {
 
   const filteredTechnicians = technicians
     .filter((tech) => {
+      // Only show service technicians - exclude supervisors, foremen, and other roles
+      const role = (tech.role || "").toLowerCase();
+      const isServiceTech = role === "service_technician" || role === "service";
+      if (!isServiceTech) return false;
+      
       const fullName = `${tech.firstName || ""} ${tech.lastName || ""}`.toLowerCase();
       const phone = (tech.phone || "").toLowerCase();
       const email = (tech.email || "").toLowerCase();
