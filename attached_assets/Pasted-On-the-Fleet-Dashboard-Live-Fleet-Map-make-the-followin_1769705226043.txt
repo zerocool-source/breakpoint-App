@@ -1,0 +1,69 @@
+On the Fleet Dashboard Live Fleet Map, make the following improvements:
+
+**1. DEFAULT ZOOM & CENTER LOCATION:**
+- Set the default map center to the Inland Empire, California area
+- Coordinates: approximately 33.9533° N, -117.3962° W (Riverside/Corona area)
+- Default zoom level should be around 10-11 so you can see the Inland Empire region clearly (Riverside, Corona, Moreno Valley, Temecula, Lake Elsinore area)
+- Do NOT show the entire world map - start zoomed into California/Inland Empire
+
+**2. AUTO-FIT TO SHOW ALL TRUCKS:**
+- On load, if there are active vehicles, auto-fit the map bounds to show all vehicle locations
+- But keep the minimum zoom to the Inland Empire area if all trucks are in that region
+- Add a "Fit All Vehicles" button to re-center and zoom to show all trucks
+
+**3. GEOFENCING INTEGRATION:**
+- Pull geofences from OneStepGPS API (if available) or allow manual geofence setup
+- Add a dropdown filter next to "All Vehicles" called "Geofences" or "Zones"
+- Show all geofences from OneStepGPS in this dropdown:
+  - "All Geofences"
+  - List each geofence by name (e.g., "South County", "Mid County", "North County", "Office", etc.)
+- When a geofence is selected, highlight that zone on the map (show the boundary polygon)
+- Display geofence boundaries as colored overlay polygons on the map
+- Color code geofences (South = orange, Mid = blue, North = teal, etc.)
+
+**4. VEHICLE DROPDOWN LIST:**
+- Add a dropdown or sidebar list showing all trucks with:
+  - Truck number (e.g., "Truck #26")
+  - Technician name (e.g., "Jacob M")
+  - Status indicator (green dot = active, orange = in transit, gray = offline)
+- Format: "Truck #26 - Jacob M" or "#26 Jacob M"
+- Clicking on a truck in the list should:
+  - Center the map on that truck
+  - Open the popup for that truck
+- Make this list searchable/filterable
+
+**5. FIX TRUCK #26 LOCATION:**
+- Verify Truck #26 Jacob M location is correct from OneStepGPS
+- If showing in wrong region (Africa), there may be a coordinate issue - check lat/long values
+- If GPS data shows "Invalid Date" or "Offline", show the truck at its last known valid location or hide offline trucks option
+
+**6. VEHICLE POPUP IMPROVEMENTS:**
+- Fix "Last Update: Invalid Date" - format the date properly
+- Show popup with:
+  - Truck # and Technician Name
+  - Status (Online/Offline/Active/Idle)
+  - Speed
+  - Odometer
+  - Engine (On/Off)
+  - Last Update (formatted nicely, e.g., "5 minutes ago" or "Jan 29, 8:42 AM")
+  - Current Address (if available)
+
+**7. MAP FILTERS:**
+Keep/update the filter row to include:
+- "All Vehicles" dropdown (shows list of all trucks with names)
+- "Geofences" dropdown (shows all OneStepGPS geofences)
+- "Satellite" toggle
+- "Refresh" button
+- "Fit All" button
+
+**ONESTEPGPS GEOFENCE API:**
+```javascript
+// Fetch geofences from OneStepGPS
+const geofences = await fetch('https://track.onestepgps.com/v3/api/public/geofence', {
+  headers: {
+    'Authorization': `Bearer ${process.env.ONESTEPGPS_API_KEY}`
+  }
+});
+```
+
+This should make the map immediately useful by showing the Inland Empire service area with all trucks and geofence zones visible.

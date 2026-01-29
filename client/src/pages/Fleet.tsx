@@ -29,9 +29,12 @@ import {
   Maximize2,
   Layers
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronDown, Target } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import type { FleetTruck, FleetMaintenanceRecord, TruckInventory } from "@shared/schema";
 import { FLEET_SERVICE_TYPES, FLEET_TRUCK_STATUSES, TRUCK_INVENTORY_CATEGORIES } from "@shared/schema";
@@ -155,18 +158,91 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Map auto-fit bounds component
-function MapBoundsUpdater({ devices }: { devices: Array<{ location: { lat: number; lng: number } }> }) {
+// Inland Empire default center
+const INLAND_EMPIRE_CENTER: [number, number] = [33.9533, -117.3962];
+const DEFAULT_ZOOM = 10;
+
+// Helper to format time ago
+function formatTimeAgo(dateStr: string | undefined): string {
+  if (!dateStr) return "Unknown";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Invalid Date";
+  
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// Helper to validate coordinates (check for valid lat/lng range)
+function isValidCoordinate(lat: number, lng: number): boolean {
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && 
+         lat !== 0 && lng !== 0 && // Exclude null island
+         !(lat > -20 && lat < 40 && lng > -20 && lng < 55); // Exclude Africa region for US-based fleet
+}
+
+// Geofence color mapping
+const GEOFENCE_COLORS: Record<string, string> = {
+  'South': '#f97316', // orange
+  'Mid': '#0077b6', // blue
+  'North': '#14b8a6', // teal
+  'Office': '#22c55e', // green
+  'Shop': '#8b5cf6', // purple
+  'default': '#6b7280', // gray
+};
+
+function getGeofenceColor(name: string): string {
+  for (const [key, color] of Object.entries(GEOFENCE_COLORS)) {
+    if (name.toLowerCase().includes(key.toLowerCase())) return color;
+  }
+  return GEOFENCE_COLORS.default;
+}
+
+// Map control component for programmatic control
+function MapController({ 
+  devices, 
+  fitAll, 
+  setFitAll,
+  selectedVehicleId,
+  setSelectedVehicleId 
+}: { 
+  devices: Array<{ id: string; location: { lat: number; lng: number } }>;
+  fitAll: boolean;
+  setFitAll: (v: boolean) => void;
+  selectedVehicleId: string | null;
+  setSelectedVehicleId: (v: string | null) => void;
+}) {
   const map = useMap();
   
   useEffect(() => {
-    if (devices.length > 0) {
-      const bounds = L.latLngBounds(devices.map(d => [d.location.lat, d.location.lng]));
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50] });
+    if (fitAll && devices.length > 0) {
+      const validDevices = devices.filter(d => isValidCoordinate(d.location.lat, d.location.lng));
+      if (validDevices.length > 0) {
+        const bounds = L.latLngBounds(validDevices.map(d => [d.location.lat, d.location.lng]));
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+        }
       }
+      setFitAll(false);
     }
-  }, [devices, map]);
+  }, [fitAll, devices, map, setFitAll]);
+  
+  useEffect(() => {
+    if (selectedVehicleId) {
+      const device = devices.find(d => d.id === selectedVehicleId);
+      if (device && isValidCoordinate(device.location.lat, device.location.lng)) {
+        map.setView([device.location.lat, device.location.lng], 15, { animate: true });
+      }
+      setSelectedVehicleId(null);
+    }
+  }, [selectedVehicleId, devices, map, setSelectedVehicleId]);
   
   return null;
 }
@@ -204,6 +280,12 @@ export default function Fleet() {
   const [mapExpanded, setMapExpanded] = useState(false);
   const [mapStyle, setMapStyle] = useState<"street" | "satellite">("street");
   const [lastMapRefresh, setLastMapRefresh] = useState(new Date());
+  const [fitAllVehicles, setFitAllVehicles] = useState(false);
+  const [selectedMapVehicle, setSelectedMapVehicle] = useState<string | null>(null);
+  const [vehicleSearchOpen, setVehicleSearchOpen] = useState(false);
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
+  const [selectedGeofence, setSelectedGeofence] = useState("all");
+  const [geofenceDropdownOpen, setGeofenceDropdownOpen] = useState(false);
 
   const { data: trucks = [], isLoading: trucksLoading } = useQuery<FleetTruck[]>({
     queryKey: ["/api/fleet/trucks"],
@@ -289,10 +371,34 @@ export default function Fleet() {
     refetchInterval: 30000, // Refresh every 30 seconds for live tracking
   });
 
-  // Filtered GPS devices for the map
+  // Geofences from OneStepGPS
+  interface Geofence {
+    id: string;
+    name: string;
+    type: string;
+    coordinates: Array<{ lat: number; lng: number }>;
+    radius?: number;
+  }
+
+  const { data: geofencesData } = useQuery<{ geofences: Geofence[] }>({
+    queryKey: ["/api/fleet/gps/geofences"],
+    queryFn: async () => {
+      const res = await fetch("/api/fleet/gps/geofences");
+      if (!res.ok) return { geofences: [] };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const geofences = geofencesData?.geofences || [];
+
+  // Filtered GPS devices for the map with coordinate validation
   const filteredMapDevices = useMemo(() => {
     const devices = gpsData?.devices || [];
     return devices.filter(device => {
+      // Validate coordinates first
+      if (!isValidCoordinate(device.location.lat, device.location.lng)) return false;
+      
       if (mapFilter === "all") return true;
       if (mapFilter === "active") return device.online && device.ignition;
       if (mapFilter === "inshop") return !device.online;
@@ -302,6 +408,20 @@ export default function Fleet() {
       return true;
     });
   }, [gpsData?.devices, mapFilter]);
+
+  // Searchable vehicle list
+  const vehicleList = useMemo(() => {
+    const devices = gpsData?.devices || [];
+    return devices
+      .filter(d => isValidCoordinate(d.location.lat, d.location.lng))
+      .filter(d => vehicleSearchQuery === "" || d.name.toLowerCase().includes(vehicleSearchQuery.toLowerCase()))
+      .sort((a, b) => {
+        // Extract truck number for sorting
+        const numA = parseInt(a.name.match(/#(\d+)/)?.[1] || "999");
+        const numB = parseInt(b.name.match(/#(\d+)/)?.[1] || "999");
+        return numA - numB;
+      });
+  }, [gpsData?.devices, vehicleSearchQuery]);
 
   // Get vehicle status for map markers
   const getVehicleMapStatus = (device: GPSDevice) => {
@@ -648,23 +768,101 @@ export default function Fleet() {
                   LIVE
                 </Badge>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500">
-                  Last updated: {lastMapRefresh.toLocaleTimeString()}
+                  Updated: {lastMapRefresh.toLocaleTimeString()}
                 </span>
+                
+                {/* Vehicle Search Dropdown */}
+                <Popover open={vehicleSearchOpen} onOpenChange={setVehicleSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-44 justify-between text-xs">
+                      <span className="truncate">
+                        {vehicleList.find(v => v.id === selectedMapVehicle)?.name || "Find Vehicle..."}
+                      </span>
+                      <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search trucks..." 
+                        value={vehicleSearchQuery}
+                        onValueChange={setVehicleSearchQuery}
+                      />
+                      <CommandList>
+                        <CommandEmpty>No vehicles found</CommandEmpty>
+                        <CommandGroup>
+                          <ScrollArea className="h-[200px]">
+                            {vehicleList.map(vehicle => (
+                              <CommandItem
+                                key={vehicle.id}
+                                onSelect={() => {
+                                  setSelectedMapVehicle(vehicle.id);
+                                  setVehicleSearchOpen(false);
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <div className={`w-2 h-2 rounded-full ${
+                                  vehicle.online && vehicle.ignition ? 'bg-green-500' :
+                                  vehicle.online ? 'bg-orange-500' : 'bg-gray-400'
+                                }`} />
+                                <span className="text-sm">{vehicle.name}</span>
+                              </CommandItem>
+                            ))}
+                          </ScrollArea>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Geofence Dropdown */}
+                {geofences.length > 0 && (
+                  <Select value={selectedGeofence} onValueChange={setSelectedGeofence}>
+                    <SelectTrigger className="w-36 h-8 text-xs">
+                      <SelectValue placeholder="Geofences" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Zones</SelectItem>
+                      {geofences.map(gf => (
+                        <SelectItem key={gf.id} value={gf.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded" 
+                              style={{ backgroundColor: getGeofenceColor(gf.name) }}
+                            />
+                            {gf.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {/* Filter */}
                 <Select value={mapFilter} onValueChange={setMapFilter}>
-                  <SelectTrigger className="w-32 h-8 text-xs">
+                  <SelectTrigger className="w-28 h-8 text-xs">
                     <SelectValue placeholder="Filter" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Vehicles</SelectItem>
-                    <SelectItem value="active">Active Only</SelectItem>
-                    <SelectItem value="inshop">In Shop</SelectItem>
-                    <SelectItem value="south">South County</SelectItem>
-                    <SelectItem value="mid">Mid County</SelectItem>
-                    <SelectItem value="north">North County</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inshop">Offline</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {/* Fit All Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFitAllVehicles(true)}
+                  className="h-8"
+                  title="Fit all vehicles"
+                >
+                  <Target className="w-4 h-4" />
+                </Button>
+                
                 <Button
                   variant="outline"
                   size="sm"
@@ -747,8 +945,8 @@ export default function Fleet() {
                 </div>
               ) : (
                 <MapContainer
-                  center={[33.7, -117.2]}
-                  zoom={10}
+                  center={INLAND_EMPIRE_CENTER}
+                  zoom={DEFAULT_ZOOM}
                   style={{ height: "100%", width: "100%" }}
                   scrollWheelZoom={true}
                 >
@@ -759,7 +957,35 @@ export default function Fleet() {
                       : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     }
                   />
-                  <MapBoundsUpdater devices={filteredMapDevices} />
+                  <MapController 
+                    devices={filteredMapDevices}
+                    fitAll={fitAllVehicles}
+                    setFitAll={setFitAllVehicles}
+                    selectedVehicleId={selectedMapVehicle}
+                    setSelectedVehicleId={setSelectedMapVehicle}
+                  />
+                  
+                  {/* Geofence Polygons */}
+                  {geofences
+                    .filter(gf => selectedGeofence === "all" || selectedGeofence === gf.id)
+                    .filter(gf => gf.coordinates && gf.coordinates.length >= 3)
+                    .map(gf => (
+                      <Polygon
+                        key={gf.id}
+                        positions={gf.coordinates.map(c => [c.lat, c.lng] as [number, number])}
+                        pathOptions={{
+                          color: getGeofenceColor(gf.name),
+                          fillColor: getGeofenceColor(gf.name),
+                          fillOpacity: 0.15,
+                          weight: 2,
+                        }}
+                      >
+                        <Popup>
+                          <div className="text-sm font-medium">{gf.name}</div>
+                        </Popup>
+                      </Polygon>
+                    ))
+                  }
                   {filteredMapDevices.map((device) => (
                     <Marker
                       key={device.id}
@@ -767,26 +993,26 @@ export default function Fleet() {
                       icon={createVehicleIcon(getVehicleMapStatus(device))}
                     >
                       <Popup>
-                        <div className="min-w-[200px]">
-                          <div className="flex items-center gap-2 mb-2">
+                        <div className="min-w-[220px]">
+                          <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                             <div className={`w-3 h-3 rounded-full ${
                               getVehicleMapStatus(device) === "active" ? "bg-green-500" :
-                              getVehicleMapStatus(device) === "transit" ? "bg-orange-500" : "bg-gray-500"
+                              getVehicleMapStatus(device) === "transit" ? "bg-orange-500" : "bg-gray-400"
                             }`} />
-                            <span className="font-semibold">{device.name}</span>
+                            <span className="font-semibold text-base">{device.name}</span>
                           </div>
-                          <div className="space-y-1 text-sm">
+                          <div className="space-y-1.5 text-sm">
                             <div className="flex justify-between">
                               <span className="text-gray-500">Status:</span>
                               <span className={`font-medium ${
-                                device.online ? "text-green-600" : "text-gray-600"
+                                device.online ? (device.speed > 5 ? "text-orange-600" : "text-green-600") : "text-gray-500"
                               }`}>
-                                {device.online ? (device.speed > 5 ? "In Transit" : "Active") : "Offline"}
+                                {device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}
                               </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500">Speed:</span>
-                              <span>{Math.round(device.speed)} mph</span>
+                              <span className="font-medium">{Math.round(device.speed)} mph</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500">Odometer:</span>
@@ -794,11 +1020,13 @@ export default function Fleet() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-500">Engine:</span>
-                              <span>{device.ignition ? "On" : "Off"}</span>
+                              <span className={device.ignition ? "text-green-600 font-medium" : "text-gray-500"}>
+                                {device.ignition ? "Running" : "Off"}
+                              </span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between pt-1 border-t mt-2">
                               <span className="text-gray-500">Last Update:</span>
-                              <span>{new Date(device.lastUpdate).toLocaleTimeString()}</span>
+                              <span className="text-xs text-gray-600">{formatTimeAgo(device.lastUpdate)}</span>
                             </div>
                           </div>
                         </div>
