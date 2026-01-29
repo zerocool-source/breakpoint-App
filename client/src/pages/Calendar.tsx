@@ -1970,7 +1970,7 @@ export default function Calendar() {
                   <SelectValue placeholder="Select technician" />
                 </SelectTrigger>
                 <SelectContent>
-                  {paginatedTechnicians
+                  {technicians
                     .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId)
                     .map((tech) => (
                       <SelectItem key={String(tech.id)} value={String(tech.id)}>
@@ -2044,7 +2044,7 @@ export default function Calendar() {
                     <SelectValue placeholder="Select technician" />
                   </SelectTrigger>
                   <SelectContent>
-                    {paginatedTechnicians
+                    {technicians
                       .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId && String(t.id) !== splitRouteForm.techBId)
                       .map((tech) => (
                         <SelectItem key={String(tech.id)} value={String(tech.id)}>
@@ -2064,7 +2064,7 @@ export default function Calendar() {
                     <SelectValue placeholder="Select technician" />
                   </SelectTrigger>
                   <SelectContent>
-                    {paginatedTechnicians
+                    {technicians
                       .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId && String(t.id) !== splitRouteForm.techAId)
                       .map((tech) => (
                         <SelectItem key={String(tech.id)} value={String(tech.id)}>
@@ -2080,7 +2080,7 @@ export default function Calendar() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="border rounded-lg p-3">
                   <p className="text-xs font-medium text-slate-500 mb-2">
-                    Assign to {paginatedTechnicians.find(t => String(t.id) === splitRouteForm.techAId)?.firstName || 'Tech A'}
+                    Assign to {technicians.find(t => String(t.id) === splitRouteForm.techAId)?.firstName || 'Tech A'}
                   </p>
                   <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                     {selectedRouteData.properties.map((prop) => (
@@ -2115,7 +2115,7 @@ export default function Calendar() {
                 
                 <div className="border rounded-lg p-3">
                   <p className="text-xs font-medium text-slate-500 mb-2">
-                    Assign to {paginatedTechnicians.find(t => String(t.id) === splitRouteForm.techBId)?.firstName || 'Tech B'}
+                    Assign to {technicians.find(t => String(t.id) === splitRouteForm.techBId)?.firstName || 'Tech B'}
                   </p>
                   <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                     {selectedRouteData.properties.map((prop) => (
@@ -2213,7 +2213,7 @@ export default function Calendar() {
                   <SelectValue placeholder="Select technician to cover entire route" />
                 </SelectTrigger>
                 <SelectContent>
-                  {paginatedTechnicians
+                  {technicians
                     .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId)
                     .map((tech) => (
                       <SelectItem key={String(tech.id)} value={String(tech.id)}>
@@ -2262,7 +2262,7 @@ export default function Calendar() {
             <Button
               className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
               onClick={() => {
-                const coveringTech = paginatedTechnicians.find(t => String(t.id) === coverFullRouteForm.coveringTechId);
+                const coveringTech = technicians.find(t => String(t.id) === coverFullRouteForm.coveringTechId);
                 toast({
                   title: "Coverage Assigned",
                   description: `${coveringTech?.firstName} ${coveringTech?.lastName} will cover the full route`,
