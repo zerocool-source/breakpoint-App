@@ -35,6 +35,9 @@ import {
   Clock,
   Lock,
   Unlock,
+  CalendarDays,
+  GitBranch,
+  UserPlus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -215,6 +218,32 @@ export default function Calendar() {
   const [expandedRouteBlocks, setExpandedRouteBlocks] = useState<Set<string>>(new Set());
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [showAddCoverageModal, setShowAddCoverageModal] = useState(false);
+  const [showExtendedCoverModal, setShowExtendedCoverModal] = useState(false);
+  const [showSplitRouteModal, setShowSplitRouteModal] = useState(false);
+  const [showCoverFullRouteModal, setShowCoverFullRouteModal] = useState(false);
+  const [selectedRouteData, setSelectedRouteData] = useState<{
+    techId: string | number;
+    techName: string;
+    date: Date;
+    properties: TechPropertyAssignment[];
+  } | null>(null);
+  const [extendedCoverForm, setExtendedCoverForm] = useState({
+    fromDate: "",
+    toDate: "",
+    coveringTechId: "",
+    reason: "",
+  });
+  const [splitRouteForm, setSplitRouteForm] = useState({
+    techAId: "",
+    techBId: "",
+    techAProperties: [] as string[],
+    techBProperties: [] as string[],
+    reason: "",
+  });
+  const [coverFullRouteForm, setCoverFullRouteForm] = useState({
+    coveringTechId: "",
+    reason: "",
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
   const [techsPerPage] = useState(10);

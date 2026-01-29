@@ -1,0 +1,47 @@
+On the Calendar page, add action options to each technician's route card (the "5 stops" popup that shows when clicking on a route):
+
+**ADD THESE OPTIONS TO EACH ROUTE CARD:**
+
+When viewing a technician's daily route (the popup showing "5 stops", "08:00 - 16:00", "Pending", and the list of properties), add a menu or buttons with these three options:
+
+1. **"Extended Cover"** button/option:
+   - Icon: Calendar or clock icon
+   - When clicked, open a modal to set up extended coverage:
+     - Select date range (From date - To date)
+     - Select who will cover (dropdown of other technicians)
+     - Reason field (optional)
+     - "Cancel" and "Save Coverage" buttons
+   - This assigns another tech to cover this route for multiple days
+
+2. **"Split Route"** button/option:
+   - Icon: Fork/split icon (like the Y shape in the screenshot)
+   - When clicked, open a modal to split the route between two technicians:
+     - Shows the properties on this route
+     - Two columns: "Assign to Tech A" and "Assign to Tech B" 
+     - Dropdown to select two covering technicians
+     - Allow dragging/assigning each property to Tech A or Tech B
+     - Reason field (optional)
+     - "Cancel" and "Split Route" buttons
+   - This divides the day's stops between two other technicians
+
+3. **"Cover Full Route"** button/option (NEW):
+   - Icon: Person/user icon or checkmark
+   - When clicked, open a modal for full day coverage:
+     - Select the date (defaults to this day)
+     - Select who will cover the ENTIRE route (dropdown of technicians)
+     - Reason field (optional, e.g., "Sick day", "PTO", "Training")
+     - "Cancel" and "Assign Coverage" buttons
+   - This assigns ONE technician to cover the entire route for that single day
+
+**POSITIONING:**
+- Add these three options as buttons or a dropdown menu at the bottom of the route popup
+- Or add a "..." three-dot menu icon that reveals these options
+- Style: Ocean blue (#0077b6) or gray icons/text, clean minimal look
+
+**BUTTON STYLING:**
+- Small, compact buttons or list items
+- Icons on the left, text label on the right
+- Subtle hover effect
+- Match the clean UI style of the calendar page
+
+**EXAMPLE LAYOUT:**
