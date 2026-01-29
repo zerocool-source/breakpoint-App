@@ -1,0 +1,62 @@
+On the Tech Ops Alerts page, clean up the UI to match the QuickBooks-style design used on the Overview page, using orange (#f97316) as the primary accent instead of green:
+
+**1. TOP FILTER TABS:**
+- Change the "All 46" button from blue/green to Orange (#f97316) background with white text
+- All other filter tabs (Repairs Needed, Service Repairs, Chemical Orders, etc.):
+  - White background with subtle gray border
+  - Dark gray text
+  - Small count badge in gray or matching accent color
+  - On hover: Light orange background tint
+  - When ACTIVE/SELECTED: Orange (#f97316) background with white text
+- Make tabs more compact and cleaner with consistent padding
+- Remove heavy shadows - use subtle borders instead
+
+**2. SECOND ROW TABS (Windy Day Clean Up, Report Issues, Emergencies):**
+- Same styling as above - white background, subtle border
+- Orange accent when selected
+- Clean, minimal look
+
+**3. LEFT SIDEBAR FILTERS (Select Properties, Select Technicians):**
+- White card background with subtle shadow
+- Clean checkbox styling
+- Section headers ("Select Properties", "Select Technicians") in dark gray with small icon
+- Subtle divider between sections
+- Checkboxes: Orange (#f97316) when checked
+- Make the cards more compact with less padding
+
+**4. SUBMISSIONS FEED (Right side):**
+- White card backgrounds for each submission entry
+- Subtle shadow and rounded corners (12px)
+- Clean spacing between entries
+
+For each submission card:
+- Title link (e.g., "Chemical Alerts") in ocean blue (#0077b6) - clickable
+- Status badges:
+  - "Active" - Orange (#f97316) background, white text
+  - "Pending" - Yellow/amber (#f59e0b) background, dark text
+  - "Completed" - Green (#22c55e) background, white text
+- Priority badges:
+  - "urgent" - Red (#ef4444) background, white text
+  - "high" - Orange (#f97316) outline or light orange background
+  - "normal" - Gray background
+- Metadata (Pool, Technician name, Date) in medium gray text with small icons
+- Description text in dark gray
+- Subtle bottom border or card separation
+
+**5. HEADER:**
+- Keep "Tech Ops Alerts" title with wrench icon
+- Subtitle "Unified feed of all field technician submissions" in gray
+- Date range picker on right - clean button style with calendar icon
+
+**6. "46 entries" COUNT:**
+- Position in top right of Submissions Feed container
+- Gray text, subtle styling
+
+**7. COLOR PALETTE:**
+- Primary accent: Orange (#f97316) - for active states, selected tabs, checkmarks
+- Secondary: Ocean blue (#0077b6) - for links
+- Success: Green (#22c55e)
+- Warning: Amber (#f59e0b)
+- Error/Urgent: Red (#ef4444)
+- Backgrounds: White (#ffffff)
+- Text: Dark gray (#1f2937), Medium gray

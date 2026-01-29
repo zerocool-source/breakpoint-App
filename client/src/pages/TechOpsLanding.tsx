@@ -62,15 +62,15 @@ const entryTypeConfig: Record<string, { label: string; color: string; bgColor: s
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  pending: { label: "Pending", color: "bg-amber-100 text-amber-700", icon: Clock },
-  pending_review: { label: "Pending Review", color: "bg-amber-100 text-amber-700", icon: Clock },
-  reviewed: { label: "Reviewed", color: "bg-blue-100 text-blue-700", icon: FileText },
-  completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
-  in_progress: { label: "In Progress", color: "bg-blue-100 text-blue-700", icon: Clock },
-  resolved: { label: "Resolved", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle },
+  pending: { label: "Pending", color: "bg-amber-100 text-amber-800", icon: Clock },
+  pending_review: { label: "Pending Review", color: "bg-amber-100 text-amber-800", icon: Clock },
+  reviewed: { label: "Reviewed", color: "bg-teal-100 text-teal-700", icon: FileText },
+  completed: { label: "Completed", color: "bg-green-100 text-green-700", icon: CheckCircle },
+  in_progress: { label: "In Progress", color: "bg-teal-100 text-teal-700", icon: Clock },
+  resolved: { label: "Resolved", color: "bg-green-100 text-green-700", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-slate-100 text-slate-600", icon: XCircle },
   archived: { label: "Archived", color: "bg-slate-100 text-slate-500", icon: Archive },
-  Active: { label: "Active", color: "bg-amber-100 text-amber-700", icon: Clock },
+  Active: { label: "Active", color: "bg-orange-100 text-orange-700", icon: Clock },
 };
 
 const filterTabs = [
@@ -310,20 +310,20 @@ export default function TechOpsLanding() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Wrench className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+              <Wrench className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900" data-testid="text-heading-techops">Tech Ops Alerts</h1>
-              <p className="text-slate-500 text-sm">Unified feed of all field technician submissions</p>
+              <h1 className="text-xl font-semibold text-slate-900" data-testid="text-heading-techops">Tech Ops Alerts</h1>
+              <p className="text-slate-500 text-xs">Unified feed of all field technician submissions</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2" data-testid="button-date-range">
-                  <CalendarIcon className="w-4 h-4" />
+                <Button variant="outline" size="sm" className="gap-2 text-sm h-9 border-slate-200 hover:border-orange-300 hover:bg-orange-50/50" data-testid="button-date-range">
+                  <CalendarIcon className="w-4 h-4 text-slate-500" />
                   {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
                 </Button>
               </PopoverTrigger>
@@ -343,8 +343,8 @@ export default function TechOpsLanding() {
           </div>
         </div>
 
-        {/* Filter Tabs - QuickBooks Style */}
-        <div className="flex flex-wrap gap-3" data-testid="filter-tabs">
+        {/* Filter Tabs - QuickBooks Style with Orange Accent */}
+        <div className="flex flex-wrap gap-2" data-testid="filter-tabs">
           {filterTabs.map(tab => {
             const count = countsByType[tab.key] || 0;
             const config = entryTypeConfig[tab.key];
@@ -354,19 +354,19 @@ export default function TechOpsLanding() {
                 key={tab.key}
                 onClick={() => setSelectedType(tab.key)}
                 className={cn(
-                  "flex items-center gap-3 px-5 py-3 rounded-xl text-base font-medium transition-all duration-200",
-                  "border shadow-sm hover:shadow-md",
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  "border",
                   isActive 
-                    ? "bg-blue-600 text-white border-blue-600 shadow-blue-200" 
-                    : "bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
+                    ? "bg-[#f97316] text-white border-[#f97316]" 
+                    : "bg-white text-slate-700 border-slate-200 hover:border-orange-300 hover:bg-orange-50/50"
                 )}
                 data-testid={`filter-tab-${tab.key}`}
               >
-                {config && <config.icon className={cn("w-5 h-5", isActive ? "text-white" : config.color)} />}
+                {config && <config.icon className={cn("w-4 h-4", isActive ? "text-white" : config.color)} />}
                 <span>{tab.label}</span>
                 <span 
                   className={cn(
-                    "inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-sm font-semibold",
+                    "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-xs font-semibold",
                     isActive 
                       ? "bg-white/25 text-white" 
                       : "bg-slate-100 text-slate-600"
@@ -380,48 +380,49 @@ export default function TechOpsLanding() {
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
           {/* Left Column - Filters */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="lg:col-span-1 space-y-3">
             {/* Select Properties */}
-            <Card className="bg-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-blue-600" />
+            <Card className="bg-white border border-slate-200 rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <CardHeader className="py-3 px-4 border-b border-slate-100">
+                <CardTitle className="text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-slate-500" />
                   Select Properties
                   {selectedProperties.size > 0 && (
-                    <Badge variant="secondary" className="ml-auto">{selectedProperties.size}</Badge>
+                    <Badge className="ml-auto bg-orange-100 text-orange-700 text-[10px] px-1.5 py-0">{selectedProperties.size}</Badge>
                   )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[200px] px-4 pb-4">
+                <ScrollArea className="h-[180px] px-3 py-2">
                   {selectedProperties.size > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-xs text-slate-500 mb-2"
+                      className="w-full justify-start text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 mb-2 h-7"
                       onClick={() => setSelectedProperties(new Set())}
                       data-testid="clear-properties"
                     >
                       Clear selection
                     </Button>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {uniqueProperties.length === 0 ? (
                       <p className="text-xs text-slate-400 py-2">No properties found</p>
                     ) : (
                       uniqueProperties.map(prop => (
-                        <div key={prop} className="flex items-center gap-2">
+                        <div key={prop} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-50">
                           <Checkbox
                             id={`prop-${prop}`}
                             checked={selectedProperties.has(prop)}
                             onCheckedChange={() => toggleProperty(prop)}
+                            className="data-[state=checked]:bg-[#f97316] data-[state=checked]:border-[#f97316]"
                             data-testid={`checkbox-prop-${prop}`}
                           />
                           <Label 
                             htmlFor={`prop-${prop}`} 
-                            className="text-sm text-slate-700 cursor-pointer truncate flex-1"
+                            className="text-xs text-slate-700 cursor-pointer truncate flex-1"
                           >
                             {prop}
                           </Label>
@@ -434,44 +435,45 @@ export default function TechOpsLanding() {
             </Card>
 
             {/* Select Technicians */}
-            <Card className="bg-white">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <User className="w-4 h-4 text-teal-600" />
+            <Card className="bg-white border border-slate-200 rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <CardHeader className="py-3 px-4 border-b border-slate-100">
+                <CardTitle className="text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-slate-500" />
                   Select Technicians
                   {selectedTechs.size > 0 && (
-                    <Badge variant="secondary" className="ml-auto">{selectedTechs.size}</Badge>
+                    <Badge className="ml-auto bg-orange-100 text-orange-700 text-[10px] px-1.5 py-0">{selectedTechs.size}</Badge>
                   )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[200px] px-4 pb-4">
+                <ScrollArea className="h-[180px] px-3 py-2">
                   {selectedTechs.size > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-xs text-slate-500 mb-2"
+                      className="w-full justify-start text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 mb-2 h-7"
                       onClick={() => setSelectedTechs(new Set())}
                       data-testid="clear-technicians"
                     >
                       Clear selection
                     </Button>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {uniqueTechs.length === 0 ? (
                       <p className="text-xs text-slate-400 py-2">No technicians found</p>
                     ) : (
                       uniqueTechs.map(tech => (
-                        <div key={tech} className="flex items-center gap-2">
+                        <div key={tech} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-50">
                           <Checkbox
                             id={`tech-${tech}`}
                             checked={selectedTechs.has(tech)}
                             onCheckedChange={() => toggleTech(tech)}
+                            className="data-[state=checked]:bg-[#f97316] data-[state=checked]:border-[#f97316]"
                             data-testid={`checkbox-tech-${tech}`}
                           />
                           <Label 
                             htmlFor={`tech-${tech}`} 
-                            className="text-sm text-slate-700 cursor-pointer truncate flex-1"
+                            className="text-xs text-slate-700 cursor-pointer truncate flex-1"
                           >
                             {tech}
                           </Label>
@@ -486,31 +488,31 @@ export default function TechOpsLanding() {
 
           {/* Right Column - Unified Feed */}
           <div className="lg:col-span-3">
-            <Card className="bg-white h-full">
-              <CardHeader className="pb-2">
+            <Card className="bg-white h-full border border-slate-200 rounded-lg" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+              <CardHeader className="py-3 px-4 border-b border-slate-100">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Filter className="w-5 h-5 text-blue-600" />
+                  <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-slate-500" />
                     Submissions Feed
                   </CardTitle>
-                  <span className="text-sm text-slate-500">
+                  <span className="text-xs text-slate-500">
                     {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
                   </span>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
                   </div>
                 ) : filteredEntries.length === 0 ? (
                   <div className="text-center py-12 text-slate-500">
-                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No submissions found for the selected filters</p>
+                    <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No submissions found for the selected filters</p>
                   </div>
                 ) : (
-                  <ScrollArea className="h-[calc(100vh-380px)]">
-                    <div className="space-y-3 pr-4">
+                  <ScrollArea className="h-[calc(100vh-340px)]">
+                    <div className="space-y-2 pr-3">
                       {filteredEntries.map((entry) => {
                         const typeConfig = entryTypeConfig[entry.entryType] || { 
                           label: entry.entryType, 
@@ -529,48 +531,48 @@ export default function TechOpsLanding() {
                         return (
                           <div
                             key={entry.id}
-                            className="p-4 bg-white border border-slate-200 rounded-lg hover:shadow-md hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                            className="p-3 bg-white border border-slate-200 rounded-xl hover:border-orange-300 hover:bg-orange-50/30 transition-all cursor-pointer group"
+                            style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
                             onClick={() => navigateToEntry(entry)}
                             data-testid={`entry-${entry.id}`}
                           >
-                            <div className="flex items-start gap-4">
+                            <div className="flex items-start gap-3">
                               {/* Type Icon */}
                               <div className={cn(
-                                "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
                                 typeConfig.bgColor
                               )}>
-                                <TypeIcon className={cn("w-5 h-5", typeConfig.color)} />
+                                <TypeIcon className={cn("w-4 h-4", typeConfig.color)} />
                               </div>
 
                               {/* Content */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <span className={cn("font-semibold", typeConfig.color)}>
+                                  <span className="text-sm font-medium text-[#0077b6] hover:underline">
                                     {typeConfig.label}
                                   </span>
-                                  <Badge className={cn("text-xs", statConfig.color)}>
-                                    <StatusIcon className="w-3 h-3 mr-1" />
+                                  <Badge className={cn("text-[10px] px-1.5 py-0", statConfig.color)}>
+                                    <StatusIcon className="w-2.5 h-2.5 mr-0.5" />
                                     {statConfig.label}
                                   </Badge>
                                   {entry.priority && entry.priority !== "normal" && entry.priority !== "LOW" && (
                                     <Badge 
-                                      variant="outline" 
                                       className={cn(
-                                        "text-xs",
+                                        "text-[10px] px-1.5 py-0",
                                         entry.priority === "urgent" || entry.priority === "URGENT" || entry.priority === "critical" || entry.priority === "CRITICAL"
-                                          ? "border-red-300 text-red-700 bg-red-50" 
+                                          ? "bg-red-500 text-white" 
                                           : entry.priority === "high" || entry.priority === "HIGH"
-                                            ? "border-orange-300 text-orange-700 bg-orange-50" 
-                                            : "border-slate-300 text-slate-600"
+                                            ? "bg-orange-100 text-orange-700 border border-orange-200" 
+                                            : "bg-slate-100 text-slate-600"
                                       )}
                                     >
                                       {entry.priority.toLowerCase()}
                                     </Badge>
                                   )}
-                                  <ExternalLink className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+                                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                                 </div>
 
-                                <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
+                                <div className="flex items-center gap-3 text-xs text-slate-500 mb-1.5">
                                   <span className="flex items-center gap-1">
                                     <MapPin className="w-3 h-3" />
                                     {entry.propertyName}
@@ -586,7 +588,7 @@ export default function TechOpsLanding() {
                                 </div>
 
                                 {entry.description && (
-                                  <p className="text-sm text-slate-600 line-clamp-2">{entry.description}</p>
+                                  <p className="text-xs text-slate-600 line-clamp-2">{entry.description}</p>
                                 )}
                               </div>
                             </div>
