@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ import {
   Maximize2,
   Layers
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon, Circle, Tooltip as LeafletTooltip } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -112,8 +112,14 @@ const MOCK_ACTIVITY = [
   { id: 4, user: "DP", name: "David P.", action: "completed service for", vehicle: "TRK-005", comment: "Oil change and tire rotation complete", time: "1 day ago" },
 ];
 
-// Custom vehicle markers for the map
-const createVehicleIcon = (status: string) => {
+// Helper to extract truck number from device name (e.g., "Truck #12 - John" -> "12")
+const extractTruckNumber = (name: string): string => {
+  const match = name.match(/(?:Truck\s*#?\s*)(\d+)/i);
+  return match ? match[1] : "";
+};
+
+// Custom vehicle markers for the map with truck number label
+const createVehicleIcon = (status: string, truckNumber: string = "") => {
   const colors: Record<string, string> = {
     active: "#22c55e",
     transit: "#f97316",
@@ -125,23 +131,41 @@ const createVehicleIcon = (status: string) => {
   return L.divIcon({
     className: "custom-vehicle-marker",
     html: `
-      <div style="
-        background-color: ${color};
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10 17h4V5H2v12h3"/>
-          <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/>
-          <circle cx="7.5" cy="17.5" r="2.5"/>
-          <circle cx="17.5" cy="17.5" r="2.5"/>
-        </svg>
+      <div style="position: relative;">
+        <div style="
+          background-color: ${color};
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 17h4V5H2v12h3"/>
+            <path d="M20 17h2v-3.34a4 4 0 0 0-1.17-2.83L19 9h-5v8h1"/>
+            <circle cx="7.5" cy="17.5" r="2.5"/>
+            <circle cx="17.5" cy="17.5" r="2.5"/>
+          </svg>
+        </div>
+        ${truckNumber ? `
+        <div style="
+          position: absolute;
+          top: -8px;
+          right: -8px;
+          background-color: #1e3a5f;
+          color: white;
+          font-size: 10px;
+          font-weight: bold;
+          padding: 2px 5px;
+          border-radius: 8px;
+          border: 2px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          white-space: nowrap;
+        ">#${truckNumber}</div>
+        ` : ''}
       </div>
     `,
     iconSize: [32, 32],
@@ -215,13 +239,15 @@ function MapController({
   fitAll, 
   setFitAll,
   focusVehicleId,
-  setFocusVehicleId 
+  setFocusVehicleId,
+  markerRefs
 }: { 
   devices: Array<{ id: string; location: { lat: number; lng: number } }>;
   fitAll: boolean;
   setFitAll: (v: boolean) => void;
   focusVehicleId: string | null;
   setFocusVehicleId: (v: string | null) => void;
+  markerRefs?: React.MutableRefObject<{ [key: string]: L.Marker | null }>;
 }) {
   const map = useMap();
   
@@ -243,13 +269,54 @@ function MapController({
       const device = devices.find(d => d.id === focusVehicleId);
       if (device && isValidCoordinate(device.location.lat, device.location.lng)) {
         map.setView([device.location.lat, device.location.lng], 15, { animate: true });
+        // Open popup after a short delay to allow map to pan
+        setTimeout(() => {
+          if (markerRefs?.current[focusVehicleId]) {
+            markerRefs.current[focusVehicleId]?.openPopup();
+          }
+        }, 300);
       }
       setFocusVehicleId(null);
     }
-  }, [focusVehicleId, devices, map, setFocusVehicleId]);
+  }, [focusVehicleId, devices, map, setFocusVehicleId, markerRefs]);
   
   return null;
 }
+
+// Calculate polygon centroid for geofence labels
+function getPolygonCentroid(coordinates: Array<{ lat: number; lng: number }>): [number, number] {
+  let latSum = 0;
+  let lngSum = 0;
+  const n = coordinates.length;
+  for (const c of coordinates) {
+    latSum += c.lat;
+    lngSum += c.lng;
+  }
+  return [latSum / n, lngSum / n];
+}
+
+// Create geofence label icon
+const createGeofenceLabelIcon = (name: string, color: string) => {
+  return L.divIcon({
+    className: "geofence-label",
+    html: `
+      <div style="
+        background-color: white;
+        color: ${color};
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 2px solid ${color};
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        white-space: nowrap;
+        text-align: center;
+      ">${name}</div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+};
 
 export default function Fleet() {
   const queryClient = useQueryClient();
@@ -291,6 +358,7 @@ export default function Fleet() {
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
   const [selectedGeofence, setSelectedGeofence] = useState("all");
   const [geofenceDropdownOpen, setGeofenceDropdownOpen] = useState(false);
+  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
 
   const { data: trucks = [], isLoading: trucksLoading } = useQuery<FleetTruck[]>({
     queryKey: ["/api/fleet/trucks"],
@@ -825,27 +893,26 @@ export default function Fleet() {
                 </Popover>
 
                 {/* Geofence Dropdown */}
-                {geofences.length > 0 && (
-                  <Select value={selectedGeofence} onValueChange={setSelectedGeofence}>
-                    <SelectTrigger className="w-36 h-8 text-xs">
-                      <SelectValue placeholder="Geofences" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Zones</SelectItem>
-                      {geofences.map(gf => (
-                        <SelectItem key={gf.id} value={gf.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded" 
-                              style={{ backgroundColor: getGeofenceColor(gf.name) }}
-                            />
-                            {gf.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select value={selectedGeofence} onValueChange={setSelectedGeofence}>
+                  <SelectTrigger className="w-36 h-8 text-xs" data-testid="geofence-dropdown">
+                    <SelectValue placeholder="Geofences" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Geofences</SelectItem>
+                    <SelectItem value="hide">Hide Geofences</SelectItem>
+                    {geofences.map(gf => (
+                      <SelectItem key={gf.id} value={gf.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded" 
+                            style={{ backgroundColor: getGeofenceColor(gf.name) }}
+                          />
+                          {gf.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
                 {/* Filter */}
                 <Select value={mapFilter} onValueChange={setMapFilter}>
@@ -971,10 +1038,11 @@ export default function Fleet() {
                     setFitAll={setFitAllVehicles}
                     focusVehicleId={focusVehicleId}
                     setFocusVehicleId={setFocusVehicleId}
+                    markerRefs={markerRefs}
                   />
                   
                   {/* Geofence Polygons and Circles */}
-                  {geofences
+                  {selectedGeofence !== "hide" && geofences
                     .filter(gf => selectedGeofence === "all" || selectedGeofence === gf.id)
                     .map(gf => {
                       const color = getGeofenceColor(gf.name);
@@ -1023,12 +1091,51 @@ export default function Fleet() {
                       return null;
                     })
                   }
+                  
+                  {/* Geofence Center Labels */}
+                  {selectedGeofence !== "hide" && geofences
+                    .filter(gf => selectedGeofence === "all" || selectedGeofence === gf.id)
+                    .filter(gf => gf.coordinates && gf.coordinates.length >= 1)
+                    .map(gf => {
+                      const color = getGeofenceColor(gf.name);
+                      let center: [number, number];
+                      
+                      if (gf.type === 'circle' && gf.coordinates?.length === 1) {
+                        center = [gf.coordinates[0].lat, gf.coordinates[0].lng];
+                      } else if (gf.coordinates && gf.coordinates.length >= 3) {
+                        center = getPolygonCentroid(gf.coordinates);
+                      } else {
+                        return null;
+                      }
+                      
+                      return (
+                        <Marker
+                          key={`label-${gf.id}`}
+                          position={center}
+                          icon={createGeofenceLabelIcon(gf.name, color)}
+                          interactive={false}
+                        />
+                      );
+                    })
+                  }
+                  
                   {filteredMapDevices.map((device) => (
                     <Marker
                       key={device.id}
                       position={[device.location.lat, device.location.lng]}
-                      icon={createVehicleIcon(getVehicleMapStatus(device))}
+                      icon={createVehicleIcon(getVehicleMapStatus(device), extractTruckNumber(device.name))}
+                      ref={(ref) => {
+                        if (ref) {
+                          markerRefs.current[device.id] = ref;
+                        }
+                      }}
                     >
+                      <LeafletTooltip direction="top" offset={[0, -20]} opacity={0.95}>
+                        <div className="text-sm font-medium">{device.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}
+                        </div>
+                      </LeafletTooltip>
                       <Popup>
                         <div className="min-w-[220px]">
                           <div className="flex items-center gap-2 mb-3 pb-2 border-b">

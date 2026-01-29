@@ -1,0 +1,73 @@
+On the Fleet Dashboard Live Fleet Map, add the missing geofencing display and improve the vehicle dropdown:
+
+**1. SHOW GEOFENCES ON MAP:**
+- Pull all geofences from OneStepGPS API: https://track.onestepgps.com/v3/api/public/geofence
+- Display each geofence as a polygon overlay on the map (like the "Crown Villa" example with the cyan/teal boundary)
+- Each geofence should show:
+  - Colored polygon boundary (semi-transparent fill)
+  - Name label in the center (e.g., "Crown Villa (9122.08)")
+- Use different colors for different geofence types or zones
+- Geofences should be visible by default on the map
+
+**2. ADD GEOFENCE DROPDOWN FILTER:**
+- Add a "Geofences" dropdown next to the "All" filter
+- Options:
+  - "All Geofences" (show all)
+  - "Hide Geofences" (hide all polygon overlays)
+  - List each individual geofence by name from OneStepGPS
+- When a specific geofence is selected:
+  - Highlight that geofence on the map
+  - Zoom/pan to that geofence location
+  - Optionally show only vehicles within that geofence
+
+**3. FIX VEHICLE DROPDOWN ("Find Vehicle..."):**
+- The "Find Vehicle..." dropdown should show a list of ALL vehicles with:
+  - Truck number + Technician name
+  - Format: "#1 - Mike Johnson" or "Truck #1 - Mike Johnson"
+  - Show status indicator (green/orange/gray dot)
+- Example list:
+  - "#1 - Mike Johnson 🟢"
+  - "#3 - Eric Gritzke 🟠"
+  - "#5 - Sean Darden ⚫"
+  - etc.
+- Make the dropdown searchable (type to filter)
+- When a vehicle is selected from the dropdown:
+  - Center the map on that vehicle's location
+  - Zoom in to that vehicle
+  - Open the vehicle's info popup automatically
+
+**4. VEHICLE MARKERS:**
+- Show the truck number ON the marker or next to it so you can identify vehicles without clicking
+- Example: Show "#12" label near each truck icon
+- Or on hover, show a tooltip with "Truck #12 - Jacob M"
+
+**5. GEOFENCE API CALL:**
+```javascript
+// Add to server-side API
+const fetchGeofences = async () => {
+  const response = await fetch('https://track.onestepgps.com/v3/api/public/geofence', {
+    headers: {
+      'Authorization': `Bearer ${process.env.ONESTEPGPS_API_KEY}`
+    }
+  });
+  return await response.json();
+};
+```
+
+**6. DISPLAY GEOFENCES ON MAP:**
+- Parse geofence polygon coordinates from OneStepGPS response
+- Draw each polygon using Leaflet:
+```javascript
+L.polygon(coordinates, {
+  color: '#0077b6', // border color
+  fillColor: '#48cae4', // fill color
+  fillOpacity: 0.3,
+  weight: 2
+}).addTo(map).bindPopup('Geofence Name');
+```
+
+**7. LAYOUT:**
+The filter bar should show:
+| "Find Vehicle..." dropdown | "Geofences" dropdown | "All" status filter | "Satellite" toggle | Refresh | Fullscreen |
+
+Make sure all geofences from OneStepGPS are visible on the map as polygon overlays, similar to the "Crown Villa" screenshot.
