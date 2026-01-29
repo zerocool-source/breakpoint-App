@@ -51,14 +51,14 @@ interface UnifiedEntry {
 }
 
 const entryTypeConfig: Record<string, { label: string; color: string; bgColor: string; icon: any }> = {
-  repairs_needed: { label: "Repairs Needed", color: "text-red-700", bgColor: "bg-red-100", icon: Wrench },
-  service_repairs: { label: "Service Repairs", color: "text-teal-700", bgColor: "bg-teal-100", icon: Wrench },
-  chemical_order: { label: "Chemical Orders", color: "text-blue-700", bgColor: "bg-blue-100", icon: Droplets },
-  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "text-emerald-700", bgColor: "bg-emerald-100", icon: Droplets },
-  chemical_alert: { label: "Chemical Alerts", color: "text-purple-700", bgColor: "bg-purple-100", icon: Droplets },
-  windy_day_cleanup: { label: "Windy Day Clean Up", color: "text-cyan-700", bgColor: "bg-cyan-100", icon: Wind },
-  report_issue: { label: "Report Issues", color: "text-orange-700", bgColor: "bg-orange-100", icon: AlertTriangle },
-  emergencies: { label: "Emergencies", color: "text-red-700", bgColor: "bg-red-100", icon: AlertCircle },
+  repairs_needed: { label: "Repairs Needed", color: "text-red-600", bgColor: "bg-red-50", icon: Wrench },
+  service_repairs: { label: "Service Repairs", color: "text-teal-600", bgColor: "bg-teal-50", icon: Wrench },
+  chemical_order: { label: "Chemical Orders", color: "text-[#0077b6]", bgColor: "bg-sky-50", icon: Droplets },
+  chemicals_dropoff: { label: "Chemicals Dropped-Off", color: "text-emerald-600", bgColor: "bg-emerald-50", icon: Droplets },
+  chemical_alert: { label: "Chemical Alerts", color: "text-[#0077b6]", bgColor: "bg-sky-50", icon: Droplets },
+  windy_day_cleanup: { label: "Windy Day Clean Up", color: "text-cyan-600", bgColor: "bg-cyan-50", icon: Wind },
+  report_issue: { label: "Report Issues", color: "text-[#f97316]", bgColor: "bg-orange-50", icon: AlertTriangle },
+  emergencies: { label: "Emergencies", color: "text-red-600", bgColor: "bg-red-50", icon: AlertCircle },
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -343,33 +343,43 @@ export default function TechOpsLanding() {
           </div>
         </div>
 
-        {/* Filter Tabs - QuickBooks Style with Orange Accent */}
+        {/* Filter Tabs - QuickBooks Pill Style */}
         <div className="flex flex-wrap gap-2" data-testid="filter-tabs">
           {filterTabs.map(tab => {
             const count = countsByType[tab.key] || 0;
             const config = entryTypeConfig[tab.key];
             const isActive = selectedType === tab.key;
+            const TabIcon = config?.icon || FileText;
             return (
               <button
                 key={tab.key}
                 onClick={() => setSelectedType(tab.key)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-2 pl-1 pr-3 py-1 rounded-full text-sm font-medium transition-all duration-200",
                   "border",
                   isActive 
-                    ? "bg-[#f97316] text-white border-[#f97316]" 
-                    : "bg-white text-slate-700 border-slate-200 hover:border-orange-300 hover:bg-orange-50/50"
+                    ? "bg-white border-[#0077b6] ring-1 ring-[#0077b6]/20" 
+                    : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                 )}
                 data-testid={`filter-tab-${tab.key}`}
               >
-                {config && <config.icon className={cn("w-4 h-4", isActive ? "text-white" : config.color)} />}
-                <span>{tab.label}</span>
+                {/* Dark circular icon */}
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center",
+                  isActive ? "bg-[#0077b6]" : "bg-slate-800"
+                )}>
+                  <TabIcon className="w-3 h-3 text-white" />
+                </div>
+                <span className={cn(
+                  "text-sm",
+                  isActive ? "text-[#0077b6] font-semibold" : "text-slate-700"
+                )}>{tab.label}</span>
                 <span 
                   className={cn(
-                    "inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full text-xs font-semibold",
+                    "inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-medium",
                     isActive 
-                      ? "bg-white/25 text-white" 
-                      : "bg-slate-100 text-slate-600"
+                      ? "bg-[#0077b6]/10 text-[#0077b6]" 
+                      : "text-slate-500"
                   )}
                 >
                   {count}
@@ -537,12 +547,9 @@ export default function TechOpsLanding() {
                             data-testid={`entry-${entry.id}`}
                           >
                             <div className="flex items-start gap-3">
-                              {/* Type Icon */}
-                              <div className={cn(
-                                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                                typeConfig.bgColor
-                              )}>
-                                <TypeIcon className={cn("w-4 h-4", typeConfig.color)} />
+                              {/* Type Icon - Navy circle with white icon */}
+                              <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-slate-800">
+                                <TypeIcon className="w-4 h-4 text-white" />
                               </div>
 
                               {/* Content */}

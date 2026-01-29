@@ -1,0 +1,59 @@
+On the Tech Ops Alerts page, fix the colors and update the top filter tabs:
+
+**1. REMOVE PINK COLOR:**
+- The icons next to submission entries are currently pink/magenta - change them to Orange (#f97316) or Ocean blue (#0077b6)
+- Do NOT use pink (#ec4899, #f472b6, #db2777) or any pink/magenta shades anywhere
+- Replace any pink with Orange (#f97316)
+
+**2. UPDATE TOP FILTER TABS TO MATCH QUICKBOOKS STYLE:**
+Style the filter tabs (All, Repairs Needed, Service Repairs, Chemical Orders, etc.) like the QuickBooks reference image:
+
+- Each tab should be a pill/capsule shape with:
+  - White background
+  - Subtle gray border (#e5e7eb)
+  - Rounded corners (full pill shape - border-radius: 9999px or 24px)
+  - Dark circular icon on the left (inside a dark navy/black circle)
+  - Label text in dark gray
+  - Count number on the right in gray
+
+- Tab structure: [Dark Circle Icon] [Label Text] [Count]
+- Example: (●) Accounting  |  (●) Repairs Needed 4
+
+- Icon circles:
+  - Dark navy/black background (#1e293b or #0f172a)
+  - White icon inside
+  - Small size (24-28px)
+
+- ACTIVE/SELECTED tab:
+  - Ocean blue (#0077b6) border or background tint
+  - Or subtle blue highlight
+  - Keep it clean, not too bold
+
+- HOVER state:
+  - Light gray or light blue background tint
+
+- Spacing:
+  - Equal spacing between tabs
+  - Horizontal scrollable if too many tabs
+  - Clean alignment
+
+**3. ICON COLORS IN SUBMISSION FEED:**
+- Change the pink/magenta circular icons to Orange (#f97316)
+- Or use Ocean blue (#0077b6) for a more neutral look
+- Keep icons consistent across all submission entries
+
+**4. COLOR PALETTE REMINDER:**
+- Primary: Orange (#f97316)
+- Secondary: Ocean blue (#0077b6)
+- Accent: Teal (#14b8a6)
+- Success: Green (#22c55e)
+- Warning: Amber (#f59e0b)
+- Error: Red (#ef4444)
+- Dark icons: Navy (#1e293b)
+- NO PINK, NO PURPLE, NO MAGENTA
+
+**5. KEEP EVERYTHING ELSE:**
+- Keep the current layout structure
+- Keep the left sidebar filters (Select Properties, Select Technicians)
+- Keep the Submissions Feed on the right
+- Only update colors and tab styling
