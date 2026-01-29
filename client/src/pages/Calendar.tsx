@@ -1015,10 +1015,11 @@ export default function Calendar() {
           </div>
         </div>
         
-        <div className="px-6 py-4 overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)]">
+        <div className="px-6 py-4 overflow-x-auto">
           <div className="min-w-[1200px]">
-            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] sticky top-0 z-50 shadow-md">
-              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white sticky left-0 bg-[#0077b6] z-[60]">
+            {/* Fixed header - outside scroll area */}
+            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] shadow-md">
+              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white bg-[#0077b6]">
                 TECHNICIAN
               </div>
               {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
@@ -1042,6 +1043,9 @@ export default function Calendar() {
               })}
               <div className="w-[50px] min-w-[50px]"></div>
             </div>
+            
+            {/* Scrollable content area */}
+            <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
             
             {filteredTechnicians.length === 0 ? (
               <div className="py-12 text-center text-[#64748B]">
@@ -1761,6 +1765,7 @@ export default function Calendar() {
                 </Button>
               </div>
             )}
+            </div>
           </div>
         </div>
         
