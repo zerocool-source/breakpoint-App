@@ -11,6 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -244,6 +250,14 @@ export default function Calendar() {
     coveringTechId: "",
     reason: "",
   });
+  const [routeCoverages, setRouteCoverages] = useState<Map<string, {
+    type: 'extended' | 'split' | 'full';
+    coveringTechName?: string;
+    techAName?: string;
+    techBName?: string;
+    fromDate?: string;
+    toDate?: string;
+  }>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
   const [techsPerPage] = useState(10);
@@ -647,8 +661,8 @@ export default function Calendar() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-[#F8FAFC]">
-        <div className="sticky top-0 z-40 bg-white border-b border-slate-200 px-6 py-4">
+      <div className="min-h-screen bg-[#f9fafb]">
+        <div className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] shadow-sm px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-[#0F172A]" data-testid="text-page-title">Calendar</h1>
             
@@ -657,17 +671,19 @@ export default function Calendar() {
                 <Button
                   variant="outline"
                   size="icon"
+                  className="rounded-full border-[#e5e7eb]"
                   onClick={() => navigateWeek("prev")}
                   data-testid="button-prev-week"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <span className="text-sm font-medium min-w-[180px] text-center">
+                <span className="text-sm font-medium min-w-[180px] text-center text-slate-700">
                   {formatWeekRange(weekDates)}
                 </span>
                 <Button
                   variant="outline"
                   size="icon"
+                  className="rounded-full border-[#e5e7eb]"
                   onClick={() => navigateWeek("next")}
                   data-testid="button-next-week"
                 >
@@ -675,17 +691,22 @@ export default function Calendar() {
                 </Button>
               </div>
               
-              <Button variant="outline" onClick={goToToday} data-testid="button-today">
+              <Button 
+                variant="outline" 
+                onClick={goToToday} 
+                className="rounded-full border-[#e5e7eb] px-4"
+                data-testid="button-today"
+              >
                 Today
               </Button>
               
-              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              <div className="flex gap-1 p-1 bg-slate-100 rounded-full">
                 <button
                   className={cn(
-                    "px-4 py-2 text-sm font-medium flex items-center gap-2 transition-colors",
+                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
                     roleFilter === "service"
-                      ? "bg-[#0078D4] text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#0077b6] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white hover:shadow-sm"
                   )}
                   onClick={() => setRoleFilter("service")}
                   data-testid="button-filter-service"
@@ -695,10 +716,10 @@ export default function Calendar() {
                 </button>
                 <button
                   className={cn(
-                    "px-4 py-2 text-sm font-medium flex items-center gap-2 transition-colors border-x border-slate-200",
+                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
                     roleFilter === "repair"
-                      ? "bg-[#FF8000] text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#f97316] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white hover:shadow-sm"
                   )}
                   onClick={() => setRoleFilter("repair")}
                   data-testid="button-filter-repair"
@@ -708,10 +729,10 @@ export default function Calendar() {
                 </button>
                 <button
                   className={cn(
-                    "px-4 py-2 text-sm font-medium flex items-center gap-2 transition-colors",
+                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
                     roleFilter === "supervisor"
-                      ? "bg-[#17BEBB] text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#0077b6] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white hover:shadow-sm"
                   )}
                   onClick={() => setRoleFilter("supervisor")}
                   data-testid="button-filter-supervisor"
@@ -721,13 +742,13 @@ export default function Calendar() {
                 </button>
               </div>
               
-              <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+              <div className="flex gap-1 p-1 bg-slate-100 rounded-full">
                 <button
                   className={cn(
-                    "px-4 py-2 text-sm font-medium flex items-center gap-2 transition-colors",
+                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
                     activeSeason === "summer"
-                      ? "bg-[#FF8000] text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#f97316] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white hover:shadow-sm"
                   )}
                   onClick={() => setActiveSeason("summer")}
                   data-testid="button-season-summer"
@@ -737,10 +758,10 @@ export default function Calendar() {
                 </button>
                 <button
                   className={cn(
-                    "px-4 py-2 text-sm font-medium flex items-center gap-2 transition-colors",
+                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
                     activeSeason === "winter"
-                      ? "bg-[#0078D4] text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50"
+                      ? "bg-[#0077b6] text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white hover:shadow-sm"
                   )}
                   onClick={() => setActiveSeason("winter")}
                   data-testid="button-season-winter"
@@ -751,7 +772,7 @@ export default function Calendar() {
               </div>
               
               <Button
-                className="bg-[#FF8000] hover:bg-[#E67300] text-white"
+                className="bg-[#f97316] hover:bg-[#ea580c] text-white rounded-full"
                 onClick={() => setShowAddCoverageModal(true)}
                 data-testid="button-add-coverage"
               >
@@ -762,10 +783,10 @@ export default function Calendar() {
           </div>
           
           <div className="grid grid-cols-3 gap-4 mb-4">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm border border-[#e5e7eb] rounded-xl bg-white">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#0078D4]/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#0078D4]" />
+                <div className="w-10 h-10 rounded-xl bg-[#0077b6]/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#0077b6]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#0F172A]">{stats.activeTechs}</p>
@@ -773,10 +794,10 @@ export default function Calendar() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="shadow-sm">
+            <Card className="shadow-sm border border-[#e5e7eb] rounded-xl bg-white">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#22D69A]/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-[#22D69A]" />
+                <div className="w-10 h-10 rounded-xl bg-[#22c55e]/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-[#22c55e]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#0F172A]">{stats.totalStops}</p>
@@ -784,10 +805,10 @@ export default function Calendar() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="shadow-sm">
+            <Card className="shadow-sm border border-[#e5e7eb] rounded-xl bg-white">
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#17BEBB]/10 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5 text-[#17BEBB]" />
+                <div className="w-10 h-10 rounded-xl bg-[#f97316]/10 flex items-center justify-center">
+                  <RefreshCw className="w-5 h-5 text-[#f97316]" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-[#0F172A]">{stats.activeCoverages}</p>
@@ -1007,20 +1028,20 @@ export default function Calendar() {
                 return (
                   <div
                     key={tech.id}
-                    className="flex border-b border-slate-100 hover:bg-slate-50/50 group"
+                    className="flex border-b border-[#e5e7eb] bg-white hover:bg-slate-50 transition-colors group"
                     data-testid={`row-tech-${tech.id}`}
                   >
-                    <div className="w-[260px] min-w-[260px] px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50/50 z-10 border-r border-slate-100">
+                    <div className="w-[260px] min-w-[260px] px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-[#e5e7eb]">
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm relative"
+                          className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm relative shadow-sm"
                           style={{ backgroundColor: techColor }}
                         >
                           {getInitials(tech.firstName, tech.lastName)}
                           <span
                             className={cn(
                               "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white",
-                              isOnLeaveThisWeek ? "bg-slate-400" : "bg-[#22D69A]"
+                              isOnLeaveThisWeek ? "bg-slate-400" : "bg-[#22c55e]"
                             )}
                           ></span>
                         </div>
@@ -1031,34 +1052,38 @@ export default function Calendar() {
                             </p>
                             {/* Lock Route Icon - only for service technicians */}
                             {tech.role === "service" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleRouteLockMutation.mutate({
-                                    techId: String(tech.id),
-                                    locked: !tech.routeLocked,
-                                    techName: `${tech.firstName} ${tech.lastName}`,
-                                  });
-                                }}
-                                className={cn(
-                                  "p-1 rounded transition-colors",
-                                  tech.routeLocked
-                                    ? "text-[#f97316] hover:bg-orange-50"
-                                    : "text-slate-400 hover:bg-slate-100"
-                                )}
-                                title={
-                                  tech.routeLocked
-                                    ? "Route Locked - Tech must follow scheduled order"
-                                    : "Route Unlocked - Tech can adjust order"
-                                }
-                                data-testid={`button-lock-route-${tech.id}`}
-                              >
-                                {tech.routeLocked ? (
-                                  <Lock className="w-3.5 h-3.5" />
-                                ) : (
-                                  <Unlock className="w-3.5 h-3.5" />
-                                )}
-                              </button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleRouteLockMutation.mutate({
+                                          techId: String(tech.id),
+                                          locked: !tech.routeLocked,
+                                          techName: `${tech.firstName} ${tech.lastName}`,
+                                        });
+                                      }}
+                                      className={cn(
+                                        "p-1.5 rounded-md transition-all cursor-pointer",
+                                        tech.routeLocked
+                                          ? "text-[#ef4444] bg-red-50 hover:bg-red-100 shadow-sm"
+                                          : "text-[#6b7280] hover:bg-slate-100"
+                                      )}
+                                      data-testid={`button-lock-route-${tech.id}`}
+                                    >
+                                      {tech.routeLocked ? (
+                                        <Lock className="w-5 h-5" />
+                                      ) : (
+                                        <Unlock className="w-5 h-5" />
+                                      )}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">
+                                    {tech.routeLocked ? "Route Locked" : "Route Unlocked"}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
                             {isOnLeaveThisWeek && (
                               <span className="px-1.5 py-0.5 text-[10px] font-medium bg-red-100 text-red-600 rounded">
@@ -1412,6 +1437,7 @@ export default function Calendar() {
                         if (propertiesForDay.length > 0) {
                           const routeBlockKey = `${tech.id}-${dayIndex}`;
                           const isRouteExpanded = expandedRouteBlocks.has(routeBlockKey);
+                          const routeCoverage = routeCoverages.get(routeBlockKey);
                           return (
                             <div
                               key={dayIndex}
@@ -1420,16 +1446,22 @@ export default function Calendar() {
                             >
                               <div
                                 className={cn(
-                                  "rounded-lg p-2 cursor-pointer transition-all border-l-[3px]",
-                                  isRouteExpanded ? "min-h-[160px]" : "min-h-[80px]"
+                                  "rounded-xl bg-white shadow-sm border border-[#e5e7eb] p-2 cursor-pointer transition-all",
+                                  isRouteExpanded ? "min-h-[160px]" : "min-h-[80px]",
+                                  routeCoverage && "border-l-4 border-l-[#f97316]"
                                 )}
-                                style={{
-                                  backgroundColor: `${techColor}15`,
-                                  borderLeftColor: techColor,
-                                }}
                                 onClick={() => toggleRouteBlockExpand(routeBlockKey)}
                                 data-testid={`route-block-${tech.id}-${dayIndex}`}
                               >
+                                {routeCoverage && (
+                                  <div className="mb-2 -mx-2 -mt-2 px-2 py-1 bg-[#f97316] rounded-t-lg">
+                                    <p className="text-[9px] font-medium text-white truncate">
+                                      {routeCoverage.type === 'extended' && `Extended: ${routeCoverage.coveringTechName}`}
+                                      {routeCoverage.type === 'split' && `Split: ${routeCoverage.techAName} & ${routeCoverage.techBName}`}
+                                      {routeCoverage.type === 'full' && `Covered by ${routeCoverage.coveringTechName}`}
+                                    </p>
+                                  </div>
+                                )}
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs font-medium text-[#0F172A]" data-testid={`text-stop-count-${tech.id}-${dayIndex}`}>
                                     {propertiesForDay.length} stops
@@ -2000,6 +2032,20 @@ export default function Calendar() {
             <Button
               className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
               onClick={() => {
+                if (selectedRouteData) {
+                  const coveringTech = technicians.find(t => String(t.id) === extendedCoverForm.coveringTechId);
+                  const routeKey = `${selectedRouteData.techId}-${weekDates.findIndex(d => d.toDateString() === selectedRouteData.date.toDateString())}`;
+                  setRouteCoverages(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(routeKey, {
+                      type: 'extended',
+                      coveringTechName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : '',
+                      fromDate: extendedCoverForm.fromDate,
+                      toDate: extendedCoverForm.toDate,
+                    });
+                    return newMap;
+                  });
+                }
                 toast({
                   title: "Coverage Saved",
                   description: `Extended coverage set for ${extendedCoverForm.fromDate} to ${extendedCoverForm.toDate}`,
@@ -2169,6 +2215,20 @@ export default function Calendar() {
             <Button
               className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
               onClick={() => {
+                if (selectedRouteData) {
+                  const techA = technicians.find(t => String(t.id) === splitRouteForm.techAId);
+                  const techB = technicians.find(t => String(t.id) === splitRouteForm.techBId);
+                  const routeKey = `${selectedRouteData.techId}-${weekDates.findIndex(d => d.toDateString() === selectedRouteData.date.toDateString())}`;
+                  setRouteCoverages(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(routeKey, {
+                      type: 'split',
+                      techAName: techA ? `${techA.firstName}` : '',
+                      techBName: techB ? `${techB.firstName}` : '',
+                    });
+                    return newMap;
+                  });
+                }
                 toast({
                   title: "Route Split",
                   description: `Route split between ${splitRouteForm.techAProperties.length} and ${splitRouteForm.techBProperties.length} stops`,
@@ -2263,6 +2323,17 @@ export default function Calendar() {
               className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
               onClick={() => {
                 const coveringTech = technicians.find(t => String(t.id) === coverFullRouteForm.coveringTechId);
+                if (selectedRouteData) {
+                  const routeKey = `${selectedRouteData.techId}-${weekDates.findIndex(d => d.toDateString() === selectedRouteData.date.toDateString())}`;
+                  setRouteCoverages(prev => {
+                    const newMap = new Map(prev);
+                    newMap.set(routeKey, {
+                      type: 'full',
+                      coveringTechName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : '',
+                    });
+                    return newMap;
+                  });
+                }
                 toast({
                   title: "Coverage Assigned",
                   description: `${coveringTech?.firstName} ${coveringTech?.lastName} will cover the full route`,
