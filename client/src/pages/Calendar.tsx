@@ -257,6 +257,11 @@ export default function Calendar() {
     techBName?: string;
     fromDate?: string;
     toDate?: string;
+    date?: string;
+    propertyCount?: number;
+    propertyNames?: string[];
+    techAProperties?: string[];
+    techBProperties?: string[];
   }>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
@@ -1454,12 +1459,41 @@ export default function Calendar() {
                                 data-testid={`route-block-${tech.id}-${dayIndex}`}
                               >
                                 {routeCoverage && (
-                                  <div className="mb-2 -mx-2 -mt-2 px-2 py-1 bg-[#f97316] rounded-t-lg">
-                                    <p className="text-[9px] font-medium text-white truncate">
-                                      {routeCoverage.type === 'extended' && `Extended: ${routeCoverage.coveringTechName}`}
-                                      {routeCoverage.type === 'split' && `Split: ${routeCoverage.techAName} & ${routeCoverage.techBName}`}
-                                      {routeCoverage.type === 'full' && `Covered by ${routeCoverage.coveringTechName}`}
-                                    </p>
+                                  <div className="mb-2 -mx-2 -mt-2 px-2 py-1.5 bg-[#f97316] rounded-t-lg">
+                                    {routeCoverage.type === 'extended' && (
+                                      <div>
+                                        <p className="text-[9px] font-bold text-white">Extended Coverage</p>
+                                        <p className="text-[8px] text-white/90 mt-0.5">Covered by: {routeCoverage.coveringTechName}</p>
+                                        {routeCoverage.fromDate && routeCoverage.toDate && (
+                                          <p className="text-[8px] text-white/80">
+                                            Dates: {new Date(routeCoverage.fromDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(routeCoverage.toDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                          </p>
+                                        )}
+                                        <p className="text-[8px] text-white/80">Covering: All {routeCoverage.propertyCount} properties</p>
+                                      </div>
+                                    )}
+                                    {routeCoverage.type === 'split' && (
+                                      <div>
+                                        <p className="text-[9px] font-bold text-white">Split Route</p>
+                                        <div className="mt-0.5 space-y-0.5">
+                                          <p className="text-[8px] text-white/90">
+                                            <span className="font-medium">{routeCoverage.techAName}:</span> {routeCoverage.techAProperties?.filter(Boolean).join(', ') || 'None'}
+                                          </p>
+                                          <p className="text-[8px] text-white/90">
+                                            <span className="font-medium">{routeCoverage.techBName}:</span> {routeCoverage.techBProperties?.filter(Boolean).join(', ') || 'None'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {routeCoverage.type === 'full' && (
+                                      <div>
+                                        <p className="text-[9px] font-bold text-white">Full Day Coverage</p>
+                                        <p className="text-[8px] text-white/90 mt-0.5">Covered by: {routeCoverage.coveringTechName}</p>
+                                        {routeCoverage.date && (
+                                          <p className="text-[8px] text-white/80">Date: {routeCoverage.date}</p>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 <div className="flex items-center justify-between mb-1">
@@ -2042,6 +2076,8 @@ export default function Calendar() {
                       coveringTechName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : '',
                       fromDate: extendedCoverForm.fromDate,
                       toDate: extendedCoverForm.toDate,
+                      propertyCount: selectedRouteData.properties.length,
+                      propertyNames: selectedRouteData.properties.map(p => p.propertyName || ''),
                     });
                     return newMap;
                   });
@@ -2219,12 +2255,21 @@ export default function Calendar() {
                   const techA = technicians.find(t => String(t.id) === splitRouteForm.techAId);
                   const techB = technicians.find(t => String(t.id) === splitRouteForm.techBId);
                   const routeKey = `${selectedRouteData.techId}-${weekDates.findIndex(d => d.toDateString() === selectedRouteData.date.toDateString())}`;
+                  // Get property names for each tech
+                  const techAPropertyNames = selectedRouteData.properties
+                    .filter(p => splitRouteForm.techAProperties.includes(p.id))
+                    .map(p => p.propertyName || '');
+                  const techBPropertyNames = selectedRouteData.properties
+                    .filter(p => splitRouteForm.techBProperties.includes(p.id))
+                    .map(p => p.propertyName || '');
                   setRouteCoverages(prev => {
                     const newMap = new Map(prev);
                     newMap.set(routeKey, {
                       type: 'split',
                       techAName: techA ? `${techA.firstName}` : '',
                       techBName: techB ? `${techB.firstName}` : '',
+                      techAProperties: techAPropertyNames,
+                      techBProperties: techBPropertyNames,
                     });
                     return newMap;
                   });
@@ -2330,6 +2375,8 @@ export default function Calendar() {
                     newMap.set(routeKey, {
                       type: 'full',
                       coveringTechName: coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : '',
+                      date: selectedRouteData.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                      propertyCount: selectedRouteData.properties.length,
                     });
                     return newMap;
                   });
