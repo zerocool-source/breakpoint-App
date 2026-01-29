@@ -996,6 +996,293 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Live Fleet Map + Truck Activity Section */}
+        <div className="grid grid-cols-10 gap-6">
+          {/* Live Fleet Map - 70% width */}
+          <div className="col-span-7">
+            <Card className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#0077b6]" />
+                    <CardTitle className="text-base">Live Fleet Map</CardTitle>
+                    <Badge className="bg-green-100 text-green-700 text-xs">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse inline-block" />
+                      LIVE
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Vehicle Search Dropdown */}
+                    <Popover open={dashboardVehicleSearchOpen} onOpenChange={setDashboardVehicleSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 w-36 justify-between text-xs" data-testid="dashboard-vehicle-search">
+                          <span className="truncate">Find Vehicle...</span>
+                          <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-0 z-[9999]" align="end">
+                        <Command>
+                          <CommandInput 
+                            placeholder="Search trucks..." 
+                            value={dashboardVehicleSearchQuery}
+                            onValueChange={setDashboardVehicleSearchQuery}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No vehicles found</CommandEmpty>
+                            <CommandGroup>
+                              <ScrollArea className="h-[180px]">
+                                {dashboardVehicleList.map(vehicle => (
+                                  <CommandItem
+                                    key={vehicle.id}
+                                    onSelect={() => {
+                                      setDashboardFocusVehicle(vehicle.id);
+                                      setDashboardVehicleSearchOpen(false);
+                                    }}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <div className={`w-2 h-2 rounded-full ${
+                                      vehicle.online && vehicle.ignition ? 'bg-green-500' :
+                                      vehicle.online ? 'bg-orange-500' : 'bg-gray-400'
+                                    }`} />
+                                    <span className="text-xs">{vehicle.name}</span>
+                                  </CommandItem>
+                                ))}
+                              </ScrollArea>
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    
+                    {/* Status Filter */}
+                    <Select value={dashboardMapFilter} onValueChange={setDashboardMapFilter}>
+                      <SelectTrigger className="w-24 h-7 text-xs">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[9999]">
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="transit">In Transit</SelectItem>
+                        <SelectItem value="inactive">Offline</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* Fit All */}
+                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setDashboardFitAll(true)} title="Fit all vehicles">
+                      <Target className="w-3.5 h-3.5" />
+                    </Button>
+                    
+                    {/* Satellite Toggle */}
+                    <Button 
+                      variant={dashboardSatelliteView ? "default" : "outline"} 
+                      size="sm" 
+                      className={`h-7 px-2 text-xs ${dashboardSatelliteView ? 'bg-[#0077b6]' : ''}`}
+                      onClick={() => setDashboardSatelliteView(!dashboardSatelliteView)}
+                    >
+                      <Layers className="w-3.5 h-3.5 mr-1" />
+                      Satellite
+                    </Button>
+                    
+                    {/* View Full Map */}
+                    <Button variant="ghost" size="sm" className="h-7 text-[#0077b6] hover:text-[#006299]" onClick={() => navigate("/fleet")}>
+                      <Maximize2 className="w-3.5 h-3.5 mr-1" />
+                      Full
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="relative h-[320px]">
+                  {gpsData?.devices && gpsData.devices.length > 0 ? (
+                    <MapContainer
+                      center={[33.9533, -117.3962]}
+                      zoom={10}
+                      className="h-full w-full"
+                      scrollWheelZoom={true}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url={
+                          dashboardSatelliteView
+                            ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        }
+                      />
+                      <DashboardMapController 
+                        devices={dashboardMapDevices}
+                        fitAll={dashboardFitAll}
+                        setFitAll={setDashboardFitAll}
+                        focusVehicleId={dashboardFocusVehicle}
+                        setFocusVehicleId={setDashboardFocusVehicle}
+                        markerRefs={dashboardMarkerRefs}
+                      />
+                      {dashboardMapDevices.map((device) => (
+                        <Marker
+                          key={device.id}
+                          position={[device.location.lat, device.location.lng]}
+                          icon={createDashboardVehicleIcon(getDashboardVehicleStatus(device), extractTruckNumber(device.name))}
+                          ref={(ref) => {
+                            if (ref) dashboardMarkerRefs.current[device.id] = ref;
+                          }}
+                        >
+                          <LeafletTooltip direction="top" offset={[0, -16]} opacity={0.95}>
+                            <div className="text-xs font-medium">{device.name}</div>
+                            <div className="text-[10px] text-gray-500">
+                              {device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}
+                            </div>
+                          </LeafletTooltip>
+                          <Popup>
+                            <div className="min-w-[180px] text-sm">
+                              <div className="font-semibold mb-2">{device.name}</div>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Status:</span>
+                                  <span>{device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Speed:</span>
+                                  <span>{Math.round(device.speed)} mph</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Updated:</span>
+                                  <span>{formatTimeAgo(device.lastUpdate)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-slate-50">
+                      <div className="text-center text-slate-500">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Loading fleet data...</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Vehicle count badge */}
+                  <div className="absolute top-3 right-3 bg-white/95 rounded-md shadow px-2 py-1 z-[1000]">
+                    <span className="text-xs font-medium">{dashboardMapDevices.length} vehicles</span>
+                  </div>
+                  {/* Map Legend */}
+                  <div className="absolute bottom-3 left-3 bg-white/95 rounded-md shadow px-2 py-1 z-[1000]">
+                    <div className="flex items-center gap-3 text-[10px]">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span>Active</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span>In Transit</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 rounded-full bg-gray-400" />
+                        <span>Offline</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Truck Activity Tracker - 30% width */}
+          <div className="col-span-3">
+            <Card className="bg-white rounded-lg h-full" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardHeader className="pb-2 px-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#0077b6]" />
+                      Truck Activity Today
+                    </CardTitle>
+                    <CardDescription className="text-xs">Daily start times and status</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" className="text-[#0077b6] hover:text-[#006299]" onClick={() => navigate("/fleet")}>
+                    View All <ArrowRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <ScrollArea className="h-[280px]">
+                  <div className="space-y-2">
+                    {(gpsData?.devices || [])
+                      .filter(d => isValidCoordinate(d.location.lat, d.location.lng))
+                      .sort((a, b) => {
+                        const numA = parseInt(a.name.match(/#(\d+)/)?.[1] || "999");
+                        const numB = parseInt(b.name.match(/#(\d+)/)?.[1] || "999");
+                        return numA - numB;
+                      })
+                      .map(device => {
+                        const status = getDashboardVehicleStatus(device);
+                        const isActive = device.online && device.ignition;
+                        const isTransit = device.online && device.speed > 5;
+                        
+                        // Calculate activity time (simulated based on last update)
+                        let activityText = "Not started";
+                        let startTime = "";
+                        if (isActive || isTransit) {
+                          const lastUpdate = new Date(device.lastUpdate);
+                          if (!isNaN(lastUpdate.getTime())) {
+                            const now = new Date();
+                            const diffMs = now.getTime() - lastUpdate.getTime();
+                            const hours = Math.floor(diffMs / 3600000);
+                            const mins = Math.floor((diffMs % 3600000) / 60000);
+                            activityText = hours > 0 ? `Active ${hours}h ${mins}m` : `Active ${mins}m`;
+                            
+                            // Estimate start time (assuming active for a while)
+                            const startDate = new Date(now.getTime() - Math.min(diffMs, 8 * 3600000));
+                            startTime = format(startDate, "h:mm a");
+                          }
+                        }
+                        
+                        return (
+                          <div 
+                            key={device.id}
+                            className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                status === "transit" ? "bg-orange-100" :
+                                status === "active" ? "bg-green-100" : "bg-slate-100"
+                              }`}>
+                                <Truck className={`w-4 h-4 ${
+                                  status === "transit" ? "text-orange-600" :
+                                  status === "active" ? "text-green-600" : "text-slate-400"
+                                }`} />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-slate-900">{device.name}</div>
+                                <div className="text-[10px] text-slate-500">
+                                  {startTime ? `Started: ${startTime}` : "Not started today"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge className={`text-[10px] ${
+                                status === "transit" ? "bg-orange-100 text-orange-700 hover:bg-orange-100" :
+                                status === "active" ? "bg-green-100 text-green-700 hover:bg-green-100" : 
+                                "bg-slate-100 text-slate-600 hover:bg-slate-100"
+                              }`}>
+                                {status === "transit" ? "In Transit" : status === "active" ? "Active" : "Inactive"}
+                              </Badge>
+                              <div className={`text-[10px] mt-0.5 ${
+                                isActive || isTransit ? "text-green-600" : "text-slate-400"
+                              }`}>
+                                {activityText}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Pending Approvals Metrics + Recent Announcements Row */}
         <div className="grid grid-cols-10 gap-6">
           {/* Pending Approvals Metrics - 70% width */}
@@ -2212,293 +2499,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         )}
-
-        {/* Live Fleet Map + Truck Activity Section */}
-        <div className="grid grid-cols-10 gap-6">
-          {/* Live Fleet Map - 60% width */}
-          <div className="col-span-6">
-            <Card className="bg-white rounded-lg overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <CardHeader className="pb-2 px-4 pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#0077b6]" />
-                    <CardTitle className="text-base">Live Fleet Map</CardTitle>
-                    <Badge className="bg-green-100 text-green-700 text-xs">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse inline-block" />
-                      LIVE
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Vehicle Search Dropdown */}
-                    <Popover open={dashboardVehicleSearchOpen} onOpenChange={setDashboardVehicleSearchOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7 w-36 justify-between text-xs" data-testid="dashboard-vehicle-search">
-                          <span className="truncate">Find Vehicle...</span>
-                          <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-52 p-0 z-[9999]" align="end">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Search trucks..." 
-                            value={dashboardVehicleSearchQuery}
-                            onValueChange={setDashboardVehicleSearchQuery}
-                          />
-                          <CommandList>
-                            <CommandEmpty>No vehicles found</CommandEmpty>
-                            <CommandGroup>
-                              <ScrollArea className="h-[180px]">
-                                {dashboardVehicleList.map(vehicle => (
-                                  <CommandItem
-                                    key={vehicle.id}
-                                    onSelect={() => {
-                                      setDashboardFocusVehicle(vehicle.id);
-                                      setDashboardVehicleSearchOpen(false);
-                                    }}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <div className={`w-2 h-2 rounded-full ${
-                                      vehicle.online && vehicle.ignition ? 'bg-green-500' :
-                                      vehicle.online ? 'bg-orange-500' : 'bg-gray-400'
-                                    }`} />
-                                    <span className="text-xs">{vehicle.name}</span>
-                                  </CommandItem>
-                                ))}
-                              </ScrollArea>
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    
-                    {/* Status Filter */}
-                    <Select value={dashboardMapFilter} onValueChange={setDashboardMapFilter}>
-                      <SelectTrigger className="w-24 h-7 text-xs">
-                        <SelectValue placeholder="All" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[9999]">
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="transit">In Transit</SelectItem>
-                        <SelectItem value="inactive">Offline</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    {/* Fit All */}
-                    <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setDashboardFitAll(true)} title="Fit all vehicles">
-                      <Target className="w-3.5 h-3.5" />
-                    </Button>
-                    
-                    {/* Satellite Toggle */}
-                    <Button 
-                      variant={dashboardSatelliteView ? "default" : "outline"} 
-                      size="sm" 
-                      className={`h-7 px-2 text-xs ${dashboardSatelliteView ? 'bg-[#0077b6]' : ''}`}
-                      onClick={() => setDashboardSatelliteView(!dashboardSatelliteView)}
-                    >
-                      <Layers className="w-3.5 h-3.5 mr-1" />
-                      Satellite
-                    </Button>
-                    
-                    {/* View Full Map */}
-                    <Button variant="ghost" size="sm" className="h-7 text-[#0077b6] hover:text-[#006299]" onClick={() => navigate("/fleet")}>
-                      <Maximize2 className="w-3.5 h-3.5 mr-1" />
-                      Full
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="relative h-[320px]">
-                  {gpsData?.devices && gpsData.devices.length > 0 ? (
-                    <MapContainer
-                      center={[33.9533, -117.3962]}
-                      zoom={10}
-                      className="h-full w-full"
-                      scrollWheelZoom={true}
-                    >
-                      <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url={
-                          dashboardSatelliteView
-                            ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                            : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        }
-                      />
-                      <DashboardMapController 
-                        devices={dashboardMapDevices}
-                        fitAll={dashboardFitAll}
-                        setFitAll={setDashboardFitAll}
-                        focusVehicleId={dashboardFocusVehicle}
-                        setFocusVehicleId={setDashboardFocusVehicle}
-                        markerRefs={dashboardMarkerRefs}
-                      />
-                      {dashboardMapDevices.map((device) => (
-                        <Marker
-                          key={device.id}
-                          position={[device.location.lat, device.location.lng]}
-                          icon={createDashboardVehicleIcon(getDashboardVehicleStatus(device), extractTruckNumber(device.name))}
-                          ref={(ref) => {
-                            if (ref) dashboardMarkerRefs.current[device.id] = ref;
-                          }}
-                        >
-                          <LeafletTooltip direction="top" offset={[0, -16]} opacity={0.95}>
-                            <div className="text-xs font-medium">{device.name}</div>
-                            <div className="text-[10px] text-gray-500">
-                              {device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}
-                            </div>
-                          </LeafletTooltip>
-                          <Popup>
-                            <div className="min-w-[180px] text-sm">
-                              <div className="font-semibold mb-2">{device.name}</div>
-                              <div className="space-y-1 text-xs">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Status:</span>
-                                  <span>{device.online ? (device.speed > 5 ? "In Transit" : device.ignition ? "Idle" : "Parked") : "Offline"}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Speed:</span>
-                                  <span>{Math.round(device.speed)} mph</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-500">Updated:</span>
-                                  <span>{formatTimeAgo(device.lastUpdate)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      ))}
-                    </MapContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full bg-slate-50">
-                      <div className="text-center text-slate-500">
-                        <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Loading fleet data...</p>
-                      </div>
-                    </div>
-                  )}
-                  {/* Vehicle count badge */}
-                  <div className="absolute top-3 right-3 bg-white/95 rounded-md shadow px-2 py-1 z-[1000]">
-                    <span className="text-xs font-medium">{dashboardMapDevices.length} vehicles</span>
-                  </div>
-                  {/* Map Legend */}
-                  <div className="absolute bottom-3 left-3 bg-white/95 rounded-md shadow px-2 py-1 z-[1000]">
-                    <div className="flex items-center gap-3 text-[10px]">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span>Active</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-orange-500" />
-                        <span>In Transit</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-gray-400" />
-                        <span>Offline</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Truck Activity Tracker - 40% width */}
-          <div className="col-span-4">
-            <Card className="bg-white rounded-lg h-full" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-              <CardHeader className="pb-2 px-4 pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#0077b6]" />
-                      Truck Activity Today
-                    </CardTitle>
-                    <CardDescription className="text-xs">Daily start times and status</CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-[#0077b6] hover:text-[#006299]" onClick={() => navigate("/fleet")}>
-                    View All <ArrowRight className="w-3 h-3 ml-1" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                <ScrollArea className="h-[280px]">
-                  <div className="space-y-2">
-                    {(gpsData?.devices || [])
-                      .filter(d => isValidCoordinate(d.location.lat, d.location.lng))
-                      .sort((a, b) => {
-                        const numA = parseInt(a.name.match(/#(\d+)/)?.[1] || "999");
-                        const numB = parseInt(b.name.match(/#(\d+)/)?.[1] || "999");
-                        return numA - numB;
-                      })
-                      .map(device => {
-                        const status = getDashboardVehicleStatus(device);
-                        const isActive = device.online && device.ignition;
-                        const isTransit = device.online && device.speed > 5;
-                        
-                        // Calculate activity time (simulated based on last update)
-                        let activityText = "Not started";
-                        let startTime = "";
-                        if (isActive || isTransit) {
-                          const lastUpdate = new Date(device.lastUpdate);
-                          if (!isNaN(lastUpdate.getTime())) {
-                            const now = new Date();
-                            const diffMs = now.getTime() - lastUpdate.getTime();
-                            const hours = Math.floor(diffMs / 3600000);
-                            const mins = Math.floor((diffMs % 3600000) / 60000);
-                            activityText = hours > 0 ? `Active ${hours}h ${mins}m` : `Active ${mins}m`;
-                            
-                            // Estimate start time (assuming active for a while)
-                            const startDate = new Date(now.getTime() - Math.min(diffMs, 8 * 3600000));
-                            startTime = format(startDate, "h:mm a");
-                          }
-                        }
-                        
-                        return (
-                          <div 
-                            key={device.id}
-                            className="flex items-center justify-between p-2.5 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                status === "transit" ? "bg-orange-100" :
-                                status === "active" ? "bg-green-100" : "bg-slate-100"
-                              }`}>
-                                <Truck className={`w-4 h-4 ${
-                                  status === "transit" ? "text-orange-600" :
-                                  status === "active" ? "text-green-600" : "text-slate-400"
-                                }`} />
-                              </div>
-                              <div>
-                                <div className="text-sm font-medium text-slate-900">{device.name}</div>
-                                <div className="text-[10px] text-slate-500">
-                                  {startTime ? `Started: ${startTime}` : "Not started today"}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge className={`text-[10px] ${
-                                status === "transit" ? "bg-orange-100 text-orange-700 hover:bg-orange-100" :
-                                status === "active" ? "bg-green-100 text-green-700 hover:bg-green-100" : 
-                                "bg-slate-100 text-slate-600 hover:bg-slate-100"
-                              }`}>
-                                {status === "transit" ? "In Transit" : status === "active" ? "Active" : "Inactive"}
-                              </Badge>
-                              <div className={`text-[10px] mt-0.5 ${
-                                isActive || isTransit ? "text-green-600" : "text-slate-400"
-                              }`}>
-                                {activityText}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
 
         {/* Repair Tech Workload */}
         {(metrics?.technicians?.repairTechWorkload?.length || 0) > 0 && (
