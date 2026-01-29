@@ -1460,6 +1460,93 @@ export default function Calendar() {
                                         +{propertiesForDay.length - 5} more
                                       </p>
                                     )}
+                                    
+                                    <div className="mt-3 pt-2 border-t border-slate-200">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full h-7 text-[10px] text-slate-600 hover:text-[#0077b6] hover:bg-slate-100"
+                                            onClick={(e) => e.stopPropagation()}
+                                            data-testid={`button-route-actions-${tech.id}-${dayIndex}`}
+                                          >
+                                            <MoreHorizontal className="w-3 h-3 mr-1" />
+                                            Route Actions
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="w-44" onClick={(e) => e.stopPropagation()}>
+                                          <DropdownMenuItem
+                                            className="text-xs cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedRouteData({
+                                                techId: tech.id,
+                                                techName: `${tech.firstName} ${tech.lastName}`,
+                                                date,
+                                                properties: propertiesForDay,
+                                              });
+                                              setExtendedCoverForm({
+                                                fromDate: date.toISOString().split('T')[0],
+                                                toDate: date.toISOString().split('T')[0],
+                                                coveringTechId: "",
+                                                reason: "",
+                                              });
+                                              setShowExtendedCoverModal(true);
+                                            }}
+                                            data-testid={`menu-extended-cover-${tech.id}-${dayIndex}`}
+                                          >
+                                            <CalendarDays className="w-3.5 h-3.5 mr-2 text-[#0077b6]" />
+                                            Extended Cover
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            className="text-xs cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedRouteData({
+                                                techId: tech.id,
+                                                techName: `${tech.firstName} ${tech.lastName}`,
+                                                date,
+                                                properties: propertiesForDay,
+                                              });
+                                              setSplitRouteForm({
+                                                techAId: "",
+                                                techBId: "",
+                                                techAProperties: [],
+                                                techBProperties: [],
+                                                reason: "",
+                                              });
+                                              setShowSplitRouteModal(true);
+                                            }}
+                                            data-testid={`menu-split-route-${tech.id}-${dayIndex}`}
+                                          >
+                                            <GitBranch className="w-3.5 h-3.5 mr-2 text-[#0077b6]" />
+                                            Split Route
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            className="text-xs cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedRouteData({
+                                                techId: tech.id,
+                                                techName: `${tech.firstName} ${tech.lastName}`,
+                                                date,
+                                                properties: propertiesForDay,
+                                              });
+                                              setCoverFullRouteForm({
+                                                coveringTechId: "",
+                                                reason: "",
+                                              });
+                                              setShowCoverFullRouteModal(true);
+                                            }}
+                                            data-testid={`menu-cover-full-route-${tech.id}-${dayIndex}`}
+                                          >
+                                            <UserPlus className="w-3.5 h-3.5 mr-2 text-[#0077b6]" />
+                                            Cover Full Route
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -1829,6 +1916,363 @@ export default function Calendar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddCoverageModal(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showExtendedCoverModal} onOpenChange={setShowExtendedCoverModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="w-5 h-5 text-[#0077b6]" />
+              Extended Cover
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {selectedRouteData && (
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-sm font-medium text-[#0F172A]">{selectedRouteData.techName}</p>
+                <p className="text-xs text-slate-500">{selectedRouteData.properties.length} stops on this route</p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium">From Date</Label>
+                <Input
+                  type="date"
+                  value={extendedCoverForm.fromDate}
+                  onChange={(e) => setExtendedCoverForm(prev => ({ ...prev, fromDate: e.target.value }))}
+                  className="mt-1"
+                  data-testid="input-extended-from-date"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">To Date</Label>
+                <Input
+                  type="date"
+                  value={extendedCoverForm.toDate}
+                  onChange={(e) => setExtendedCoverForm(prev => ({ ...prev, toDate: e.target.value }))}
+                  className="mt-1"
+                  data-testid="input-extended-to-date"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">Covering Technician</Label>
+              <Select
+                value={extendedCoverForm.coveringTechId}
+                onValueChange={(value) => setExtendedCoverForm(prev => ({ ...prev, coveringTechId: value }))}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-extended-covering-tech">
+                  <SelectValue placeholder="Select technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paginatedTechnicians
+                    .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId)
+                    .map((tech) => (
+                      <SelectItem key={String(tech.id)} value={String(tech.id)}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">Reason (Optional)</Label>
+              <Textarea
+                placeholder="e.g., Vacation, PTO, Training"
+                value={extendedCoverForm.reason}
+                onChange={(e) => setExtendedCoverForm(prev => ({ ...prev, reason: e.target.value }))}
+                className="mt-1"
+                rows={2}
+                data-testid="input-extended-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExtendedCoverModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
+              onClick={() => {
+                toast({
+                  title: "Coverage Saved",
+                  description: `Extended coverage set for ${extendedCoverForm.fromDate} to ${extendedCoverForm.toDate}`,
+                });
+                setShowExtendedCoverModal(false);
+              }}
+              disabled={!extendedCoverForm.coveringTechId || !extendedCoverForm.fromDate || !extendedCoverForm.toDate}
+              data-testid="button-save-extended-cover"
+            >
+              Save Coverage
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showSplitRouteModal} onOpenChange={setShowSplitRouteModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitBranch className="w-5 h-5 text-[#0077b6]" />
+              Split Route
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {selectedRouteData && (
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-sm font-medium text-[#0F172A]">{selectedRouteData.techName}'s Route</p>
+                <p className="text-xs text-slate-500">
+                  {selectedRouteData.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} - {selectedRouteData.properties.length} stops
+                </p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium">Tech A</Label>
+                <Select
+                  value={splitRouteForm.techAId}
+                  onValueChange={(value) => setSplitRouteForm(prev => ({ ...prev, techAId: value }))}
+                >
+                  <SelectTrigger className="mt-1" data-testid="select-split-tech-a">
+                    <SelectValue placeholder="Select technician" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paginatedTechnicians
+                      .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId && String(t.id) !== splitRouteForm.techBId)
+                      .map((tech) => (
+                        <SelectItem key={String(tech.id)} value={String(tech.id)}>
+                          {tech.firstName} {tech.lastName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Tech B</Label>
+                <Select
+                  value={splitRouteForm.techBId}
+                  onValueChange={(value) => setSplitRouteForm(prev => ({ ...prev, techBId: value }))}
+                >
+                  <SelectTrigger className="mt-1" data-testid="select-split-tech-b">
+                    <SelectValue placeholder="Select technician" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paginatedTechnicians
+                      .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId && String(t.id) !== splitRouteForm.techAId)
+                      .map((tech) => (
+                        <SelectItem key={String(tech.id)} value={String(tech.id)}>
+                          {tech.firstName} {tech.lastName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {selectedRouteData && splitRouteForm.techAId && splitRouteForm.techBId && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="border rounded-lg p-3">
+                  <p className="text-xs font-medium text-slate-500 mb-2">
+                    Assign to {paginatedTechnicians.find(t => String(t.id) === splitRouteForm.techAId)?.firstName || 'Tech A'}
+                  </p>
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    {selectedRouteData.properties.map((prop) => (
+                      <label
+                        key={prop.id}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded cursor-pointer text-xs",
+                          splitRouteForm.techAProperties.includes(prop.id) 
+                            ? "bg-[#0077b6]/10 border border-[#0077b6]" 
+                            : "bg-slate-50 hover:bg-slate-100",
+                          splitRouteForm.techBProperties.includes(prop.id) && "opacity-40 pointer-events-none"
+                        )}
+                      >
+                        <Checkbox
+                          checked={splitRouteForm.techAProperties.includes(prop.id)}
+                          disabled={splitRouteForm.techBProperties.includes(prop.id)}
+                          onCheckedChange={(checked) => {
+                            setSplitRouteForm(prev => ({
+                              ...prev,
+                              techAProperties: checked
+                                ? [...prev.techAProperties, prop.id]
+                                : prev.techAProperties.filter(id => id !== prop.id)
+                            }));
+                          }}
+                        />
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <span className="truncate">{prop.propertyName}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-3">
+                  <p className="text-xs font-medium text-slate-500 mb-2">
+                    Assign to {paginatedTechnicians.find(t => String(t.id) === splitRouteForm.techBId)?.firstName || 'Tech B'}
+                  </p>
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    {selectedRouteData.properties.map((prop) => (
+                      <label
+                        key={prop.id}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded cursor-pointer text-xs",
+                          splitRouteForm.techBProperties.includes(prop.id) 
+                            ? "bg-[#0077b6]/10 border border-[#0077b6]" 
+                            : "bg-slate-50 hover:bg-slate-100",
+                          splitRouteForm.techAProperties.includes(prop.id) && "opacity-40 pointer-events-none"
+                        )}
+                      >
+                        <Checkbox
+                          checked={splitRouteForm.techBProperties.includes(prop.id)}
+                          disabled={splitRouteForm.techAProperties.includes(prop.id)}
+                          onCheckedChange={(checked) => {
+                            setSplitRouteForm(prev => ({
+                              ...prev,
+                              techBProperties: checked
+                                ? [...prev.techBProperties, prop.id]
+                                : prev.techBProperties.filter(id => id !== prop.id)
+                            }));
+                          }}
+                        />
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <span className="truncate">{prop.propertyName}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <Label className="text-sm font-medium">Reason (Optional)</Label>
+              <Textarea
+                placeholder="e.g., Heavy workload, Training new tech"
+                value={splitRouteForm.reason}
+                onChange={(e) => setSplitRouteForm(prev => ({ ...prev, reason: e.target.value }))}
+                className="mt-1"
+                rows={2}
+                data-testid="input-split-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSplitRouteModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
+              onClick={() => {
+                toast({
+                  title: "Route Split",
+                  description: `Route split between ${splitRouteForm.techAProperties.length} and ${splitRouteForm.techBProperties.length} stops`,
+                });
+                setShowSplitRouteModal(false);
+              }}
+              disabled={!splitRouteForm.techAId || !splitRouteForm.techBId || 
+                (splitRouteForm.techAProperties.length === 0 && splitRouteForm.techBProperties.length === 0)}
+              data-testid="button-split-route"
+            >
+              Split Route
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showCoverFullRouteModal} onOpenChange={setShowCoverFullRouteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-[#0077b6]" />
+              Cover Full Route
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {selectedRouteData && (
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-sm font-medium text-[#0F172A]">{selectedRouteData.techName}'s Route</p>
+                <p className="text-xs text-slate-500">
+                  {selectedRouteData.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} - {selectedRouteData.properties.length} stops
+                </p>
+              </div>
+            )}
+            
+            <div>
+              <Label className="text-sm font-medium">Covering Technician</Label>
+              <Select
+                value={coverFullRouteForm.coveringTechId}
+                onValueChange={(value) => setCoverFullRouteForm(prev => ({ ...prev, coveringTechId: value }))}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-cover-full-tech">
+                  <SelectValue placeholder="Select technician to cover entire route" />
+                </SelectTrigger>
+                <SelectContent>
+                  {paginatedTechnicians
+                    .filter(t => t.role === "service" && t.id !== selectedRouteData?.techId)
+                    .map((tech) => (
+                      <SelectItem key={String(tech.id)} value={String(tech.id)}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">Reason (Optional)</Label>
+              <Textarea
+                placeholder="e.g., Sick day, PTO, Training, Personal emergency"
+                value={coverFullRouteForm.reason}
+                onChange={(e) => setCoverFullRouteForm(prev => ({ ...prev, reason: e.target.value }))}
+                className="mt-1"
+                rows={2}
+                data-testid="input-cover-full-reason"
+              />
+            </div>
+            
+            {selectedRouteData && (
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                <p className="text-xs text-blue-700 font-medium mb-1">Stops to be covered:</p>
+                <div className="space-y-0.5">
+                  {selectedRouteData.properties.slice(0, 4).map((prop, idx) => (
+                    <p key={prop.id} className="text-xs text-blue-600 flex items-center gap-1">
+                      <span className="w-4">{idx + 1}.</span>
+                      {prop.propertyName}
+                    </p>
+                  ))}
+                  {selectedRouteData.properties.length > 4 && (
+                    <p className="text-xs text-blue-500 font-medium">
+                      +{selectedRouteData.properties.length - 4} more stops
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCoverFullRouteModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0077b6] hover:bg-[#005f8f] text-white"
+              onClick={() => {
+                const coveringTech = paginatedTechnicians.find(t => String(t.id) === coverFullRouteForm.coveringTechId);
+                toast({
+                  title: "Coverage Assigned",
+                  description: `${coveringTech?.firstName} ${coveringTech?.lastName} will cover the full route`,
+                });
+                setShowCoverFullRouteModal(false);
+              }}
+              disabled={!coverFullRouteForm.coveringTechId}
+              data-testid="button-assign-coverage"
+            >
+              Assign Coverage
             </Button>
           </DialogFooter>
         </DialogContent>
