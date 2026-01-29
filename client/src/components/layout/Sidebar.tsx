@@ -184,7 +184,7 @@ function FlyoutPanel({
 
   return (
     <div 
-      className="fixed z-[100] bg-white rounded-lg shadow-xl border border-slate-200 min-w-[200px] py-2 animate-in fade-in slide-in-from-left-2 duration-150"
+      className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-slate-200 min-w-[200px] py-2 animate-in fade-in slide-in-from-left-2 duration-150"
       style={{ 
         left: "68px",
         top: `${position}px`,
@@ -278,7 +278,7 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="w-[68px] h-screen bg-[#1e3a5f] flex flex-col fixed left-0 top-0 z-50 shadow-lg">
+      <aside className="w-[68px] h-screen bg-[#1e3a5f] flex flex-col fixed left-0 top-0 z-[1000] shadow-lg">
         <div className="py-3 border-b border-white/10 flex items-center justify-center">
           <img 
             src={BLogo} 
