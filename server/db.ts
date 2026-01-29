@@ -28,12 +28,16 @@ if (shouldUseTcp) {
   // Use node-postgres (pg) for TCP connections - works on Render.com
   const pg = require("pg");
   const { drizzle } = require("drizzle-orm/node-postgres");
-  
-  pool = new pg.Pool({ 
+
+  // Enable SSL for external connections (required by Render PostgreSQL)
+  const isExternalConnection = databaseUrl.includes('.render.com') || databaseUrl.includes('sslmode=require');
+
+  pool = new pg.Pool({
     connectionString: databaseUrl,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    ssl: isExternalConnection ? { rejectUnauthorized: false } : false,
   });
   
   pool.on('error', (err: Error) => {
