@@ -137,14 +137,11 @@ function getInitials(firstName: string, lastName: string): string {
 
 function getAvatarColor(name: string): string {
   const colors = [
-    "bg-gradient-to-br from-blue-500 to-blue-700",
-    "bg-gradient-to-br from-emerald-500 to-emerald-700", 
-    "bg-gradient-to-br from-cyan-500 to-cyan-700",
-    "bg-gradient-to-br from-orange-500 to-orange-700",
-    "bg-gradient-to-br from-pink-500 to-pink-700",
-    "bg-gradient-to-br from-purple-500 to-purple-700",
-    "bg-gradient-to-br from-indigo-500 to-indigo-700",
-    "bg-gradient-to-br from-teal-500 to-teal-700",
+    "bg-[#0077b6]", // Ocean Blue
+    "bg-[#f97316]", // Orange
+    "bg-[#14b8a6]", // Teal
+    "bg-[#22c55e]", // Green
+    "bg-[#6b7280]", // Gray
   ];
   const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];

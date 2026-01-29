@@ -164,8 +164,11 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const TECH_COLORS = [
-  "#0078D4", "#FF8000", "#17BEBB", "#22D69A", "#8B5CF6",
-  "#F59E0B", "#EC4899", "#14B8A6", "#6366F1", "#EF4444",
+  "#0077b6", // Ocean Blue
+  "#f97316", // Orange
+  "#14b8a6", // Teal
+  "#22c55e", // Green
+  "#6b7280", // Gray
 ];
 
 const DAYS_OF_WEEK = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];

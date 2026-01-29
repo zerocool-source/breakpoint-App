@@ -62,14 +62,11 @@ function getInitials(firstName: string, lastName: string): string {
 
 function getAvatarColor(name: string): string {
   const colors = [
-    "bg-[#0078D4]",
-    "bg-[#22D69A]",
-    "bg-[#17BEBB]",
-    "bg-[#FF8000]",
-    "bg-pink-600",
-    "bg-[#17BEBB]",
-    "bg-[#0078D4]",
-    "bg-[#17BEBB]",
+    "bg-[#0077b6]", // Ocean Blue
+    "bg-[#f97316]", // Orange
+    "bg-[#14b8a6]", // Teal
+    "bg-[#22c55e]", // Green
+    "bg-[#6b7280]", // Gray
   ];
   const hash = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
