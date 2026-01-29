@@ -193,7 +193,7 @@ interface EstimateFormData {
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   draft: { label: "Draft", color: "bg-slate-100 text-slate-700 border-slate-200", icon: FileText },
-  pending_approval: { label: "Pending Approval", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: Clock },
+  pending_approval: { label: "Sent for Approval", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: Clock },
   approved: { label: "Approved", color: "bg-[#22D69A]1A text-[#22D69A] border-[#22D69A]33", icon: CheckCircle2 },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
   needs_scheduling: { label: "Needs Scheduling", color: "bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]", icon: CalendarIcon },
@@ -2297,7 +2297,7 @@ export default function Estimates() {
                             <>
                               <Badge className="bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33 rounded-full">
                                 <Clock className="w-3 h-3 mr-1" />
-                                Pending Approval
+                                Sent for Approval
                               </Badge>
                               {estimate.approvalSentTo && (
                                 <div className="flex items-center gap-1 text-xs text-[#D35400] bg-[#FF8000]1A px-2 py-1 rounded-full">
