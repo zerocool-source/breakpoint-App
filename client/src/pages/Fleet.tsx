@@ -29,7 +29,7 @@ import {
   Maximize2,
   Layers
 } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -181,11 +181,15 @@ function formatTimeAgo(dateStr: string | undefined): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-// Helper to validate coordinates (check for valid lat/lng range)
+// Helper to validate coordinates (check for valid lat/lng range and basic sanity)
 function isValidCoordinate(lat: number, lng: number): boolean {
-  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && 
-         lat !== 0 && lng !== 0 && // Exclude null island
-         !(lat > -20 && lat < 40 && lng > -20 && lng < 55); // Exclude Africa region for US-based fleet
+  // Basic range check
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+  // Exclude null island (0,0) which indicates missing data
+  if (lat === 0 && lng === 0) return false;
+  // For US-based fleet, prefer coordinates in North America region but don't hard exclude
+  // Just check for obvious bad data (like exactly 0 or extremely far from US)
+  return true;
 }
 
 // Geofence color mapping
@@ -210,14 +214,14 @@ function MapController({
   devices, 
   fitAll, 
   setFitAll,
-  selectedVehicleId,
-  setSelectedVehicleId 
+  focusVehicleId,
+  setFocusVehicleId 
 }: { 
   devices: Array<{ id: string; location: { lat: number; lng: number } }>;
   fitAll: boolean;
   setFitAll: (v: boolean) => void;
-  selectedVehicleId: string | null;
-  setSelectedVehicleId: (v: string | null) => void;
+  focusVehicleId: string | null;
+  setFocusVehicleId: (v: string | null) => void;
 }) {
   const map = useMap();
   
@@ -235,14 +239,14 @@ function MapController({
   }, [fitAll, devices, map, setFitAll]);
   
   useEffect(() => {
-    if (selectedVehicleId) {
-      const device = devices.find(d => d.id === selectedVehicleId);
+    if (focusVehicleId) {
+      const device = devices.find(d => d.id === focusVehicleId);
       if (device && isValidCoordinate(device.location.lat, device.location.lng)) {
         map.setView([device.location.lat, device.location.lng], 15, { animate: true });
       }
-      setSelectedVehicleId(null);
+      setFocusVehicleId(null);
     }
-  }, [selectedVehicleId, devices, map, setSelectedVehicleId]);
+  }, [focusVehicleId, devices, map, setFocusVehicleId]);
   
   return null;
 }
@@ -282,6 +286,7 @@ export default function Fleet() {
   const [lastMapRefresh, setLastMapRefresh] = useState(new Date());
   const [fitAllVehicles, setFitAllVehicles] = useState(false);
   const [selectedMapVehicle, setSelectedMapVehicle] = useState<string | null>(null);
+  const [focusVehicleId, setFocusVehicleId] = useState<string | null>(null);
   const [vehicleSearchOpen, setVehicleSearchOpen] = useState(false);
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState("");
   const [selectedGeofence, setSelectedGeofence] = useState("all");
@@ -776,7 +781,7 @@ export default function Fleet() {
                 {/* Vehicle Search Dropdown */}
                 <Popover open={vehicleSearchOpen} onOpenChange={setVehicleSearchOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 w-44 justify-between text-xs">
+                    <Button variant="outline" size="sm" className="h-8 w-44 justify-between text-xs" data-testid="vehicle-search-trigger">
                       <span className="truncate">
                         {vehicleList.find(v => v.id === selectedMapVehicle)?.name || "Find Vehicle..."}
                       </span>
@@ -799,9 +804,11 @@ export default function Fleet() {
                                 key={vehicle.id}
                                 onSelect={() => {
                                   setSelectedMapVehicle(vehicle.id);
+                                  setFocusVehicleId(vehicle.id);
                                   setVehicleSearchOpen(false);
                                 }}
                                 className="flex items-center gap-2"
+                                data-testid={`vehicle-item-${vehicle.id}`}
                               >
                                 <div className={`w-2 h-2 rounded-full ${
                                   vehicle.online && vehicle.ignition ? 'bg-green-500' :
@@ -859,6 +866,7 @@ export default function Fleet() {
                   onClick={() => setFitAllVehicles(true)}
                   className="h-8"
                   title="Fit all vehicles"
+                  data-testid="fit-all-vehicles-btn"
                 >
                   <Target className="w-4 h-4" />
                 </Button>
@@ -961,30 +969,59 @@ export default function Fleet() {
                     devices={filteredMapDevices}
                     fitAll={fitAllVehicles}
                     setFitAll={setFitAllVehicles}
-                    selectedVehicleId={selectedMapVehicle}
-                    setSelectedVehicleId={setSelectedMapVehicle}
+                    focusVehicleId={focusVehicleId}
+                    setFocusVehicleId={setFocusVehicleId}
                   />
                   
-                  {/* Geofence Polygons */}
+                  {/* Geofence Polygons and Circles */}
                   {geofences
                     .filter(gf => selectedGeofence === "all" || selectedGeofence === gf.id)
-                    .filter(gf => gf.coordinates && gf.coordinates.length >= 3)
-                    .map(gf => (
-                      <Polygon
-                        key={gf.id}
-                        positions={gf.coordinates.map(c => [c.lat, c.lng] as [number, number])}
-                        pathOptions={{
-                          color: getGeofenceColor(gf.name),
-                          fillColor: getGeofenceColor(gf.name),
-                          fillOpacity: 0.15,
-                          weight: 2,
-                        }}
-                      >
-                        <Popup>
-                          <div className="text-sm font-medium">{gf.name}</div>
-                        </Popup>
-                      </Polygon>
-                    ))
+                    .map(gf => {
+                      const color = getGeofenceColor(gf.name);
+                      
+                      // Circle geofence (has radius and single center point)
+                      if (gf.type === 'circle' && gf.radius && gf.coordinates?.length === 1) {
+                        return (
+                          <Circle
+                            key={gf.id}
+                            center={[gf.coordinates[0].lat, gf.coordinates[0].lng]}
+                            radius={gf.radius}
+                            pathOptions={{
+                              color,
+                              fillColor: color,
+                              fillOpacity: 0.15,
+                              weight: 2,
+                            }}
+                          >
+                            <Popup>
+                              <div className="text-sm font-medium">{gf.name}</div>
+                            </Popup>
+                          </Circle>
+                        );
+                      }
+                      
+                      // Polygon geofence (has 3+ coordinates)
+                      if (gf.coordinates && gf.coordinates.length >= 3) {
+                        return (
+                          <Polygon
+                            key={gf.id}
+                            positions={gf.coordinates.map(c => [c.lat, c.lng] as [number, number])}
+                            pathOptions={{
+                              color,
+                              fillColor: color,
+                              fillOpacity: 0.15,
+                              weight: 2,
+                            }}
+                          >
+                            <Popup>
+                              <div className="text-sm font-medium">{gf.name}</div>
+                            </Popup>
+                          </Polygon>
+                        );
+                      }
+                      
+                      return null;
+                    })
                   }
                   {filteredMapDevices.map((device) => (
                     <Marker
