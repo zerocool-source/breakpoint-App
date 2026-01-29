@@ -823,31 +823,22 @@ export default function SupervisorTeams() {
                       </TableCell>
                       <TableCell>
                         <Badge
-                          className={cn(
-                            "font-medium border",
-                            supervisor.region === "south" && "bg-[#f97316] text-white border-[#f97316]",
-                            supervisor.region === "north" && "bg-[#0077b6] text-white border-[#0077b6]",
-                            supervisor.region === "mid" && "bg-[#14b8a6] text-white border-[#14b8a6]",
-                            !supervisor.region && "bg-slate-100 text-slate-600 border-slate-200"
-                          )}
+                          className="font-medium bg-[#f97316] text-white border border-[#f97316]"
                         >
                           {getRegionLabel(supervisor.region)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-[#f97316] hover:text-[#f97316] hover:bg-[#fff7ed] gap-1"
+                        <Badge
+                          className="font-medium bg-[#0077b6] text-white border border-[#0077b6] cursor-pointer hover:bg-[#0077b6]/90"
                           onClick={(e) => {
                             e.stopPropagation();
                             setViewingTeam(supervisor);
                           }}
                           data-testid={`button-view-team-${supervisor.id}`}
                         >
-                          <Users className="h-4 w-4" />
-                          {teamCount}
-                        </Button>
+                          {teamCount} Technicians
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
