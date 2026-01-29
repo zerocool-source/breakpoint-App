@@ -269,6 +269,10 @@ export default function Calendar() {
   }>>(new Map());
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
+  const [propertyFilter, setPropertyFilter] = useState<string | null>(null);
+  const [propertySearchTerm, setPropertySearchTerm] = useState("");
+  const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
+  const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
   const [techsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTechForSchedule, setSelectedTechForSchedule] = useState<Technician | null>(null);
@@ -415,6 +419,48 @@ export default function Calendar() {
   const scheduledEstimates = scheduledEstimatesData?.estimates || [];
   const propertyAssignments = propertyAssignmentsData?.assignments || [];
 
+  // Get unique properties for filter dropdown
+  const uniqueProperties = useMemo(() => {
+    const propsMap = new Map<string, { id: string; name: string }>();
+    propertyAssignments.forEach(a => {
+      if (a.propertyId && a.propertyName) {
+        propsMap.set(a.propertyId, { id: a.propertyId, name: a.propertyName });
+      }
+    });
+    return Array.from(propsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [propertyAssignments]);
+
+  // Filter properties for dropdown search
+  const filteredProperties = useMemo(() => {
+    if (!propertySearchTerm) return uniqueProperties;
+    return uniqueProperties.filter(p => 
+      p.name.toLowerCase().includes(propertySearchTerm.toLowerCase())
+    );
+  }, [uniqueProperties, propertySearchTerm]);
+
+  // Get technician IDs that have the selected property
+  const techsWithSelectedProperty = useMemo(() => {
+    if (!propertyFilter) return null;
+    const techIds = new Set<string>();
+    propertyAssignments.forEach(a => {
+      if (a.propertyId === propertyFilter) {
+        techIds.add(a.technicianId);
+      }
+    });
+    return techIds;
+  }, [propertyAssignments, propertyFilter]);
+
+  // Click outside handler for property dropdown
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (propertyDropdownRef.current && !propertyDropdownRef.current.contains(event.target as Node)) {
+        setShowPropertyDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Mutation to toggle route lock
   const toggleRouteLockMutation = useMutation({
     mutationFn: async ({ techId, locked, techName }: { techId: string; locked: boolean; techName: string }) => {
@@ -518,9 +564,14 @@ export default function Calendar() {
         }
       }
       
+      // Property filter: only show technicians assigned to the selected property
+      if (techsWithSelectedProperty && !techsWithSelectedProperty.has(String(tech.id))) {
+        return false;
+      }
+      
       return true;
     });
-  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap]);
+  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap, techsWithSelectedProperty]);
   
   const filteredTechnicians = useMemo(() => {
     const startIndex = (currentPage - 1) * techsPerPage;
@@ -991,6 +1042,127 @@ export default function Calendar() {
                 North
               </button>
             </div>
+            
+            {/* Property Filter Dropdown */}
+            <div className="relative" ref={propertyDropdownRef}>
+              <button
+                onClick={() => setShowPropertyDropdown(!showPropertyDropdown)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors",
+                  propertyFilter
+                    ? "bg-[#fff7ed] border-[#f97316] text-[#f97316]"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                )}
+                data-testid="button-property-filter"
+              >
+                <MapPin className="w-4 h-4" />
+                {propertyFilter 
+                  ? uniqueProperties.find(p => p.id === propertyFilter)?.name || "Property"
+                  : "All Properties"
+                }
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              
+              {showPropertyDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                  <div className="p-3 border-b border-slate-200">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Search properties..."
+                        value={propertySearchTerm}
+                        onChange={(e) => setPropertySearchTerm(e.target.value)}
+                        className="pl-9 h-9"
+                        data-testid="input-property-search"
+                      />
+                    </div>
+                  </div>
+                  
+                  <ScrollArea className="max-h-64">
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          setPropertyFilter(null);
+                          setShowPropertyDropdown(false);
+                          setPropertySearchTerm("");
+                          setCurrentPage(1);
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
+                          !propertyFilter
+                            ? "bg-[#0077b6] text-white"
+                            : "hover:bg-slate-100 text-slate-700"
+                        )}
+                        data-testid="button-property-all"
+                      >
+                        All Properties
+                      </button>
+                      
+                      {filteredProperties.map(prop => (
+                        <button
+                          key={prop.id}
+                          onClick={() => {
+                            setPropertyFilter(prop.id);
+                            setShowPropertyDropdown(false);
+                            setPropertySearchTerm("");
+                            setCurrentPage(1);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors truncate",
+                            propertyFilter === prop.id
+                              ? "bg-[#0077b6] text-white"
+                              : "hover:bg-slate-100 text-slate-700"
+                          )}
+                          data-testid={`button-property-${prop.id}`}
+                        >
+                          {prop.name}
+                        </button>
+                      ))}
+                      
+                      {filteredProperties.length === 0 && (
+                        <p className="text-sm text-slate-500 text-center py-4">No properties found</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                  
+                  {propertyFilter && (
+                    <div className="p-2 border-t border-slate-200">
+                      <button
+                        onClick={() => {
+                          setPropertyFilter(null);
+                          setShowPropertyDropdown(false);
+                          setPropertySearchTerm("");
+                          setCurrentPage(1);
+                        }}
+                        className="w-full text-center px-3 py-2 text-sm text-[#f97316] hover:bg-[#fff7ed] rounded-lg transition-colors font-medium"
+                        data-testid="button-clear-property-filter"
+                      >
+                        Clear Filter
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Active Property Filter Indicator */}
+            {propertyFilter && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#fff7ed] rounded-lg border border-[#f97316]/30">
+                <span className="text-sm text-[#f97316]">
+                  Filtered by: <span className="font-medium">{uniqueProperties.find(p => p.id === propertyFilter)?.name}</span>
+                </span>
+                <button
+                  onClick={() => {
+                    setPropertyFilter(null);
+                    setCurrentPage(1);
+                  }}
+                  className="text-[#f97316] hover:text-[#ea580c]"
+                  data-testid="button-clear-filter-indicator"
+                >
+                  ×
+                </button>
+              </div>
+            )}
             
             <span className="text-sm text-[#64748B]">
               Page {currentPage} of {totalPages} ({totalFilteredCount} technicians)
