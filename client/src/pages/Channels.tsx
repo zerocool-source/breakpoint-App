@@ -141,8 +141,10 @@ export default function Channels() {
   const [replyInput, setReplyInput] = useState("");
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
-  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7days" | "30days">("all");
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7days" | "30days" | "custom">("all");
   const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
@@ -301,6 +303,11 @@ export default function Channels() {
       case "today": return "Today";
       case "7days": return "Last 7 Days";
       case "30days": return "Last 30 Days";
+      case "custom": 
+        if (customStartDate && customEndDate) {
+          return `${format(new Date(customStartDate), "MMM d")} - ${format(new Date(customEndDate), "MMM d")}`;
+        }
+        return "Custom Range";
       default: return "All Time";
     }
   };
@@ -323,6 +330,14 @@ export default function Channels() {
           const thirtyDaysAgo = new Date(startOfToday);
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
           return msgDate >= thirtyDaysAgo;
+        case "custom":
+          if (customStartDate && customEndDate) {
+            const start = new Date(customStartDate);
+            const end = new Date(customEndDate);
+            end.setHours(23, 59, 59, 999);
+            return msgDate >= start && msgDate <= end;
+          }
+          return true;
         default:
           return true;
       }
@@ -718,7 +733,7 @@ export default function Channels() {
                       </button>
                       
                       {showDateDropdown && (
-                        <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-lg border border-[#e5e7eb] z-50">
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-[#e5e7eb] z-50">
                           <div className="py-1">
                             {[
                               { value: "all" as const, label: "All Time" },
@@ -730,6 +745,8 @@ export default function Channels() {
                                 key={option.value}
                                 onClick={() => {
                                   setDateFilter(option.value);
+                                  setCustomStartDate("");
+                                  setCustomEndDate("");
                                   setShowDateDropdown(false);
                                 }}
                                 className={cn(
@@ -743,6 +760,46 @@ export default function Channels() {
                                 {option.label}
                               </button>
                             ))}
+                          </div>
+                          
+                          <div className="border-t border-[#e5e7eb] p-3">
+                            <p className="text-xs font-medium text-[#6b7280] mb-2">Custom Date Range</p>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs text-[#6b7280] w-12">From:</label>
+                                <Input
+                                  type="date"
+                                  value={customStartDate}
+                                  onChange={(e) => setCustomStartDate(e.target.value)}
+                                  className="h-8 text-sm flex-1"
+                                  data-testid="input-date-start"
+                                />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs text-[#6b7280] w-12">To:</label>
+                                <Input
+                                  type="date"
+                                  value={customEndDate}
+                                  onChange={(e) => setCustomEndDate(e.target.value)}
+                                  className="h-8 text-sm flex-1"
+                                  data-testid="input-date-end"
+                                />
+                              </div>
+                              <Button
+                                size="sm"
+                                className="w-full mt-2 bg-[#0077b6] hover:bg-[#0077b6]/90"
+                                disabled={!customStartDate || !customEndDate}
+                                onClick={() => {
+                                  if (customStartDate && customEndDate) {
+                                    setDateFilter("custom");
+                                    setShowDateDropdown(false);
+                                  }
+                                }}
+                                data-testid="button-apply-custom-date"
+                              >
+                                Apply Range
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       )}
