@@ -83,9 +83,9 @@ function getRegionLabel(region: string | null | undefined): string {
 
 function getRegionBadgeStyle(region: string | null | undefined): string {
   switch (region) {
-    case "south": return "bg-blue-100 text-blue-700 border-blue-200";
-    case "mid": return "bg-green-100 text-green-700 border-green-200";
-    case "north": return "bg-purple-100 text-purple-700 border-purple-200";
+    case "south": return "bg-orange-100 text-[#f97316] border-orange-200";
+    case "mid": return "bg-teal-100 text-[#14b8a6] border-teal-200";
+    case "north": return "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20";
     default: return "bg-slate-100 text-slate-600 border-slate-200";
   }
 }
