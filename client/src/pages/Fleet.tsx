@@ -264,13 +264,27 @@ export default function Fleet() {
     inactive: number;
   }
 
-  const { data: gpsData, isLoading: gpsLoading, refetch: refetchGps } = useQuery<{ devices: GPSDevice[]; summary: GPSSummary }>({
+  interface GPSResponse {
+    devices: GPSDevice[];
+    summary: GPSSummary;
+    configured?: boolean;
+    error?: boolean;
+    message?: string;
+  }
+
+  const { data: gpsData, isLoading: gpsLoading, refetch: refetchGps } = useQuery<GPSResponse>({
     queryKey: ["/api/fleet/gps/devices"],
     queryFn: async () => {
       const res = await fetch("/api/fleet/gps/devices");
       const data = await res.json();
       setLastMapRefresh(new Date());
-      return data.devices ? data : { devices: [], summary: { total: 0, active: 0, inShop: 0, inactive: 0 } };
+      return {
+        devices: data.devices || [],
+        summary: data.summary || { total: 0, active: 0, inShop: 0, inactive: 0 },
+        configured: data.configured,
+        error: data.error,
+        message: data.message,
+      };
     },
     refetchInterval: 30000, // Refresh every 30 seconds for live tracking
   });
@@ -688,11 +702,47 @@ export default function Fleet() {
                     <p className="text-sm text-gray-500">Loading GPS data...</p>
                   </div>
                 </div>
+              ) : gpsData?.configured === false ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <div className="flex flex-col items-center gap-3 max-w-md text-center px-4">
+                    <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                      <AlertTriangle className="w-8 h-8 text-amber-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-700">GPS Tracking Not Configured</h3>
+                    <p className="text-sm text-gray-500">
+                      Configure OneStepGPS in Settings to enable live vehicle tracking. 
+                      Add your ONESTEPGPS_API_KEY to your secrets.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/settings'}>
+                      Go to Settings
+                    </Button>
+                  </div>
+                </div>
+              ) : gpsData?.error ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <div className="flex flex-col items-center gap-3 max-w-md text-center px-4">
+                    <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                      <AlertTriangle className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-700">GPS Connection Error</h3>
+                    <p className="text-sm text-gray-500">
+                      {gpsData.message || 'Unable to fetch live locations. Please check your API key.'}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => refetchGps()}>
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      Retry
+                    </Button>
+                  </div>
+                </div>
               ) : filteredMapDevices.length === 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                   <div className="flex flex-col items-center gap-2">
                     <MapPin className="w-8 h-8 text-gray-400" />
                     <p className="text-sm text-gray-500">No vehicles found</p>
+                    <Button variant="outline" size="sm" onClick={() => refetchGps()} className="mt-2">
+                      <RefreshCw className="w-4 h-4 mr-1" />
+                      Refresh
+                    </Button>
                   </div>
                 </div>
               ) : (

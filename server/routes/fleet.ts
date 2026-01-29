@@ -193,18 +193,67 @@ export function registerFleetRoutes(app: any) {
 
   // ==================== GPS TRACKING (OneStepGPS) ====================
 
+  // Test OneStepGPS connection
+  app.get("/api/fleet/gps/test-connection", async (req: Request, res: Response) => {
+    try {
+      const apiKey = process.env.ONESTEPGPS_API_KEY;
+      if (!apiKey) {
+        return res.json({ 
+          connected: false, 
+          configured: false,
+          message: "OneStepGPS API key not configured. Add ONESTEPGPS_API_KEY to your secrets." 
+        });
+      }
+
+      const data = await onestepgps.getDevices();
+      res.json({ 
+        connected: true, 
+        configured: true,
+        deviceCount: data.result_list?.length || 0,
+        message: `Successfully connected. Found ${data.result_list?.length || 0} devices.` 
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('OneStepGPS connection test failed:', errorMessage);
+      res.json({ 
+        connected: false, 
+        configured: true,
+        message: `Connection failed: ${errorMessage}` 
+      });
+    }
+  });
+
+  // Check GPS configuration status
+  app.get("/api/fleet/gps/status", async (req: Request, res: Response) => {
+    const apiKey = process.env.ONESTEPGPS_API_KEY;
+    res.json({ 
+      configured: !!apiKey,
+      keyLength: apiKey ? apiKey.length : 0
+    });
+  });
+
   app.get("/api/fleet/gps/devices", async (req: Request, res: Response) => {
     try {
+      const apiKey = process.env.ONESTEPGPS_API_KEY;
+      if (!apiKey) {
+        return res.json({ 
+          devices: [], 
+          summary: { total: 0, active: 0, inShop: 0, inactive: 0 },
+          configured: false,
+          message: "OneStepGPS API key not configured"
+        });
+      }
+
       const data = await onestepgps.getDevices();
       
-      const devices = data.result_list.map(device => ({
+      const devices = (data.result_list || []).map(device => ({
         id: device.device_id,
         name: device.display_name,
         online: device.online,
         status: device.active_state === 'active' ? 'Active' : device.active_state === 'inactive' ? 'Inactive' : 'In Shop',
         location: {
-          lat: device.latest_device_point?.lat,
-          lng: device.latest_device_point?.lng,
+          lat: device.latest_device_point?.lat || 0,
+          lng: device.latest_device_point?.lng || 0,
         },
         speed: device.latest_device_point?.speed || 0,
         heading: device.latest_device_point?.heading || 0,
@@ -222,12 +271,20 @@ export function registerFleetRoutes(app: any) {
         inactive: devices.filter(d => !d.online || d.status === 'Inactive').length,
       };
 
-      res.json({ devices, summary });
+      res.json({ devices, summary, configured: true });
     } catch (error) {
       console.error('Fleet GPS devices error:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch fleet GPS devices', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Return empty data with error info instead of 500 error
+      res.json({ 
+        devices: [], 
+        summary: { total: 0, active: 0, inShop: 0, inactive: 0 },
+        configured: true,
+        error: true,
+        message: errorMessage.includes('400') 
+          ? 'Invalid API key. Please check your OneStepGPS API key in Settings.'
+          : `GPS Error: ${errorMessage}`
       });
     }
   });
