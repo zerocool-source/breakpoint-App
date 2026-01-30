@@ -1781,12 +1781,12 @@ export default function Dashboard() {
                 {(() => {
                   const pipelineData = [
                     { label: "Draft", value: metrics?.values?.draft || 0, color: "#6b7280" },
-                    { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#34d399" },
-                    { label: "Approved", value: metrics?.values?.approved || 0, color: "#10b981" },
+                    { label: "Pending Approval", value: metrics?.values?.pendingApproval || 0, color: "#06b6d4" },
+                    { label: "Approved", value: metrics?.values?.approved || 0, color: "#22c55e" },
                     { label: "Scheduled", value: metrics?.values?.scheduled || 0, color: "#0077b6" },
-                    { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#059669" },
+                    { label: "Ready to Invoice", value: metrics?.values?.readyToInvoice || 0, color: "#8b5cf6" },
                     { label: "Unpaid", value: metrics?.invoices?.unpaidValue || 0, color: "#ef4444" },
-                    { label: "Paid", value: metrics?.invoices?.paidValue || 0, color: "#22c55e" },
+                    { label: "Paid", value: metrics?.invoices?.paidValue || 0, color: "#84cc16" },
                   ];
                   
                   const totalValue = pipelineData.reduce((sum, item) => sum + item.value, 0);
@@ -1879,13 +1879,13 @@ export default function Dashboard() {
                   <div className="p-3 rounded-lg bg-white border border-slate-200">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-[#6b7280]">Total Pipeline Value</span>
-                      <span className="text-2xl font-bold text-[#10b981]">{formatCurrency(metrics?.values.total || 0)}</span>
+                      <span className="text-2xl font-bold text-[#22c55e]">{formatCurrency(metrics?.values.total || 0)}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="p-2 rounded-lg bg-white border border-slate-200 text-center">
                       <p className="text-xs font-medium text-[#6b7280]">Pending Approval</p>
-                      <p className="text-base font-bold text-[#34d399]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
+                      <p className="text-base font-bold text-[#06b6d4]">{formatCurrency(metrics?.values.pendingApproval || 0)}</p>
                     </div>
                     <div className="p-2 rounded-lg bg-white border border-slate-200 text-center">
                       <p className="text-xs font-medium text-[#6b7280]">Scheduled</p>
@@ -1893,7 +1893,7 @@ export default function Dashboard() {
                     </div>
                     <div className="p-2 rounded-lg bg-white border border-slate-200 text-center">
                       <p className="text-xs font-medium text-[#6b7280]">Ready to Invoice</p>
-                      <p className="text-base font-bold text-[#059669]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
+                      <p className="text-base font-bold text-[#8b5cf6]">{formatCurrency(metrics?.values.readyToInvoice || 0)}</p>
                     </div>
                   </div>
                   <Button
