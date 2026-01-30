@@ -1211,7 +1211,7 @@ export default function Calendar() {
                 return (
                   <div
                     key={originalIndex}
-                    className="flex-1 min-w-[140px] px-2 py-3 text-center"
+                    className="flex-1 min-w-[140px] px-2 py-3 text-center border-l border-[#005f8f]/30"
                   >
                     <div className="text-xs font-semibold text-white/80">{displayDaysOfWeek[i]}</div>
                     <div
@@ -1384,7 +1384,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="flex-1 min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                           >
                             <div
                               className="h-full min-h-[80px] rounded-lg p-2"
@@ -1410,7 +1410,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="flex-1 min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                           >
                             <div
                               className={cn(
@@ -1533,7 +1533,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="flex-1 min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                           >
                             <div
                               className="min-h-[80px] rounded-lg p-2 border-l-[3px]"
@@ -1568,7 +1568,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="flex-1 min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                             data-testid={`cell-supervisor-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
@@ -1622,7 +1622,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="flex-1 min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                             data-testid={`cell-repair-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
@@ -1681,7 +1681,7 @@ export default function Calendar() {
                           return (
                             <div
                               key={displayIndex}
-                              className="flex-1 min-w-[140px] px-2 py-2"
+                              className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                               data-testid={`cell-service-${tech.id}-${dayIndex}`}
                             >
                               <div
@@ -1873,7 +1873,7 @@ export default function Calendar() {
                       return (
                         <div
                           key={displayIndex}
-                          className="flex-1 min-w-[140px] px-2 py-2 group/cell"
+                          className="flex-1 min-w-[140px] px-2 py-2 group/cell border-l border-[#e5e7eb]"
                         >
                           <div className="h-full min-h-[80px] border-2 border-dashed border-transparent group-hover/cell:border-slate-200 rounded-lg flex items-center justify-center">
                             <Button
