@@ -85,12 +85,14 @@ interface QcInspection {
 
 interface ScheduledRepair {
   id: string;
+  estimateNumber?: string;
   propertyName: string;
   title: string;
   status: string;
   scheduledDate: string | null;
   repairTechId: string | null;
   repairTechName: string | null;
+  totalAmount?: number;
 }
 
 interface TechPropertyAssignment {
@@ -270,6 +272,12 @@ export default function Calendar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [regionFilter, setRegionFilter] = useState<"all" | "south" | "middle" | "north">("all");
   const [propertyFilter, setPropertyFilter] = useState<string | null>(null);
+  const [showAssignEstimateModal, setShowAssignEstimateModal] = useState(false);
+  const [selectedEstimateForAssign, setSelectedEstimateForAssign] = useState<ScheduledRepair | null>(null);
+  const [assignEstimateForm, setAssignEstimateForm] = useState({
+    repairTechId: "",
+    scheduledDate: "",
+  });
   const [propertySearchTerm, setPropertySearchTerm] = useState("");
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -340,22 +348,40 @@ export default function Calendar() {
     enabled: weekDates.length === 7 && roleFilter === "supervisor",
   });
 
-  // Fetch scheduled estimates for repair technicians
-  const { data: scheduledEstimatesData } = useQuery<{ estimates: ScheduledRepair[] }>({
+  // Fetch scheduled estimates for repair technicians (both assigned and unassigned)
+  const { data: scheduledEstimatesData, refetch: refetchScheduledEstimates } = useQuery<{ estimates: ScheduledRepair[], unassigned: ScheduledRepair[] }>({
     queryKey: ["/api/estimates/scheduled", weekDates[0]?.toISOString()],
     queryFn: async () => {
       const startDate = weekDates[0]?.toISOString().split("T")[0];
       const endDate = weekDates[6]?.toISOString().split("T")[0];
       const res = await fetch(`/api/estimates?status=scheduled`);
-      if (!res.ok) return { estimates: [] };
+      if (!res.ok) return { estimates: [], unassigned: [] };
       const data = await res.json();
-      // Filter by date range
-      const filtered = (data.estimates || []).filter((e: any) => {
-        if (!e.scheduledDate) return false;
+      
+      // All scheduled estimates
+      const allScheduled = (data.estimates || []).map((e: any) => ({
+        id: e.id,
+        estimateNumber: e.estimateNumber,
+        propertyName: e.customerName || e.propertyName,
+        title: e.jobTitle || e.description || "Scheduled Job",
+        status: e.status,
+        scheduledDate: e.scheduledDate,
+        repairTechId: e.repairTechId,
+        repairTechName: e.repairTechName,
+        totalAmount: e.totalAmount,
+      }));
+      
+      // Unassigned - no repairTechId or no scheduledDate
+      const unassigned = allScheduled.filter((e: any) => !e.repairTechId);
+      
+      // Assigned - has repairTechId and scheduledDate within date range
+      const assigned = allScheduled.filter((e: any) => {
+        if (!e.repairTechId || !e.scheduledDate) return false;
         const schedDate = e.scheduledDate.split("T")[0];
         return schedDate >= startDate && schedDate <= endDate;
       });
-      return { estimates: filtered };
+      
+      return { estimates: assigned, unassigned };
     },
     enabled: weekDates.length === 7 && roleFilter === "repair",
   });
@@ -417,6 +443,7 @@ export default function Calendar() {
   const customers = customersData?.customers || [];
   const qcInspections = qcInspectionsData?.inspections || [];
   const scheduledEstimates = scheduledEstimatesData?.estimates || [];
+  const unassignedEstimates = scheduledEstimatesData?.unassigned || [];
   const propertyAssignments = propertyAssignmentsData?.assignments || [];
 
   // Get unique properties for filter dropdown
@@ -483,6 +510,33 @@ export default function Calendar() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update route lock", variant: "destructive" });
+    },
+  });
+
+  // Mutation to assign estimate to repair tech
+  const assignEstimateMutation = useMutation({
+    mutationFn: async ({ estimateId, repairTechId, repairTechName, scheduledDate }: { estimateId: string; repairTechId: string; repairTechName: string; scheduledDate: string }) => {
+      const res = await fetch(`/api/estimates/${estimateId}/schedule`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repairTechId, repairTechName, scheduledDate }),
+      });
+      if (!res.ok) throw new Error("Failed to assign estimate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/scheduled"] });
+      refetchScheduledEstimates();
+      setShowAssignEstimateModal(false);
+      setSelectedEstimateForAssign(null);
+      setAssignEstimateForm({ repairTechId: "", scheduledDate: "" });
+      toast({
+        title: "Estimate Assigned",
+        description: "The scheduled estimate has been assigned to the repair technician.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to assign estimate", variant: "destructive" });
     },
   });
 
@@ -1221,6 +1275,62 @@ export default function Calendar() {
             
             {/* Scrollable content area */}
             <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
+            
+            {/* Unassigned Jobs Section - Only show when Repair filter is selected */}
+            {roleFilter === "repair" && unassignedEstimates.length > 0 && (
+              <div className="border-b-2 border-[#f97316] bg-[#fff7ed]">
+                <div className="px-4 py-3 flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#f97316] flex items-center justify-center">
+                      <Wrench className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-semibold text-[#0F172A]">Unassigned Jobs</span>
+                    <span className="px-2 py-0.5 bg-[#f97316] text-white text-xs font-medium rounded-full">
+                      {unassignedEstimates.length}
+                    </span>
+                  </div>
+                </div>
+                <div className="px-4 pb-4">
+                  <div className="flex flex-wrap gap-3">
+                    {unassignedEstimates.map((estimate) => (
+                      <button
+                        key={estimate.id}
+                        onClick={() => {
+                          setSelectedEstimateForAssign(estimate);
+                          setShowAssignEstimateModal(true);
+                        }}
+                        className="flex flex-col gap-1.5 p-3 bg-white border-2 border-[#f97316] rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer min-w-[220px] text-left"
+                        data-testid={`unassigned-estimate-${estimate.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-[#f97316]">
+                            {estimate.estimateNumber || `EST-${estimate.id.slice(0, 8)}`}
+                          </span>
+                          <span className="px-2 py-0.5 bg-[#0077b6] text-white text-xs font-medium rounded-full">
+                            Scheduled
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-[#0F172A] truncate">
+                          {estimate.propertyName}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">
+                          {estimate.title}
+                        </p>
+                        {estimate.totalAmount !== undefined && (
+                          <p className="text-sm font-bold text-[#10b981]">
+                            ${(estimate.totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1 text-xs text-[#f97316] mt-1">
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>Click to assign</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             
             {filteredTechnicians.length === 0 ? (
               <div className="py-12 text-center text-[#64748B]">
@@ -2632,6 +2742,102 @@ export default function Calendar() {
               data-testid="button-assign-coverage"
             >
               Assign Coverage
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Estimate to Repair Tech Modal */}
+      <Dialog open={showAssignEstimateModal} onOpenChange={setShowAssignEstimateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-[#f97316]" />
+              Assign Scheduled Estimate
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {selectedEstimateForAssign && (
+              <div className="bg-[#fff7ed] rounded-lg p-3 border border-[#f97316]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-[#f97316]">
+                    {selectedEstimateForAssign.estimateNumber || `EST-${selectedEstimateForAssign.id.slice(0, 8)}`}
+                  </span>
+                  <span className="px-2 py-0.5 bg-[#0077b6] text-white text-xs font-medium rounded-full">
+                    Scheduled
+                  </span>
+                </div>
+                <p className="text-sm font-medium text-[#0F172A]">{selectedEstimateForAssign.propertyName}</p>
+                <p className="text-xs text-slate-600 mt-1">{selectedEstimateForAssign.title}</p>
+                {selectedEstimateForAssign.totalAmount !== undefined && (
+                  <p className="text-sm font-bold text-[#10b981] mt-2">
+                    ${(selectedEstimateForAssign.totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            <div>
+              <Label className="text-sm font-medium">Repair Technician</Label>
+              <Select
+                value={assignEstimateForm.repairTechId}
+                onValueChange={(value) => setAssignEstimateForm(prev => ({ ...prev, repairTechId: value }))}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-assign-repair-tech">
+                  <SelectValue placeholder="Select repair technician" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technicians
+                    .filter(t => t.role === "repair" && t.active)
+                    .map((tech) => (
+                      <SelectItem key={String(tech.id)} value={String(tech.id)}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">Scheduled Date</Label>
+              <Input
+                type="date"
+                value={assignEstimateForm.scheduledDate}
+                onChange={(e) => setAssignEstimateForm(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                className="mt-1"
+                data-testid="input-assign-scheduled-date"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowAssignEstimateModal(false);
+                setSelectedEstimateForAssign(null);
+                setAssignEstimateForm({ repairTechId: "", scheduledDate: "" });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+              onClick={() => {
+                if (selectedEstimateForAssign && assignEstimateForm.repairTechId && assignEstimateForm.scheduledDate) {
+                  const selectedTech = technicians.find(t => String(t.id) === assignEstimateForm.repairTechId);
+                  const techName = selectedTech ? `${selectedTech.firstName} ${selectedTech.lastName}` : "";
+                  assignEstimateMutation.mutate({
+                    estimateId: selectedEstimateForAssign.id,
+                    repairTechId: assignEstimateForm.repairTechId,
+                    repairTechName: techName,
+                    scheduledDate: assignEstimateForm.scheduledDate,
+                  });
+                }
+              }}
+              disabled={!assignEstimateForm.repairTechId || !assignEstimateForm.scheduledDate || assignEstimateMutation.isPending}
+              data-testid="button-assign-estimate"
+            >
+              {assignEstimateMutation.isPending ? "Assigning..." : "Assign to Tech"}
             </Button>
           </DialogFooter>
         </DialogContent>
