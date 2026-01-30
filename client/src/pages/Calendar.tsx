@@ -934,7 +934,7 @@ export default function Calendar() {
               </div>
               
               <Button
-                className="bg-[#f97316] hover:bg-[#ea580c] text-white rounded-full"
+                className="bg-[#14b8a6] hover:bg-[#0d9488] text-white rounded-full"
                 onClick={() => setShowAddCoverageModal(true)}
                 data-testid="button-add-coverage"
               >
@@ -2928,9 +2928,9 @@ export default function Calendar() {
                 data-testid="select-assignment-property"
               >
                 <option value="">Select property...</option>
-                {(properties || []).map((prop: any) => (
-                  <option key={prop.id} value={prop.id}>
-                    {prop.name}
+                {(customersData?.customers || []).map((customer: Customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.companyName || customer.name}
                   </option>
                 ))}
               </select>
