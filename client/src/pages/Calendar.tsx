@@ -350,35 +350,42 @@ export default function Calendar() {
     enabled: weekDates.length === 7 && roleFilter === "supervisor",
   });
 
-  // Fetch scheduled estimates for repair technicians (both assigned and unassigned)
+  // Fetch estimates for repair technicians - needs_scheduling (ready to assign) and scheduled (assigned)
   const { data: scheduledEstimatesData, refetch: refetchScheduledEstimates } = useQuery<{ estimates: ScheduledRepair[], unassigned: ScheduledRepair[] }>({
-    queryKey: ["/api/estimates/scheduled", weekDates[0]?.toISOString()],
+    queryKey: ["/api/estimates/for-calendar", weekDates[0]?.toISOString()],
     queryFn: async () => {
       const startDate = weekDates[0]?.toISOString().split("T")[0];
       const endDate = weekDates[6]?.toISOString().split("T")[0];
-      const res = await fetch(`/api/estimates?status=scheduled`);
-      if (!res.ok) return { estimates: [], unassigned: [] };
-      const data = await res.json();
       
-      // All scheduled estimates
-      const allScheduled = (data.estimates || []).map((e: any) => ({
+      // Fetch estimates that need scheduling (ready to assign) and already scheduled
+      const [needsSchedulingRes, scheduledRes] = await Promise.all([
+        fetch(`/api/estimates?status=needs_scheduling`),
+        fetch(`/api/estimates?status=scheduled`),
+      ]);
+      
+      const needsSchedulingData = needsSchedulingRes.ok ? await needsSchedulingRes.json() : { estimates: [] };
+      const scheduledData = scheduledRes.ok ? await scheduledRes.json() : { estimates: [] };
+      
+      // Map estimate data
+      const mapEstimate = (e: any) => ({
         id: e.id,
         estimateNumber: e.estimateNumber,
         propertyName: e.customerName || e.propertyName,
-        title: e.jobTitle || e.title || e.description || "Scheduled Job",
+        title: e.jobTitle || e.title || e.description || "Repair Job",
         status: e.status,
         scheduledDate: e.scheduledDate,
         repairTechId: e.repairTechId,
         repairTechName: e.repairTechName,
         totalAmount: e.totalAmount,
         createdAt: e.createdAt,
-      }));
+      });
       
-      // Unassigned - no repairTechId or no scheduledDate
-      const unassigned = allScheduled.filter((e: any) => !e.repairTechId);
+      // Unassigned = needs_scheduling status (ready to be assigned to a tech)
+      const unassigned = (needsSchedulingData.estimates || []).map(mapEstimate);
       
-      // Assigned - has repairTechId and scheduledDate within date range
-      const assigned = allScheduled.filter((e: any) => {
+      // Assigned = scheduled status with repairTechId and scheduledDate in current week
+      const scheduled = (scheduledData.estimates || []).map(mapEstimate);
+      const assigned = scheduled.filter((e: any) => {
         if (!e.repairTechId || !e.scheduledDate) return false;
         const schedDate = e.scheduledDate.split("T")[0];
         return schedDate >= startDate && schedDate <= endDate;
@@ -1292,8 +1299,8 @@ export default function Calendar() {
                       <Wrench className="w-4.5 h-4.5 text-white" />
                     </div>
                     <div className="text-left">
-                      <h3 className="font-semibold text-[#0F172A] text-sm">Scheduled Jobs</h3>
-                      <p className="text-xs text-slate-500">Ready to assign to repair technicians</p>
+                      <h3 className="font-semibold text-[#0F172A] text-sm">Ready to Assign</h3>
+                      <p className="text-xs text-slate-500">Approved estimates awaiting technician assignment</p>
                     </div>
                     <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
                       {unassignedEstimates.length} {unassignedEstimates.length === 1 ? 'job' : 'jobs'}
@@ -1320,8 +1327,8 @@ export default function Calendar() {
                                 <span className="text-xs font-bold text-[#f97316]">
                                   EST#{estimate.estimateNumber || estimate.id.slice(0, 8)}
                                 </span>
-                                <span className="px-2 py-0.5 bg-[#0077b6] text-white text-[10px] font-medium rounded-full whitespace-nowrap">
-                                  Scheduled
+                                <span className="px-2 py-0.5 bg-[#f97316] text-white text-[10px] font-medium rounded-full whitespace-nowrap">
+                                  Needs Scheduling
                                 </span>
                               </div>
                               <p className="text-sm font-semibold text-[#0F172A] truncate mb-1" title={estimate.propertyName}>
