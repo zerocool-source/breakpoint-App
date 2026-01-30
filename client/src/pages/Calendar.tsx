@@ -244,6 +244,7 @@ export default function Calendar() {
   });
   const [viewMode, setViewMode] = useState<"5day" | "7day">("5day");
   const [roleFilter, setRoleFilter] = useState<"service" | "repair" | "supervisor">("service");
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "with" | "without">("all");
   const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
   const [expandedRouteBlocks, setExpandedRouteBlocks] = useState<Set<string>>(new Set());
@@ -345,7 +346,7 @@ export default function Calendar() {
     }
   };
 
-  const [techsPerPage] = useState(10);
+  const [techsPerPage] = useState(6);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTechForSchedule, setSelectedTechForSchedule] = useState<Technician | null>(null);
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
@@ -736,9 +737,18 @@ export default function Calendar() {
         return false;
       }
       
+      // Assignment filter: filter by whether tech has assignments
+      if (roleFilter === "service" && assignmentFilter !== "all") {
+        const techHasAssignments = serviceAssignments.some(
+          (a) => String(a.technicianId) === String(tech.id)
+        );
+        if (assignmentFilter === "with" && !techHasAssignments) return false;
+        if (assignmentFilter === "without" && techHasAssignments) return false;
+      }
+      
       return true;
     });
-  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap, techsWithSelectedProperty]);
+  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap, techsWithSelectedProperty, assignmentFilter, serviceAssignments]);
   
   const filteredTechnicians = useMemo(() => {
     const startIndex = (currentPage - 1) * techsPerPage;
@@ -1173,6 +1183,23 @@ export default function Calendar() {
               )}
             </div>
             
+            {/* Assignments Filter Dropdown - Only show for service role */}
+            {roleFilter === "service" && (
+              <select
+                value={assignmentFilter}
+                onChange={(e) => {
+                  setAssignmentFilter(e.target.value as "all" | "with" | "without");
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0077b6] focus:border-[#0077b6]"
+                data-testid="select-assignment-filter"
+              >
+                <option value="all">Assignments: All</option>
+                <option value="with">With Assignments</option>
+                <option value="without">Without Assignments</option>
+              </select>
+            )}
+            
             {/* Active Property Filter Indicator */}
             {propertyFilter && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[#fff7ed] rounded-lg border border-[#f97316]/30">
@@ -1413,13 +1440,17 @@ export default function Calendar() {
                     weekDates.some((d) => d >= start && d <= end);
                 });
 
+                const rowBgColor = techIndex % 2 === 0 ? "bg-white" : "bg-[#f9fafb]";
+                const rowBgColorHover = techIndex % 2 === 0 ? "hover:bg-slate-50" : "hover:bg-slate-100";
+                const stickyBgColor = techIndex % 2 === 0 ? "bg-white group-hover:bg-slate-50" : "bg-[#f9fafb] group-hover:bg-slate-100";
+                
                 return (
                   <div
                     key={tech.id}
-                    className="flex border-b border-[#e5e7eb] bg-white hover:bg-slate-50 transition-colors group"
+                    className={cn("flex border-b border-[#e5e7eb] transition-colors group", rowBgColor, rowBgColorHover)}
                     data-testid={`row-tech-${tech.id}`}
                   >
-                    <div className="w-[260px] min-w-[260px] px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-[#e5e7eb]">
+                    <div className={cn("w-[260px] min-w-[260px] px-4 py-3 sticky left-0 z-10 border-r border-[#e5e7eb]", stickyBgColor)}>
                       <div className="flex items-center gap-3">
                         <div
                           className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm relative shadow-sm"
