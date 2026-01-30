@@ -400,7 +400,7 @@ export default function Calendar() {
   }, [techniciansData]);
 
   // Fetch QC Inspections for supervisors tab
-  const { data: qcInspectionsData } = useQuery<{ inspections: QcInspection[] }>({
+  const { data: qcInspectionsData, refetch: refetchQcInspections } = useQuery<{ inspections: QcInspection[] }>({
     queryKey: ["/api/qc-inspections", weekDates[0]?.toISOString()],
     queryFn: async () => {
       const startDate = weekDates[0]?.toISOString().split("T")[0];
@@ -3801,22 +3801,68 @@ export default function Calendar() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => {
-                    toast({
-                      title: "QC Inspection Created",
-                      description: "The inspection has been scheduled successfully.",
-                    });
-                    setShowCreateQcForm(false);
-                    setQcInspectionForm({
-                      propertyId: "",
-                      inspectionType: "",
-                      supervisorId: "",
-                      scheduledDate: "",
-                      notes: "",
-                    });
+                  onClick={async () => {
+                    try {
+                      // Find the selected property and supervisor details
+                      const selectedProperty = (customersData?.customers || []).find(
+                        (c: Customer) => c.id === qcInspectionForm.propertyId
+                      );
+                      const selectedSupervisor = (technicians || []).find(
+                        (t: Technician) => t.id === qcInspectionForm.supervisorId
+                      );
+                      
+                      const inspectionTypeLabels: Record<string, string> = {
+                        routine_qc: "Routine QC Inspection",
+                        follow_up: "Follow-up Inspection",
+                        complaint: "Complaint Investigation",
+                        new_property: "New Property Inspection",
+                      };
+                      
+                      const response = await fetch("/api/qc-inspections", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          supervisorId: qcInspectionForm.supervisorId,
+                          supervisorName: selectedSupervisor 
+                            ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` 
+                            : null,
+                          propertyId: qcInspectionForm.propertyId,
+                          propertyName: selectedProperty?.name || "Unknown Property",
+                          propertyAddress: selectedProperty?.address || null,
+                          title: inspectionTypeLabels[qcInspectionForm.inspectionType] || qcInspectionForm.inspectionType,
+                          notes: qcInspectionForm.notes,
+                          dueDate: qcInspectionForm.scheduledDate,
+                        }),
+                      });
+                      
+                      if (!response.ok) {
+                        throw new Error("Failed to create inspection");
+                      }
+                      
+                      toast({
+                        title: "QC Inspection Created",
+                        description: "The inspection has been scheduled successfully.",
+                      });
+                      setShowCreateQcForm(false);
+                      setQcInspectionForm({
+                        propertyId: "",
+                        inspectionType: "",
+                        supervisorId: "",
+                        scheduledDate: "",
+                        notes: "",
+                      });
+                      // Refetch QC inspections to update the list and badge
+                      refetchQcInspections();
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to create inspection. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   className="flex-1 bg-[#f97316] hover:bg-[#ea580c] text-white"
-                  disabled={!qcInspectionForm.propertyId || !qcInspectionForm.inspectionType || !qcInspectionForm.scheduledDate}
+                  disabled={!qcInspectionForm.propertyId || !qcInspectionForm.inspectionType || !qcInspectionForm.scheduledDate || !qcInspectionForm.supervisorId}
                   data-testid="button-submit-qc"
                 >
                   Create Inspection

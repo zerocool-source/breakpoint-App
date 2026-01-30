@@ -17,10 +17,10 @@ export function registerQcInspectionRoutes(app: Express) {
         conditions.push(eq(qcInspections.status, status as string));
       }
       if (startDate) {
-        conditions.push(gte(qcInspections.createdAt, new Date(startDate as string)));
+        conditions.push(gte(qcInspections.dueDate, new Date(startDate as string)));
       }
       if (endDate) {
-        conditions.push(lte(qcInspections.createdAt, new Date(endDate as string)));
+        conditions.push(lte(qcInspections.dueDate, new Date(endDate as string)));
       }
       
       const results = await db
