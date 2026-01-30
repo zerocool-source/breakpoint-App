@@ -9,6 +9,13 @@ interface Device {
   display_name: string;
   active_state: string;
   online: boolean;
+  vin?: string;
+  license_plate?: string;
+  make?: string;
+  model?: string;
+  year?: string;
+  driver_name?: string;
+  device_groups?: string[];
   latest_device_point: {
     lat: number;
     lng: number;
@@ -16,12 +23,18 @@ interface Device {
     heading: number;
     altitude: number;
     dt_tracker: string;
+    address?: string;
+    formatted_address?: string;
     params: {
       odometer?: number;
       engine_hours?: number;
       fuel_level?: number;
       battery_voltage?: number;
+      backup_voltage?: number;
       ignition?: boolean;
+      cell_signal?: number;
+      rssi?: number;
+      gps_accuracy?: number;
     };
   };
   latest_accurate_device_point: {
@@ -30,6 +43,36 @@ interface Device {
     speed: number;
     dt_tracker: string;
   };
+}
+
+interface Trip {
+  trip_id: string;
+  device_id: string;
+  start_time: string;
+  end_time: string;
+  start_lat: number;
+  start_lng: number;
+  end_lat: number;
+  end_lng: number;
+  start_address?: string;
+  end_address?: string;
+  distance_miles: number;
+  duration_seconds: number;
+  max_speed: number;
+  avg_speed: number;
+  idle_time_seconds: number;
+  stops_count: number;
+}
+
+interface TripStop {
+  stop_id: string;
+  lat: number;
+  lng: number;
+  address?: string;
+  arrival_time: string;
+  departure_time: string;
+  duration_seconds: number;
+  idle_time_seconds: number;
 }
 
 interface Geofence {
@@ -146,4 +189,23 @@ export const onestepgps = new OneStepGPSClient({
   apiKey: process.env.ONESTEPGPS_API_KEY || '',
 });
 
-export type { Device, Geofence, GeofenceEvent, DriveEvent };
+export type { Device, Geofence, GeofenceEvent, DriveEvent, Trip, TripStop };
+
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      {
+        headers: {
+          'User-Agent': 'BreakpointBI/1.0 (pool-management-app)',
+        },
+      }
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.display_name || null;
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    return null;
+  }
+}

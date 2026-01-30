@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { storage } from "../storage";
-import { onestepgps } from "../lib/onestepgps";
+import { onestepgps, reverseGeocode } from "../lib/onestepgps";
 
 export function registerFleetRoutes(app: any) {
   // ==================== FLEET MANAGEMENT ====================
@@ -361,6 +361,198 @@ export function registerFleetRoutes(app: any) {
     } catch (error) {
       console.error('Geofences error:', error);
       res.status(500).json({ error: 'Failed to fetch geofences' });
+    }
+  });
+
+  app.get("/api/fleet/gps/devices-detailed", async (req: Request, res: Response) => {
+    try {
+      const apiKey = process.env.ONESTEPGPS_API_KEY;
+      if (!apiKey) {
+        return res.json({ 
+          devices: [], 
+          summary: { total: 0, driving: 0, idle: 0, offline: 0 },
+          configured: false,
+          message: "OneStepGPS API key not configured"
+        });
+      }
+
+      const data = await onestepgps.getDevices();
+      
+      const devices = await Promise.all((data.result_list || []).map(async device => {
+        const lat = device.latest_device_point?.lat || 0;
+        const lng = device.latest_device_point?.lng || 0;
+        const speed = device.latest_device_point?.speed || 0;
+        const ignition = device.latest_device_point?.params?.ignition || false;
+        
+        let status: 'driving' | 'idle' | 'offline' = 'offline';
+        let statusDuration = '';
+        
+        if (!device.online) {
+          status = 'offline';
+        } else if (speed > 2 && ignition) {
+          status = 'driving';
+        } else if (ignition) {
+          status = 'idle';
+        }
+        
+        const lastUpdateTime = device.latest_device_point?.dt_tracker;
+        if (lastUpdateTime) {
+          const diffMs = Date.now() - new Date(lastUpdateTime).getTime();
+          const mins = Math.floor(diffMs / 60000);
+          const secs = Math.floor((diffMs % 60000) / 1000);
+          statusDuration = `${mins}m ${secs}s`;
+        }
+
+        const address = device.latest_device_point?.formatted_address || 
+                        device.latest_device_point?.address || 
+                        null;
+
+        const cellSignal = device.latest_device_point?.params?.cell_signal;
+        let cellSignalLabel = 'Unknown';
+        if (cellSignal !== undefined) {
+          if (cellSignal >= 75) cellSignalLabel = 'Excellent';
+          else if (cellSignal >= 50) cellSignalLabel = 'Good';
+          else if (cellSignal >= 25) cellSignalLabel = 'Normal';
+          else cellSignalLabel = 'Weak';
+        }
+
+        const gpsAccuracy = device.latest_device_point?.params?.gps_accuracy;
+        let gpsAccuracyLabel = 'Unknown';
+        if (gpsAccuracy !== undefined) {
+          if (gpsAccuracy <= 5) gpsAccuracyLabel = 'Excellent';
+          else if (gpsAccuracy <= 10) gpsAccuracyLabel = 'Good';
+          else if (gpsAccuracy <= 20) gpsAccuracyLabel = 'Fair';
+          else gpsAccuracyLabel = 'Poor';
+        }
+
+        return {
+          id: device.device_id,
+          name: device.display_name,
+          online: device.online,
+          status,
+          statusDuration,
+          location: { lat, lng },
+          address,
+          speed: Math.round(speed),
+          odometer: device.latest_device_point?.params?.odometer || 0,
+          engineHours: device.latest_device_point?.params?.engine_hours || 0,
+          voltage: device.latest_device_point?.params?.battery_voltage || 0,
+          backupVoltage: device.latest_device_point?.params?.backup_voltage,
+          fuelLevel: device.latest_device_point?.params?.fuel_level,
+          ignition,
+          lastUpdate: lastUpdateTime,
+          vin: device.vin || null,
+          licensePlate: device.license_plate || null,
+          driverName: device.driver_name || null,
+          deviceGroups: device.device_groups || [],
+          cellSignal: cellSignalLabel,
+          gpsAccuracy: gpsAccuracyLabel,
+          rssi: device.latest_device_point?.params?.rssi || null,
+          make: device.make || null,
+          model: device.model || null,
+          year: device.year || null,
+        };
+      }));
+
+      const summary = {
+        total: devices.length,
+        driving: devices.filter(d => d.status === 'driving').length,
+        idle: devices.filter(d => d.status === 'idle').length,
+        offline: devices.filter(d => d.status === 'offline').length,
+      };
+
+      res.json({ devices, summary, configured: true });
+    } catch (error) {
+      console.error('Fleet GPS detailed devices error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      res.json({ 
+        devices: [], 
+        summary: { total: 0, driving: 0, idle: 0, offline: 0 },
+        configured: true,
+        error: true,
+        message: errorMessage.includes('400') 
+          ? 'Invalid API key. Please check your OneStepGPS API key in Settings.'
+          : `GPS Error: ${errorMessage}`
+      });
+    }
+  });
+
+  app.get("/api/fleet/gps/trips/:deviceId", async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const date = (req.query.date as string) || new Date().toISOString().split('T')[0];
+      
+      const startDate = `${date}T00:00:00Z`;
+      const endDate = `${date}T23:59:59Z`;
+      
+      const tripData = await onestepgps.getTrips(deviceId, startDate, endDate);
+      
+      const trips = (tripData.result_list || []).map((trip: any, index: number) => ({
+        id: trip.trip_id || `trip-${index}`,
+        startTime: trip.start_time,
+        endTime: trip.end_time,
+        startAddress: trip.start_address || null,
+        endAddress: trip.end_address || null,
+        startLocation: { lat: trip.start_lat, lng: trip.start_lng },
+        endLocation: { lat: trip.end_lat, lng: trip.end_lng },
+        distanceMiles: trip.distance_miles || 0,
+        durationSeconds: trip.duration_seconds || 0,
+        maxSpeed: trip.max_speed || 0,
+        avgSpeed: trip.avg_speed || 0,
+        idleTimeSeconds: trip.idle_time_seconds || 0,
+        stopsCount: trip.stops_count || 0,
+      }));
+
+      const totalDistance = trips.reduce((sum: number, t: any) => sum + t.distanceMiles, 0);
+      const totalIdleTime = trips.reduce((sum: number, t: any) => sum + t.idleTimeSeconds, 0);
+      const totalEngineTime = trips.reduce((sum: number, t: any) => sum + t.durationSeconds, 0);
+      const totalStops = trips.reduce((sum: number, t: any) => sum + t.stopsCount, 0);
+
+      res.json({
+        trips,
+        summary: {
+          date,
+          totalTrips: trips.length,
+          totalDistance: Math.round(totalDistance * 10) / 10,
+          totalIdleTime,
+          totalEngineTime,
+          totalStops,
+        }
+      });
+    } catch (error) {
+      console.error('Fleet GPS trips error:', error);
+      res.json({
+        trips: [],
+        summary: {
+          date: req.query.date || new Date().toISOString().split('T')[0],
+          totalTrips: 0,
+          totalDistance: 0,
+          totalIdleTime: 0,
+          totalEngineTime: 0,
+          totalStops: 0,
+        },
+        error: true,
+        message: 'Failed to fetch trip data'
+      });
+    }
+  });
+
+  app.get("/api/fleet/gps/device/:deviceId/address", async (req: Request, res: Response) => {
+    try {
+      const { deviceId } = req.params;
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        return res.status(400).json({ error: 'Invalid coordinates' });
+      }
+      
+      const address = await reverseGeocode(lat, lng);
+      res.json({ address });
+    } catch (error) {
+      console.error('Reverse geocode error:', error);
+      res.status(500).json({ error: 'Failed to get address' });
     }
   });
 }
