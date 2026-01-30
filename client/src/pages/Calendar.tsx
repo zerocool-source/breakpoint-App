@@ -244,7 +244,7 @@ export default function Calendar() {
   });
   const [viewMode, setViewMode] = useState<"5day" | "7day">("5day");
   const [roleFilter, setRoleFilter] = useState<"service" | "repair" | "supervisor">("service");
-  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "with" | "without">("all");
+  const [displayFilter, setDisplayFilter] = useState<"all" | "routes_only" | "assignments_only" | "with_assignments" | "without_assignments">("all");
   const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
   const [expandedRouteBlocks, setExpandedRouteBlocks] = useState<Set<string>>(new Set());
@@ -737,18 +737,18 @@ export default function Calendar() {
         return false;
       }
       
-      // Assignment filter: filter by whether tech has assignments
-      if (roleFilter === "service" && assignmentFilter !== "all") {
+      // Display filter: filter by whether tech has assignments (for with/without filters)
+      if (roleFilter === "service" && (displayFilter === "with_assignments" || displayFilter === "without_assignments")) {
         const techHasAssignments = serviceAssignments.some(
           (a) => String(a.technicianId) === String(tech.id)
         );
-        if (assignmentFilter === "with" && !techHasAssignments) return false;
-        if (assignmentFilter === "without" && techHasAssignments) return false;
+        if (displayFilter === "with_assignments" && !techHasAssignments) return false;
+        if (displayFilter === "without_assignments" && techHasAssignments) return false;
       }
       
       return true;
     });
-  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap, techsWithSelectedProperty, assignmentFilter, serviceAssignments]);
+  }, [technicians, roleFilter, searchTerm, regionFilter, supervisorRegionMap, techsWithSelectedProperty, displayFilter, serviceAssignments]);
   
   const filteredTechnicians = useMemo(() => {
     const startIndex = (currentPage - 1) * techsPerPage;
@@ -1183,20 +1183,22 @@ export default function Calendar() {
               )}
             </div>
             
-            {/* Assignments Filter Dropdown - Only show for service role */}
+            {/* Display Filter Dropdown - Only show for service role */}
             {roleFilter === "service" && (
               <select
-                value={assignmentFilter}
+                value={displayFilter}
                 onChange={(e) => {
-                  setAssignmentFilter(e.target.value as "all" | "with" | "without");
+                  setDisplayFilter(e.target.value as "all" | "routes_only" | "assignments_only" | "with_assignments" | "without_assignments");
                   setCurrentPage(1);
                 }}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0077b6] focus:border-[#0077b6]"
-                data-testid="select-assignment-filter"
+                data-testid="select-display-filter"
               >
-                <option value="all">Assignments: All</option>
-                <option value="with">With Assignments</option>
-                <option value="without">Without Assignments</option>
+                <option value="all">Show: All</option>
+                <option value="routes_only">Routes Only</option>
+                <option value="assignments_only">Assignments Only</option>
+                <option value="with_assignments">With Assignments</option>
+                <option value="without_assignments">Without Assignments</option>
               </select>
             )}
             
@@ -1243,6 +1245,19 @@ export default function Calendar() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Synced with Service Tech App
               </span>
+              {roleFilter === "service" && (
+                <>
+                  <span className="w-px h-4 bg-slate-300 ml-2"></span>
+                  <span className="flex items-center gap-1.5 ml-2">
+                    <span className="w-4 h-4 rounded bg-white border border-slate-300 flex items-center justify-center text-[10px]">📦</span>
+                    Routes
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 rounded bg-[#fff7ed] border border-[#f97316] flex items-center justify-center text-[10px]">📋</span>
+                    Assignments
+                  </span>
+                </>
+              )}
             </div>
             
             {/* Date Navigation */}
@@ -1713,8 +1728,8 @@ export default function Calendar() {
                               </div>
                             )}
 
-                            {/* Service Assignments - show alongside schedule */}
-                            {tech.role === "service" && serviceAssignmentsForDay.length > 0 && (
+                            {/* Service Assignments - show alongside schedule (hidden when routes_only filter) */}
+                            {tech.role === "service" && serviceAssignmentsForDay.length > 0 && displayFilter !== "routes_only" && (
                               <div className="mt-2 space-y-1">
                                 {serviceAssignmentsForDay.map((assignment) => {
                                   const statusColors: Record<string, { bg: string; text: string; badge: string }> = {
@@ -1921,8 +1936,8 @@ export default function Calendar() {
                         );
                       }
 
-                      // Render route properties for service technicians based on visit days
-                      if (tech.role === "service") {
+                      // Render route properties for service technicians based on visit days (hidden when assignments_only filter)
+                      if (tech.role === "service" && displayFilter !== "assignments_only") {
                         const propertiesForDay = getPropertiesForTechAndDate(tech.id, date);
                         if (propertiesForDay.length > 0) {
                           const routeBlockKey = `${tech.id}-${dayIndex}`;
@@ -2116,8 +2131,8 @@ export default function Calendar() {
                                 )}
                               </div>
 
-                              {/* Service Assignments - show below route card */}
-                              {serviceAssignmentsForDay.length > 0 && (
+                              {/* Service Assignments - show below route card (hidden when routes_only filter) */}
+                              {serviceAssignmentsForDay.length > 0 && displayFilter !== "routes_only" && (
                                 <div className="mt-2 space-y-1">
                                   {serviceAssignmentsForDay.map((assignment) => {
                                     const statusColors: Record<string, { bg: string; badge: string }> = {
@@ -2183,8 +2198,8 @@ export default function Calendar() {
                         }
                       }
 
-                      // If service technician has assignments for this day, show them
-                      if (tech.role === "service" && serviceAssignmentsForDay.length > 0) {
+                      // If service technician has assignments for this day, show them (hidden when routes_only filter)
+                      if (tech.role === "service" && serviceAssignmentsForDay.length > 0 && displayFilter !== "routes_only") {
                         return (
                           <div
                             key={displayIndex}
