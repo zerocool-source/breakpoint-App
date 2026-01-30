@@ -27,7 +27,14 @@ import {
   MapPin,
   RefreshCw,
   Maximize2,
-  Layers
+  Layers,
+  Eye,
+  ChevronUp,
+  Gauge,
+  Zap,
+  Signal,
+  Navigation,
+  History
 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon, Circle, Tooltip as LeafletTooltip } from "react-leaflet";
 import L from "leaflet";
@@ -207,13 +214,21 @@ function formatTimeAgo(dateStr: string | undefined): string {
 
 // Helper to validate coordinates (check for valid lat/lng range and basic sanity)
 function isValidCoordinate(lat: number, lng: number): boolean {
-  // Basic range check
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
-  // Exclude null island (0,0) which indicates missing data
   if (lat === 0 && lng === 0) return false;
-  // For US-based fleet, prefer coordinates in North America region but don't hard exclude
-  // Just check for obvious bad data (like exactly 0 or extremely far from US)
   return true;
+}
+
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return `${hours}h ${mins}min`;
+  return `${mins}min`;
+}
+
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 // Geofence color mapping
@@ -441,7 +456,92 @@ export default function Fleet() {
         message: data.message,
       };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds for live tracking
+    refetchInterval: 30000,
+  });
+
+  interface DetailedGPSDevice {
+    id: string;
+    name: string;
+    online: boolean;
+    status: 'driving' | 'idle' | 'offline';
+    statusDuration: string;
+    location: { lat: number; lng: number };
+    address: string | null;
+    speed: number;
+    odometer: number;
+    engineHours: number;
+    voltage: number;
+    backupVoltage?: number;
+    fuelLevel?: number;
+    ignition: boolean;
+    lastUpdate: string;
+    vin: string | null;
+    licensePlate: string | null;
+    driverName: string | null;
+    deviceGroups: string[];
+    cellSignal: string;
+    gpsAccuracy: string;
+    rssi: number | null;
+    make: string | null;
+    model: string | null;
+    year: string | null;
+  }
+
+  interface DetailedGPSResponse {
+    devices: DetailedGPSDevice[];
+    summary: { total: number; driving: number; idle: number; offline: number };
+    configured?: boolean;
+    error?: boolean;
+    message?: string;
+  }
+
+  const { data: detailedGpsData, isLoading: detailedGpsLoading, refetch: refetchDetailedGps } = useQuery<DetailedGPSResponse>({
+    queryKey: ["/api/fleet/gps/devices-detailed"],
+    queryFn: async () => {
+      const res = await fetch("/api/fleet/gps/devices-detailed");
+      const data = await res.json();
+      return data;
+    },
+    refetchInterval: 30000,
+  });
+
+  const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);
+  const [tripHistoryDate, setTripHistoryDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+  interface TripData {
+    id: string;
+    startTime: string;
+    endTime: string;
+    startAddress: string | null;
+    endAddress: string | null;
+    distanceMiles: number;
+    durationSeconds: number;
+    maxSpeed: number;
+    avgSpeed: number;
+    idleTimeSeconds: number;
+    stopsCount: number;
+  }
+
+  interface TripResponse {
+    trips: TripData[];
+    summary: {
+      date: string;
+      totalTrips: number;
+      totalDistance: number;
+      totalIdleTime: number;
+      totalEngineTime: number;
+      totalStops: number;
+    };
+  }
+
+  const { data: tripData, isLoading: tripLoading } = useQuery<TripResponse>({
+    queryKey: ["/api/fleet/gps/trips", expandedVehicleId, tripHistoryDate],
+    queryFn: async () => {
+      if (!expandedVehicleId) return { trips: [], summary: { date: tripHistoryDate, totalTrips: 0, totalDistance: 0, totalIdleTime: 0, totalEngineTime: 0, totalStops: 0 } };
+      const res = await fetch(`/api/fleet/gps/trips/${expandedVehicleId}?date=${tripHistoryDate}`);
+      return res.json();
+    },
+    enabled: !!expandedVehicleId,
   });
 
   // Geofences from OneStepGPS
@@ -963,263 +1063,299 @@ export default function Fleet() {
           </Card>
         </div>
 
-        {/* Vehicle Fleet */}
-        <Card className="bg-white shadow-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Vehicle Fleet ({trucks.length})</CardTitle>
-              <Button size="sm" onClick={() => setAddRecordModal(true)} data-testid="button-add-service">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Service Record
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {trucksLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0078D4]" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-gray-500">
-                      <th className="pb-2 font-medium">Vehicle</th>
-                      <th className="pb-2 font-medium">Status</th>
-                      <th className="pb-2 font-medium">Mileage</th>
-                      <th className="pb-2 font-medium">Truck Health</th>
-                      <th className="pb-2 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trucksWithMaintenance
-                      .filter(truck => {
-                        const matchesSearch = !searchQuery || truck.truckNumber.toString().includes(searchQuery);
-                        let matchesStatus = true;
-                        if (vehicleFilter === "active") matchesStatus = truck.status === "Active" || !truck.status;
-                        else if (vehicleFilter === "inshop") matchesStatus = truck.status === "In Shop";
-                        else if (vehicleFilter === "inactive") matchesStatus = truck.status === "Inactive";
-                        return matchesSearch && matchesStatus;
-                      })
-                      .map((truck) => {
-                        const truckStatus = truck.status || "Active";
-                        const gpsDevice = getGpsDeviceForTruck(String(truck.truckNumber));
-                        const displayMileage = gpsDevice?.odometer || truck.currentMileage;
-                        const healthScore = (() => {
-                          let score = 100;
-                          for (const type of FLEET_SERVICE_TYPES) {
-                            const record = truck.latestByType[type];
-                            const days = daysSince(record?.serviceDate);
-                            const status = getMaintenanceStatus(days, type);
-                            if (status.status === "Overdue") score -= 15;
-                            else if (status.status === "Due Soon") score -= 5;
-                            else if (status.status === "No Record") score -= 10;
-                          }
-                          return Math.max(0, Math.min(100, score));
-                        })();
-                        const healthColor = healthScore >= 80 ? "text-[#22D69A]" : healthScore >= 60 ? "text-[#D35400]" : "text-red-600";
-                        const statusBadgeColor = truckStatus === "Active" ? "bg-[#22D69A]1A text-[#22D69A]" :
-                                                 truckStatus === "In Shop" ? "bg-[#FF8000]1A text-[#D35400]" : "bg-gray-100 text-gray-700";
-
-                        return (
-                          <tr 
-                            key={truck.id} 
-                            className="border-b hover:bg-gray-50 cursor-pointer"
-                            onClick={() => setSelectedTruck(truck)}
-                            data-testid={`row-truck-${truck.truckNumber}`}
-                          >
-                            <td className="py-3">
-                              <div className="flex items-center gap-2">
-                                <Truck className="h-4 w-4 text-[#0078D4]" />
-                                <span className="font-bold">#{truck.truckNumber}</span>
-                              </div>
-                            </td>
-                            <td className="py-3">
-                              <Select
-                                value={truckStatus}
-                                onValueChange={(value) => {
-                                  updateTruckStatusMutation.mutate({ truckId: truck.id, status: value });
-                                }}
-                              >
-                                <SelectTrigger 
-                                  className="h-7 w-28 text-xs"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent onClick={(e) => e.stopPropagation()}>
-                                  {FLEET_TRUCK_STATUSES.map(s => (
-                                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
-                            <td className="py-3 text-gray-600">
-                              <div className="flex items-center gap-1">
-                                {displayMileage?.toLocaleString() || "—"}
-                                {gpsDevice && (
-                                  <span className="text-[10px] text-[#0077b6] font-medium" title="Live GPS data">●</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3">
-                              <span className={`font-semibold ${healthColor}`}>
-                                {healthScore}%
-                              </span>
-                            </td>
-                            <td className="py-3">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTruck(truck);
-                                }}
-                              >
-                                View Details
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Truck Inventory Section */}
+        {/* Vehicle Fleet - QuickBooks Style Cards */}
         <Card className="bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Package className="h-5 w-5 text-[#0078D4]" />
-                <CardTitle className="text-lg font-semibold">Truck Inventory</CardTitle>
-                {lowStockItems.length > 0 && (
-                  <Badge className="bg-red-100 text-red-700">
-                    {lowStockItems.length} Low Stock
-                  </Badge>
-                )}
+                <CardTitle className="text-lg font-semibold">
+                  Live Vehicle Fleet ({detailedGpsData?.devices?.length || 0})
+                </CardTitle>
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge className="bg-green-100 text-green-700">{detailedGpsData?.summary?.driving || 0} Driving</Badge>
+                  <Badge className="bg-orange-100 text-orange-700">{detailedGpsData?.summary?.idle || 0} Idle</Badge>
+                  <Badge className="bg-gray-100 text-gray-600">{detailedGpsData?.summary?.offline || 0} Offline</Badge>
+                </div>
               </div>
-              <Button 
-                size="sm" 
-                onClick={() => setInventoryModalOpen(true)} 
-                data-testid="button-add-inventory"
-              >
-                <PackagePlus className="h-4 w-4 mr-2" />
-                Add Inventory Item
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => { refetchDetailedGps(); refetchGps(); }}
+                  data-testid="button-refresh-fleet"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+                <Button size="sm" onClick={() => setAddRecordModal(true)} data-testid="button-add-service">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Service Record
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            {trucks.length === 0 ? (
+            {detailedGpsLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0078D4]" />
+              </div>
+            ) : !detailedGpsData?.configured ? (
               <div className="text-center py-8 text-gray-500">
-                <Package className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p>No trucks available. Add trucks first to manage inventory.</p>
+                <MapPin className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>OneStepGPS not configured. Add ONESTEPGPS_API_KEY to enable live tracking.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {trucks.map(truck => {
-                  const inventory = getInventoryForTruck(truck.id);
-                  const lowItems = inventory.filter(item => item.quantity <= (item.minQuantity || 0));
-                  
-                  return (
-                    <div key={truck.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Truck className="h-4 w-4 text-[#0078D4]" />
-                          <span className="font-bold">Truck #{truck.truckNumber}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {inventory.length} items
-                          </Badge>
-                          {lowItems.length > 0 && (
-                            <Badge className="bg-red-100 text-red-700 text-xs">
-                              {lowItems.length} low
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {(detailedGpsData?.devices || [])
+                  .filter(device => {
+                    const matchesSearch = !searchQuery || device.name.toLowerCase().includes(searchQuery.toLowerCase());
+                    let matchesStatus = true;
+                    if (vehicleFilter === "active") matchesStatus = device.status === 'driving';
+                    else if (vehicleFilter === "inshop") matchesStatus = device.status === 'idle';
+                    else if (vehicleFilter === "inactive") matchesStatus = device.status === 'offline';
+                    return matchesSearch && matchesStatus;
+                  })
+                  .sort((a, b) => {
+                    const numA = parseInt(a.name.match(/#(\d+)/)?.[1] || "999");
+                    const numB = parseInt(b.name.match(/#(\d+)/)?.[1] || "999");
+                    return numA - numB;
+                  })
+                  .map((device) => {
+                    const isExpanded = expandedVehicleId === device.id;
+                    const statusColor = device.status === 'driving' ? 'bg-green-500' : 
+                                       device.status === 'idle' ? 'bg-orange-500' : 'bg-gray-400';
+                    const statusBgColor = device.status === 'driving' ? 'bg-green-100 text-green-700' : 
+                                          device.status === 'idle' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600';
+                    
+                    return (
+                      <div 
+                        key={device.id} 
+                        className="border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+                        data-testid={`vehicle-card-${device.id}`}
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between p-4 border-b bg-slate-50 rounded-t-lg">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${statusColor}`} />
+                            <Truck className="h-5 w-5 text-[#1e3a5f]" />
+                            <div>
+                              <span className="font-bold text-[#1e3a5f]">{device.name}</span>
+                              {device.driverName && (
+                                <span className="text-gray-500 text-sm ml-2">- {device.driverName}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={statusBgColor}>
+                              {device.status.charAt(0).toUpperCase() + device.status.slice(1)}
                             </Badge>
-                          )}
+                            {device.statusDuration && (
+                              <span className="text-xs text-gray-500">{device.statusDuration}</span>
+                            )}
+                          </div>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedInventoryTruck(truck);
-                            setInventoryModalOpen(true);
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add Item
-                        </Button>
-                      </div>
-                      
-                      {inventory.length === 0 ? (
-                        <p className="text-sm text-gray-500 italic">No inventory items tracked</p>
-                      ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {inventory.slice(0, 8).map(item => (
-                            <div 
-                              key={item.id} 
-                              className={`p-2 rounded border text-sm ${
-                                item.quantity <= (item.minQuantity || 0) 
-                                  ? 'bg-red-50 border-red-200' 
-                                  : 'bg-gray-50'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium truncate">{item.itemName}</span>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-5 w-5 p-0"
-                                    onClick={() => updateInventoryMutation.mutate({
-                                      id: item.id,
-                                      updates: { quantity: Math.max(0, item.quantity - 1) }
-                                    })}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className={`font-bold ${
-                                    item.quantity <= (item.minQuantity || 0) ? 'text-red-600' : ''
-                                  }`}>
-                                    {item.quantity}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-5 w-5 p-0"
-                                    onClick={() => updateInventoryMutation.mutate({
-                                      id: item.id,
-                                      updates: { quantity: item.quantity + 1 }
-                                    })}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
+
+                        {/* Card Content - Grid Layout */}
+                        <div className="p-4">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-gray-500 text-xs uppercase font-medium">Location</p>
+                              <p className="text-gray-800 truncate" title={device.address || 'Unknown'}>
+                                {device.address || 'Location unavailable'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500 text-xs uppercase font-medium">Speed</p>
+                              <p className="text-gray-800 font-semibold">{device.speed} mph</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500 text-xs uppercase font-medium">Odometer</p>
+                              <p className="text-gray-800">{device.odometer?.toLocaleString() || '—'}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500 text-xs uppercase font-medium">Driver</p>
+                              <p className="text-gray-800">{device.driverName || '—'}</p>
+                            </div>
+                          </div>
+
+                          {/* Expandable Details */}
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t">
+                              <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">Engine Hours</p>
+                                  <p className="text-gray-800">{device.engineHours?.toFixed(1) || '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">Device Groups</p>
+                                  <p className="text-gray-800">{device.deviceGroups?.join(', ') || '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">Cell Signal</p>
+                                  <p className="text-gray-800 flex items-center gap-1">
+                                    <Signal className="h-3 w-3" />
+                                    {device.cellSignal}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">GPS Accuracy</p>
+                                  <p className="text-gray-800 flex items-center gap-1">
+                                    <Navigation className="h-3 w-3" />
+                                    {device.gpsAccuracy}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">VIN</p>
+                                  <p className="text-gray-800 font-mono text-xs">{device.vin || '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">Voltage</p>
+                                  <p className="text-gray-800 flex items-center gap-1">
+                                    <Zap className="h-3 w-3" />
+                                    {device.voltage?.toFixed(1) || '—'}V
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">Backup Volt</p>
+                                  <p className="text-gray-800">{device.backupVoltage ? `${device.backupVoltage}%` : '—'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase font-medium">RSSI</p>
+                                  <p className="text-gray-800">{device.rssi || '—'}</p>
                                 </div>
                               </div>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="text-xs text-gray-500">{item.category}</span>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-4 w-4 p-0 text-red-500 hover:text-red-700"
-                                  onClick={() => deleteInventoryMutation.mutate(item.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+
+                              {/* License Plate */}
+                              {device.licensePlate && (
+                                <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg mb-4">
+                                  <span className="text-xs text-gray-500 uppercase font-medium">License Plate #:</span>
+                                  <span className="font-bold text-[#1e3a5f]">{device.licensePlate}</span>
+                                </div>
+                              )}
+
+                              {/* Trip History Section */}
+                              <div className="border-t pt-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <History className="h-4 w-4 text-gray-500" />
+                                    <span className="font-medium text-sm">Trip History</span>
+                                  </div>
+                                  <Input
+                                    type="date"
+                                    value={tripHistoryDate}
+                                    onChange={(e) => setTripHistoryDate(e.target.value)}
+                                    className="h-7 w-36 text-xs"
+                                  />
+                                </div>
+
+                                {tripLoading ? (
+                                  <div className="flex items-center justify-center py-4">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#0078D4]" />
+                                  </div>
+                                ) : tripData?.summary ? (
+                                  <div className="space-y-3">
+                                    {/* Trip Summary */}
+                                    <div className="grid grid-cols-4 gap-2 text-xs bg-slate-50 p-3 rounded-lg">
+                                      <div className="text-center">
+                                        <p className="text-gray-500">Stops</p>
+                                        <p className="font-bold text-lg">{tripData.summary.totalStops}</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <p className="text-gray-500">Distance</p>
+                                        <p className="font-bold text-lg">{tripData.summary.totalDistance} mi</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <p className="text-gray-500">Idle Time</p>
+                                        <p className="font-bold">{formatDuration(tripData.summary.totalIdleTime)}</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <p className="text-gray-500">Engine On</p>
+                                        <p className="font-bold">{formatDuration(tripData.summary.totalEngineTime)}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Trip List */}
+                                    {tripData.trips.length > 0 ? (
+                                      <ScrollArea className="h-48">
+                                        <div className="space-y-2">
+                                          {tripData.trips.map((trip, index) => (
+                                            <div key={trip.id} className="border rounded-lg p-3 text-xs">
+                                              <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                  <span className="w-5 h-5 rounded-full bg-[#0078D4] text-white flex items-center justify-center text-[10px] font-bold">
+                                                    {index + 1}
+                                                  </span>
+                                                  <span className="font-medium">
+                                                    {formatTime(trip.startTime)} - {formatTime(trip.endTime)}
+                                                  </span>
+                                                </div>
+                                                <span className="text-gray-500">{formatDuration(trip.durationSeconds)}</span>
+                                              </div>
+                                              {trip.endAddress && (
+                                                <p className="text-gray-600 ml-7 truncate" title={trip.endAddress}>
+                                                  {trip.endAddress}
+                                                </p>
+                                              )}
+                                              <div className="flex items-center gap-4 mt-2 ml-7 text-gray-500">
+                                                <span>Distance: {trip.distanceMiles.toFixed(1)} mi</span>
+                                                <span>Speed: {trip.avgSpeed.toFixed(1)} mph avg, {trip.maxSpeed.toFixed(1)} mph top</span>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+                                    ) : (
+                                      <p className="text-center text-gray-500 text-sm py-4">No trips recorded for this date</p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-center text-gray-500 text-sm py-4">No trip data available</p>
+                                )}
                               </div>
-                            </div>
-                          ))}
-                          {inventory.length > 8 && (
-                            <div className="p-2 flex items-center justify-center text-sm text-[#0078D4]">
-                              +{inventory.length - 8} more items
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+
+                        {/* Card Footer */}
+                        <div className="flex items-center justify-between p-3 border-t bg-slate-50 rounded-b-lg">
+                          <span className="text-xs text-gray-500">
+                            Last updated: {device.lastUpdate ? formatTimeAgo(device.lastUpdate) : 'Unknown'}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                setFocusVehicleId(device.id);
+                              }}
+                            >
+                              <MapPin className="h-3 w-3 mr-1" />
+                              Locate
+                            </Button>
+                            <Button
+                              variant={isExpanded ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => setExpandedVehicleId(isExpanded ? null : device.id)}
+                            >
+                              {isExpanded ? (
+                                <>
+                                  <ChevronUp className="h-3 w-3 mr-1" />
+                                  Close
+                                </>
+                              ) : (
+                                <>
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  View Details
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </CardContent>
