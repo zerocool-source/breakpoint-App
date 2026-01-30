@@ -93,6 +93,7 @@ interface ScheduledRepair {
   repairTechId: string | null;
   repairTechName: string | null;
   totalAmount?: number;
+  createdAt?: string;
 }
 
 interface TechPropertyAssignment {
@@ -278,6 +279,7 @@ export default function Calendar() {
     repairTechId: "",
     scheduledDate: "",
   });
+  const [scheduledJobsExpanded, setScheduledJobsExpanded] = useState(true);
   const [propertySearchTerm, setPropertySearchTerm] = useState("");
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -363,12 +365,13 @@ export default function Calendar() {
         id: e.id,
         estimateNumber: e.estimateNumber,
         propertyName: e.customerName || e.propertyName,
-        title: e.jobTitle || e.description || "Scheduled Job",
+        title: e.jobTitle || e.title || e.description || "Scheduled Job",
         status: e.status,
         scheduledDate: e.scheduledDate,
         repairTechId: e.repairTechId,
         repairTechName: e.repairTechName,
         totalAmount: e.totalAmount,
+        createdAt: e.createdAt,
       }));
       
       // Unassigned - no repairTechId or no scheduledDate
@@ -1276,59 +1279,90 @@ export default function Calendar() {
             {/* Scrollable content area */}
             <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
             
-            {/* Unassigned Jobs Section - Only show when Repair filter is selected */}
+            {/* Scheduled Jobs Container - Only show when Repair filter is selected */}
             {roleFilter === "repair" && unassignedEstimates.length > 0 && (
-              <div className="border-b-2 border-[#f97316] bg-[#fff7ed]">
-                <div className="px-4 py-3 flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#f97316] flex items-center justify-center">
-                      <Wrench className="w-4 h-4 text-white" />
+              <div className="mx-4 mt-4 mb-3 bg-white rounded-lg shadow-md border-l-4 border-[#f97316] overflow-hidden">
+                <button
+                  onClick={() => setScheduledJobsExpanded(!scheduledJobsExpanded)}
+                  className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white hover:from-[#ffedd5] transition-colors"
+                  data-testid="button-toggle-scheduled-jobs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
+                      <Wrench className="w-4.5 h-4.5 text-white" />
                     </div>
-                    <span className="font-semibold text-[#0F172A]">Unassigned Jobs</span>
-                    <span className="px-2 py-0.5 bg-[#f97316] text-white text-xs font-medium rounded-full">
-                      {unassignedEstimates.length}
+                    <div className="text-left">
+                      <h3 className="font-semibold text-[#0F172A] text-sm">Scheduled Jobs</h3>
+                      <p className="text-xs text-slate-500">Ready to assign to repair technicians</p>
+                    </div>
+                    <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
+                      {unassignedEstimates.length} {unassignedEstimates.length === 1 ? 'job' : 'jobs'}
                     </span>
                   </div>
-                </div>
-                <div className="px-4 pb-4">
-                  <div className="flex flex-wrap gap-3">
-                    {unassignedEstimates.map((estimate) => (
-                      <button
-                        key={estimate.id}
-                        onClick={() => {
-                          setSelectedEstimateForAssign(estimate);
-                          setShowAssignEstimateModal(true);
-                        }}
-                        className="flex flex-col gap-1.5 p-3 bg-white border-2 border-[#f97316] rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer min-w-[220px] text-left"
-                        data-testid={`unassigned-estimate-${estimate.id}`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-[#f97316]">
-                            {estimate.estimateNumber || `EST-${estimate.id.slice(0, 8)}`}
-                          </span>
-                          <span className="px-2 py-0.5 bg-[#0077b6] text-white text-xs font-medium rounded-full">
-                            Scheduled
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-[#0F172A] truncate">
-                          {estimate.propertyName}
-                        </p>
-                        <p className="text-xs text-slate-500 truncate">
-                          {estimate.title}
-                        </p>
-                        {estimate.totalAmount !== undefined && (
-                          <p className="text-sm font-bold text-[#10b981]">
-                            ${(estimate.totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1 text-xs text-[#f97316] mt-1">
-                          <UserPlus className="w-3.5 h-3.5" />
-                          <span>Click to assign</span>
-                        </div>
-                      </button>
-                    ))}
+                  <ChevronDown className={cn(
+                    "w-5 h-5 text-slate-400 transition-transform duration-200",
+                    scheduledJobsExpanded ? "rotate-180" : ""
+                  )} />
+                </button>
+                
+                {scheduledJobsExpanded && (
+                  <div className="border-t border-slate-100">
+                    <ScrollArea className="max-h-[280px]">
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {unassignedEstimates.map((estimate) => (
+                          <div
+                            key={estimate.id}
+                            className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden group"
+                            data-testid={`scheduled-job-${estimate.id}`}
+                          >
+                            <div className="p-3 border-l-3 border-l-[#f97316]">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <span className="text-xs font-bold text-[#f97316]">
+                                  EST#{estimate.estimateNumber || estimate.id.slice(0, 8)}
+                                </span>
+                                <span className="px-2 py-0.5 bg-[#0077b6] text-white text-[10px] font-medium rounded-full whitespace-nowrap">
+                                  Scheduled
+                                </span>
+                              </div>
+                              <p className="text-sm font-semibold text-[#0F172A] truncate mb-1" title={estimate.propertyName}>
+                                {estimate.propertyName}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate mb-2" title={estimate.title}>
+                                {estimate.title}
+                              </p>
+                              <div className="flex items-center justify-between">
+                                {estimate.totalAmount !== undefined && (
+                                  <p className="text-sm font-bold text-[#10b981]">
+                                    ${(estimate.totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                  </p>
+                                )}
+                                {estimate.createdAt && (
+                                  <p className="text-[10px] text-slate-400">
+                                    Created {new Date(estimate.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="border-t border-slate-100 px-3 py-2 bg-slate-50">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedEstimateForAssign(estimate);
+                                  setShowAssignEstimateModal(true);
+                                }}
+                                className="w-full h-8 bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-medium gap-1.5 rounded-md shadow-sm"
+                                data-testid={`button-assign-${estimate.id}`}
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                Assign to Tech
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
-                </div>
+                )}
               </div>
             )}
             
