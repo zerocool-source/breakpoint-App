@@ -284,65 +284,28 @@ export default function Calendar() {
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
   const readyToAssignScrollRef = React.useRef<HTMLDivElement>(null);
-  const [jobCardPage, setJobCardPage] = useState(0);
-  const jobCardsPerPage = 5;
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Calculate visible job cards based on pagination
-  const visibleJobCards = useMemo(() => {
-    const startIndex = jobCardPage * jobCardsPerPage;
-    return {
-      startIndex,
-      endIndex: Math.min(startIndex + jobCardsPerPage, 100), // Will be clamped by actual length
-    };
-  }, [jobCardPage]);
-
-  const calendarHeaderScrollRef = React.useRef<HTMLDivElement>(null);
-  const calendarBodyScrollRef = React.useRef<HTMLDivElement>(null);
-  const [calendarCanScrollLeft, setCalendarCanScrollLeft] = useState(false);
-  const [calendarCanScrollRight, setCalendarCanScrollRight] = useState(false);
-
-  // Handle calendar horizontal scroll (sync header and body)
-  const handleCalendarScroll = (source: 'header' | 'body') => {
-    const headerContainer = calendarHeaderScrollRef.current;
-    const bodyContainer = calendarBodyScrollRef.current;
-    
-    if (source === 'header' && headerContainer && bodyContainer) {
-      bodyContainer.scrollLeft = headerContainer.scrollLeft;
-      setCalendarCanScrollLeft(headerContainer.scrollLeft > 0);
-      setCalendarCanScrollRight(headerContainer.scrollLeft < headerContainer.scrollWidth - headerContainer.clientWidth - 1);
-    } else if (source === 'body' && bodyContainer && headerContainer) {
-      headerContainer.scrollLeft = bodyContainer.scrollLeft;
-      setCalendarCanScrollLeft(bodyContainer.scrollLeft > 0);
-      setCalendarCanScrollRight(bodyContainer.scrollLeft < bodyContainer.scrollWidth - bodyContainer.clientWidth - 1);
-    }
-  };
-
-  const scrollCalendar = (direction: 'left' | 'right') => {
-    const headerContainer = calendarHeaderScrollRef.current;
-    const bodyContainer = calendarBodyScrollRef.current;
-    const scrollAmount = 200;
-    
-    if (headerContainer) {
-      headerContainer.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-    if (bodyContainer) {
-      bodyContainer.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
-  // Check calendar scroll state on mount
-  React.useEffect(() => {
-    const container = calendarHeaderScrollRef.current;
+  // Handle horizontal scroll for Ready to Assign cards
+  const handleReadyToAssignScroll = () => {
+    const container = readyToAssignScrollRef.current;
     if (container) {
-      setTimeout(() => handleCalendarScroll('header'), 100);
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(container.scrollLeft < container.scrollWidth - container.clientWidth - 1);
     }
-  }, [viewMode]);
+  };
+
+  const scrollReadyToAssign = (direction: 'left' | 'right') => {
+    const container = readyToAssignScrollRef.current;
+    if (container) {
+      const scrollAmount = 300;
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const [techsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -1354,32 +1317,36 @@ export default function Calendar() {
                 
                 {scheduledJobsExpanded && (
                   <div className="border-t border-slate-100">
-                    {/* Paginated cards with arrow navigation */}
-                    <div className="flex items-center gap-3 p-4">
-                      {/* Left arrow - previous page */}
+                    {/* Scrollable cards with arrow navigation */}
+                    <div className="flex items-center gap-2 p-4">
+                      {/* Left scroll arrow - always visible */}
                       <button
-                        onClick={() => setJobCardPage(prev => Math.max(0, prev - 1))}
-                        disabled={jobCardPage === 0}
+                        onClick={() => scrollReadyToAssign('left')}
+                        disabled={!canScrollLeft}
                         className={cn(
                           "flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
-                          jobCardPage > 0 
+                          canScrollLeft 
                             ? "bg-white border-[#f97316] text-[#f97316] hover:bg-[#fff7ed] cursor-pointer" 
                             : "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
                         )}
-                        data-testid="button-jobs-prev"
+                        data-testid="button-scroll-left"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                       
-                      {/* Cards container - shows 5 at a time */}
-                      <div className="flex-1 flex gap-3 overflow-hidden">
-                        {unassignedEstimates
-                          .slice(jobCardPage * jobCardsPerPage, (jobCardPage + 1) * jobCardsPerPage)
-                          .map((estimate) => (
+                      {/* Scrollable cards container */}
+                      <div 
+                        ref={readyToAssignScrollRef}
+                        onScroll={handleReadyToAssignScroll}
+                        className="flex-1 overflow-x-auto py-2"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                      >
+                        <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                        {unassignedEstimates.map((estimate) => (
                           <div
                             key={estimate.id}
                             className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden group flex-shrink-0"
-                            style={{ width: '200px' }}
+                            style={{ width: '240px' }}
                             data-testid={`scheduled-job-${estimate.id}`}
                           >
                             <div className="p-3 border-l-3 border-l-[#f97316]">
@@ -1426,40 +1393,39 @@ export default function Calendar() {
                             </div>
                           </div>
                         ))}
+                        </div>
                       </div>
                       
-                      {/* Right arrow - next page */}
+                      {/* Right scroll arrow - always visible */}
                       <button
-                        onClick={() => setJobCardPage(prev => Math.min(Math.ceil(unassignedEstimates.length / jobCardsPerPage) - 1, prev + 1))}
-                        disabled={(jobCardPage + 1) * jobCardsPerPage >= unassignedEstimates.length}
+                        onClick={() => scrollReadyToAssign('right')}
+                        disabled={!canScrollRight}
                         className={cn(
                           "flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
-                          (jobCardPage + 1) * jobCardsPerPage < unassignedEstimates.length 
+                          canScrollRight 
                             ? "bg-white border-[#f97316] text-[#f97316] hover:bg-[#fff7ed] cursor-pointer" 
                             : "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
                         )}
-                        data-testid="button-jobs-next"
+                        data-testid="button-scroll-right"
                       >
                         <ChevronRight className="w-5 h-5" />
                       </button>
                     </div>
                     
-                    {/* Position indicator - "Showing 1-5 of 8" */}
-                    {unassignedEstimates.length > jobCardsPerPage && (
-                      <div className="flex items-center justify-center gap-3 pb-3">
-                        <span className="text-xs font-medium text-slate-600">
-                          Showing {jobCardPage * jobCardsPerPage + 1}-{Math.min((jobCardPage + 1) * jobCardsPerPage, unassignedEstimates.length)} of {unassignedEstimates.length}
+                    {/* Position indicator */}
+                    {unassignedEstimates.length > 3 && (
+                      <div className="flex items-center justify-center gap-2 pb-3">
+                        <span className="text-xs text-slate-500">
+                          Scroll to see all {unassignedEstimates.length} jobs
                         </span>
-                        <div className="flex gap-1.5">
-                          {Array.from({ length: Math.ceil(unassignedEstimates.length / jobCardsPerPage) }).map((_, i) => (
-                            <button
+                        <div className="flex gap-1">
+                          {Array.from({ length: Math.ceil(unassignedEstimates.length / 3) }).map((_, i) => (
+                            <div
                               key={i}
-                              onClick={() => setJobCardPage(i)}
                               className={cn(
                                 "w-2 h-2 rounded-full transition-colors",
-                                i === jobCardPage ? "bg-[#f97316]" : "bg-slate-300 hover:bg-slate-400"
+                                i === 0 ? "bg-[#f97316]" : "bg-slate-300"
                               )}
-                              data-testid={`button-page-${i}`}
                             />
                           ))}
                         </div>
@@ -1470,76 +1436,35 @@ export default function Calendar() {
               </div>
             )}
             
-            {/* Calendar scroll controls */}
-            <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => scrollCalendar('left')}
-                  disabled={!calendarCanScrollLeft}
-                  className={cn(
-                    "w-8 h-8 rounded-md border flex items-center justify-center transition-all",
-                    calendarCanScrollLeft 
-                      ? "bg-white border-[#0077b6] text-[#0077b6] hover:bg-[#0077b6] hover:text-white cursor-pointer shadow-sm" 
-                      : "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
-                  )}
-                  data-testid="button-calendar-scroll-left"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs text-slate-500">Scroll days</span>
-                <button
-                  onClick={() => scrollCalendar('right')}
-                  disabled={!calendarCanScrollRight}
-                  className={cn(
-                    "w-8 h-8 rounded-md border flex items-center justify-center transition-all",
-                    calendarCanScrollRight 
-                      ? "bg-white border-[#0077b6] text-[#0077b6] hover:bg-[#0077b6] hover:text-white cursor-pointer shadow-sm" 
-                      : "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
-                  )}
-                  data-testid="button-calendar-scroll-right"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+            {/* Fixed header - outside scroll area */}
+            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] shadow-md rounded-t-lg">
+              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white bg-[#0077b6]">
+                TECHNICIAN
               </div>
-              <span className="text-xs text-slate-500">
-                {displayDatesWithIndex.length} days visible
-              </span>
+              {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
+                const isToday = isSameDay(date, today);
+                return (
+                  <div
+                    key={originalIndex}
+                    className="flex-1 min-w-[140px] px-2 py-3 text-center"
+                  >
+                    <div className="text-xs font-semibold text-white/80">{displayDaysOfWeek[i]}</div>
+                    <div
+                      className={cn(
+                        "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium mt-1",
+                        isToday ? "bg-white text-[#0077b6] font-bold" : "text-white"
+                      )}
+                    >
+                      {date.getDate()}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="w-[50px] min-w-[50px]"></div>
             </div>
             
-            {/* Calendar grid with horizontal scroll */}
-            <div 
-              ref={calendarHeaderScrollRef}
-              onScroll={() => handleCalendarScroll('header')}
-              className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-380px)]"
-              style={{ scrollbarWidth: 'thin' }}
-            >
-              <div style={{ minWidth: `${280 + (displayDatesWithIndex.length * 140) + 50}px` }}>
-                {/* Fixed header */}
-                <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] shadow-md sticky top-0 z-20">
-                  <div className="w-[280px] min-w-[280px] px-4 py-3 font-semibold text-sm text-white bg-[#0077b6] sticky left-0 z-30">
-                    TECHNICIAN
-                  </div>
-                  {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
-                    const isToday = isSameDay(date, today);
-                    return (
-                      <div
-                        key={originalIndex}
-                        className="w-[140px] min-w-[140px] px-2 py-3 text-center"
-                      >
-                        <div className="text-xs font-semibold text-white/80">{displayDaysOfWeek[i]}</div>
-                        <div
-                          className={cn(
-                            "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium mt-1",
-                            isToday ? "bg-white text-[#0077b6] font-bold" : "text-white"
-                          )}
-                        >
-                          {date.getDate()}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div className="w-[50px] min-w-[50px]"></div>
-                </div>
+            {/* Scrollable content area */}
+            <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
             
             {filteredTechnicians.length === 0 ? (
               <div className="py-12 text-center text-[#64748B]">
@@ -1578,7 +1503,7 @@ export default function Calendar() {
                     className="flex border-b border-[#e5e7eb] bg-white hover:bg-slate-50 transition-colors group"
                     data-testid={`row-tech-${tech.id}`}
                   >
-                    <div className="w-[280px] min-w-[280px] px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-[#e5e7eb]">
+                    <div className="w-[260px] min-w-[260px] px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-[#e5e7eb]">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold text-sm relative shadow-sm"
@@ -1694,7 +1619,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="w-[140px] min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2"
                           >
                             <div
                               className="h-full min-h-[80px] rounded-lg p-2"
@@ -1720,7 +1645,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="w-[140px] min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2"
                           >
                             <div
                               className={cn(
@@ -1843,7 +1768,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="w-[140px] min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2"
                           >
                             <div
                               className="min-h-[80px] rounded-lg p-2 border-l-[3px]"
@@ -1878,7 +1803,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="w-[140px] min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2"
                             data-testid={`cell-supervisor-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
@@ -1932,7 +1857,7 @@ export default function Calendar() {
                         return (
                           <div
                             key={displayIndex}
-                            className="w-[140px] min-w-[140px] px-2 py-2"
+                            className="flex-1 min-w-[140px] px-2 py-2"
                             data-testid={`cell-repair-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
@@ -1991,7 +1916,7 @@ export default function Calendar() {
                           return (
                             <div
                               key={displayIndex}
-                              className="w-[140px] min-w-[140px] px-2 py-2"
+                              className="flex-1 min-w-[140px] px-2 py-2"
                               data-testid={`cell-service-${tech.id}-${dayIndex}`}
                             >
                               <div
@@ -2183,7 +2108,7 @@ export default function Calendar() {
                       return (
                         <div
                           key={displayIndex}
-                          className="w-[140px] min-w-[140px] px-2 py-2 group/cell"
+                          className="flex-1 min-w-[140px] px-2 py-2 group/cell"
                         >
                           <div className="h-full min-h-[80px] border-2 border-dashed border-transparent group-hover/cell:border-slate-200 rounded-lg flex items-center justify-center">
                             <Button
@@ -2259,7 +2184,6 @@ export default function Calendar() {
                 </Button>
               </div>
             )}
-              </div>
             </div>
           </div>
         </div>
