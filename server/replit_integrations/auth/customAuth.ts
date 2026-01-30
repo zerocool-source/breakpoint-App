@@ -27,6 +27,7 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  const isProduction = process.env.NODE_ENV === "production";
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -34,7 +35,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction || !!process.env.REPL_ID,
+      sameSite: isProduction ? "strict" : "none",
       maxAge: sessionTtl,
     },
   });
@@ -56,17 +58,22 @@ export function registerCustomAuthRoutes(app: Express): void {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
+      console.log("[LOGIN] Attempt for email:", email);
 
       if (!email || !password) {
+        console.log("[LOGIN] Missing email or password");
         return res.status(400).json({ message: "Email and password are required" });
       }
 
       const user = await authStorage.getUserByEmail(email);
+      console.log("[LOGIN] User found:", !!user, user?.email);
       if (!user) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      console.log("[LOGIN] Password hash:", user.password?.substring(0, 20), "length:", user.password?.length);
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log("[LOGIN] Password valid:", isValidPassword);
       if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
