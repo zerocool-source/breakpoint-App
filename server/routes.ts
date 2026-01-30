@@ -29,6 +29,7 @@ import { registerVendorRoutes } from "./routes/vendors";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerCalendarRoutes } from "./routes/calendar";
 import { registerSmsRoutes } from "./routes/sms";
+import { registerPoolBrainRoutes } from "./routes/poolbrain";
 import adminUsersRouter from "./routes/adminUsers";
 
 export async function registerRoutes(app: any) {
@@ -69,5 +70,6 @@ function setupRoutes(app: any) {
   registerInvoiceRoutes(app);
   registerCalendarRoutes(app);
   registerSmsRoutes(app);
+  registerPoolBrainRoutes(app);
   app.use(adminUsersRouter);
 }
