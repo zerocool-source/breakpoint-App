@@ -839,30 +839,6 @@ export default function Calendar() {
             <h1 className="text-2xl font-bold text-[#0F172A]" data-testid="text-page-title">Calendar</h1>
             
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full border-[#e5e7eb]"
-                  onClick={() => navigateWeek("prev")}
-                  data-testid="button-prev-week"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-[180px] text-center text-slate-700">
-                  {formatWeekRange(weekDates)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full border-[#e5e7eb]"
-                  onClick={() => navigateWeek("next")}
-                  data-testid="button-next-week"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-              
               <Button 
                 variant="outline" 
                 onClick={goToToday} 
@@ -1265,24 +1241,51 @@ export default function Calendar() {
             </span>
           </div>
           
-          <div className="flex items-center gap-6 text-sm text-[#64748B]">
-            <span className="font-medium">Live Status:</span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#22D69A]"></span>
-              Completed
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
-              In Progress
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
-              Pending
-            </span>
-            <span className="flex items-center gap-1.5 ml-4">
-              <RefreshCw className="w-3.5 h-3.5" />
-              Synced with Service Tech App
-            </span>
+          <div className="flex items-center justify-between text-sm text-[#64748B]">
+            <div className="flex items-center gap-6">
+              <span className="font-medium">Live Status:</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#22D69A]"></span>
+                Completed
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
+                In Progress
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+                Pending
+              </span>
+              <span className="flex items-center gap-1.5 ml-4">
+                <RefreshCw className="w-3.5 h-3.5" />
+                Synced with Service Tech App
+              </span>
+            </div>
+            
+            {/* Date Navigation */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full hover:bg-slate-100"
+                onClick={() => navigateWeek("prev")}
+                data-testid="button-prev-week"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </Button>
+              <span className="text-sm font-medium min-w-[150px] text-center text-slate-700">
+                {formatWeekRange(weekDates)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full hover:bg-slate-100"
+                onClick={() => navigateWeek("next")}
+                data-testid="button-next-week"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </Button>
+            </div>
           </div>
         </div>
         
