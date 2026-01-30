@@ -1572,14 +1572,14 @@ export default function Dashboard() {
                               stroke="#e2e8f0"
                               strokeWidth={strokeWidth}
                             />
-                            {/* Issues segment (ocean blue) */}
+                            {/* Issues segment (orange) */}
                             {issueLength > 0 && (
                               <circle
                                 cx={size / 2}
                                 cy={size / 2}
                                 r={radius}
                                 fill="none"
-                                stroke={selectedStatusCategory === 'issues' ? '#006299' : '#0077b6'}
+                                stroke={selectedStatusCategory === 'issues' ? '#ea580c' : '#f97316'}
                                 strokeWidth={selectedStatusCategory === 'issues' ? strokeWidth + 4 : strokeWidth}
                                 strokeDasharray={`${issueLength} ${circumference - issueLength}`}
                                 strokeDashoffset={-issueOffset}
@@ -1602,14 +1602,14 @@ export default function Dashboard() {
                                 onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
                               />
                             )}
-                            {/* Completed Without Approval segment (green) */}
+                            {/* Completed Without Approval segment (dark yellow) */}
                             {completedLength > 0 && (
                               <circle
                                 cx={size / 2}
                                 cy={size / 2}
                                 r={radius}
                                 fill="none"
-                                stroke={selectedStatusCategory === 'completed' ? '#16a34a' : '#22c55e'}
+                                stroke={selectedStatusCategory === 'completed' ? '#ca8a04' : '#eab308'}
                                 strokeWidth={selectedStatusCategory === 'completed' ? strokeWidth + 4 : strokeWidth}
                                 strokeDasharray={`${completedLength} ${circumference - completedLength}`}
                                 strokeDashoffset={-completedOffset}
@@ -1648,30 +1648,30 @@ export default function Dashboard() {
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'issues' ? 'all' : 'issues')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'issues' 
-                            ? 'bg-sky-50 border border-sky-200' 
+                            ? 'bg-orange-50 border border-orange-200' 
                             : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-[#0077b6]"></div>
+                          <div className="w-3 h-3 rounded-full bg-[#f97316]"></div>
                           <span className="text-sm font-medium text-slate-700">Reported Issues</span>
                         </div>
-                        <span className="text-sm font-bold text-[#0077b6]">{issueCount}</span>
+                        <span className="text-sm font-bold text-[#f97316]">{issueCount}</span>
                       </button>
                       
                       <button
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'completed' ? 'all' : 'completed')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
                           selectedStatusCategory === 'completed' 
-                            ? 'bg-green-50 border border-green-200' 
+                            ? 'bg-yellow-50 border border-yellow-300' 
                             : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-[#22c55e]"></div>
+                          <div className="w-3 h-3 rounded-full bg-[#eab308]"></div>
                           <span className="text-sm font-medium text-slate-700">Completed Without Approval</span>
                         </div>
-                        <span className="text-sm font-bold text-[#22c55e]">{completedWithoutApprovalCount}</span>
+                        <span className="text-sm font-bold text-[#ca8a04]">{completedWithoutApprovalCount}</span>
                       </button>
                     </div>
                   </div>
@@ -1695,12 +1695,12 @@ export default function Dashboard() {
                             timeDisplay = daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`;
                           }
                           
-                          // Color coding to match legend: Red=Emergencies, Blue=Issues, Green=Completed
+                          // Color coding to match legend: Red=Emergencies, Orange=Issues, Yellow=Completed
                           const cardStyles = item.type === 'emergency' 
                             ? 'bg-[#fef2f2] border-l-4 border-l-[#ef4444] border-t border-r border-b border-red-100' 
                             : item.type === 'completed' 
-                            ? 'bg-[#dcfce7] border-l-4 border-l-[#22c55e] border-t border-r border-b border-green-100' 
-                            : 'bg-[#eff6ff] border-l-4 border-l-[#0077b6] border-t border-r border-b border-blue-100';
+                            ? 'bg-[#fefce8] border-l-4 border-l-[#eab308] border-t border-r border-b border-yellow-200' 
+                            : 'bg-[#fff7ed] border-l-4 border-l-[#f97316] border-t border-r border-b border-orange-100';
                           
                           // Get reporter info
                           const reporterName = item.reportedBy || item.submittedByName || item.technicianName || 'Unknown';
@@ -1728,7 +1728,7 @@ export default function Dashboard() {
                                   <Badge className="bg-[#f97316] text-white text-[9px] shrink-0">Pending review</Badge>
                                 )}
                                 {item.type === 'completed' && (
-                                  <Badge className="bg-[#22c55e] text-white text-[9px] shrink-0">Completed</Badge>
+                                  <Badge className="bg-[#eab308] text-white text-[9px] shrink-0">Completed</Badge>
                                 )}
                               </div>
                               <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
