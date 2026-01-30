@@ -957,61 +957,6 @@ export default function Calendar() {
             </div>
           </div>
           
-          {/* Coverage Activity Section */}
-          <Card className="shadow-sm mb-4" data-testid="card-coverage-activity">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-[#0F172A] flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 text-[#17BEBB]" />
-                  Coverage Activity
-                </h3>
-                <span className="text-xs text-[#64748B]">{coverages.length} active</span>
-              </div>
-              <div className="space-y-2 max-h-[120px] overflow-y-auto">
-                {coverages.length > 0 ? (
-                  coverages.slice(0, 5).map((coverage) => {
-                    const originalTech = technicians.find(t => String(t.id) === String(coverage.originalTechId));
-                    const coveringTech = technicians.find(t => String(t.id) === String(coverage.coveringTechId));
-                    const startDate = new Date(coverage.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    const endDate = new Date(coverage.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    return (
-                      <div key={coverage.id} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg text-sm" data-testid={`coverage-entry-${coverage.id}`}>
-                        <div className="flex items-center gap-2 flex-1">
-                          <span className="font-medium text-[#0F172A]">
-                            {coveringTech ? `${coveringTech.firstName} ${coveringTech.lastName}` : 'Unknown'}
-                          </span>
-                          <ArrowRight className="w-3 h-3 text-[#64748B]" />
-                          <span className="text-[#64748B]">covering for</span>
-                          <span className="font-medium text-[#0F172A]">
-                            {originalTech ? `${originalTech.firstName} ${originalTech.lastName}` : 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-3 h-3 text-[#64748B]" />
-                          <span className="text-xs text-[#64748B]">{startDate} - {endDate}</span>
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-xs font-medium",
-                            coverage.status === 'active' ? "bg-green-100 text-green-700" :
-                            coverage.status === 'pending' ? "bg-yellow-100 text-yellow-700" : "bg-slate-100 text-slate-600"
-                          )}>
-                            {coverage.status}
-                          </span>
-                        </div>
-                        {coverage.propertyName && (
-                          <span className="text-xs text-[#64748B] bg-white px-2 py-0.5 rounded border border-slate-200">
-                            {coverage.propertyName}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-[#64748B] text-center py-2">No active coverages this week</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
           {/* Search and Region Filters */}
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-1 max-w-xs">
