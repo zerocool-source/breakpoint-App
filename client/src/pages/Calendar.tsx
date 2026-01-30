@@ -1316,36 +1316,32 @@ export default function Calendar() {
                 </button>
                 
                 {scheduledJobsExpanded && (
-                  <div className="border-t border-slate-100 relative">
-                    {/* Left scroll arrow */}
-                    {canScrollLeft && (
+                  <div className="border-t border-slate-100">
+                    {/* Scrollable cards with arrow navigation */}
+                    <div className="flex items-center gap-2 p-4">
+                      {/* Left scroll arrow - always visible */}
                       <button
                         onClick={() => scrollReadyToAssign('left')}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                        disabled={!canScrollLeft}
+                        className={cn(
+                          "flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
+                          canScrollLeft 
+                            ? "bg-white border-[#f97316] text-[#f97316] hover:bg-[#fff7ed] cursor-pointer" 
+                            : "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
+                        )}
                         data-testid="button-scroll-left"
                       >
-                        <ChevronLeft className="w-4 h-4 text-slate-600" />
+                        <ChevronLeft className="w-5 h-5" />
                       </button>
-                    )}
-                    
-                    {/* Right scroll arrow */}
-                    {canScrollRight && (
-                      <button
-                        onClick={() => scrollReadyToAssign('right')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                        data-testid="button-scroll-right"
+                      
+                      {/* Scrollable cards container */}
+                      <div 
+                        ref={readyToAssignScrollRef}
+                        onScroll={handleReadyToAssignScroll}
+                        className="flex-1 overflow-x-auto py-2"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                       >
-                        <ChevronRight className="w-4 h-4 text-slate-600" />
-                      </button>
-                    )}
-                    
-                    <div 
-                      ref={readyToAssignScrollRef}
-                      onScroll={handleReadyToAssignScroll}
-                      className="overflow-x-auto scrollbar-hide py-4 px-4"
-                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                      <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                        <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
                         {unassignedEstimates.map((estimate) => (
                           <div
                             key={estimate.id}
@@ -1397,8 +1393,44 @@ export default function Calendar() {
                             </div>
                           </div>
                         ))}
+                        </div>
                       </div>
+                      
+                      {/* Right scroll arrow - always visible */}
+                      <button
+                        onClick={() => scrollReadyToAssign('right')}
+                        disabled={!canScrollRight}
+                        className={cn(
+                          "flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all shadow-md",
+                          canScrollRight 
+                            ? "bg-white border-[#f97316] text-[#f97316] hover:bg-[#fff7ed] cursor-pointer" 
+                            : "bg-slate-100 border-slate-200 text-slate-300 cursor-not-allowed"
+                        )}
+                        data-testid="button-scroll-right"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
                     </div>
+                    
+                    {/* Position indicator */}
+                    {unassignedEstimates.length > 3 && (
+                      <div className="flex items-center justify-center gap-2 pb-3">
+                        <span className="text-xs text-slate-500">
+                          Scroll to see all {unassignedEstimates.length} jobs
+                        </span>
+                        <div className="flex gap-1">
+                          {Array.from({ length: Math.ceil(unassignedEstimates.length / 3) }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "w-2 h-2 rounded-full transition-colors",
+                                i === 0 ? "bg-[#f97316]" : "bg-slate-300"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
