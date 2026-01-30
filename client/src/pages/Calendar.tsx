@@ -2084,6 +2084,69 @@ export default function Calendar() {
                                   </div>
                                 )}
                               </div>
+
+                              {/* Service Assignments - show below route card */}
+                              {serviceAssignmentsForDay.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {serviceAssignmentsForDay.map((assignment) => {
+                                    const statusColors: Record<string, { bg: string; badge: string }> = {
+                                      pending: { bg: "#fff7ed", badge: "#f97316" },
+                                      in_progress: { bg: "#fef3c7", badge: "#f59e0b" },
+                                      completed: { bg: "#f0fdf4", badge: "#22c55e" },
+                                    };
+                                    const colors = statusColors[assignment.status || "pending"] || statusColors.pending;
+                                    const typeLabels: Record<string, string> = {
+                                      service_visit: "Service Visit",
+                                      inspection: "Inspection",
+                                      follow_up: "Follow-up",
+                                      special_task: "Special Task",
+                                    };
+                                    
+                                    return (
+                                      <div
+                                        key={assignment.id}
+                                        className="rounded-lg p-2 cursor-pointer transition-all hover:shadow-md border-l-[3px]"
+                                        style={{
+                                          backgroundColor: colors.bg,
+                                          borderLeftColor: colors.badge,
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedAssignment(assignment);
+                                          setShowAssignmentsSidebar(true);
+                                        }}
+                                        data-testid={`assignment-card-${assignment.id}`}
+                                      >
+                                        <div className="flex items-start justify-between gap-1">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1">
+                                              <ClipboardList className="w-3 h-3 text-[#f97316] shrink-0" />
+                                              <p className="text-xs font-medium text-[#0F172A] truncate">
+                                                {typeLabels[assignment.assignmentType] || assignment.assignmentType}
+                                              </p>
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                                              {assignment.propertyName || "Property"}
+                                            </p>
+                                            {assignment.scheduledTime && (
+                                              <p className="text-[10px] text-slate-400 mt-0.5">
+                                                {assignment.scheduledTime}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <span
+                                            className="px-1.5 py-0.5 text-[9px] font-medium rounded text-white shrink-0"
+                                            style={{ backgroundColor: colors.badge }}
+                                          >
+                                            {assignment.status === "in_progress" ? "In Progress" : 
+                                             assignment.status === "completed" ? "Done" : "Pending"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           );
                         }
@@ -2099,8 +2162,8 @@ export default function Calendar() {
                             <div className="space-y-1">
                               {serviceAssignmentsForDay.map((assignment) => {
                                 const statusColors: Record<string, { bg: string; text: string; badge: string }> = {
-                                  pending: { bg: "#f1f5f9", text: "#64748b", badge: "#6b7280" },
-                                  in_progress: { bg: "#fff7ed", text: "#ea580c", badge: "#f97316" },
+                                  pending: { bg: "#fff7ed", text: "#ea580c", badge: "#f97316" },
+                                  in_progress: { bg: "#fef3c7", text: "#d97706", badge: "#f59e0b" },
                                   completed: { bg: "#f0fdf4", text: "#16a34a", badge: "#22c55e" },
                                 };
                                 const colors = statusColors[assignment.status || "pending"] || statusColors.pending;
