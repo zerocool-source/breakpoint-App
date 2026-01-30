@@ -2265,37 +2265,14 @@ export default function Calendar() {
                       return (
                         <div
                           key={displayIndex}
-                          className="flex-1 min-w-[140px] px-2 py-2 group/cell border-l border-[#e5e7eb]"
+                          className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
                         >
-                          <div className="h-full min-h-[80px] border-2 border-dashed border-transparent group-hover/cell:border-slate-200 rounded-lg flex items-center justify-center">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="opacity-0 group-hover/cell:opacity-100 transition-opacity"
-                              onClick={() => {
-                                setSelectedTechForSchedule(tech);
-                                setSelectedDays([dayIndex]);
-                                setShowAddScheduleModal(true);
-                              }}
-                            >
-                              <Plus className="w-4 h-4 text-slate-400" />
-                            </Button>
-                          </div>
+                          <div className="h-full min-h-[80px]"></div>
                         </div>
                       );
                     })}
                     
-                    <div className="w-[50px] min-w-[50px] flex items-center justify-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[#0078D4]"
-                        onClick={() => openAddScheduleModal(tech)}
-                        data-testid={`button-add-schedule-${tech.id}`}
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <div className="w-[50px] min-w-[50px]"></div>
                   </div>
                 );
               })
