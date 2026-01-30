@@ -834,7 +834,12 @@ export default function Calendar() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-[#f9fafb]">
+      <div className="min-h-screen bg-[#f9fafb] flex">
+        {/* Main Calendar Content */}
+        <div className={cn(
+          "flex-1 transition-all duration-300",
+          showReadyToAssignSidebar ? "mr-[380px]" : ""
+        )}>
         <div className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] shadow-sm px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-[#0F172A]" data-testid="text-page-title">Calendar</h1>
@@ -2039,6 +2044,7 @@ export default function Calendar() {
             </Card>
           </div>
         )}
+        </div>
       </div>
       
       <Dialog open={showAddScheduleModal} onOpenChange={setShowAddScheduleModal}>
@@ -2739,18 +2745,10 @@ export default function Calendar() {
 
       {/* Ready to Assign Sidebar */}
       {showReadyToAssignSidebar && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/20 z-50"
-            onClick={() => setShowReadyToAssignSidebar(false)}
-          />
-          
-          {/* Sidebar Panel */}
-          <div 
-            className="fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300"
-            data-testid="sidebar-ready-to-assign"
-          >
+        <div 
+          className="fixed top-0 right-0 h-full w-[380px] bg-white shadow-[-4px_0_20px_rgba(0,0,0,0.1)] z-40 flex flex-col animate-in slide-in-from-right duration-300 border-l border-slate-200"
+          data-testid="sidebar-ready-to-assign"
+        >
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white">
               <div>
@@ -2826,8 +2824,7 @@ export default function Calendar() {
                 </div>
               )}
             </div>
-          </div>
-        </>
+        </div>
       )}
     </AppLayout>
   );
