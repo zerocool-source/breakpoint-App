@@ -1695,9 +1695,12 @@ export default function Dashboard() {
                             timeDisplay = daysOpen === 0 ? "Today" : daysOpen === 1 ? "1 day" : `${daysOpen} days`;
                           }
                           
-                          const bgColor = item.type === 'emergency' ? 'bg-red-50 border-red-100' :
-                                          item.type === 'completed' ? 'bg-green-50 border-green-100' :
-                                          'bg-blue-50 border-blue-100';
+                          // Color coding to match legend: Red=Emergencies, Blue=Issues, Green=Completed
+                          const cardStyles = item.type === 'emergency' 
+                            ? 'bg-[#fef2f2] border-l-4 border-l-[#ef4444] border-t border-r border-b border-red-100' 
+                            : item.type === 'completed' 
+                            ? 'bg-[#dcfce7] border-l-4 border-l-[#22c55e] border-t border-r border-b border-green-100' 
+                            : 'bg-[#eff6ff] border-l-4 border-l-[#0077b6] border-t border-r border-b border-blue-100';
                           
                           // Get reporter info
                           const reporterName = item.reportedBy || item.submittedByName || item.technicianName || 'Unknown';
@@ -1707,22 +1710,25 @@ export default function Dashboard() {
                           return (
                             <div 
                               key={item.id || idx} 
-                              className={`p-2.5 rounded-lg border ${bgColor} cursor-pointer hover:shadow-sm transition-all`}
-                              onClick={() => navigate(item.type === 'emergency' ? '/emergencies' : item.type === 'alert' ? '/alerts' : '/tech-ops')}
+                              className={`p-2.5 rounded-lg ${cardStyles} cursor-pointer hover:shadow-sm transition-all`}
+                              onClick={() => navigate(item.type === 'emergency' ? '/emergencies' : item.type === 'completed' ? '/estimates' : '/tech-ops')}
                             >
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <span className="text-sm font-medium text-slate-800 truncate flex-1">{item.propertyName}</span>
                                 {item.type === 'emergency' && item.priority === 'critical' && (
-                                  <Badge className="bg-red-600 text-white text-[9px] shrink-0">Critical</Badge>
+                                  <Badge className="bg-[#ef4444] text-white text-[9px] shrink-0">Critical</Badge>
                                 )}
                                 {item.type === 'emergency' && item.priority === 'high' && (
-                                  <Badge className="bg-orange-500 text-white text-[9px] shrink-0">High</Badge>
+                                  <Badge className="bg-[#f97316] text-white text-[9px] shrink-0">High</Badge>
                                 )}
                                 {item.type === 'emergency' && item.priority === 'medium' && (
                                   <Badge className="bg-amber-500 text-white text-[9px] shrink-0">Medium</Badge>
                                 )}
-                                {item.type === 'issue' && item.status && (
-                                  <Badge className="bg-sky-100 text-[#0077b6] text-[9px] shrink-0">{item.status}</Badge>
+                                {item.type === 'issue' && (
+                                  <Badge className="bg-[#f97316] text-white text-[9px] shrink-0">Pending review</Badge>
+                                )}
+                                {item.type === 'completed' && (
+                                  <Badge className="bg-[#22c55e] text-white text-[9px] shrink-0">Completed</Badge>
                                 )}
                               </div>
                               <p className="text-xs text-slate-600 line-clamp-1 mb-1">{item.description}</p>
