@@ -299,7 +299,7 @@ export default function Calendar() {
   const scrollReadyToAssign = (direction: 'left' | 'right') => {
     const container = readyToAssignScrollRef.current;
     if (container) {
-      const scrollAmount = 300;
+      const scrollAmount = 570; // 3 cards at 180px + 12px gap each
       container.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
@@ -1349,7 +1349,7 @@ export default function Calendar() {
                           <div
                             key={estimate.id}
                             className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden group flex-shrink-0"
-                            style={{ width: '240px' }}
+                            style={{ width: '180px' }}
                             data-testid={`scheduled-job-${estimate.id}`}
                           >
                             <div className="p-3 border-l-3 border-l-[#f97316]">
@@ -1416,13 +1416,13 @@ export default function Calendar() {
                     </div>
                     
                     {/* Position indicator */}
-                    {unassignedEstimates.length > 3 && (
+                    {unassignedEstimates.length > 6 && (
                       <div className="flex items-center justify-center gap-2 pb-3">
                         <span className="text-xs text-slate-500">
                           Scroll to see all {unassignedEstimates.length} jobs
                         </span>
                         <div className="flex gap-1">
-                          {Array.from({ length: Math.ceil(unassignedEstimates.length / 3) }).map((_, i) => (
+                          {Array.from({ length: Math.ceil(unassignedEstimates.length / 6) }).map((_, i) => (
                             <div
                               key={i}
                               className={cn(
