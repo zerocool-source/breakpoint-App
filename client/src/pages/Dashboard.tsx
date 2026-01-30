@@ -935,7 +935,7 @@ export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   // Emergency & Alerts Status filter state
-  const [selectedStatusCategory, setSelectedStatusCategory] = useState<'all' | 'emergencies' | 'alerts' | 'issues'>('all');
+  const [selectedStatusCategory, setSelectedStatusCategory] = useState<'all' | 'emergencies' | 'issues' | 'completed'>('all');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
@@ -1459,14 +1459,14 @@ export default function Dashboard() {
               const realAlertCount = metrics?.alerts?.active ?? 0;
               const realIssueCount = metrics?.reportedIssues?.count ?? 0;
               
-              const emergencyCount = realEmergencyCount > 0 ? realEmergencyCount : 30;
-              const alertCount = realAlertCount > 0 ? realAlertCount : 5228;
+              const emergencyCount = realEmergencyCount > 0 ? realEmergencyCount : 4;
               const issueCount = realIssueCount > 0 ? realIssueCount : 40;
-              const total = emergencyCount + alertCount + issueCount;
+              const completedWithoutApprovalCount = 12; // Hardcoded for now
+              const total = emergencyCount + issueCount + completedWithoutApprovalCount;
               
               const emergencyPct = total > 0 ? (emergencyCount / total) * 100 : 0;
-              const alertPct = total > 0 ? (alertCount / total) * 100 : 0;
               const issuePct = total > 0 ? (issueCount / total) * 100 : 0;
+              const completedPct = total > 0 ? (completedWithoutApprovalCount / total) * 100 : 0;
               
               // Sample data for demonstration with reportedBy info
               const sampleEmergencies = [
@@ -1506,15 +1506,23 @@ export default function Dashboard() {
                 ? realIssueItems.map((i: any) => ({ ...i, type: 'issue', timeAgo: null }))
                 : sampleIssues;
               
+              // Sample data for completed without approval
+              const sampleCompleted = [
+                { id: 'sc1', propertyName: 'Mountain View Estates', description: 'Filter replacement completed', reportedBy: 'Mike Johnson', reporterRole: 'Service Tech', timeAgo: '2 days', type: 'completed' },
+                { id: 'sc2', propertyName: 'Harbor Point Club', description: 'Pump repair finished', reportedBy: 'Sarah Williams', reporterRole: 'Repair Tech', timeAgo: '3 days', type: 'completed' },
+                { id: 'sc3', propertyName: 'Riverside Community', description: 'Heater service done', reportedBy: 'James Wilson', reporterRole: 'Service Tech', timeAgo: '5 days', type: 'completed' },
+              ];
+              const completedItems = sampleCompleted;
+              
               const getFilteredItems = () => {
                 if (selectedStatusCategory === 'emergencies') return emergencyItems;
-                if (selectedStatusCategory === 'alerts') return alertItems;
                 if (selectedStatusCategory === 'issues') return issueItems;
+                if (selectedStatusCategory === 'completed') return completedItems;
                 // Show more items when "all" is selected - mix of all types
                 return [
                   ...emergencyItems.slice(0, 2),
                   ...issueItems.slice(0, 3),
-                  ...alertItems.slice(0, 2),
+                  ...completedItems.slice(0, 2),
                 ];
               };
               
@@ -1524,29 +1532,33 @@ export default function Dashboard() {
                 <div className="flex gap-6">
                   {/* Left side: Donut chart and legend */}
                   <div className="w-1/2 flex flex-col items-center">
-                    {/* Donut Chart - Only Emergencies + Reported Issues */}
+                    {/* Donut Chart - Emergencies + Reported Issues + Completed Without Approval */}
                     {(() => {
                       const size = 160;
                       const strokeWidth = 24;
                       const radius = (size - strokeWidth) / 2;
                       const circumference = 2 * Math.PI * radius;
                       
-                      // Total for donut is only Emergencies + Issues (not Alerts)
-                      const donutTotal = emergencyCount + issueCount;
+                      // Total for donut includes all three categories
+                      const donutTotal = emergencyCount + issueCount + completedWithoutApprovalCount;
                       
                       // Calculate segment lengths based on donut total
                       const emergencyLength = donutTotal > 0 ? (emergencyCount / donutTotal) * circumference : 0;
                       const issueLength = donutTotal > 0 ? (issueCount / donutTotal) * circumference : 0;
+                      const completedLength = donutTotal > 0 ? (completedWithoutApprovalCount / donutTotal) * circumference : 0;
                       
                       // Calculate offsets (cumulative)
                       const emergencyOffset = 0;
                       const issueOffset = emergencyLength;
+                      const completedOffset = emergencyLength + issueLength;
                       
-                      // Center text based on selection (only emergencies/issues, not alerts)
+                      // Center text based on selection
                       const centerLabel = selectedStatusCategory === 'emergencies' ? 'Emergencies' :
-                                         selectedStatusCategory === 'issues' ? 'Reported Issues' : 'Total';
+                                         selectedStatusCategory === 'issues' ? 'Reported Issues' :
+                                         selectedStatusCategory === 'completed' ? 'Completed' : 'Total';
                       const centerCount = selectedStatusCategory === 'emergencies' ? emergencyCount :
-                                         selectedStatusCategory === 'issues' ? issueCount : donutTotal;
+                                         selectedStatusCategory === 'issues' ? issueCount :
+                                         selectedStatusCategory === 'completed' ? completedWithoutApprovalCount : donutTotal;
                       
                       return (
                         <div className="relative mb-4">
@@ -1590,6 +1602,21 @@ export default function Dashboard() {
                                 onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
                               />
                             )}
+                            {/* Completed Without Approval segment (green) */}
+                            {completedLength > 0 && (
+                              <circle
+                                cx={size / 2}
+                                cy={size / 2}
+                                r={radius}
+                                fill="none"
+                                stroke={selectedStatusCategory === 'completed' ? '#16a34a' : '#22c55e'}
+                                strokeWidth={selectedStatusCategory === 'completed' ? strokeWidth + 4 : strokeWidth}
+                                strokeDasharray={`${completedLength} ${circumference - completedLength}`}
+                                strokeDashoffset={-completedOffset}
+                                className="cursor-pointer transition-all duration-200"
+                                onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'completed' ? 'all' : 'completed')}
+                              />
+                            )}
                           </svg>
                           {/* Center text */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -1600,7 +1627,7 @@ export default function Dashboard() {
                       );
                     })()}
                     
-                    {/* Legend - Only Emergencies + Issues */}
+                    {/* Legend - Emergencies + Reported Issues + Completed Without Approval */}
                     <div className="space-y-2 w-full">
                       <button
                         onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'emergencies' ? 'all' : 'emergencies')}
@@ -1631,25 +1658,21 @@ export default function Dashboard() {
                         </div>
                         <span className="text-sm font-bold text-[#0077b6]">{issueCount}</span>
                       </button>
-                    </div>
-                    
-                    {/* Separate System Alerts metric */}
-                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      
                       <button
-                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'alerts' ? 'all' : 'alerts')}
+                        onClick={() => setSelectedStatusCategory(selectedStatusCategory === 'completed' ? 'all' : 'completed')}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all ${
-                          selectedStatusCategory === 'alerts' 
-                            ? 'bg-orange-50 border border-orange-200' 
-                            : 'bg-slate-50 hover:bg-orange-50'
+                          selectedStatusCategory === 'completed' 
+                            ? 'bg-green-50 border border-green-200' 
+                            : 'hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                          <span className="text-sm font-medium text-slate-600">System Alerts</span>
+                          <div className="w-3 h-3 rounded-full bg-[#22c55e]"></div>
+                          <span className="text-sm font-medium text-slate-700">Completed Without Approval</span>
                         </div>
-                        <span className="text-sm font-bold text-orange-600">{alertCount.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-[#22c55e]">{completedWithoutApprovalCount}</span>
                       </button>
-                      <p className="text-[10px] text-slate-400 mt-1 text-center">Auto-generated system alerts</p>
                     </div>
                   </div>
                   
@@ -1658,7 +1681,7 @@ export default function Dashboard() {
                     <p className="text-xs font-medium text-slate-500 mb-3">
                       {selectedStatusCategory === 'all' ? 'Recent Items' : 
                        selectedStatusCategory === 'emergencies' ? 'Emergencies' :
-                       selectedStatusCategory === 'alerts' ? 'Alerts' : 'Reported Issues'}
+                       selectedStatusCategory === 'issues' ? 'Reported Issues' : 'Completed Without Approval'}
                     </p>
                     <div className="space-y-2 max-h-[280px] overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent hover:scrollbar-thumb-slate-300" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}>
                       {filteredItems.length === 0 ? (
@@ -1673,7 +1696,7 @@ export default function Dashboard() {
                           }
                           
                           const bgColor = item.type === 'emergency' ? 'bg-red-50 border-red-100' :
-                                          item.type === 'alert' ? 'bg-orange-50 border-orange-100' :
+                                          item.type === 'completed' ? 'bg-green-50 border-green-100' :
                                           'bg-blue-50 border-blue-100';
                           
                           // Get reporter info
