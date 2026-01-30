@@ -1256,39 +1256,10 @@ export default function Calendar() {
         
         <div className="px-6 py-4 overflow-x-auto">
           <div className="min-w-[1200px]">
-            {/* Fixed header - outside scroll area */}
-            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] shadow-md">
-              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white bg-[#0077b6]">
-                TECHNICIAN
-              </div>
-              {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
-                const isToday = isSameDay(date, today);
-                return (
-                  <div
-                    key={originalIndex}
-                    className="flex-1 min-w-[140px] px-2 py-3 text-center"
-                  >
-                    <div className="text-xs font-semibold text-white/80">{displayDaysOfWeek[i]}</div>
-                    <div
-                      className={cn(
-                        "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium mt-1",
-                        isToday ? "bg-white text-[#0077b6] font-bold" : "text-white"
-                      )}
-                    >
-                      {date.getDate()}
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="w-[50px] min-w-[50px]"></div>
-            </div>
             
-            {/* Scrollable content area */}
-            <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
-            
-            {/* Scheduled Jobs Container - Only show when Repair filter is selected */}
+            {/* Ready to Assign Container - Only show when Repair filter is selected */}
             {roleFilter === "repair" && unassignedEstimates.length > 0 && (
-              <div className="mx-4 mt-4 mb-3 bg-white rounded-lg shadow-md border-l-4 border-[#f97316] overflow-hidden">
+              <div className="mb-4 bg-white rounded-lg shadow-md border-l-4 border-[#f97316] overflow-hidden">
                 <button
                   onClick={() => setScheduledJobsExpanded(!scheduledJobsExpanded)}
                   className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white hover:from-[#ffedd5] transition-colors"
@@ -1314,7 +1285,7 @@ export default function Calendar() {
                 
                 {scheduledJobsExpanded && (
                   <div className="border-t border-slate-100">
-                    <ScrollArea className="max-h-[280px]">
+                    <ScrollArea className="max-h-[240px]">
                       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {unassignedEstimates.map((estimate) => (
                           <div
@@ -1372,6 +1343,36 @@ export default function Calendar() {
                 )}
               </div>
             )}
+            
+            {/* Fixed header - outside scroll area */}
+            <div className="flex border-b-2 border-[#005f8f] bg-[#0077b6] shadow-md rounded-t-lg">
+              <div className="w-[260px] min-w-[260px] px-4 py-3 font-semibold text-sm text-white bg-[#0077b6]">
+                TECHNICIAN
+              </div>
+              {displayDatesWithIndex.map(({ date, originalIndex }, i) => {
+                const isToday = isSameDay(date, today);
+                return (
+                  <div
+                    key={originalIndex}
+                    className="flex-1 min-w-[140px] px-2 py-3 text-center"
+                  >
+                    <div className="text-xs font-semibold text-white/80">{displayDaysOfWeek[i]}</div>
+                    <div
+                      className={cn(
+                        "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium mt-1",
+                        isToday ? "bg-white text-[#0077b6] font-bold" : "text-white"
+                      )}
+                    >
+                      {date.getDate()}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="w-[50px] min-w-[50px]"></div>
+            </div>
+            
+            {/* Scrollable content area */}
+            <div className="overflow-y-auto max-h-[calc(100vh-350px)]">
             
             {filteredTechnicians.length === 0 ? (
               <div className="py-12 text-center text-[#64748B]">
