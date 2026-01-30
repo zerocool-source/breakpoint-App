@@ -754,7 +754,11 @@ export default function Fleet() {
     }, 0),
   };
 
-  const vehicleStatusData = [
+  const vehicleStatusData = detailedGpsData?.summary ? [
+    { name: "Driving", value: detailedGpsData.summary.driving, color: COLORS.green },
+    { name: "Idle", value: detailedGpsData.summary.idle, color: COLORS.orange },
+    { name: "Offline", value: detailedGpsData.summary.offline, color: COLORS.gray },
+  ] : [
     { name: "Active", value: stats.active, color: COLORS.green },
     { name: "In Shop", value: stats.inShop, color: COLORS.yellow },
     { name: "Inactive", value: stats.inactive, color: COLORS.gray },
