@@ -54,7 +54,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { format, formatDistanceToNow } from "date-fns";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip as LeafletTooltip } from "react-leaflet";
@@ -1010,6 +1010,12 @@ export default function Dashboard() {
                       <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse inline-block" />
                       LIVE
                     </Badge>
+                    <Link 
+                      href="/fleet" 
+                      className="text-sm text-[#f97316] hover:text-[#ea580c] hover:underline ml-2"
+                    >
+                      Go to Fleet Dashboard →
+                    </Link>
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Vehicle Search Dropdown */}
