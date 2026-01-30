@@ -244,7 +244,7 @@ export default function Calendar() {
   });
   const [viewMode, setViewMode] = useState<"5day" | "7day">("5day");
   const [roleFilter, setRoleFilter] = useState<"service" | "repair" | "supervisor">("service");
-  const [displayFilter, setDisplayFilter] = useState<"all" | "routes_only" | "assignments_only" | "with_assignments" | "without_assignments">("all");
+  const [displayFilter, setDisplayFilter] = useState<"all" | "routes_only" | "assignments_only" | "with_assignments">("all");
   const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
   const [expandedRouteBlocks, setExpandedRouteBlocks] = useState<Set<string>>(new Set());
@@ -737,13 +737,12 @@ export default function Calendar() {
         return false;
       }
       
-      // Display filter: filter by whether tech has assignments (for with/without filters)
-      if (roleFilter === "service" && (displayFilter === "with_assignments" || displayFilter === "without_assignments")) {
+      // Display filter: filter by whether tech has assignments
+      if (roleFilter === "service" && displayFilter === "with_assignments") {
         const techHasAssignments = serviceAssignments.some(
           (a) => String(a.technicianId) === String(tech.id)
         );
-        if (displayFilter === "with_assignments" && !techHasAssignments) return false;
-        if (displayFilter === "without_assignments" && techHasAssignments) return false;
+        if (!techHasAssignments) return false;
       }
       
       return true;
@@ -1188,7 +1187,7 @@ export default function Calendar() {
               <select
                 value={displayFilter}
                 onChange={(e) => {
-                  setDisplayFilter(e.target.value as "all" | "routes_only" | "assignments_only" | "with_assignments" | "without_assignments");
+                  setDisplayFilter(e.target.value as "all" | "routes_only" | "assignments_only" | "with_assignments");
                   setCurrentPage(1);
                 }}
                 className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium bg-white text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0077b6] focus:border-[#0077b6]"
@@ -1198,7 +1197,6 @@ export default function Calendar() {
                 <option value="routes_only">Routes Only</option>
                 <option value="assignments_only">Assignments Only</option>
                 <option value="with_assignments">With Assignments</option>
-                <option value="without_assignments">Without Assignments</option>
               </select>
             )}
             
