@@ -917,35 +917,6 @@ export default function Calendar() {
                 </button>
               </div>
               
-              <div className="flex gap-1 p-1 bg-slate-100 rounded-full">
-                <button
-                  className={cn(
-                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
-                    activeSeason === "summer"
-                      ? "bg-[#f97316] text-white shadow-sm"
-                      : "text-slate-600 hover:bg-white hover:shadow-sm"
-                  )}
-                  onClick={() => setActiveSeason("summer")}
-                  data-testid="button-season-summer"
-                >
-                  <Sun className="w-4 h-4" />
-                  Summer
-                </button>
-                <button
-                  className={cn(
-                    "px-4 py-1.5 text-sm font-medium flex items-center gap-2 transition-all rounded-full",
-                    activeSeason === "winter"
-                      ? "bg-[#0077b6] text-white shadow-sm"
-                      : "text-slate-600 hover:bg-white hover:shadow-sm"
-                  )}
-                  onClick={() => setActiveSeason("winter")}
-                  data-testid="button-season-winter"
-                >
-                  <Snowflake className="w-4 h-4" />
-                  Winter
-                </button>
-              </div>
-              
               <Button
                 className="bg-[#f97316] hover:bg-[#ea580c] text-white rounded-full"
                 onClick={() => setShowAddCoverageModal(true)}
