@@ -425,7 +425,7 @@ export default function Calendar() {
   });
 
   // Fetch Service Assignment count for the badge
-  const { data: assignmentCountData } = useQuery<{ count: number }>({
+  const { data: assignmentCountData, refetch: refetchAssignmentCount } = useQuery<{ count: number }>({
     queryKey: ["/api/service-assignments/count"],
     queryFn: async () => {
       const res = await fetch(`/api/service-assignments/count`);
@@ -3152,6 +3152,7 @@ export default function Calendar() {
                           if (!res.ok) throw new Error('Failed to update');
                           toast({ title: "Status Updated", description: "Assignment status has been updated." });
                           refetchServiceAssignments();
+                          refetchAssignmentCount();
                           setSelectedAssignment({ ...selectedAssignment, status: e.target.value });
                         } catch (error) {
                           toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
@@ -3209,6 +3210,7 @@ export default function Calendar() {
                                 description: `Assignment reassigned to ${newTech.firstName} ${newTech.lastName}` 
                               });
                               refetchServiceAssignments();
+                              refetchAssignmentCount();
                               setSelectedAssignment({ ...selectedAssignment, technicianId: newTechId });
                             } catch (error) {
                               toast({ title: "Error", description: "Failed to reassign technician.", variant: "destructive" });
@@ -3260,6 +3262,7 @@ export default function Calendar() {
                         if (!res.ok) throw new Error('Failed to complete');
                         toast({ title: "Completed", description: "Assignment marked as complete." });
                         refetchServiceAssignments();
+                        refetchAssignmentCount();
                         setShowAssignmentsSidebar(false);
                         setSelectedAssignment(null);
                       } catch (error) {
@@ -3283,6 +3286,7 @@ export default function Calendar() {
                       if (!res.ok) throw new Error('Failed to delete');
                       toast({ title: "Deleted", description: "Assignment has been deleted." });
                       refetchServiceAssignments();
+                      refetchAssignmentCount();
                       setShowAssignmentsSidebar(false);
                       setSelectedAssignment(null);
                     } catch (error) {
@@ -3454,6 +3458,7 @@ export default function Calendar() {
                     description: "The assignment has been created successfully.",
                   });
                   refetchServiceAssignments();
+                  refetchAssignmentCount();
                   setShowAssignmentsSidebar(false);
                   setAssignmentForm({
                     technicianId: "",
