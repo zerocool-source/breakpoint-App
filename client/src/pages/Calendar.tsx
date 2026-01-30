@@ -2811,7 +2811,7 @@ export default function Calendar() {
                         setSelectedEstimateForAssign(estimate);
                         setShowAssignEstimateModal(true);
                       }}
-                      className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white font-medium gap-2"
+                      className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white font-medium gap-2"
                       data-testid={`sidebar-button-assign-${estimate.id}`}
                     >
                       <UserPlus className="w-4 h-4" />
