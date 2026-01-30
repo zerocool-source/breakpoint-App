@@ -1,0 +1,71 @@
+```
+On the Calendar page under the Service filter, make these fixes:
+
+**1. SHOW ASSIGNMENT INDICATOR ON ERIC GRITZKE'S SLOT FOR TUE 27:**
+- Add a separate small container/card in orange showing the assignment
+- Position it below or next to the route card (1 stops)
+- Style it differently from route cards to distinguish it
+
+**ASSIGNMENT CARD STYLE:**
+- Orange (#f97316) left border or light orange background (#fff7ed)
+- Smaller than route cards
+- Show:
+  - 📋 icon or "Assignment" label
+  - Assignment count (e.g., "1 assignment" or "2 assignments")
+  - Or show assignment type (e.g., "Inspection")
+  - Status badge: [Pending]
+- Clickable to open assignment details
+
+**EXAMPLE:**
+```
+TUE 27 slot for Eric Gritzke:
+┌─────────────────────────┐
+│ 1 stops           0/1   │  ← Route card (existing)
+│ ⏱ 08:00 - 16:00         │
+│ [Pending]               │
+│ 1 📍 Amelia Square HOA  │
+│ ••• Route Actions       │
+└─────────────────────────┘
+┌─────────────────────────┐
+│ 📋 1 Assignment [Pending]│  ← NEW Assignment card (orange tint)
+│ Inspection              │
+└─────────────────────────┘
+```
+
+**2. MAKE ASSIGNMENTS BAR CLICKABLE:**
+- When clicking on the "Assignments" bar (or the "4 assignments" badge), open a right sidebar
+- Sidebar slides in from the right (same style as "Ready to Assign" sidebar)
+- Calendar condenses to make room
+
+**RIGHT SIDEBAR CONTENTS:**
+- Header: "Assignments" with X close button
+- Subtitle: "4 assignments"
+- Scrollable list of all assignments showing:
+  - Assignment type/title
+  - Property name
+  - Assigned technician name
+  - Scheduled date
+  - Status badge (Pending/In Progress/Completed)
+  - "View Details" or click to expand
+- Sort by date (oldest first) or by technician
+
+**SIDEBAR LAYOUT:**
+```
+┌─────────────────────────────┐
+│ Assignments            X   │
+│ 4 assignments              │
+├─────────────────────────────┤
+│ 📋 Inspection              │
+│ CHARDONNAY HILLS HOA       │
+│ Assigned to: Eric Gritzke  │
+│ Date: Jan 27, 2026         │
+│ [Pending]                  │
+├─────────────────────────────┤
+│ 📋 Follow-up               │
+│ Sunset Marina              │
+│ Assigned to: Sean Darden   │
+│ Date: Jan 28, 2026         │
+│ [Pending]                  │
+└─────────────────────────────┘
+```
+```

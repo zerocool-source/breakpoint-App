@@ -299,6 +299,7 @@ export default function Calendar() {
   });
   const [showReadyToAssignSidebar, setShowReadyToAssignSidebar] = useState(false);
   const [showAssignmentsSidebar, setShowAssignmentsSidebar] = useState(false);
+  const [showAssignmentsList, setShowAssignmentsList] = useState(false); // true = show list, false = show create form
   const [assignmentForm, setAssignmentForm] = useState({
     technicianId: "",
     propertyId: "",
@@ -1276,22 +1277,35 @@ export default function Calendar() {
                 className="mb-4 w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white rounded-lg shadow-md border-l-4 border-[#f97316]"
                 data-testid="assignments-bar"
               >
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    setShowAssignmentsList(true);
+                    setSelectedAssignment(null);
+                    setShowAssignmentsSidebar(true);
+                  }}
+                  data-testid="button-view-assignments"
+                >
                   <div className="w-9 h-9 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
                     <ClipboardList className="w-4.5 h-4.5 text-white" />
                   </div>
                   <div className="text-left">
                     <h3 className="font-semibold text-[#0F172A] text-sm">Assignments</h3>
-                    <p className="text-xs text-slate-500">Assign tasks to service technicians</p>
+                    <p className="text-xs text-slate-500">Click to view all assignments</p>
                   </div>
                   {(assignmentCountData?.count || 0) > 0 && (
                     <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
-                      {assignmentCountData?.count} {assignmentCountData?.count === 1 ? 'assignment' : 'assignments'}
+                      {assignmentCountData?.count}
                     </span>
                   )}
                 </div>
                 <Button
-                  onClick={() => setShowAssignmentsSidebar(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAssignmentsList(false);
+                    setSelectedAssignment(null);
+                    setShowAssignmentsSidebar(true);
+                  }}
                   className="bg-[#f97316] hover:bg-[#ea580c] text-white font-medium"
                   data-testid="button-create-assignment"
                 >
@@ -1673,8 +1687,8 @@ export default function Calendar() {
                               <div className="mt-2 space-y-1">
                                 {serviceAssignmentsForDay.map((assignment) => {
                                   const statusColors: Record<string, { bg: string; text: string; badge: string }> = {
-                                    pending: { bg: "#f1f5f9", text: "#64748b", badge: "#6b7280" },
-                                    in_progress: { bg: "#fff7ed", text: "#ea580c", badge: "#f97316" },
+                                    pending: { bg: "#fff7ed", text: "#ea580c", badge: "#f97316" },
+                                    in_progress: { bg: "#fef3c7", text: "#d97706", badge: "#f59e0b" },
                                     completed: { bg: "#f0fdf4", text: "#16a34a", badge: "#22c55e" },
                                   };
                                   const colors = statusColors[assignment.status || "pending"] || statusColors.pending;
@@ -3113,10 +3127,14 @@ export default function Calendar() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-[#0F172A]">
-                    {selectedAssignment ? "Assignment Details" : "Create Assignment"}
+                    {selectedAssignment ? "Assignment Details" : showAssignmentsList ? "All Assignments" : "Create Assignment"}
                   </h2>
                   <p className="text-sm text-slate-500">
-                    {selectedAssignment ? selectedAssignment.propertyName || "View and update assignment" : "Assign task to service technician"}
+                    {selectedAssignment 
+                      ? selectedAssignment.propertyName || "View and update assignment" 
+                      : showAssignmentsList 
+                        ? `${serviceAssignments.length} assignment${serviceAssignments.length === 1 ? '' : 's'}`
+                        : "Assign task to service technician"}
                   </p>
                 </div>
               </div>
@@ -3124,6 +3142,7 @@ export default function Calendar() {
                 onClick={() => {
                   setShowAssignmentsSidebar(false);
                   setSelectedAssignment(null);
+                  setShowAssignmentsList(false);
                 }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 data-testid="button-close-assignments-sidebar"
@@ -3133,8 +3152,94 @@ export default function Calendar() {
             </div>
           </div>
 
-          {/* View/Edit Selected Assignment */}
-          {selectedAssignment ? (
+          {/* Assignments List View */}
+          {showAssignmentsList && !selectedAssignment ? (
+            <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+              {serviceAssignments.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p>No assignments yet</p>
+                  <Button
+                    onClick={() => setShowAssignmentsList(false)}
+                    className="mt-4 bg-[#f97316] hover:bg-[#ea580c] text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create Assignment
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {serviceAssignments
+                    .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+                    .map((assignment) => {
+                      const tech = (technicians || []).find((t: Technician) => String(t.id) === String(assignment.technicianId));
+                      const statusColors: Record<string, { bg: string; badge: string }> = {
+                        pending: { bg: "#fff7ed", badge: "#f97316" },
+                        in_progress: { bg: "#fef3c7", badge: "#f59e0b" },
+                        completed: { bg: "#f0fdf4", badge: "#22c55e" },
+                      };
+                      const colors = statusColors[assignment.status || "pending"] || statusColors.pending;
+                      const typeLabels: Record<string, string> = {
+                        service_visit: "Service Visit",
+                        inspection: "Inspection",
+                        follow_up: "Follow-up",
+                        special_task: "Special Task",
+                      };
+                      
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="p-3 rounded-lg border border-slate-200 cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ backgroundColor: colors.bg }}
+                          onClick={() => setSelectedAssignment(assignment)}
+                          data-testid={`list-assignment-${assignment.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4 text-[#f97316] shrink-0" />
+                                <span className="font-medium text-sm text-[#0F172A]">
+                                  {typeLabels[assignment.assignmentType] || assignment.assignmentType}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-600 mt-1 truncate">
+                                {assignment.propertyName || "No property"}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Assigned to: {tech ? `${tech.firstName} ${tech.lastName}` : "Unknown"}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                Date: {new Date(assignment.scheduledDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                {assignment.scheduledTime && ` at ${assignment.scheduledTime}`}
+                              </p>
+                            </div>
+                            <span
+                              className="px-2 py-1 text-[10px] font-medium rounded text-white shrink-0"
+                              style={{ backgroundColor: colors.badge }}
+                            >
+                              {assignment.status === "in_progress" ? "In Progress" : 
+                               assignment.status === "completed" ? "Done" : "Pending"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+              
+              {serviceAssignments.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <Button
+                    onClick={() => setShowAssignmentsList(false)}
+                    className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create New Assignment
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : selectedAssignment ? (
             <>
               <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
