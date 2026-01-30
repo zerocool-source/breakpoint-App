@@ -1967,3 +1967,29 @@ export const insertTechTimeOffSchema = createInsertSchema(techTimeOff).omit({
 
 export type InsertTechTimeOff = z.infer<typeof insertTechTimeOffSchema>;
 export type TechTimeOff = typeof techTimeOff.$inferSelect;
+
+// Service Assignments (tasks assigned to service technicians)
+export const serviceAssignments = pgTable("service_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  technicianId: varchar("technician_id").notNull(),
+  propertyId: varchar("property_id"), // Customer/property ID
+  propertyName: text("property_name"), // Cached property name for display
+  assignmentType: text("assignment_type").notNull(), // "service_visit", "inspection", "follow_up", "special_task"
+  scheduledDate: text("scheduled_date").notNull(), // YYYY-MM-DD format
+  scheduledTime: text("scheduled_time"), // Optional time HH:MM format
+  status: text("status").default("pending"), // "pending", "in_progress", "completed"
+  notes: text("notes"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertServiceAssignmentSchema = createInsertSchema(serviceAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export type InsertServiceAssignment = z.infer<typeof insertServiceAssignmentSchema>;
+export type ServiceAssignment = typeof serviceAssignments.$inferSelect;

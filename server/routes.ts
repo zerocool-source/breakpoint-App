@@ -30,6 +30,7 @@ import { registerCalendarRoutes } from "./routes/calendar";
 import { registerSearchRoutes } from "./routes/search";
 import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
+import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -69,4 +70,5 @@ function setupRoutes(app: any) {
   registerSearchRoutes(app);
   registerUserRoutes(app);
   registerZoneRoutes(app);
+  registerServiceAssignmentRoutes(app);
 }

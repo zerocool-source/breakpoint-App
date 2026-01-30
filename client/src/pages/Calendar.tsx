@@ -46,6 +46,7 @@ import {
   UserPlus,
   X,
   ClipboardList,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -83,6 +84,21 @@ interface QcInspection {
   status: string;
   dueDate: string | null;
   completedAt: string | null;
+}
+
+interface ServiceAssignment {
+  id: string;
+  technicianId: string;
+  propertyId: string | null;
+  propertyName: string | null;
+  assignmentType: string;
+  scheduledDate: string;
+  scheduledTime: string | null;
+  status: string;
+  notes: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface ScheduledRepair {
@@ -293,6 +309,7 @@ export default function Calendar() {
   });
   const [showQcInspectionsSidebar, setShowQcInspectionsSidebar] = useState(false);
   const [showCreateQcForm, setShowCreateQcForm] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<ServiceAssignment | null>(null);
   const [qcInspectionForm, setQcInspectionForm] = useState({
     propertyId: "",
     inspectionType: "",
@@ -392,6 +409,29 @@ export default function Calendar() {
       return res.json();
     },
     enabled: weekDates.length === 7 && roleFilter === "supervisor",
+  });
+
+  // Fetch Service Assignments for service tab
+  const { data: serviceAssignmentsData, refetch: refetchServiceAssignments } = useQuery<{ assignments: ServiceAssignment[] }>({
+    queryKey: ["/api/service-assignments", weekDates[0]?.toISOString()],
+    queryFn: async () => {
+      const startDate = weekDates[0]?.toISOString().split("T")[0];
+      const endDate = weekDates[6]?.toISOString().split("T")[0];
+      const res = await fetch(`/api/service-assignments?startDate=${startDate}&endDate=${endDate}`);
+      if (!res.ok) return { assignments: [] };
+      return res.json();
+    },
+    enabled: weekDates.length === 7,
+  });
+
+  // Fetch Service Assignment count for the badge
+  const { data: assignmentCountData } = useQuery<{ count: number }>({
+    queryKey: ["/api/service-assignments/count"],
+    queryFn: async () => {
+      const res = await fetch(`/api/service-assignments/count`);
+      if (!res.ok) return { count: 0 };
+      return res.json();
+    },
   });
 
   // Fetch estimates for repair technicians - needs_scheduling (ready to assign) and scheduled (assigned)
@@ -619,6 +659,16 @@ export default function Calendar() {
       if (String(est.repairTechId) !== String(techId)) return false;
       if (!est.scheduledDate) return false;
       return est.scheduledDate.startsWith(dateStr);
+    });
+  };
+
+  // Get service assignments for a service tech and date
+  const serviceAssignments = serviceAssignmentsData?.assignments || [];
+  const getServiceAssignmentsForTechAndDate = (techId: string | number, date: Date): ServiceAssignment[] => {
+    const dateStr = date.toISOString().split("T")[0];
+    return serviceAssignments.filter((assignment) => {
+      if (String(assignment.technicianId) !== String(techId)) return false;
+      return assignment.scheduledDate === dateStr;
     });
   };
 
@@ -1234,6 +1284,11 @@ export default function Calendar() {
                     <h3 className="font-semibold text-[#0F172A] text-sm">Assignments</h3>
                     <p className="text-xs text-slate-500">Assign tasks to service technicians</p>
                   </div>
+                  {(assignmentCountData?.count || 0) > 0 && (
+                    <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
+                      {assignmentCountData?.count} {assignmentCountData?.count === 1 ? 'assignment' : 'assignments'}
+                    </span>
+                  )}
                 </div>
                 <Button
                   onClick={() => setShowAssignmentsSidebar(true)}
@@ -1459,6 +1514,11 @@ export default function Calendar() {
                       // For repair technicians - get scheduled repairs
                       const scheduledRepairsForDay = tech.role === "repair"
                         ? getScheduledRepairsForTechAndDate(tech.id, date)
+                        : [];
+
+                      // For service technicians - get service assignments
+                      const serviceAssignmentsForDay = tech.role === "service"
+                        ? getServiceAssignmentsForTechAndDate(tech.id, date)
                         : [];
 
                       if (timeOff) {
@@ -1950,6 +2010,72 @@ export default function Calendar() {
                             </div>
                           );
                         }
+                      }
+
+                      // If service technician has assignments for this day, show them
+                      if (tech.role === "service" && serviceAssignmentsForDay.length > 0) {
+                        return (
+                          <div
+                            key={displayIndex}
+                            className="flex-1 min-w-[140px] px-2 py-2 border-l border-[#e5e7eb]"
+                          >
+                            <div className="space-y-1">
+                              {serviceAssignmentsForDay.map((assignment) => {
+                                const statusColors: Record<string, { bg: string; text: string; badge: string }> = {
+                                  pending: { bg: "#f1f5f9", text: "#64748b", badge: "#6b7280" },
+                                  in_progress: { bg: "#fff7ed", text: "#ea580c", badge: "#f97316" },
+                                  completed: { bg: "#f0fdf4", text: "#16a34a", badge: "#22c55e" },
+                                };
+                                const colors = statusColors[assignment.status || "pending"] || statusColors.pending;
+                                const typeLabels: Record<string, string> = {
+                                  service_visit: "Service Visit",
+                                  inspection: "Inspection",
+                                  follow_up: "Follow-up",
+                                  special_task: "Special Task",
+                                };
+                                
+                                return (
+                                  <div
+                                    key={assignment.id}
+                                    className="rounded-lg p-2 cursor-pointer transition-all hover:shadow-md border-l-[3px]"
+                                    style={{
+                                      backgroundColor: colors.bg,
+                                      borderLeftColor: colors.badge,
+                                    }}
+                                    onClick={() => {
+                                      setSelectedAssignment(assignment);
+                                      setShowAssignmentsSidebar(true);
+                                    }}
+                                    data-testid={`assignment-card-${assignment.id}`}
+                                  >
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium text-[#0F172A] truncate">
+                                          {assignment.propertyName || "Property"}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500 truncate">
+                                          {typeLabels[assignment.assignmentType] || assignment.assignmentType}
+                                        </p>
+                                        {assignment.scheduledTime && (
+                                          <p className="text-[10px] text-slate-400 mt-0.5">
+                                            {assignment.scheduledTime}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span
+                                        className="px-1.5 py-0.5 text-[9px] font-medium rounded text-white shrink-0"
+                                        style={{ backgroundColor: colors.badge }}
+                                      >
+                                        {assignment.status === "in_progress" ? "In Progress" : 
+                                         assignment.status === "completed" ? "Done" : "Pending"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
                       }
 
                       return (
@@ -2924,13 +3050,18 @@ export default function Calendar() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-[#0F172A]">
-                    Create Assignment
+                    {selectedAssignment ? "Assignment Details" : "Create Assignment"}
                   </h2>
-                  <p className="text-sm text-slate-500">Assign task to service technician</p>
+                  <p className="text-sm text-slate-500">
+                    {selectedAssignment ? selectedAssignment.propertyName || "View and update assignment" : "Assign task to service technician"}
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => setShowAssignmentsSidebar(false)}
+                onClick={() => {
+                  setShowAssignmentsSidebar(false);
+                  setSelectedAssignment(null);
+                }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 data-testid="button-close-assignments-sidebar"
               >
@@ -2938,6 +3069,142 @@ export default function Calendar() {
               </button>
             </div>
           </div>
+
+          {/* View/Edit Selected Assignment */}
+          {selectedAssignment ? (
+            <>
+              <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-slate-700">Status</span>
+                    <select
+                      value={selectedAssignment.status}
+                      onChange={async (e) => {
+                        try {
+                          const res = await fetch(`/api/service-assignments/${selectedAssignment.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: e.target.value }),
+                          });
+                          if (!res.ok) throw new Error('Failed to update');
+                          toast({ title: "Status Updated", description: "Assignment status has been updated." });
+                          refetchServiceAssignments();
+                          setSelectedAssignment({ ...selectedAssignment, status: e.target.value });
+                        } catch (error) {
+                          toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+                        }
+                      }}
+                      className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                      data-testid="select-assignment-status"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-slate-500">Assignment Type</label>
+                      <p className="text-sm font-medium text-[#0F172A]">
+                        {selectedAssignment.assignmentType === "service_visit" ? "Service Visit" :
+                         selectedAssignment.assignmentType === "inspection" ? "Inspection" :
+                         selectedAssignment.assignmentType === "follow_up" ? "Follow-up" :
+                         selectedAssignment.assignmentType === "special_task" ? "Special Task" :
+                         selectedAssignment.assignmentType}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500">Property</label>
+                      <p className="text-sm font-medium text-[#0F172A]">{selectedAssignment.propertyName || "N/A"}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500">Scheduled Date</label>
+                      <p className="text-sm font-medium text-[#0F172A]">
+                        {new Date(selectedAssignment.scheduledDate).toLocaleDateString()}
+                        {selectedAssignment.scheduledTime && ` at ${selectedAssignment.scheduledTime}`}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500">Technician</label>
+                      <p className="text-sm font-medium text-[#0F172A]">
+                        {(technicians || []).find((t: Technician) => String(t.id) === String(selectedAssignment.technicianId))
+                          ? `${(technicians || []).find((t: Technician) => String(t.id) === String(selectedAssignment.technicianId))?.firstName} ${(technicians || []).find((t: Technician) => String(t.id) === String(selectedAssignment.technicianId))?.lastName}`
+                          : "Unknown"}
+                      </p>
+                    </div>
+                    {selectedAssignment.notes && (
+                      <div>
+                        <label className="text-xs text-slate-500">Notes</label>
+                        <p className="text-sm text-[#0F172A]">{selectedAssignment.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedAssignment(null);
+                  }}
+                  className="flex-1"
+                  data-testid="button-back-to-create"
+                >
+                  New Assignment
+                </Button>
+                {selectedAssignment.status !== "completed" && (
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/service-assignments/${selectedAssignment.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ status: "completed" }),
+                        });
+                        if (!res.ok) throw new Error('Failed to complete');
+                        toast({ title: "Completed", description: "Assignment marked as complete." });
+                        refetchServiceAssignments();
+                        setShowAssignmentsSidebar(false);
+                        setSelectedAssignment(null);
+                      } catch (error) {
+                        toast({ title: "Error", description: "Failed to mark complete.", variant: "destructive" });
+                      }
+                    }}
+                    className="flex-1 bg-[#22c55e] hover:bg-[#16a34a] text-white"
+                    data-testid="button-mark-complete"
+                  >
+                    Mark Complete
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (!confirm("Are you sure you want to delete this assignment?")) return;
+                    try {
+                      const res = await fetch(`/api/service-assignments/${selectedAssignment.id}`, {
+                        method: 'DELETE',
+                      });
+                      if (!res.ok) throw new Error('Failed to delete');
+                      toast({ title: "Deleted", description: "Assignment has been deleted." });
+                      refetchServiceAssignments();
+                      setShowAssignmentsSidebar(false);
+                      setSelectedAssignment(null);
+                    } catch (error) {
+                      toast({ title: "Error", description: "Failed to delete.", variant: "destructive" });
+                    }
+                  }}
+                  className="px-3"
+                  data-testid="button-delete-assignment"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            /* Create New Assignment Form */
+            <>
 
           <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
             {/* Service Technician */}
@@ -3066,20 +3333,49 @@ export default function Calendar() {
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                toast({
-                  title: "Assignment Created",
-                  description: "The assignment has been created successfully.",
-                });
-                setShowAssignmentsSidebar(false);
-                setAssignmentForm({
-                  technicianId: "",
-                  propertyId: "",
-                  assignmentType: "",
-                  date: "",
-                  time: "",
-                  notes: "",
-                });
+              onClick={async () => {
+                try {
+                  const customerName = (customersData?.customers || []).find(
+                    (c: Customer) => c.id === assignmentForm.propertyId
+                  )?.name;
+                  
+                  const res = await fetch('/api/service-assignments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      technicianId: assignmentForm.technicianId,
+                      propertyId: assignmentForm.propertyId,
+                      propertyName: customerName,
+                      assignmentType: assignmentForm.assignmentType,
+                      scheduledDate: assignmentForm.date,
+                      scheduledTime: assignmentForm.time || null,
+                      notes: assignmentForm.notes || null,
+                    }),
+                  });
+                  
+                  if (!res.ok) throw new Error('Failed to create assignment');
+                  
+                  toast({
+                    title: "Assignment Created",
+                    description: "The assignment has been created successfully.",
+                  });
+                  refetchServiceAssignments();
+                  setShowAssignmentsSidebar(false);
+                  setAssignmentForm({
+                    technicianId: "",
+                    propertyId: "",
+                    assignmentType: "",
+                    date: "",
+                    time: "",
+                    notes: "",
+                  });
+                } catch (error) {
+                  toast({
+                    title: "Error",
+                    description: "Failed to create assignment. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
               className="flex-1 bg-[#f97316] hover:bg-[#ea580c] text-white"
               disabled={!assignmentForm.technicianId || !assignmentForm.propertyId || !assignmentForm.assignmentType || !assignmentForm.date}
@@ -3088,6 +3384,8 @@ export default function Calendar() {
               Create Assignment
             </Button>
           </div>
+          </>
+          )}
         </div>
       )}
 
