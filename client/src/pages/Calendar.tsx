@@ -3127,11 +3127,42 @@ export default function Calendar() {
                     </div>
                     <div>
                       <label className="text-xs text-slate-500">Technician</label>
-                      <p className="text-sm font-medium text-[#0F172A]">
-                        {(technicians || []).find((t: Technician) => String(t.id) === String(selectedAssignment.technicianId))
-                          ? `${(technicians || []).find((t: Technician) => String(t.id) === String(selectedAssignment.technicianId))?.firstName} ${(technicians || []).find((t: Technician) => String(t.id) === String(selectedAssignment.technicianId))?.lastName}`
-                          : "Unknown"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={String(selectedAssignment.technicianId)}
+                          onChange={async (e) => {
+                            const newTechId = e.target.value;
+                            const newTech = (technicians || []).find((t: Technician) => String(t.id) === newTechId);
+                            if (!newTech) return;
+                            try {
+                              const res = await fetch(`/api/service-assignments/${selectedAssignment.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ technicianId: parseInt(newTechId) }),
+                              });
+                              if (!res.ok) throw new Error('Failed to reassign');
+                              toast({ 
+                                title: "Reassigned", 
+                                description: `Assignment reassigned to ${newTech.firstName} ${newTech.lastName}` 
+                              });
+                              refetchServiceAssignments();
+                              setSelectedAssignment({ ...selectedAssignment, technicianId: newTechId });
+                            } catch (error) {
+                              toast({ title: "Error", description: "Failed to reassign technician.", variant: "destructive" });
+                            }
+                          }}
+                          className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-medium text-[#0F172A] focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none bg-white"
+                          data-testid="select-reassign-technician"
+                        >
+                          {(technicians || [])
+                            .filter((t: Technician) => t.role === "service" && t.active)
+                            .map((tech: Technician) => (
+                              <option key={tech.id} value={String(tech.id)}>
+                                {tech.firstName} {tech.lastName}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
                     </div>
                     {selectedAssignment.notes && (
                       <div>
