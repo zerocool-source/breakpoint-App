@@ -291,6 +291,15 @@ export default function Calendar() {
     time: "",
     notes: "",
   });
+  const [showQcInspectionsSidebar, setShowQcInspectionsSidebar] = useState(false);
+  const [showCreateQcForm, setShowCreateQcForm] = useState(false);
+  const [qcInspectionForm, setQcInspectionForm] = useState({
+    propertyId: "",
+    inspectionType: "",
+    supervisorId: "",
+    scheduledDate: "",
+    notes: "",
+  });
   const [propertySearchTerm, setPropertySearchTerm] = useState("");
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -848,7 +857,7 @@ export default function Calendar() {
         {/* Main Calendar Content */}
         <div className={cn(
           "flex-1 transition-all duration-300",
-          (showReadyToAssignSidebar || showAssignmentsSidebar) ? "mr-[380px]" : ""
+          (showReadyToAssignSidebar || showAssignmentsSidebar || showQcInspectionsSidebar) ? "mr-[380px]" : ""
         )}>
         <div className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] shadow-sm px-6 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -1234,6 +1243,43 @@ export default function Calendar() {
                   <Plus className="w-4 h-4 mr-1" />
                   Create Assignment
                 </Button>
+              </div>
+            )}
+
+            {/* QC Inspections Bar - Only show when Supervisors filter is selected */}
+            {roleFilter === "supervisor" && (
+              <div
+                className="mb-4 w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white rounded-lg shadow-md border-l-4 border-[#f97316] cursor-pointer hover:from-[#ffedd5] transition-colors"
+                onClick={() => setShowQcInspectionsSidebar(true)}
+                data-testid="qc-inspections-bar"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
+                    <ClipboardList className="w-4.5 h-4.5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-[#0F172A] text-sm">QC Inspections</h3>
+                    <p className="text-xs text-slate-500">Quality control inspections for supervisors</p>
+                  </div>
+                  <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
+                    {(qcInspectionsData?.inspections || []).length} {(qcInspectionsData?.inspections || []).length === 1 ? 'inspection' : 'inspections'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowQcInspectionsSidebar(true);
+                      setShowCreateQcForm(true);
+                    }}
+                    className="bg-[#f97316] hover:bg-[#ea580c] text-white font-medium"
+                    data-testid="button-create-qc-inspection"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create QC Inspection
+                  </Button>
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
               </div>
             )}
             
@@ -2907,10 +2953,10 @@ export default function Calendar() {
               >
                 <option value="">Select technician...</option>
                 {(technicians || [])
-                  .filter((t: Technician) => t.roleType === "service" && t.isActive)
+                  .filter((t: Technician) => t.role === "service" && t.active)
                   .map((tech: Technician) => (
                     <option key={tech.id} value={tech.id}>
-                      {tech.name}
+                      {tech.firstName} {tech.lastName}
                     </option>
                   ))}
               </select>
@@ -2930,7 +2976,7 @@ export default function Calendar() {
                 <option value="">Select property...</option>
                 {(customersData?.customers || []).map((customer: Customer) => (
                   <option key={customer.id} value={customer.id}>
-                    {customer.companyName || customer.name}
+                    {customer.name}
                   </option>
                 ))}
               </select>
@@ -3042,6 +3088,238 @@ export default function Calendar() {
               Create Assignment
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* QC Inspections Sidebar */}
+      {showQcInspectionsSidebar && (
+        <div className="fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out border-l border-slate-200">
+          <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-[#fff7ed] to-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
+                  <ClipboardList className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#0F172A]">
+                    {showCreateQcForm ? "Create QC Inspection" : "QC Inspections"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    {showCreateQcForm ? "Schedule a quality control inspection" : `${(qcInspectionsData?.inspections || []).length} pending inspections`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowQcInspectionsSidebar(false);
+                  setShowCreateQcForm(false);
+                }}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                data-testid="button-close-qc-sidebar"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+          </div>
+
+          {showCreateQcForm ? (
+            <>
+              <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+                {/* Property */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Property
+                  </label>
+                  <select
+                    value={qcInspectionForm.propertyId}
+                    onChange={(e) => setQcInspectionForm({ ...qcInspectionForm, propertyId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                    data-testid="select-qc-property"
+                  >
+                    <option value="">Select property...</option>
+                    {(customersData?.customers || []).map((customer: Customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Inspection Type */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Inspection Type
+                  </label>
+                  <select
+                    value={qcInspectionForm.inspectionType}
+                    onChange={(e) => setQcInspectionForm({ ...qcInspectionForm, inspectionType: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                    data-testid="select-qc-type"
+                  >
+                    <option value="">Select type...</option>
+                    <option value="routine_qc">Routine QC</option>
+                    <option value="follow_up">Follow-up</option>
+                    <option value="complaint">Complaint Investigation</option>
+                    <option value="new_property">New Property Inspection</option>
+                  </select>
+                </div>
+
+                {/* Supervisor */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Assign to Supervisor
+                  </label>
+                  <select
+                    value={qcInspectionForm.supervisorId}
+                    onChange={(e) => setQcInspectionForm({ ...qcInspectionForm, supervisorId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                    data-testid="select-qc-supervisor"
+                  >
+                    <option value="">Select supervisor...</option>
+                    {(technicians || [])
+                      .filter((t: Technician) => t.role === "supervisor" && t.active)
+                      .map((tech: Technician) => (
+                        <option key={tech.id} value={tech.id}>
+                          {tech.firstName} {tech.lastName}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Scheduled Date */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Scheduled Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={qcInspectionForm.scheduledDate}
+                    onChange={(e) => setQcInspectionForm({ ...qcInspectionForm, scheduledDate: e.target.value })}
+                    className="w-full"
+                    data-testid="input-qc-date"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={qcInspectionForm.notes}
+                    onChange={(e) => setQcInspectionForm({ ...qcInspectionForm, notes: e.target.value })}
+                    placeholder="Add any notes or special instructions..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none resize-none"
+                    data-testid="textarea-qc-notes"
+                  />
+                </div>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateQcForm(false);
+                    setQcInspectionForm({
+                      propertyId: "",
+                      inspectionType: "",
+                      supervisorId: "",
+                      scheduledDate: "",
+                      notes: "",
+                    });
+                  }}
+                  className="flex-1"
+                  data-testid="button-cancel-qc"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    toast({
+                      title: "QC Inspection Created",
+                      description: "The inspection has been scheduled successfully.",
+                    });
+                    setShowCreateQcForm(false);
+                    setQcInspectionForm({
+                      propertyId: "",
+                      inspectionType: "",
+                      supervisorId: "",
+                      scheduledDate: "",
+                      notes: "",
+                    });
+                  }}
+                  className="flex-1 bg-[#f97316] hover:bg-[#ea580c] text-white"
+                  disabled={!qcInspectionForm.propertyId || !qcInspectionForm.inspectionType || !qcInspectionForm.scheduledDate}
+                  data-testid="button-submit-qc"
+                >
+                  Create Inspection
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Create Button */}
+              <div className="p-4 border-b border-slate-100">
+                <Button
+                  onClick={() => setShowCreateQcForm(true)}
+                  className="w-full bg-[#f97316] hover:bg-[#ea580c] text-white font-medium"
+                  data-testid="sidebar-button-create-qc"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create New QC Inspection
+                </Button>
+              </div>
+
+              {/* List of QC Inspections */}
+              <div className="p-4 space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+                {(qcInspectionsData?.inspections || []).map((inspection: QcInspection) => (
+                  <div
+                    key={inspection.id}
+                    className="p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
+                    data-testid={`qc-inspection-card-${inspection.id}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-[#0F172A] text-sm">
+                          {inspection.title || 'QC Inspection'}
+                        </h4>
+                        <p className="text-xs text-slate-500">
+                          ID: {inspection.id}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 bg-[#f97316]/10 text-[#f97316] text-xs font-medium rounded">
+                        {inspection.status || 'Pending'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-2">
+                      {inspection.propertyName || 'Property'}
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Due: {inspection.dueDate ? new Date(inspection.dueDate).toLocaleDateString() : 'Not set'}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white font-medium gap-2"
+                      data-testid={`button-schedule-qc-${inspection.id}`}
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Assign to Supervisor
+                    </Button>
+                  </div>
+                ))}
+
+                {(qcInspectionsData?.inspections || []).length === 0 && (
+                  <div className="text-center py-8 text-slate-500">
+                    <ClipboardList className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p>No pending QC inspections</p>
+                    <p className="text-xs mt-1">Click "Create New" to add one</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </AppLayout>
