@@ -283,6 +283,30 @@ export default function Calendar() {
   const [propertySearchTerm, setPropertySearchTerm] = useState("");
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
+  const readyToAssignScrollRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Handle horizontal scroll for Ready to Assign cards
+  const handleReadyToAssignScroll = () => {
+    const container = readyToAssignScrollRef.current;
+    if (container) {
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(container.scrollLeft < container.scrollWidth - container.clientWidth - 1);
+    }
+  };
+
+  const scrollReadyToAssign = (direction: 'left' | 'right') => {
+    const container = readyToAssignScrollRef.current;
+    if (container) {
+      const scrollAmount = 300;
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   const [techsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTechForSchedule, setSelectedTechForSchedule] = useState<Technician | null>(null);
@@ -455,6 +479,14 @@ export default function Calendar() {
   const scheduledEstimates = scheduledEstimatesData?.estimates || [];
   const unassignedEstimates = scheduledEstimatesData?.unassigned || [];
   const propertyAssignments = propertyAssignmentsData?.assignments || [];
+
+  // Check scroll state when estimates change
+  React.useEffect(() => {
+    const container = readyToAssignScrollRef.current;
+    if (container && unassignedEstimates.length > 0) {
+      setTimeout(handleReadyToAssignScroll, 100);
+    }
+  }, [unassignedEstimates, scheduledJobsExpanded]);
 
   // Get unique properties for filter dropdown
   const uniqueProperties = useMemo(() => {
@@ -1284,13 +1316,41 @@ export default function Calendar() {
                 </button>
                 
                 {scheduledJobsExpanded && (
-                  <div className="border-t border-slate-100">
-                    <ScrollArea className="max-h-[240px]">
-                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="border-t border-slate-100 relative">
+                    {/* Left scroll arrow */}
+                    {canScrollLeft && (
+                      <button
+                        onClick={() => scrollReadyToAssign('left')}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                        data-testid="button-scroll-left"
+                      >
+                        <ChevronLeft className="w-4 h-4 text-slate-600" />
+                      </button>
+                    )}
+                    
+                    {/* Right scroll arrow */}
+                    {canScrollRight && (
+                      <button
+                        onClick={() => scrollReadyToAssign('right')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                        data-testid="button-scroll-right"
+                      >
+                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                      </button>
+                    )}
+                    
+                    <div 
+                      ref={readyToAssignScrollRef}
+                      onScroll={handleReadyToAssignScroll}
+                      className="overflow-x-auto scrollbar-hide py-4 px-4"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
                         {unassignedEstimates.map((estimate) => (
                           <div
                             key={estimate.id}
-                            className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden group"
+                            className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden group flex-shrink-0"
+                            style={{ width: '240px' }}
                             data-testid={`scheduled-job-${estimate.id}`}
                           >
                             <div className="p-3 border-l-3 border-l-[#f97316]">
@@ -1338,7 +1398,7 @@ export default function Calendar() {
                           </div>
                         ))}
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 )}
               </div>
