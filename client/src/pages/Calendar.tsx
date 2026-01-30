@@ -45,6 +45,7 @@ import {
   GitBranch,
   UserPlus,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -281,6 +282,15 @@ export default function Calendar() {
     scheduledDate: "",
   });
   const [showReadyToAssignSidebar, setShowReadyToAssignSidebar] = useState(false);
+  const [showAssignmentsSidebar, setShowAssignmentsSidebar] = useState(false);
+  const [assignmentForm, setAssignmentForm] = useState({
+    technicianId: "",
+    propertyId: "",
+    assignmentType: "",
+    date: "",
+    time: "",
+    notes: "",
+  });
   const [propertySearchTerm, setPropertySearchTerm] = useState("");
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
   const propertyDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -838,7 +848,7 @@ export default function Calendar() {
         {/* Main Calendar Content */}
         <div className={cn(
           "flex-1 transition-all duration-300",
-          showReadyToAssignSidebar ? "mr-[380px]" : ""
+          (showReadyToAssignSidebar || showAssignmentsSidebar) ? "mr-[380px]" : ""
         )}>
         <div className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] shadow-sm px-6 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -1199,6 +1209,32 @@ export default function Calendar() {
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
               </button>
+            )}
+
+            {/* Assignments Bar - Only show when Service filter is selected */}
+            {roleFilter === "service" && (
+              <div
+                className="mb-4 w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white rounded-lg shadow-md border-l-4 border-[#f97316]"
+                data-testid="assignments-bar"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
+                    <ClipboardList className="w-4.5 h-4.5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-[#0F172A] text-sm">Assignments</h3>
+                    <p className="text-xs text-slate-500">Assign tasks to service technicians</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowAssignmentsSidebar(true)}
+                  className="bg-[#f97316] hover:bg-[#ea580c] text-white font-medium"
+                  data-testid="button-create-assignment"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Create Assignment
+                </Button>
+              </div>
             )}
             
             {/* Fixed header - outside scroll area */}
@@ -2828,6 +2864,184 @@ export default function Calendar() {
                 </div>
               )}
             </div>
+        </div>
+      )}
+
+      {/* Assignments Sidebar */}
+      {showAssignmentsSidebar && (
+        <div className="fixed top-0 right-0 h-full w-[380px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out border-l border-slate-200">
+          <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-[#fff7ed] to-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
+                  <ClipboardList className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-[#0F172A]">
+                    Create Assignment
+                  </h2>
+                  <p className="text-sm text-slate-500">Assign task to service technician</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAssignmentsSidebar(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                data-testid="button-close-assignments-sidebar"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+            {/* Service Technician */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Service Technician
+              </label>
+              <select
+                value={assignmentForm.technicianId}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, technicianId: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                data-testid="select-assignment-technician"
+              >
+                <option value="">Select technician...</option>
+                {(technicians || [])
+                  .filter((t: Technician) => t.roleType === "service" && t.isActive)
+                  .map((tech: Technician) => (
+                    <option key={tech.id} value={tech.id}>
+                      {tech.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Property */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Property
+              </label>
+              <select
+                value={assignmentForm.propertyId}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, propertyId: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                data-testid="select-assignment-property"
+              >
+                <option value="">Select property...</option>
+                {(properties || []).map((prop: any) => (
+                  <option key={prop.id} value={prop.id}>
+                    {prop.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Assignment Type */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Assignment Type
+              </label>
+              <select
+                value={assignmentForm.assignmentType}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, assignmentType: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none"
+                data-testid="select-assignment-type"
+              >
+                <option value="">Select type...</option>
+                <option value="service_visit">Service Visit</option>
+                <option value="inspection">Inspection</option>
+                <option value="follow_up">Follow-up</option>
+                <option value="special_task">Special Task</option>
+              </select>
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Date
+              </label>
+              <Input
+                type="date"
+                value={assignmentForm.date}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, date: e.target.value })}
+                className="w-full"
+                data-testid="input-assignment-date"
+              />
+            </div>
+
+            {/* Time (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Time <span className="text-slate-400">(optional)</span>
+              </label>
+              <Input
+                type="time"
+                value={assignmentForm.time}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, time: e.target.value })}
+                className="w-full"
+                data-testid="input-assignment-time"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Notes / Description
+              </label>
+              <textarea
+                value={assignmentForm.notes}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, notes: e.target.value })}
+                placeholder="Add any notes or instructions..."
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#f97316] focus:border-[#f97316] outline-none resize-none"
+                data-testid="textarea-assignment-notes"
+              />
+            </div>
+          </div>
+
+          {/* Footer Buttons */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAssignmentsSidebar(false);
+                setAssignmentForm({
+                  technicianId: "",
+                  propertyId: "",
+                  assignmentType: "",
+                  date: "",
+                  time: "",
+                  notes: "",
+                });
+              }}
+              className="flex-1"
+              data-testid="button-cancel-assignment"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                toast({
+                  title: "Assignment Created",
+                  description: "The assignment has been created successfully.",
+                });
+                setShowAssignmentsSidebar(false);
+                setAssignmentForm({
+                  technicianId: "",
+                  propertyId: "",
+                  assignmentType: "",
+                  date: "",
+                  time: "",
+                  notes: "",
+                });
+              }}
+              className="flex-1 bg-[#f97316] hover:bg-[#ea580c] text-white"
+              disabled={!assignmentForm.technicianId || !assignmentForm.propertyId || !assignmentForm.assignmentType || !assignmentForm.date}
+              data-testid="button-submit-assignment"
+            >
+              Create Assignment
+            </Button>
+          </div>
         </div>
       )}
     </AppLayout>
