@@ -1,0 +1,81 @@
+```
+On the Visits/Activity Log page, redesign the layout to group activities by property with team member filters:
+
+**PAGE LAYOUT:**
+- Group all activities under their respective property
+- Show property name as a header with activity count
+- List all visits/repairs/inspections under each property
+
+**FILTER TABS AT TOP:**
+Add tabs to filter by team member type:
+- All (default) - Show all activities from everyone
+- Service Technicians - Show only service tech visits
+- Repair Technicians - Show only repair tech visits/repairs
+- Supervisors - Show only supervisor QC inspections
+
+**ADDITIONAL FILTERS:**
+Keep existing filters:
+- Date Range picker
+- All Properties dropdown
+- All Types dropdown (Service Visit, Repair, QC Inspection)
+- Search input
+
+**PROPERTY GROUPING LAYOUT:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ [All] [Service Technicians] [Repair Technicians] [Supervisors]             │
+│                                                                             │
+│ 📅 Dec 31 - Jan 30, 2026  📍 All Properties  👤 All Types  🔍 Search...    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+│ 🏢 Palm Court Apartments  (3 repairs)
+├─────────────────────────────────────────────────────────────────────────────
+│ ○ Installed new pool light LED fixture    SR#26-00008
+│   👤 Taryn Moore  📅 Jan 19, 2026  💰 15% ($21.75)  📷 1
+│
+│ ○ Replaced pool pump motor - motor was overheating    SR#26-00007
+│   👤 Kevin Enriquez  📅 Jan 18, 2026  💰 15% ($42.75)  📷 1
+│
+│ ○ Repaired leak at filter multiport valve    SR#26-00005
+│   👤 Kevin Enriquez  📅 Jan 17, 2026  💰 10% ($8.50)
+
+│ 🏢 Shady Trails HOA  (3 repairs)
+├─────────────────────────────────────────────────────────────────────────────
+│ ○ Replaced skimmer weir doors (3)    SR#26-00003
+│   👤 Kevin Enriquez  📅 Jan 15, 2026  💰 10% ($4.50)
+│
+│ ○ Installed new automatic fill valve    SR#26-00002
+│   👤 Taryn Moore  📅 Jan 14, 2026  💰 15% ($27.75)  📷 1
+│
+│ ○ Repaired pool cover reel - replaced bearings    SR#26-00001
+│   👤 Kevin Enriquez  📅 Jan 13, 2026  💰 10% ($12.00)
+```
+
+**STYLING:**
+- Orange/Yellow left border on property header (like the screenshot)
+- Property name bold with building icon
+- Activity count in parentheses: "(3 repairs)" or "(5 visits)"
+- Each activity row shows:
+  - Checkbox/circle on left
+  - Description text
+  - SR# or reference number (blue link)
+  - Technician name with icon
+  - Date
+  - Commission percentage and amount
+  - Photo count if any (📷 1)
+- Clean QuickBooks-style with white backgrounds
+- Subtle dividers between activities
+
+**FILTER TABS STYLING:**
+- Pill-shaped buttons
+- Active tab: Blue background (#0077b6), white text
+- Inactive tab: White/gray background, dark text
+- Show count in each tab: "Service Technicians (12)"
+
+**DATA TO SHOW:**
+- Pull service visits from Service Technicians
+- Pull repairs from Repair Technicians
+- Pull QC inspections from Supervisors
+- Group by property
+- Show all relevant details per activity type
+```

@@ -13,8 +13,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ClipboardCheck, CalendarIcon, User, MapPin, Loader2,
-  Image as ImageIcon, Wrench, ClipboardList, CheckCircle2, Clock,
-  Search, ChevronRight, X, Activity
+  Image as ImageIcon, Wrench, ClipboardList, Building2,
+  Search, X, Activity, Circle, Camera
 } from "lucide-react";
 import type { FieldEntry } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -50,19 +50,23 @@ interface QcInspection {
   updatedAt: string;
 }
 
-interface ServiceAssignment {
+interface ServiceRepair {
   id: string;
-  technicianId: string;
-  technicianName: string | null;
   propertyId: string | null;
   propertyName: string | null;
-  assignmentType: string;
-  scheduledDate: string;
-  scheduledTime: string | null;
+  technicianId: string | null;
+  technicianName: string | null;
+  description: string;
+  laborCost: string | null;
+  partsCost: string | null;
+  totalCost: string | null;
+  commissionRate: string | null;
+  commissionAmount: string | null;
+  serviceDate: string;
+  photos: string[] | null;
   status: string;
-  notes: string | null;
+  referenceNumber: string | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 interface Technician {
@@ -75,7 +79,7 @@ interface Technician {
 
 interface ActivityItem {
   id: string;
-  type: "service_visit" | "repair" | "qc_inspection" | "assignment";
+  type: "service_visit" | "repair" | "qc_inspection";
   technicianName: string;
   technicianRole: string;
   propertyName: string;
@@ -84,45 +88,18 @@ interface ActivityItem {
   status: string;
   photos: string[];
   title?: string;
+  referenceNumber?: string;
+  commissionRate?: string;
+  commissionAmount?: string;
 }
 
-const activityTypeConfig: Record<string, { label: string; bgColor: string; textColor: string; borderColor: string; icon: any }> = {
-  service_visit: { 
-    label: "Service Visit", 
-    bgColor: "bg-[#0077b6]/10", 
-    textColor: "text-[#0077b6]", 
-    borderColor: "border-[#0077b6]",
-    icon: Wrench 
-  },
-  repair: { 
-    label: "Repair", 
-    bgColor: "bg-[#f97316]/10", 
-    textColor: "text-[#f97316]", 
-    borderColor: "border-[#f97316]",
-    icon: Wrench 
-  },
-  qc_inspection: { 
-    label: "QC Inspection", 
-    bgColor: "bg-[#14b8a6]/10", 
-    textColor: "text-[#14b8a6]", 
-    borderColor: "border-[#14b8a6]",
-    icon: ClipboardList 
-  },
-  assignment: { 
-    label: "Assignment", 
-    bgColor: "bg-[#22c55e]/10", 
-    textColor: "text-[#22c55e]", 
-    borderColor: "border-[#22c55e]",
-    icon: CheckCircle2 
-  },
-};
+interface PropertyGroup {
+  propertyName: string;
+  activities: ActivityItem[];
+  activitySummary: string;
+}
 
-const statusConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
-  completed: { label: "Completed", bgColor: "bg-[#22c55e]", textColor: "text-white" },
-  in_progress: { label: "In Progress", bgColor: "bg-[#f59e0b]", textColor: "text-white" },
-  pending: { label: "Pending", bgColor: "bg-slate-400", textColor: "text-white" },
-  assigned: { label: "Pending", bgColor: "bg-slate-400", textColor: "text-white" },
-};
+type TeamFilter = "all" | "service" | "repair" | "supervisor";
 
 function parsePayload(payload: string | null): ParsedPayload {
   if (!payload) return {};
@@ -131,11 +108,6 @@ function parsePayload(payload: string | null): ParsedPayload {
   } catch {
     return { notes: payload };
   }
-}
-
-function formatDateTime(date: Date | string | null | undefined): string {
-  if (!date) return "—";
-  return format(new Date(date), "MMM d, yyyy h:mm a");
 }
 
 function formatDateShort(date: Date | string | null | undefined): string {
@@ -149,9 +121,8 @@ export default function Visits() {
     to: new Date()
   });
   const [selectedProperty, setSelectedProperty] = useState<string>("all");
-  const [selectedTech, setSelectedTech] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [teamFilter, setTeamFilter] = useState<TeamFilter>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -184,12 +155,12 @@ export default function Visits() {
     },
   });
 
-  // Fetch service assignments
-  const { data: assignmentsData, isLoading: assignmentsLoading } = useQuery<{ assignments: ServiceAssignment[] }>({
-    queryKey: ["service-assignments-all"],
+  // Fetch service repairs
+  const { data: repairsData, isLoading: repairsLoading } = useQuery<{ repairs: ServiceRepair[] }>({
+    queryKey: ["service-repairs-all"],
     queryFn: async () => {
-      const response = await fetch("/api/service-assignments");
-      if (!response.ok) return { assignments: [] };
+      const response = await fetch("/api/tech-ops/service-repairs");
+      if (!response.ok) return { repairs: [] };
       return response.json();
     },
   });
@@ -206,7 +177,7 @@ export default function Visits() {
 
   const technicians = techniciansData?.technicians || [];
   const qcInspections = qcInspectionsData?.inspections || [];
-  const assignments = assignmentsData?.assignments || [];
+  const repairs = repairsData?.repairs || [];
 
   // Build technician role map
   const techRoleMap = useMemo(() => {
@@ -222,23 +193,42 @@ export default function Visits() {
   const allActivities: ActivityItem[] = useMemo(() => {
     const items: ActivityItem[] = [];
 
-    // Add visits
+    // Add visits (service technician activities)
     visits.forEach(visit => {
       const payload = parsePayload(visit.payload);
+      const role = techRoleMap.get(visit.technicianName || "") || "service";
       items.push({
         id: `visit-${visit.id}`,
-        type: visit.entryType === "repair" ? "repair" : "service_visit",
+        type: "service_visit",
         technicianName: visit.technicianName || "Unknown",
-        technicianRole: techRoleMap.get(visit.technicianName || "") || "service",
+        technicianRole: role,
         propertyName: payload.propertyName || "No property",
-        date: new Date(visit.submittedAt || visit.createdAt),
+        date: new Date(visit.submittedAt || visit.createdAt || new Date()),
         notes: payload.notes || null,
         status: "completed",
         photos: payload.photos || [],
       });
     });
 
-    // Add QC inspections
+    // Add service repairs (repair technician activities)
+    repairs.forEach(repair => {
+      items.push({
+        id: `repair-${repair.id}`,
+        type: "repair",
+        technicianName: repair.technicianName || "Unknown",
+        technicianRole: "repair",
+        propertyName: repair.propertyName || "No property",
+        date: new Date(repair.serviceDate || repair.createdAt),
+        notes: repair.description,
+        status: repair.status,
+        photos: repair.photos || [],
+        referenceNumber: repair.referenceNumber || undefined,
+        commissionRate: repair.commissionRate || undefined,
+        commissionAmount: repair.commissionAmount || undefined,
+      });
+    });
+
+    // Add QC inspections (supervisor activities)
     qcInspections.forEach(insp => {
       items.push({
         id: `qc-${insp.id}`,
@@ -248,32 +238,17 @@ export default function Visits() {
         propertyName: insp.propertyName || "No property",
         date: new Date(insp.dueDate || insp.createdAt),
         notes: insp.notes,
-        status: insp.status === "completed" ? "completed" : insp.status === "in_progress" ? "in_progress" : "pending",
+        status: insp.status,
         photos: insp.photos || [],
         title: insp.title,
       });
     });
 
-    // Add service assignments
-    assignments.forEach(assign => {
-      items.push({
-        id: `assign-${assign.id}`,
-        type: "assignment",
-        technicianName: assign.technicianName || "Unknown",
-        technicianRole: techRoleMap.get(assign.technicianId) || "service",
-        propertyName: assign.propertyName || "No property",
-        date: new Date(assign.scheduledDate),
-        notes: assign.notes,
-        status: assign.status === "completed" ? "completed" : assign.status === "in_progress" ? "in_progress" : "pending",
-        photos: [],
-      });
-    });
-
     // Sort by date descending
     return items.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [visits, qcInspections, assignments, techRoleMap]);
+  }, [visits, qcInspections, repairs, techRoleMap]);
 
-  // Get unique properties and technicians for filters
+  // Get unique properties for filter
   const uniqueProperties = useMemo(() => {
     const props = new Set<string>();
     allActivities.forEach(a => {
@@ -284,14 +259,15 @@ export default function Visits() {
     return Array.from(props).sort();
   }, [allActivities]);
 
-  const uniqueTechs = useMemo(() => {
-    const techs = new Set<string>();
+  // Count activities by team type
+  const teamCounts = useMemo(() => {
+    let service = 0, repair = 0, supervisor = 0;
     allActivities.forEach(a => {
-      if (a.technicianName && a.technicianName !== "Unknown") {
-        techs.add(a.technicianName);
-      }
+      if (a.technicianRole === "service" || a.type === "service_visit") service++;
+      else if (a.technicianRole === "repair" || a.type === "repair") repair++;
+      else if (a.technicianRole === "supervisor" || a.type === "qc_inspection") supervisor++;
     });
-    return Array.from(techs).sort();
+    return { service, repair, supervisor, all: allActivities.length };
   }, [allActivities]);
 
   // Filter activities
@@ -304,14 +280,15 @@ export default function Visits() {
       // Property filter
       if (selectedProperty !== "all" && activity.propertyName !== selectedProperty) return false;
 
-      // Technician filter
-      if (selectedTech !== "all" && activity.technicianName !== selectedTech) return false;
-
       // Type filter
       if (selectedType !== "all" && activity.type !== selectedType) return false;
 
-      // Status filter
-      if (selectedStatus !== "all" && activity.status !== selectedStatus) return false;
+      // Team filter
+      if (teamFilter !== "all") {
+        if (teamFilter === "service" && activity.type !== "service_visit") return false;
+        if (teamFilter === "repair" && activity.type !== "repair") return false;
+        if (teamFilter === "supervisor" && activity.type !== "qc_inspection") return false;
+      }
 
       // Search filter
       if (searchTerm) {
@@ -319,14 +296,48 @@ export default function Visits() {
         const matchesProperty = activity.propertyName.toLowerCase().includes(search);
         const matchesTech = activity.technicianName.toLowerCase().includes(search);
         const matchesNotes = activity.notes?.toLowerCase().includes(search) || false;
-        if (!matchesProperty && !matchesTech && !matchesNotes) return false;
+        const matchesRef = activity.referenceNumber?.toLowerCase().includes(search) || false;
+        if (!matchesProperty && !matchesTech && !matchesNotes && !matchesRef) return false;
       }
 
       return true;
     });
-  }, [allActivities, dateRange, selectedProperty, selectedTech, selectedType, selectedStatus, searchTerm]);
+  }, [allActivities, dateRange, selectedProperty, selectedType, teamFilter, searchTerm]);
 
-  const isLoading = visitsLoading || qcLoading || assignmentsLoading;
+  // Group activities by property
+  const propertyGroups: PropertyGroup[] = useMemo(() => {
+    const groups = new Map<string, ActivityItem[]>();
+    
+    filteredActivities.forEach(activity => {
+      const key = activity.propertyName;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(activity);
+    });
+
+    return Array.from(groups.entries())
+      .map(([propertyName, activities]) => {
+        // Build activity summary
+        const visits = activities.filter(a => a.type === "service_visit").length;
+        const repairs = activities.filter(a => a.type === "repair").length;
+        const inspections = activities.filter(a => a.type === "qc_inspection").length;
+        
+        const parts: string[] = [];
+        if (visits > 0) parts.push(`${visits} visit${visits !== 1 ? 's' : ''}`);
+        if (repairs > 0) parts.push(`${repairs} repair${repairs !== 1 ? 's' : ''}`);
+        if (inspections > 0) parts.push(`${inspections} inspection${inspections !== 1 ? 's' : ''}`);
+        
+        return {
+          propertyName,
+          activities: activities.sort((a, b) => b.date.getTime() - a.date.getTime()),
+          activitySummary: parts.join(', ') || 'No activities',
+        };
+      })
+      .sort((a, b) => a.propertyName.localeCompare(b.propertyName));
+  }, [filteredActivities]);
+
+  const isLoading = visitsLoading || qcLoading || repairsLoading;
 
   const openImageViewer = (images: string[], startIndex: number = 0) => {
     setSelectedImages(images);
@@ -334,22 +345,24 @@ export default function Visits() {
     setImageDialogOpen(true);
   };
 
-  const getRoleBadge = (role: string) => {
-    const roleConfig: Record<string, { label: string; color: string }> = {
-      service: { label: "Service Tech", color: "bg-[#0077b6]/10 text-[#0077b6]" },
-      repair: { label: "Repair Tech", color: "bg-[#f97316]/10 text-[#f97316]" },
-      supervisor: { label: "Supervisor", color: "bg-[#8b5cf6]/10 text-[#8b5cf6]" },
-      foreman: { label: "Foreman", color: "bg-[#8b5cf6]/10 text-[#8b5cf6]" },
-    };
-    const config = roleConfig[role] || roleConfig.service;
-    return <Badge className={cn("text-[10px] font-medium", config.color)}>{config.label}</Badge>;
+  const getActivityTypeStyle = (type: string) => {
+    switch (type) {
+      case "service_visit":
+        return { color: "text-[#0077b6]", label: "Service Visit" };
+      case "repair":
+        return { color: "text-[#f97316]", label: "Repair" };
+      case "qc_inspection":
+        return { color: "text-[#14b8a6]", label: "QC Inspection" };
+      default:
+        return { color: "text-slate-600", label: "Activity" };
+    }
   };
 
   return (
     <AppLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-4">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#0077b6] to-[#00a8e8] flex items-center justify-center shadow-lg">
               <Activity className="w-7 h-7 text-white" />
@@ -365,9 +378,69 @@ export default function Visits() {
           </div>
         </div>
 
+        {/* Team Filter Tabs */}
+        <div className="flex items-center gap-2 pb-2">
+          <Button
+            variant={teamFilter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("all")}
+            className={cn(
+              "rounded-full px-4",
+              teamFilter === "all" 
+                ? "bg-[#0077b6] hover:bg-[#005f8f] text-white" 
+                : "bg-white hover:bg-slate-100"
+            )}
+            data-testid="filter-team-all"
+          >
+            All ({teamCounts.all})
+          </Button>
+          <Button
+            variant={teamFilter === "service" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("service")}
+            className={cn(
+              "rounded-full px-4",
+              teamFilter === "service" 
+                ? "bg-[#0077b6] hover:bg-[#005f8f] text-white" 
+                : "bg-white hover:bg-slate-100"
+            )}
+            data-testid="filter-team-service"
+          >
+            Service Technicians ({teamCounts.service})
+          </Button>
+          <Button
+            variant={teamFilter === "repair" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("repair")}
+            className={cn(
+              "rounded-full px-4",
+              teamFilter === "repair" 
+                ? "bg-[#0077b6] hover:bg-[#005f8f] text-white" 
+                : "bg-white hover:bg-slate-100"
+            )}
+            data-testid="filter-team-repair"
+          >
+            Repair Technicians ({teamCounts.repair})
+          </Button>
+          <Button
+            variant={teamFilter === "supervisor" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setTeamFilter("supervisor")}
+            className={cn(
+              "rounded-full px-4",
+              teamFilter === "supervisor" 
+                ? "bg-[#0077b6] hover:bg-[#005f8f] text-white" 
+                : "bg-white hover:bg-slate-100"
+            )}
+            data-testid="filter-team-supervisor"
+          >
+            Supervisors ({teamCounts.supervisor})
+          </Button>
+        </div>
+
         {/* Filter Bar */}
         <Card className="shadow-sm">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center gap-3 flex-wrap">
               {/* Date Range */}
               <Popover>
@@ -405,20 +478,6 @@ export default function Visits() {
                 </SelectContent>
               </Select>
 
-              {/* Technician Filter */}
-              <Select value={selectedTech} onValueChange={setSelectedTech}>
-                <SelectTrigger className="w-[180px] h-9" data-testid="filter-technician">
-                  <User className="w-4 h-4 mr-2 text-slate-400" />
-                  <SelectValue placeholder="All Technicians" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Technicians</SelectItem>
-                  {uniqueTechs.map(t => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               {/* Type Filter */}
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="w-[160px] h-9" data-testid="filter-type">
@@ -430,20 +489,6 @@ export default function Visits() {
                   <SelectItem value="service_visit">Service Visits</SelectItem>
                   <SelectItem value="repair">Repairs</SelectItem>
                   <SelectItem value="qc_inspection">QC Inspections</SelectItem>
-                  <SelectItem value="assignment">Assignments</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Status Filter */}
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[150px] h-9" data-testid="filter-status">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -462,105 +507,98 @@ export default function Visits() {
           </CardContent>
         </Card>
 
-        {/* Activity List */}
-        <Card className="shadow-sm">
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0077b6]" />
-              </div>
-            ) : filteredActivities.length === 0 ? (
-              <div className="text-center py-16 text-slate-500">
-                <Activity className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                <p className="text-lg font-medium">No activities found</p>
-                <p className="text-sm mt-1">Try adjusting your filters or check back later</p>
-              </div>
-            ) : (
-              <ScrollArea className="max-h-[calc(100vh-320px)]">
-                <div className="divide-y divide-slate-100">
-                  {filteredActivities.map((activity) => {
-                    const typeConfig = activityTypeConfig[activity.type];
-                    const TypeIcon = typeConfig.icon;
-                    const statusCfg = statusConfig[activity.status] || statusConfig.pending;
-
-                    return (
-                      <div
-                        key={activity.id}
-                        className="p-4 hover:bg-slate-50 transition-colors"
-                        data-testid={`activity-${activity.id}`}
-                      >
-                        <div className="flex items-start gap-4">
-                          {/* Type Icon */}
-                          <div className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border-2",
-                            typeConfig.bgColor,
-                            typeConfig.borderColor
-                          )}>
-                            <TypeIcon className={cn("w-6 h-6", typeConfig.textColor)} />
-                          </div>
+        {/* Activity List - Grouped by Property */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-[#0077b6]" />
+          </div>
+        ) : propertyGroups.length === 0 ? (
+          <Card className="shadow-sm">
+            <CardContent className="py-16 text-center text-slate-500">
+              <Activity className="w-16 h-16 mx-auto mb-4 opacity-20" />
+              <p className="text-lg font-medium">No activities found</p>
+              <p className="text-sm mt-1">Try adjusting your filters or check back later</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ScrollArea className="h-[calc(100vh-340px)]">
+            <div className="space-y-4">
+              {propertyGroups.map((group) => (
+                <Card key={group.propertyName} className="shadow-sm overflow-hidden">
+                  {/* Property Header */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-white border-l-4 border-[#f59e0b]">
+                    <Building2 className="w-5 h-5 text-[#f59e0b]" />
+                    <span className="font-semibold text-[#1E293B]">{group.propertyName}</span>
+                    <span className="text-sm text-slate-500">({group.activitySummary})</span>
+                  </div>
+                  
+                  {/* Activities List */}
+                  <div className="divide-y divide-slate-100">
+                    {group.activities.map((activity) => {
+                      const typeStyle = getActivityTypeStyle(activity.type);
+                      
+                      return (
+                        <div
+                          key={activity.id}
+                          className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+                          data-testid={`activity-${activity.id}`}
+                        >
+                          {/* Circle indicator */}
+                          <Circle className={cn("w-3 h-3 mt-1.5 shrink-0", typeStyle.color)} />
                           
-                          {/* Main Content */}
+                          {/* Main content */}
                           <div className="flex-1 min-w-0">
-                            {/* Type Label & Status */}
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <span className={cn("text-sm font-semibold", typeConfig.textColor)}>
-                                {activity.title || typeConfig.label}
-                              </span>
-                              <Badge className={cn("text-[10px]", statusCfg.bgColor, statusCfg.textColor)}>
-                                {statusCfg.label}
-                              </Badge>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                {/* Description */}
+                                <p className="text-sm text-slate-800 leading-snug">
+                                  {activity.title || activity.notes || typeStyle.label}
+                                </p>
+                                
+                                {/* Meta info */}
+                                <div className="flex items-center gap-4 mt-1.5 text-xs text-slate-500 flex-wrap">
+                                  <span className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    {activity.technicianName}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <CalendarIcon className="w-3 h-3" />
+                                    {formatDateShort(activity.date)}
+                                  </span>
+                                  {activity.commissionRate && activity.commissionAmount && (
+                                    <span className="text-[#22c55e] font-medium">
+                                      💰 {activity.commissionRate}% (${parseFloat(activity.commissionAmount).toFixed(2)})
+                                    </span>
+                                  )}
+                                  {activity.photos.length > 0 && (
+                                    <button
+                                      onClick={() => openImageViewer(activity.photos, 0)}
+                                      className="flex items-center gap-1 text-[#0077b6] hover:text-[#005f8f]"
+                                    >
+                                      <Camera className="w-3 h-3" />
+                                      {activity.photos.length}
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Reference number */}
+                              {activity.referenceNumber && (
+                                <span className="text-xs font-medium text-[#0077b6] shrink-0">
+                                  {activity.referenceNumber}
+                                </span>
+                              )}
                             </div>
-
-                            {/* Technician & Role */}
-                            <div className="flex items-center gap-2 mb-1.5">
-                              <User className="w-3.5 h-3.5 text-slate-400" />
-                              <span className="text-sm font-medium text-slate-700">{activity.technicianName}</span>
-                              {getRoleBadge(activity.technicianRole)}
-                            </div>
-
-                            {/* Property & Date */}
-                            <div className="flex items-center gap-4 text-sm text-slate-500 mb-2">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="w-3.5 h-3.5" />
-                                {activity.propertyName}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                {formatDateTime(activity.date)}
-                              </span>
-                            </div>
-
-                            {/* Notes */}
-                            {activity.notes && (
-                              <p className="text-sm text-slate-600 line-clamp-2">{activity.notes}</p>
-                            )}
-                          </div>
-
-                          {/* Right Side - Photos & Actions */}
-                          <div className="flex items-center gap-3 shrink-0">
-                            {activity.photos.length > 0 && (
-                              <button
-                                onClick={() => openImageViewer(activity.photos, 0)}
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                              >
-                                <ImageIcon className="w-4 h-4 text-slate-500" />
-                                <span className="text-xs font-medium text-slate-600">{activity.photos.length}</span>
-                              </button>
-                            )}
-                            <Button variant="ghost" size="sm" className="text-[#0077b6] hover:text-[#005f8f]">
-                              View Details
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            )}
-          </CardContent>
-        </Card>
+                      );
+                    })}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
       </div>
 
       {/* Image Viewer Dialog */}
