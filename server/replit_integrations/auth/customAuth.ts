@@ -71,7 +71,13 @@ export function registerCustomAuthRoutes(app: Express): void {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      console.log("[LOGIN] Password received:", JSON.stringify(password), "length:", password?.length);
       console.log("[LOGIN] Password hash:", user.password?.substring(0, 20), "length:", user.password?.length);
+      
+      // Test with direct comparison
+      const testResult = await bcrypt.compare("admin123", user.password);
+      console.log("[LOGIN] Test with hardcoded password:", testResult);
+      
       const isValidPassword = await bcrypt.compare(password, user.password);
       console.log("[LOGIN] Password valid:", isValidPassword);
       if (!isValidPassword) {
