@@ -957,42 +957,6 @@ export default function Calendar() {
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <Card className="shadow-sm border border-[#e5e7eb] rounded-xl bg-white">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#0077b6]/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#0077b6]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#0F172A]">{stats.activeTechs}</p>
-                  <p className="text-sm text-[#64748B]">Active Techs</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border border-[#e5e7eb] rounded-xl bg-white">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#22c55e]/10 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-[#22c55e]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#0F172A]">{stats.totalStops}</p>
-                  <p className="text-sm text-[#64748B]">Total Stops This Week</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm border border-[#e5e7eb] rounded-xl bg-white">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#f97316]/10 flex items-center justify-center">
-                  <RefreshCw className="w-5 h-5 text-[#f97316]" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#0F172A]">{stats.activeCoverages}</p>
-                  <p className="text-sm text-[#64748B]">Active Coverages</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
           {/* Coverage Activity Section */}
           <Card className="shadow-sm mb-4" data-testid="card-coverage-activity">
             <CardContent className="p-4">
