@@ -192,35 +192,36 @@ function FlyoutPanel({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="px-4 py-2 border-b border-slate-100">
-        <h3 className="font-semibold text-slate-900 text-sm">{item.label}</h3>
-      </div>
-      
       {hasChildren ? (
-        <div className="py-1">
-          {item.children!.map((child) => {
-            const isChildActive = location === child.href;
-            return (
-              <Link
-                key={child.href}
-                href={child.href}
-                className={cn(
-                  "block px-4 py-2 text-sm transition-colors",
-                  isChildActive 
-                    ? "bg-blue-50 text-blue-700 font-medium" 
-                    : "text-slate-700 hover:bg-slate-50"
-                )}
-              >
-                {child.label}
-              </Link>
-            );
-          })}
-        </div>
+        <>
+          <div className="px-4 py-2 border-b border-slate-100">
+            <h3 className="font-semibold text-[#f97316] text-sm">{item.label}</h3>
+          </div>
+          <div className="py-1">
+            {item.children!.map((child) => {
+              const isChildActive = location === child.href;
+              return (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    "block px-4 py-2 text-sm transition-colors",
+                    isChildActive 
+                      ? "bg-blue-50 text-blue-700 font-medium" 
+                      : "text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  {child.label}
+                </Link>
+              );
+            })}
+          </div>
+        </>
       ) : (
-        <div className="px-4 py-2">
+        <div className="px-4 py-3">
           <Link 
             href={item.href || "/"}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-[#f97316] hover:text-[#ea580c] font-semibold"
           >
             Go to {item.label}
           </Link>
