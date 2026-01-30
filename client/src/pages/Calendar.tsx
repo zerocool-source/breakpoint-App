@@ -2769,7 +2769,11 @@ export default function Calendar() {
             
             {/* Job List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {unassignedEstimates.map((estimate) => (
+              {[...unassignedEstimates].sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateA - dateB; // Oldest first
+              }).map((estimate) => (
                 <div
                   key={estimate.id}
                   className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden"
