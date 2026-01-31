@@ -51,8 +51,9 @@ async function gatherDashboardContext(): Promise<string> {
       alerts,
       emergencies,
       customers,
-      windyDayEntries,
-      reportIssues,
+      techOpsEntries,
+      adminActionPatterns,
+      learningInsights,
     ] = await Promise.all([
       storage.getEstimates().catch(() => []),
       storage.getServiceRepairJobs().catch(() => []),
@@ -60,8 +61,9 @@ async function gatherDashboardContext(): Promise<string> {
       storage.getAlerts().catch(() => []),
       storage.getEmergencies().catch(() => []),
       storage.getCustomers().catch(() => []),
-      Promise.resolve([]), // windyDayEntries placeholder
-      Promise.resolve([]), // reportIssues placeholder
+      storage.getTechOpsEntries({}).catch(() => []),
+      storage.getRecentAdminActionPatterns(50).catch(() => ({ patterns: [], recentActions: [] })),
+      storage.getAiLearningInsights().catch(() => []),
     ]);
 
     const draftEstimates = estimates.filter((e: any) => e.status === "draft");
@@ -103,9 +105,21 @@ async function gatherDashboardContext(): Promise<string> {
       .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, 10);
 
-    const pendingReportIssues = Array.isArray(reportIssues) 
-      ? reportIssues.filter((i: any) => i.status === "pending" || i.status === "open")
-      : [];
+    // Parse Tech Ops entries by type
+    const techOpsArray = Array.isArray(techOpsEntries) ? techOpsEntries : [];
+    const repairsNeeded = techOpsArray.filter((e: any) => e.entryType === "service_repairs" && (e.status === "pending" || e.status === "open"));
+    const chemicalOrders = techOpsArray.filter((e: any) => e.entryType === "chemical_order");
+    const pendingChemicalOrders = chemicalOrders.filter((e: any) => e.status === "pending");
+    const windyDayCleanups = techOpsArray.filter((e: any) => e.entryType === "windy_day_cleanup");
+    const reportIssues = techOpsArray.filter((e: any) => e.entryType === "report_issue");
+    const pendingReportIssues = reportIssues.filter((e: any) => e.status === "pending" || e.status === "open");
+    const chemicalsDroppedOff = techOpsArray.filter((e: any) => e.entryType === "chemicals_dropped_off");
+    const chemicalAlerts = techOpsArray.filter((e: any) => e.entryType === "chemical_alert");
+    
+    // Sort all tech ops entries by date for recent feed
+    const recentTechOps = techOpsArray
+      .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 15);
 
     let context = `
 ---
@@ -145,12 +159,14 @@ async function gatherDashboardContext(): Promise<string> {
 ### CUSTOMERS:
 - Total Properties: ${customers.length}
 
-### REPORT ISSUES:
-- Pending Issues: ${pendingReportIssues.length}
-- Total Issues: ${Array.isArray(reportIssues) ? reportIssues.length : 0}
-
-### WINDY DAY CLEANUPS:
-- Total Entries: ${Array.isArray(windyDayEntries) ? windyDayEntries.length : 0}
+### TECH OPS SUBMISSIONS FEED (Field Technician Submissions):
+- Repairs Needed: ${repairsNeeded.length} (pending/open)
+- Chemical Orders: ${chemicalOrders.length} (${pendingChemicalOrders.length} pending)
+- Chemicals Dropped Off: ${chemicalsDroppedOff.length}
+- Chemical Alerts: ${chemicalAlerts.length}
+- Report Issues: ${reportIssues.length} (${pendingReportIssues.length} pending)
+- Windy Day Clean Ups: ${windyDayCleanups.length}
+- TOTAL SUBMISSIONS: ${techOpsArray.length}
 `;
 
     if (openEmergencies.length > 0) {
@@ -195,7 +211,40 @@ async function gatherDashboardContext(): Promise<string> {
       });
     }
 
-    context += `\n---\nUse this data to answer questions about what's happening in the business. Be specific with numbers and details when relevant.`;
+    // Add Recent Tech Ops Submissions Feed
+    if (recentTechOps.length > 0) {
+      context += `\n### RECENT TECH OPS SUBMISSIONS (Submissions Feed):\n`;
+      recentTechOps.forEach((e: any, i: number) => {
+        const typeLabel = e.entryType?.replace(/_/g, ' ')?.toUpperCase() || "UNKNOWN";
+        const priorityLabel = e.priority === "urgent" ? " [URGENT]" : "";
+        const property = e.propertyName || e.propertyId || "Unknown Property";
+        const tech = e.technicianName || "Unknown Tech";
+        const status = e.status || "pending";
+        const date = e.createdAt ? new Date(e.createdAt).toLocaleDateString() : "";
+        context += `${i + 1}. [${typeLabel}]${priorityLabel} ${property} - ${tech} - Status: ${status} - ${date}\n`;
+        if (e.description) {
+          context += `   Description: ${e.description.substring(0, 100)}${e.description.length > 100 ? "..." : ""}\n`;
+        }
+      });
+    }
+
+    // Add Admin Action Patterns (Learning)
+    if (adminActionPatterns.patterns && adminActionPatterns.patterns.length > 0) {
+      context += `\n### LEARNED ADMIN PATTERNS (from your actions):\n`;
+      adminActionPatterns.patterns.slice(0, 5).forEach((p: any, i: number) => {
+        context += `${i + 1}. ${p.actionType}: performed ${p.count} times\n`;
+      });
+    }
+
+    // Add AI Learning Insights
+    if (Array.isArray(learningInsights) && learningInsights.length > 0) {
+      context += `\n### AI LEARNING INSIGHTS:\n`;
+      learningInsights.slice(0, 5).forEach((insight: any, i: number) => {
+        context += `${i + 1}. [${insight.category}] ${insight.description} (confidence: ${Math.round((insight.confidence || 0) * 100)}%)\n`;
+      });
+    }
+
+    context += `\n---\nUse this data to answer questions about what's happening in the business. Be specific with numbers and details when relevant. You learn from admin user actions to provide better recommendations.`;
 
     return context;
   } catch (error) {

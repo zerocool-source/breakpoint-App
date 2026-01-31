@@ -49,6 +49,8 @@ import {
   type SupervisorActivity, type InsertSupervisorActivity,
   type ChemicalVendor, type InsertChemicalVendor,
   type InvoiceTemplate, type InsertInvoiceTemplate,
+  type AdminAction, type InsertAdminAction,
+  type AiLearningInsight, type InsertAiLearningInsight,
   settings, alerts, workflows, technicians, technicianNotes, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -58,7 +60,8 @@ import {
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
   customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity,
-  chemicalVendors, invoiceTemplates, smsMessages, InsertSmsMessage, SmsMessage
+  chemicalVendors, invoiceTemplates, smsMessages, InsertSmsMessage, SmsMessage,
+  adminActions, aiLearningInsights
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte, sql } from "drizzle-orm";
@@ -3187,6 +3190,101 @@ export class DbStorage implements IStorage {
       .set(updates as any)
       .where(eq(smsMessages.id, id))
       .returning();
+    return result[0];
+  }
+
+  // AI Learning - Admin Actions
+  async getAdminActions(filters?: { 
+    userId?: string; 
+    actionCategory?: string; 
+    limit?: number;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<AdminAction[]> {
+    let query = db.select().from(adminActions).orderBy(desc(adminActions.createdAt));
+    
+    const conditions: any[] = [];
+    if (filters?.userId) {
+      conditions.push(eq(adminActions.userId, filters.userId));
+    }
+    if (filters?.actionCategory) {
+      conditions.push(eq(adminActions.actionCategory, filters.actionCategory));
+    }
+    if (filters?.startDate) {
+      conditions.push(gte(adminActions.createdAt, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(adminActions.createdAt, filters.endDate));
+    }
+    
+    if (conditions.length > 0) {
+      query = db.select().from(adminActions)
+        .where(and(...conditions))
+        .orderBy(desc(adminActions.createdAt));
+    }
+    
+    const results = await query;
+    return filters?.limit ? results.slice(0, filters.limit) : results;
+  }
+
+  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
+    const result = await db.insert(adminActions).values(action as any).returning();
+    return result[0];
+  }
+
+  async getRecentAdminActionPatterns(limit: number = 50): Promise<{
+    patterns: { actionType: string; count: number }[];
+    recentActions: AdminAction[];
+  }> {
+    const recent = await db.select().from(adminActions)
+      .orderBy(desc(adminActions.createdAt))
+      .limit(limit);
+    
+    const patternCounts: Record<string, number> = {};
+    recent.forEach(a => {
+      patternCounts[a.actionType] = (patternCounts[a.actionType] || 0) + 1;
+    });
+    
+    const patterns = Object.entries(patternCounts)
+      .map(([actionType, count]) => ({ actionType, count }))
+      .sort((a, b) => b.count - a.count);
+    
+    return { patterns, recentActions: recent };
+  }
+
+  // AI Learning Insights
+  async getAiLearningInsights(category?: string): Promise<AiLearningInsight[]> {
+    if (category) {
+      return db.select().from(aiLearningInsights)
+        .where(eq(aiLearningInsights.category, category))
+        .orderBy(desc(aiLearningInsights.confidence));
+    }
+    return db.select().from(aiLearningInsights).orderBy(desc(aiLearningInsights.confidence));
+  }
+
+  async upsertAiLearningInsight(insight: InsertAiLearningInsight): Promise<AiLearningInsight> {
+    const existing = await db.select().from(aiLearningInsights)
+      .where(and(
+        eq(aiLearningInsights.insightType, insight.insightType),
+        eq(aiLearningInsights.category, insight.category),
+        eq(aiLearningInsights.description, insight.description)
+      ))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      const updated = await db.update(aiLearningInsights)
+        .set({
+          occurrences: (existing[0].occurrences || 0) + 1,
+          confidence: Math.min((existing[0].confidence || 0) + 0.1, 1.0),
+          lastObserved: new Date(),
+          updatedAt: new Date(),
+        } as any)
+        .where(eq(aiLearningInsights.id, existing[0].id))
+        .returning();
+      return updated[0];
+    }
+    
+    const result = await db.insert(aiLearningInsights).values(insight as any).returning();
     return result[0];
   }
 }

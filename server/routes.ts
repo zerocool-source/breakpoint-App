@@ -32,6 +32,7 @@ import { registerSmsRoutes } from "./routes/sms";
 import { registerPoolBrainRoutes } from "./routes/poolbrain";
 import { registerAiInsightsRoutes } from "./routes/aiInsights";
 import { registerApiV2Routes } from "./routes/apiv2";
+import { registerAiLearningRoutes } from "./routes/aiLearning";
 import adminUsersRouter from "./routes/adminUsers";
 
 export async function registerRoutes(app: any) {
@@ -75,5 +76,6 @@ function setupRoutes(app: any) {
   registerPoolBrainRoutes(app);
   registerAiInsightsRoutes(app);
   registerApiV2Routes(app);
+  registerAiLearningRoutes(app);
   app.use(adminUsersRouter);
 }

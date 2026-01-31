@@ -1958,3 +1958,49 @@ export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
 
 export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
 export type SmsMessage = typeof smsMessages.$inferSelect;
+
+// AI Learning - Admin Actions tracking for self-learning AI
+export const adminActions = pgTable("admin_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Admin user who performed the action
+  actionType: text("action_type").notNull(), // "estimate_approved", "technician_assigned", "emergency_resolved", etc.
+  actionCategory: text("action_category").notNull(), // "estimates", "technicians", "emergencies", "service_repairs", etc.
+  entityId: varchar("entity_id"), // ID of the entity acted upon
+  entityType: text("entity_type"), // Type of entity: "estimate", "technician", "customer", etc.
+  actionDetails: json("action_details"), // JSON with full context of the action
+  previousState: json("previous_state"), // State before action (for learning patterns)
+  newState: json("new_state"), // State after action
+  metadata: json("metadata"), // Additional context like time of day, day of week, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAdminActionSchema = createInsertSchema(adminActions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAdminAction = z.infer<typeof insertAdminActionSchema>;
+export type AdminAction = typeof adminActions.$inferSelect;
+
+// AI Learning Insights - Patterns and insights learned from admin actions
+export const aiLearningInsights = pgTable("ai_learning_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  insightType: text("insight_type").notNull(), // "pattern", "preference", "workflow", "decision_rule"
+  category: text("category").notNull(), // "scheduling", "estimates", "emergencies", etc.
+  description: text("description").notNull(), // Human-readable description of the insight
+  pattern: json("pattern"), // JSON pattern data
+  confidence: real("confidence").default(0), // Confidence level 0-1
+  occurrences: integer("occurrences").default(1), // How many times this pattern was observed
+  lastObserved: timestamp("last_observed").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAiLearningInsightSchema = createInsertSchema(aiLearningInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiLearningInsight = z.infer<typeof insertAiLearningInsightSchema>;
+export type AiLearningInsight = typeof aiLearningInsights.$inferSelect;
