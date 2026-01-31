@@ -64,24 +64,10 @@ export default function Chat() {
       setIsSubmitting(false);
     },
     onError: (error: any) => {
-      const errorCode = error.errorCode || "";
-      let errorTitle = "Connection Error";
-      let errorDescription = error.message;
-      
-      if (errorCode === "PROXY_OFFLINE") {
-        errorTitle = "Proxy Offline";
-        errorDescription = "Start ace-breakpoint-app on your Mac to chat with Ace.";
-      } else if (errorCode === "NOT_CONFIGURED") {
-        errorTitle = "Configuration Error";
-        errorDescription = "ACE_APP_URL needs to be configured in environment variables.";
-      } else if (errorCode === "OLLAMA_ERROR") {
-        errorTitle = "Ollama Error";
-        errorDescription = "Check if Ollama is running on your Mac.";
-      }
       
       toast({
-        title: errorTitle,
-        description: errorDescription,
+        title: "Error",
+        description: error.message || "Failed to send message",
         variant: "destructive",
       });
       setIsSubmitting(false);
@@ -276,7 +262,7 @@ export default function Chat() {
         {/* Connection Status */}
         <div className="mt-4 text-center">
           <p className="text-xs text-[#0D9488]/50" style={{ fontFamily: "Rajdhani, sans-serif" }}>
-            Connected to local Ace model via ace-breakpoint-app
+            Powered by AI • Pool operations, estimates, and customer communications
           </p>
         </div>
       </div>
