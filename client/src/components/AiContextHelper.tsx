@@ -1,33 +1,12 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Brain, Sparkles, X, HelpCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface ContextInfo {
   title: string;
   description: string;
   tips?: string[];
   category?: string;
-}
-
-interface AiContextHelperContextType {
-  setContext: (context: ContextInfo | null) => void;
-  isVisible: boolean;
-  toggleVisibility: () => void;
-}
-
-const AiContextHelperContext = createContext<AiContextHelperContextType | null>(null);
-
-export function useAiContextHelper() {
-  const context = useContext(AiContextHelperContext);
-  if (!context) {
-    return {
-      setContext: () => {},
-      isVisible: false,
-      toggleVisibility: () => {},
-    };
-  }
-  return context;
 }
 
 const defaultContexts: Record<string, ContextInfo> = {
@@ -122,40 +101,23 @@ const defaultContexts: Record<string, ContextInfo> = {
     category: "Priority"
   },
   "default": {
-    title: "Ace AI Assistant",
-    description: "I'm here to help you understand your pool service operations. Hover over or click any dashboard element to get detailed explanations and helpful tips.",
+    title: "Ace Context Helper",
+    description: "Hover over or click any dashboard card to get detailed explanations and helpful tips about that section.",
     tips: [
       "Hover over cards for context",
       "Click elements for detailed info",
-      "I update insights every minute"
+      "Tips help you work more efficiently"
     ],
     category: "Help"
   }
 };
 
-export function AiContextHelperProvider({ children }: { children: React.ReactNode }) {
-  const [currentContext, setCurrentContext] = useState<ContextInfo | null>(null);
-  const [isVisible, setIsVisible] = useState(true);
-
-  return (
-    <AiContextHelperContext.Provider 
-      value={{ 
-        setContext: setCurrentContext, 
-        isVisible,
-        toggleVisibility: () => setIsVisible(!isVisible)
-      }}
-    >
-      {children}
-    </AiContextHelperContext.Provider>
-  );
-}
-
 export function AiContextHelper() {
   const [currentContext, setCurrentContext] = useState<ContextInfo>(defaultContexts.default);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [lastHoveredId, setLastHoveredId] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(true);
 
-  const getContextForTestId = (testId: string): ContextInfo | null => {
+  const getContextForTestId = useCallback((testId: string): ContextInfo | null => {
     if (testId.includes('pending-approval')) return defaultContexts["pending-approvals"];
     if (testId.includes('needs-scheduling')) return defaultContexts["needs-scheduling"];
     if (testId.includes('ready-to-invoice')) return defaultContexts["ready-to-invoice"];
@@ -201,18 +163,26 @@ export function AiContextHelper() {
       tips: ["Optimize routes for efficiency", "Consider travel time", "Leave buffer for emergencies"],
       category: "Operations"
     };
+    if (testId.includes('card-')) return {
+      title: "Dashboard Card",
+      description: "This card shows key metrics for your pool service operations. Click to see more details.",
+      tips: ["Cards update in real-time", "Click for detailed view", "Watch trends over time"],
+      category: "Dashboard"
+    };
     return null;
-  };
+  }, []);
 
   useEffect(() => {
-    const handleInteraction = (e: MouseEvent, isClick: boolean) => {
+    let lastTestId: string | null = null;
+
+    const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const card = target.closest('[data-testid]');
       
       if (card) {
         const testId = card.getAttribute('data-testid');
-        if (testId && (testId !== lastHoveredId || isClick)) {
-          setLastHoveredId(testId);
+        if (testId && testId !== lastTestId) {
+          lastTestId = testId;
           const context = getContextForTestId(testId);
           if (context) {
             setCurrentContext(context);
@@ -221,97 +191,111 @@ export function AiContextHelper() {
       }
     };
 
-    const handleMouseOver = (e: MouseEvent) => handleInteraction(e, false);
-    const handleClick = (e: MouseEvent) => handleInteraction(e, true);
-
     const handleMouseOut = (e: MouseEvent) => {
       const relatedTarget = e.relatedTarget as HTMLElement;
-      if (!relatedTarget?.closest('[data-testid]')) {
-        setLastHoveredId(null);
+      if (!relatedTarget || !relatedTarget.closest('[data-testid]')) {
+        lastTestId = null;
         setCurrentContext(defaultContexts.default);
       }
     };
 
-    document.addEventListener('mouseover', handleMouseOver);
-    document.addEventListener('mouseout', handleMouseOut);
-    document.addEventListener('click', handleClick);
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const card = target.closest('[data-testid]');
+      
+      if (card) {
+        const testId = card.getAttribute('data-testid');
+        if (testId) {
+          const context = getContextForTestId(testId);
+          if (context) {
+            setCurrentContext(context);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('mouseover', handleMouseOver, true);
+    document.addEventListener('mouseout', handleMouseOut, true);
+    document.addEventListener('click', handleClick, true);
 
     return () => {
-      document.removeEventListener('mouseover', handleMouseOver);
-      document.removeEventListener('mouseout', handleMouseOut);
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener('mouseover', handleMouseOver, true);
+      document.removeEventListener('mouseout', handleMouseOut, true);
+      document.removeEventListener('click', handleClick, true);
     };
-  }, [lastHoveredId]);
+  }, [getContextForTestId]);
 
-  if (isMinimized) {
+  if (!isVisible) {
     return (
-      <Button
-        onClick={() => setIsMinimized(false)}
-        className="fixed bottom-24 right-4 z-40 rounded-full w-12 h-12 bg-gradient-to-r from-[#0078D4] to-[#60A5FA] shadow-lg hover:shadow-xl transition-all"
-        data-testid="ai-context-helper-toggle"
+      <button
+        onClick={() => setIsVisible(true)}
+        className="fixed top-[200px] right-4 z-40 w-10 h-10 rounded-full bg-[#F97316] shadow-lg hover:bg-[#F97316]/90 transition-all flex items-center justify-center"
+        data-testid="ai-context-helper-show"
       >
-        <HelpCircle className="w-6 h-6 text-white" />
-      </Button>
+        <HelpCircle className="w-5 h-5 text-white" />
+      </button>
     );
   }
 
   return (
     <Card 
-      className="fixed bottom-24 right-4 w-80 z-40 shadow-xl border-[#0078D4]/20 bg-white/95 backdrop-blur-sm"
+      className="fixed top-[200px] right-4 w-72 z-40 shadow-lg border-[#F97316]/20 bg-white overflow-hidden"
       data-testid="ai-context-helper"
     >
-      <CardHeader className="pb-2 pt-3 px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-gradient-to-r from-[#0078D4] to-[#60A5FA]">
-              <Brain className="w-4 h-4 text-white" />
-            </div>
-            <CardTitle className="text-sm font-semibold text-[#1E293B]">
+      <CardHeader className="pb-0 pt-0 px-0">
+        <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-[#F97316] to-[#FB923C]">
+          <div 
+            className="flex items-center gap-2 cursor-pointer flex-1"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            <HelpCircle className="w-4 h-4 text-white" />
+            <CardTitle className="text-xs font-semibold text-white">
               {currentContext.title}
             </CardTitle>
           </div>
           <div className="flex items-center gap-1">
             {currentContext.category && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#0078D4]/10 text-[#0078D4]">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/20 text-white">
                 {currentContext.category}
               </span>
             )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-6 w-6 p-0"
-              onClick={() => setIsMinimized(true)}
+            <button 
+              className="w-6 h-6 text-white/80 hover:text-white hover:bg-white/10 rounded flex items-center justify-center"
+              onClick={() => setIsVisible(false)}
             >
-              <X className="w-3 h-3 text-[#64748B]" />
-            </Button>
+              <X className="w-3 h-3" />
+            </button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-4 pt-0">
-        <p className="text-xs text-[#64748B] leading-relaxed mb-3">
-          {currentContext.description}
-        </p>
-        
-        {currentContext.tips && currentContext.tips.length > 0 && (
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-[#0078D4] uppercase tracking-wide">
-              <Sparkles className="w-3 h-3" />
-              Quick Tips
+      
+      {isExpanded && (
+        <CardContent className="px-3 pb-3 pt-2">
+          <p className="text-xs text-[#64748B] leading-relaxed mb-2">
+            {currentContext.description}
+          </p>
+          
+          {currentContext.tips && currentContext.tips.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-[9px] font-medium text-[#F97316] uppercase tracking-wide">
+                <Sparkles className="w-2.5 h-2.5" />
+                Quick Tips
+              </div>
+              <ul className="space-y-0.5">
+                {currentContext.tips.map((tip, index) => (
+                  <li 
+                    key={index}
+                    className="text-[10px] text-[#475569] flex items-start gap-1.5"
+                  >
+                    <span className="text-[#F97316] mt-0.5">•</span>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="space-y-1">
-              {currentContext.tips.map((tip, index) => (
-                <li 
-                  key={index}
-                  className="text-[11px] text-[#475569] flex items-start gap-2"
-                >
-                  <span className="text-[#60A5FA] mt-0.5">•</span>
-                  {tip}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </CardContent>
+          )}
+        </CardContent>
+      )}
     </Card>
   );
 }
