@@ -30,6 +30,7 @@ import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerCalendarRoutes } from "./routes/calendar";
 import { registerSmsRoutes } from "./routes/sms";
 import { registerPoolBrainRoutes } from "./routes/poolbrain";
+import { registerAiInsightsRoutes } from "./routes/aiInsights";
 import adminUsersRouter from "./routes/adminUsers";
 
 export async function registerRoutes(app: any) {
@@ -71,5 +72,6 @@ function setupRoutes(app: any) {
   registerCalendarRoutes(app);
   registerSmsRoutes(app);
   registerPoolBrainRoutes(app);
+  registerAiInsightsRoutes(app);
   app.use(adminUsersRouter);
 }
