@@ -137,9 +137,16 @@ Routes are organized into domain-specific modules in `server/routes/`:
 - Connection via `@neondatabase/serverless` with WebSocket support
 - Drizzle ORM for type-safe queries
 
-**AI Service (ace-breakpoint-app):**
-- External Replit service for AI chat responses
-- Proxy pattern keeps credentials secure
+**AI Service (Ace Assistant):**
+- Uses OpenAI API (gpt-5-mini model) for AI chat responses
+- Full dashboard awareness: AI has real-time visibility into all business data including:
+  - Estimates (draft, pending, approved, scheduled, completed, ready to invoice)
+  - Service repairs and their status
+  - Emergencies and alerts (including urgent/critical priorities)
+  - Technician assignments and team composition
+  - Customer properties
+  - Report issues and windy day cleanups
+- Context gathering happens on each chat request for up-to-date information
 - Supports conversation context for multi-turn interactions
 
 **Email Generation:**
