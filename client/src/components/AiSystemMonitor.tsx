@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Brain, AlertTriangle, CheckCircle, Info, Zap, ChevronDown, ChevronUp, RefreshCw, X } from "lucide-react";
+import { useAiWidgets } from "@/contexts/AiWidgetsContext";
 
 interface AiThought {
   thought: string;
@@ -26,7 +27,7 @@ const typeConfig = {
 };
 
 export function AiSystemMonitor() {
-  const [isVisible, setIsVisible] = useState(true);
+  const { showMonitor, toggleMonitor } = useAiWidgets();
   const [isExpanded, setIsExpanded] = useState(true);
   const [currentThoughtIndex, setCurrentThoughtIndex] = useState(0);
 
@@ -52,16 +53,8 @@ export function AiSystemMonitor() {
   const config = currentThought ? typeConfig[currentThought.type] || typeConfig.info : typeConfig.info;
   const IconComponent = config.icon;
 
-  if (!isVisible) {
-    return (
-      <button
-        onClick={() => setIsVisible(true)}
-        className="fixed top-20 right-4 z-50 w-10 h-10 rounded-full bg-[#0078D4] shadow-lg hover:bg-[#0078D4]/90 transition-all flex items-center justify-center"
-        data-testid="ai-monitor-show"
-      >
-        <Brain className="w-5 h-5 text-white" />
-      </button>
-    );
+  if (!showMonitor) {
+    return null;
   }
 
   return (
@@ -100,7 +93,7 @@ export function AiSystemMonitor() {
               {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </button>
             <button 
-              onClick={() => setIsVisible(false)}
+              onClick={toggleMonitor}
               className="w-6 h-6 text-white/80 hover:text-white hover:bg-white/10 rounded flex items-center justify-center"
               data-testid="ai-monitor-close"
             >

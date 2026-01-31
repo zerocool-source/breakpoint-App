@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Bell, Search, Calendar, User, LogOut } from "lucide-react";
+import { Bell, Search, Calendar, User, LogOut, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { useAiWidgets } from "@/contexts/AiWidgetsContext";
 
 function DateDisplay() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -32,11 +33,14 @@ function DateDisplay() {
 export function Header() {
   const { user, logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
+  const { showMonitor, showHelper, showAll } = useAiWidgets();
 
   const handleLogout = () => {
     logout();
     setLocation("/login");
   };
+
+  const widgetsHidden = !showMonitor && !showHelper;
 
   return (
     <header className="h-16 border-b border-[#E2E8F0] bg-white sticky top-0 z-40 flex items-center justify-between px-6">
@@ -56,6 +60,19 @@ export function Header() {
         <DateDisplay />
         
         <div className="h-6 w-px bg-[#E2E8F0]" />
+
+        {widgetsHidden && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={showAll}
+            className="relative text-[#0078D4] hover:text-[#0078D4] hover:bg-[#EFF6FF] rounded-lg w-9 h-9"
+            title="Show Ace AI Widgets"
+            data-testid="button-show-ace"
+          >
+            <Brain className="w-5 h-5" />
+          </Button>
+        )}
         
         <Button 
           variant="ghost" 

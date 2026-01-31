@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Brain, Sparkles, X, HelpCircle } from "lucide-react";
+import { Sparkles, X, HelpCircle } from "lucide-react";
+import { useAiWidgets } from "@/contexts/AiWidgetsContext";
 
 interface ContextInfo {
   title: string;
@@ -113,8 +114,8 @@ const defaultContexts: Record<string, ContextInfo> = {
 };
 
 export function AiContextHelper() {
+  const { showHelper, toggleHelper } = useAiWidgets();
   const [currentContext, setCurrentContext] = useState<ContextInfo>(defaultContexts.default);
-  const [isVisible, setIsVisible] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);
 
   const getContextForTestId = useCallback((testId: string): ContextInfo | null => {
@@ -225,16 +226,8 @@ export function AiContextHelper() {
     };
   }, [getContextForTestId]);
 
-  if (!isVisible) {
-    return (
-      <button
-        onClick={() => setIsVisible(true)}
-        className="fixed top-[200px] right-4 z-40 w-10 h-10 rounded-full bg-[#F97316] shadow-lg hover:bg-[#F97316]/90 transition-all flex items-center justify-center"
-        data-testid="ai-context-helper-show"
-      >
-        <HelpCircle className="w-5 h-5 text-white" />
-      </button>
-    );
+  if (!showHelper) {
+    return null;
   }
 
   return (
@@ -261,7 +254,8 @@ export function AiContextHelper() {
             )}
             <button 
               className="w-6 h-6 text-white/80 hover:text-white hover:bg-white/10 rounded flex items-center justify-center"
-              onClick={() => setIsVisible(false)}
+              onClick={toggleHelper}
+              data-testid="ai-helper-close"
             >
               <X className="w-3 h-3" />
             </button>
