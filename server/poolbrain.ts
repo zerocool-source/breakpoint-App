@@ -56,26 +56,14 @@ async function poolBrainRequest(endpoint: string, options: any = {}) {
 }
 
 export const poolBrainClient = {
-  async getCustomers() {
-    return poolBrainRequest("/v2/customer_list");
-  },
-
-  async getCustomerDetail(customerId: string) {
-    return poolBrainRequest(`/v2/customer_detail?customerId=${customerId}`);
-  },
-
-  async getCustomerPools(customerId: string) {
-    return poolBrainRequest(`/v2/customer_pool_details?customerId=${customerId}`);
-  },
-
   async getProducts() {
     return poolBrainRequest("/v2/product_list");
   },
 
   async testConnection() {
     try {
-      const result = await poolBrainRequest("/v2/customer_list");
-      return { success: true, message: "Connected to Pool Brain API", data: result };
+      const result = await poolBrainRequest("/v2/product_list");
+      return { success: true, message: "Connected to Pool Brain API", data: { productCount: result?.data?.length || 0 } };
     } catch (error: any) {
       return { success: false, message: error.message };
     }

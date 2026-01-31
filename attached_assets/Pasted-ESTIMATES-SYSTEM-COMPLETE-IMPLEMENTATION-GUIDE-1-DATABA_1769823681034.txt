@@ -1,0 +1,305 @@
+ESTIMATES SYSTEM - COMPLETE IMPLEMENTATION GUIDE
+1. DATABASE SCHEMA (shared/schema.ts)
+// Estimate Status Workflow
+export const estimateStatusEnum = [
+  "draft",              // Initial creation
+  "pending_approval",   // Sent to customer for approval
+  "approved",           // Customer approved (can skip to needs_scheduling)
+  "rejected",           // Customer declined
+  "needs_scheduling",   // Approved, ready for technician assignment
+  "scheduled",          // Assigned to repair tech with deadline
+  "completed",          // Work finished
+  "ready_to_invoice",   // Ready for billing
+  "invoiced",           // Invoice sent
+  "archived"            // Closed/archived
+] as const;
+export const estimates = pgTable("estimates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  address: text("address"),
+  
+  // QuickBooks-compatible fields
+  estimateNumber: text("estimate_number"),      // Auto-generated: "YY-NNNNN"
+  estimateDate: timestamp("estimate_date").defaultNow(),
+  expirationDate: timestamp("expiration_date"),
+  acceptedBy: text("accepted_by"),              // Customer name who accepted
+  acceptedDate: timestamp("accepted_date"),
+  location: text("location"),
+  tags: text("tags").array(),
+  
+  // Source tracking (where estimate came from)
+  sourceType: text("source_type").default("office_staff"), // "office_staff", "repair_tech", "service_tech", "emergency"
+  sourceRepairJobId: text("source_repair_job_id"),
+  sourceEmergencyId: text("source_emergency_id"),
+  serviceRepairCount: integer("service_repair_count"),
+  sourceServiceRepairIds: text("source_service_repair_ids").array(),
+  
+  // Conversion tracking
+  convertedByUserId: text("converted_by_user_id"),
+  convertedByUserName: text("converted_by_user_name"),
+  convertedAt: timestamp("converted_at"),
+  
+  // Estimate details
+  title: text("title").notNull(),
+  description: text("description"),
+  items: json("items").$type<{
+    lineNumber: number;
+    serviceDate?: string;
+    productService: string;
+    description: string;
+    sku?: string;
+    quantity: number;
+    rate: number;        // In cents
+    amount: number;      // In cents (quantity * rate)
+    taxable: boolean;
+    class?: string;
+  }[]>().default([]),
+  
+  // Photos/Attachments
+  photos: text("photos").array(),
+  attachments: json("attachments").$type<{
+    name: string;
+    url: string;
+    size: number;
+  }[]>().default([]),
+  
+  // Totals (stored in cents)
+  subtotal: integer("subtotal").default(0),
+  discountType: text("discount_type").default("percent"),
+  discountValue: real("discount_value").default(0),
+  discountAmount: integer("discount_amount").default(0),
+  taxableSubtotal: integer("taxable_subtotal").default(0),
+  salesTaxRate: real("sales_tax_rate").default(0),
+  salesTaxAmount: integer("sales_tax_amount").default(0),
+  totalAmount: integer("total_amount").default(0),
+  
+  // Status tracking
+  status: text("status").notNull().default("draft"),
+  
+  // People involved
+  createdByTechId: text("created_by_tech_id"),
+  createdByTechName: text("created_by_tech_name"),
+  repairTechId: text("repair_tech_id"),
+  repairTechName: text("repair_tech_name"),
+  
+  // Dates
+  createdAt: timestamp("created_at").defaultNow(),
+  sentForApprovalAt: timestamp("sent_for_approval_at"),
+  approvedAt: timestamp("approved_at"),
+  rejectedAt: timestamp("rejected_at"),
+  scheduledDate: timestamp("scheduled_date"),
+  scheduledAt: timestamp("scheduled_at"),
+  completedAt: timestamp("completed_at"),
+  invoicedAt: timestamp("invoiced_at"),
+  
+  // Notes
+  techNotes: text("tech_notes"),
+  managerNotes: text("manager_notes"),
+  rejectionReason: text("rejection_reason"),
+  customerNote: text("customer_note"),
+  
+  // Customer Approval Tracking (secure tokenless approval)
+  approvalToken: text("approval_token"),
+  approvalTokenExpiresAt: timestamp("approval_token_expires_at"),
+  approvalSentTo: text("approval_sent_to"),
+  approvalSentAt: timestamp("approval_sent_at"),
+  customerApproverName: text("customer_approver_name"),
+  customerApproverTitle: text("customer_approver_title"),
+  
+  // Verbal Approval Tracking
+  verbalApprovalRecordedBy: text("verbal_approval_recorded_by"),
+  verbalApprovalMethod: text("verbal_approval_method"),
+  
+  // Job linking
+  jobId: text("job_id"),
+  invoiceId: text("invoice_id"),
+  assignedRepairJobId: text("assigned_repair_job_id"),
+  scheduledByUserId: text("scheduled_by_user_id"),
+  scheduledByUserName: text("scheduled_by_user_name"),
+  
+  // Deadline tracking
+  deadlineAt: timestamp("deadline_at"),
+  deadlineUnit: text("deadline_unit").default("hours"),
+  deadlineValue: integer("deadline_value"),
+  
+  // Work Order tracking
+  workType: text("work_type").default("repairs"),
+  woRequired: boolean("wo_required").default(false),
+  woReceived: boolean("wo_received").default(false),
+  woNumber: text("wo_number"),
+});
+export const insertEstimateSchema = createInsertSchema(estimates).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
+export type Estimate = typeof estimates.$inferSelect;
+2. API ROUTES (server/routes/estimates.ts)
+Core CRUD Routes:
+
+// GET all estimates (with optional status filter)
+GET /api/estimates?status=draft
+// GET single estimate
+GET /api/estimates/:id
+// GET estimates by property
+GET /api/estimates/property/:propertyId
+// CREATE new estimate
+POST /api/estimates
+Body: InsertEstimate
+// UPDATE estimate
+PUT /api/estimates/:id
+Body: Partial<InsertEstimate>
+// UPDATE status only
+PATCH /api/estimates/:id/status
+Body: { status: EstimateStatus, ...extras }
+// DELETE estimate
+DELETE /api/estimates/:id
+Workflow Transition Routes:
+
+// Approve estimate (internal/manager)
+PATCH /api/estimates/:id/approve
+Body: { approvedByManagerId, approvedByManagerName }
+// Reject estimate
+PATCH /api/estimates/:id/reject
+Body: { rejectionReason }
+// Mark needs scheduling (after approval)
+PATCH /api/estimates/:id/needs-scheduling
+// Schedule estimate (assign to repair tech)
+PATCH /api/estimates/:id/schedule
+Body: {
+  repairTechId: string,
+  repairTechName: string,
+  scheduledDate: Date,
+  scheduledByUserId: string,
+  scheduledByUserName: string,
+  deadlineAt?: Date,
+  deadlineUnit?: "hours" | "days",
+  deadlineValue?: number
+}
+// This also creates a linked service_repair_job in the Repair Queue
+// Complete estimate
+PATCH /api/estimates/:id/complete
+// Mark ready to invoice
+PATCH /api/estimates/:id/ready-to-invoice
+// Invoice estimate
+PATCH /api/estimates/:id/invoice
+Body: { invoiceId }
+Email Approval Routes:
+
+// Send estimate for customer approval via email
+POST /api/estimates/:id/send-for-approval
+Body: { 
+  email: string,
+  subject?: string,
+  customMessage?: string 
+}
+// Generates secure approval token, sends branded HTML email with PDF attachment
+// Record verbal approval (phone/email confirmation)
+POST /api/estimates/:id/verbal-approval
+Body: {
+  approverName: string,
+  approverTitle?: string,
+  officeStaffName: string,
+  approvedByMethod: "email" | "phone" | "other",
+  otherMethodDetails?: string
+}
+Public Customer Approval Routes (no auth required):
+
+// Get estimate by approval token
+GET /api/public/estimates/approve/:token
+// Approve estimate via token link
+POST /api/public/estimates/approve/:token
+Body: { approverName, approverTitle? }
+// Reject estimate via token link
+POST /api/public/estimates/reject/:token
+Body: { approverName, approverTitle, rejectionReason }
+Metrics & Helpers:
+
+// Get estimate metrics dashboard
+GET /api/estimates/metrics
+Returns: {
+  total, byStatus, totalValue, approvedValue, scheduledValue,
+  completedValue, readyToInvoiceValue, invoicedValue,
+  conversionRate, avgApprovalTime, avgSchedulingTime, avgCompletionTime
+}
+// Get repair technicians with availability
+GET /api/estimates/repair-techs
+Returns: { technicians: [{ id, name, assignedJobs, scheduledEstimates }] }
+// Generate PDF
+GET /api/estimates/:id/pdf
+Returns: PDF file attachment
+3. MOBILE APP SYNC API (server/routes/sync.ts)
+For your mobile app, use these sync endpoints:
+
+// Get all estimates for sync
+GET /api/sync/estimates
+Returns: { estimates: Estimate[] }
+// Create/sync estimate from mobile
+POST /api/sync/estimates
+Body: { estimate: InsertEstimate, valuesInCents?: boolean }
+// If valuesInCents is false, amounts will be converted to cents
+// Update estimate from mobile
+PUT /api/sync/estimates/:id
+Body: { estimate: Partial<InsertEstimate>, valuesInCents?: boolean }
+4. CONVERTING REPAIRS TO ESTIMATES
+From Tech Ops Entry (Service/Repair Tech Reports):
+
+POST /api/tech-ops/:id/convert-to-estimate
+Body: {
+  urgent?: boolean,
+  convertedByUserId?: string,
+  convertedByUserName?: string
+}
+// Creates draft estimate from tech ops entry
+// Marks original entry as "completed"
+From Service Repair Jobs (Batch Multiple):
+
+POST /api/service-repairs/batch-to-estimate
+Body: {
+  ids: string[],              // Array of service repair job IDs
+  propertyId: string,
+  propertyName: string,
+  notes?: string,
+  convertedByUserId?: string,
+  convertedByUserName?: string
+}
+// Creates single estimate from multiple service repairs
+// Updates all jobs status to "estimated"
+From Emergency:
+
+POST /api/emergencies/:id/convert-to-estimate
+// Creates estimate from emergency
+// Links emergency to estimate via convertedToEstimateId
+5. WORKFLOW DIAGRAM
+[Draft] 
+    ↓ (Send for Approval)
+[Pending Approval] ──→ [Rejected] (end)
+    ↓ (Customer Approves OR Verbal Approval)
+[Needs Scheduling]
+    ↓ (Assign Repair Tech + Deadline)
+[Scheduled] ──→ Creates linked service_repair_job
+    ↓ (Work Completed)
+[Completed]
+    ↓ (Ready for Billing)
+[Ready to Invoice]
+    ↓ (Invoice Sent)
+[Invoiced] / [Archived]
+Auto-Return Rule: If scheduled estimate deadline expires, it auto-returns to "needs_scheduling" status.
+
+6. KEY IMPLEMENTATION NOTES
+All amounts stored in cents - Multiply by 100 before saving, divide by 100 for display
+
+Estimate Number Format: YY-NNNNN (e.g., 26-00001 for year 2026)
+
+Approval Token: 32-byte random hex string, expires in 30 days
+
+When Scheduling: Creates linked service_repair_job in repair queue with estimateId reference
+
+Photos: Stored as array of paths in Object Storage (format: /objects/public/estimates/{id}/photo-1.jpg)
+
+Email Integration: Uses Microsoft Graph API for sending approval emails with PDF attachments
+
+Source Tracking: Tracks origin (office_staff, repair_tech, service_tech, emergency) and links back to source records
