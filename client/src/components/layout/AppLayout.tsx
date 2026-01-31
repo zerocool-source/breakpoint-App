@@ -1,6 +1,8 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { PaymentNotifications } from "../PaymentNotifications";
+import { AiSystemMonitor } from "../AiSystemMonitor";
+import { AiContextHelper } from "../AiContextHelper";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -19,6 +21,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
       <PaymentNotifications />
+      <AiSystemMonitor />
+      <AiContextHelper />
     </div>
   );
 }

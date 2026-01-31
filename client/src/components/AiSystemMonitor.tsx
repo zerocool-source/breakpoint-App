@@ -55,12 +55,14 @@ export function AiSystemMonitor() {
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
       <div className="bg-slate-900/95 backdrop-blur-md border border-cyan-500/30 rounded-lg shadow-xl shadow-cyan-500/10 overflow-hidden">
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-cyan-500/20 hover:from-slate-700 hover:to-slate-800 transition-colors"
-          data-testid="ai-monitor-toggle"
+        <div
+          className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-cyan-500/20"
         >
-          <div className="flex items-center gap-2">
+          <div 
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity flex-1"
+            onClick={() => setIsExpanded(!isExpanded)}
+            data-testid="ai-monitor-toggle"
+          >
             <div className="relative">
               <Brain className="w-5 h-5 text-cyan-400" />
               <div className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
@@ -70,26 +72,29 @@ export function AiSystemMonitor() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 refetch();
               }}
-              className="h-6 w-6 p-0 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+              className="h-6 w-6 p-0 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 rounded flex items-center justify-center"
               disabled={isFetching}
               data-testid="ai-monitor-refresh"
             >
               <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
-            </Button>
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-cyan-400" />
-            ) : (
-              <ChevronUp className="w-4 h-4 text-cyan-400" />
-            )}
+            </button>
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-cyan-400 hover:text-cyan-300"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </button>
           </div>
-        </button>
+        </div>
 
         {isExpanded && (
           <div className="p-4 space-y-3">
