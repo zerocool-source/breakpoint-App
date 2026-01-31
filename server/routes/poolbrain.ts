@@ -45,20 +45,6 @@ export function registerPoolBrainRoutes(app: Express) {
     }
   });
 
-  app.get("/api/poolbrain/alerts", async (req: Request, res: Response) => {
-    try {
-      const { startDate, endDate } = req.query;
-      const alerts = await poolBrainClient.getAlerts({
-        startDate: startDate as string,
-        endDate: endDate as string,
-      });
-      res.json(alerts);
-    } catch (error: any) {
-      console.error("Error fetching Pool Brain alerts:", error);
-      res.status(500).json({ error: "Failed to fetch alerts", message: error.message });
-    }
-  });
-
   app.get("/api/poolbrain/products", async (req: Request, res: Response) => {
     try {
       const products = await poolBrainClient.getProducts();
@@ -66,40 +52,6 @@ export function registerPoolBrainRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error fetching Pool Brain products:", error);
       res.status(500).json({ error: "Failed to fetch products", message: error.message });
-    }
-  });
-
-  app.get("/api/poolbrain/technicians", async (req: Request, res: Response) => {
-    try {
-      const technicians = await poolBrainClient.getTechnicians();
-      res.json(technicians);
-    } catch (error: any) {
-      console.error("Error fetching Pool Brain technicians:", error);
-      res.status(500).json({ error: "Failed to fetch technicians", message: error.message });
-    }
-  });
-
-  app.get("/api/poolbrain/routes", async (req: Request, res: Response) => {
-    try {
-      const routes = await poolBrainClient.getRoutes();
-      res.json(routes);
-    } catch (error: any) {
-      console.error("Error fetching Pool Brain routes:", error);
-      res.status(500).json({ error: "Failed to fetch routes", message: error.message });
-    }
-  });
-
-  app.get("/api/poolbrain/jobs", async (req: Request, res: Response) => {
-    try {
-      const { startDate, endDate } = req.query;
-      const jobs = await poolBrainClient.getJobs({
-        startDate: startDate as string,
-        endDate: endDate as string,
-      });
-      res.json(jobs);
-    } catch (error: any) {
-      console.error("Error fetching Pool Brain jobs:", error);
-      res.status(500).json({ error: "Failed to fetch jobs", message: error.message });
     }
   });
 }

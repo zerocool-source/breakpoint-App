@@ -56,15 +56,6 @@ async function poolBrainRequest(endpoint: string, options: any = {}) {
 }
 
 export const poolBrainClient = {
-  async getAlerts(params?: { startDate?: string; endDate?: string }) {
-    const queryParams = new URLSearchParams();
-    if (params?.startDate) queryParams.append("startDate", params.startDate);
-    if (params?.endDate) queryParams.append("endDate", params.endDate);
-    
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
-    return poolBrainRequest(`/v2/alerts_list${query}`);
-  },
-
   async getCustomers() {
     return poolBrainRequest("/v2/customer_list");
   },
@@ -77,33 +68,8 @@ export const poolBrainClient = {
     return poolBrainRequest(`/v2/customer_pool_details?customerId=${customerId}`);
   },
 
-  async getCustomerNotes(customerId: string) {
-    return poolBrainRequest(`/v2/customer_notes?customerId=${customerId}`);
-  },
-
   async getProducts() {
     return poolBrainRequest("/v2/product_list");
-  },
-
-  async getTechnicians() {
-    return poolBrainRequest("/v2/technician_list");
-  },
-
-  async getRoutes() {
-    return poolBrainRequest("/v2/route_list");
-  },
-
-  async getJobs(params?: { startDate?: string; endDate?: string }) {
-    const queryParams = new URLSearchParams();
-    if (params?.startDate) queryParams.append("startDate", params.startDate);
-    if (params?.endDate) queryParams.append("endDate", params.endDate);
-    
-    const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
-    return poolBrainRequest(`/v2/job_list${query}`);
-  },
-
-  async getEquipment(poolId: string) {
-    return poolBrainRequest(`/v2/pool_equipment?poolId=${poolId}`);
   },
 
   async testConnection() {
