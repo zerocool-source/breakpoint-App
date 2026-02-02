@@ -1462,7 +1462,7 @@ export default function RepairQueue() {
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       <ScrollArea className="h-[550px]">
                         {(selectedTech 
                           ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
@@ -1473,11 +1473,117 @@ export default function RepairQueue() {
                             <p>No active jobs</p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-4">
-                            {(selectedTech 
-                              ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
-                              : [...pendingRepairs, ...inProgressRepairs]
-                            ).map(renderRepairCard)}
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                                <tr>
+                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">EST #</th>
+                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Status</th>
+                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Property</th>
+                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Technician</th>
+                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
+                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Description</th>
+                                  <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Amount</th>
+                                  <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(selectedTech 
+                                  ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
+                                  : [...pendingRepairs, ...inProgressRepairs]
+                                ).map((repair, index) => {
+                                  const statusCfg = statusConfig[repair.status || "pending"] || defaultStatus;
+                                  const getRowStatusStyle = (status: string | null) => {
+                                    switch (status) {
+                                      case "pending":
+                                      case "assigned":
+                                        return "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20";
+                                      case "in_progress":
+                                        return "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20";
+                                      case "completed":
+                                        return "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20";
+                                      default:
+                                        return "bg-slate-100 text-slate-600 border-slate-200";
+                                    }
+                                  };
+                                  return (
+                                    <tr 
+                                      key={repair.id} 
+                                      className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
+                                      data-testid={`row-repair-${repair.id}`}
+                                    >
+                                      <td className="px-4 py-3">
+                                        <span className="font-semibold text-slate-900 text-sm">{repair.jobNumber || "—"}</span>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <Badge className={`${getRowStatusStyle(repair.status)} border text-xs`}>
+                                          {statusCfg.label}
+                                        </Badge>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span className="text-sm text-slate-700 font-medium">{repair.propertyName || "—"}</span>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span className="text-sm text-slate-600">{repair.technicianName || "Unassigned"}</span>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span className="text-sm text-slate-500">{formatDate(repair.jobDate)}</span>
+                                      </td>
+                                      <td className="px-4 py-3 max-w-[200px]">
+                                        <span className="text-sm text-slate-600 truncate block" title={repair.description || ""}>
+                                          {repair.description || "—"}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right">
+                                        <span className="font-semibold text-slate-900">{formatCurrency(repair.totalAmount)}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                          {repair.status === "in_progress" && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="text-[#22c55e] border-[#22c55e] hover:bg-[#22c55e]/10 h-7 px-2 text-xs"
+                                              onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "completed" })}
+                                              data-testid={`button-complete-row-${repair.id}`}
+                                            >
+                                              <CheckCircle className="w-3 h-3 mr-1" /> Complete
+                                            </Button>
+                                          )}
+                                          {repair.status === "pending" && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="text-[#14b8a6] border-[#14b8a6] hover:bg-[#14b8a6]/10 h-7 px-2 text-xs"
+                                              onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
+                                              data-testid={`button-start-row-${repair.id}`}
+                                            >
+                                              <Wrench className="w-3 h-3 mr-1" /> Start
+                                            </Button>
+                                          )}
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="text-slate-600 border-slate-300 hover:bg-slate-50 h-7 px-2 text-xs"
+                                            data-testid={`button-view-row-${repair.id}`}
+                                          >
+                                            <Eye className="w-3 h-3 mr-1" /> View
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="text-slate-400 hover:text-slate-600 h-7 w-7 p-0"
+                                            data-testid={`button-more-row-${repair.id}`}
+                                          >
+                                            <MoreVertical className="w-4 h-4" />
+                                          </Button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </ScrollArea>
