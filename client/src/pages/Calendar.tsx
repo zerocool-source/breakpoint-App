@@ -312,6 +312,19 @@ export default function Calendar() {
   const [showQcInspectionsSidebar, setShowQcInspectionsSidebar] = useState(false);
   const [showCreateQcForm, setShowCreateQcForm] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<ServiceAssignment | null>(null);
+  
+  // Repairs Needed state
+  const [showRepairsNeededSidebar, setShowRepairsNeededSidebar] = useState(false);
+  const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
+  const [repairRequestForm, setRepairRequestForm] = useState({
+    propertyId: "",
+    propertyName: "",
+    issueDescription: "",
+    reportedBy: "office" as "service_tech" | "customer" | "office",
+    reportedByName: "",
+    priority: "medium" as "low" | "medium" | "high" | "urgent",
+    notes: "",
+  });
   const [qcInspectionForm, setQcInspectionForm] = useState({
     propertyId: "",
     inspectionType: "",
@@ -435,6 +448,19 @@ export default function Calendar() {
       return res.json();
     },
   });
+
+  // Fetch Repair Requests for repair tab
+  const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<any[]>({
+    queryKey: ["/api/repair-requests", "pending"],
+    queryFn: async () => {
+      const res = await fetch(`/api/repair-requests?status=pending`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: roleFilter === "repair",
+  });
+
+  const pendingRepairRequests = repairRequestsData || [];
 
   // Fetch estimates for repair technicians - needs_scheduling (ready to assign) and scheduled (assigned)
   const { data: scheduledEstimatesData, refetch: refetchScheduledEstimates } = useQuery<{ estimates: ScheduledRepair[], unassigned: ScheduledRepair[] }>({
@@ -641,6 +667,70 @@ export default function Calendar() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to assign estimate", variant: "destructive" });
+    },
+  });
+
+  // Mutation to create repair request
+  const createRepairRequestMutation = useMutation({
+    mutationFn: async (data: {
+      propertyId: string;
+      propertyName: string;
+      issueDescription: string;
+      reportedBy: string;
+      reportedByName?: string;
+      priority: string;
+      notes?: string;
+    }) => {
+      const res = await fetch("/api/repair-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create repair request");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchRepairRequests();
+      setShowCreateRepairRequestModal(false);
+      setRepairRequestForm({
+        propertyId: "",
+        propertyName: "",
+        issueDescription: "",
+        reportedBy: "office",
+        reportedByName: "",
+        priority: "medium",
+        notes: "",
+      });
+      toast({
+        title: "Repair Request Created",
+        description: "The repair request has been submitted for evaluation.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create repair request", variant: "destructive" });
+    },
+  });
+
+  // Mutation to assign repair request to tech for assessment
+  const assignRepairRequestMutation = useMutation({
+    mutationFn: async ({ requestId, technicianId, technicianName }: { requestId: string; technicianId: string; technicianName: string }) => {
+      const res = await fetch(`/api/repair-requests/${requestId}/assign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ technicianId, technicianName }),
+      });
+      if (!res.ok) throw new Error("Failed to assign repair request");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchRepairRequests();
+      toast({
+        title: "Repair Request Assigned",
+        description: "The repair request has been assigned for assessment.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to assign repair request", variant: "destructive" });
     },
   });
 
@@ -917,7 +1007,7 @@ export default function Calendar() {
         {/* Main Calendar Content */}
         <div className={cn(
           "flex-1 transition-all duration-300",
-          (showReadyToAssignSidebar || showAssignmentsSidebar || showQcInspectionsSidebar) ? "mr-[380px]" : ""
+          (showReadyToAssignSidebar || showAssignmentsSidebar || showQcInspectionsSidebar || showRepairsNeededSidebar) ? "mr-[380px]" : ""
         )}>
         <div className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] shadow-sm px-6 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -1309,6 +1399,53 @@ export default function Calendar() {
                 </div>
                 <ChevronRight className="w-5 h-5 text-slate-400" />
               </button>
+            )}
+
+            {/* Repairs Needed Bar - Only show when Repair filter is selected */}
+            {roleFilter === "repair" && (
+              <div
+                className="mb-4 w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white rounded-lg shadow-md border-l-4 border-[#f97316]"
+                data-testid="repairs-needed-bar"
+              >
+                <div 
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setShowRepairsNeededSidebar(true)}
+                  data-testid="button-view-repairs-needed"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-[#f97316] flex items-center justify-center shadow-sm">
+                    <Wrench className="w-4.5 h-4.5 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-[#0F172A] text-sm">Repairs Needed</h3>
+                    <p className="text-xs text-slate-500">Repair Request - Evaluate repair needs for properties</p>
+                  </div>
+                  {pendingRepairRequests.length > 0 && (
+                    <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
+                      {pendingRepairRequests.length} {pendingRepairRequests.length === 1 ? 'job' : 'jobs'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCreateRepairRequestModal(true);
+                    }}
+                    className="bg-[#f97316] hover:bg-[#ea580c] text-white font-medium"
+                    data-testid="button-create-repair-request"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    + Repair Request
+                  </Button>
+                  <button
+                    onClick={() => setShowRepairsNeededSidebar(true)}
+                    className="p-1 hover:bg-slate-100 rounded transition-colors"
+                    data-testid="button-expand-repairs-needed"
+                  >
+                    <ChevronRight className="w-5 h-5 text-slate-400" />
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Assignments Bar - Only show when Service filter is selected */}
@@ -3954,6 +4091,254 @@ export default function Calendar() {
           )}
         </div>
       )}
+
+      {/* Repairs Needed Sidebar */}
+      {showRepairsNeededSidebar && (
+        <div 
+          className="fixed top-0 right-0 h-full w-[380px] bg-white shadow-[-4px_0_20px_rgba(0,0,0,0.1)] z-40 flex flex-col animate-in slide-in-from-right duration-300 border-l border-slate-200"
+          data-testid="sidebar-repairs-needed"
+        >
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white">
+            <div>
+              <h2 className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-[#f97316]" />
+                Repairs Needed
+              </h2>
+              <p className="text-sm text-slate-500">{pendingRepairRequests.length} repair requests awaiting evaluation</p>
+            </div>
+            <button
+              onClick={() => setShowRepairsNeededSidebar(false)}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              data-testid="button-close-repairs-sidebar"
+            >
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+          
+          {/* Repair Requests List */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {pendingRepairRequests.map((request: any) => (
+              <div
+                key={request.id}
+                className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden"
+                data-testid={`sidebar-repair-${request.id}`}
+              >
+                <div className="p-4 border-l-4 border-l-[#f97316]">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <p className="text-base font-semibold text-[#0F172A]" title={request.propertyName}>
+                      {request.propertyName}
+                    </p>
+                    {request.priority && (
+                      <span className={cn(
+                        "px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap",
+                        request.priority === "urgent" && "bg-red-100 text-red-700",
+                        request.priority === "high" && "bg-orange-100 text-orange-700",
+                        request.priority === "medium" && "bg-yellow-100 text-yellow-700",
+                        request.priority === "low" && "bg-slate-100 text-slate-600"
+                      )}>
+                        {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600 mb-2 line-clamp-2" title={request.issueDescription}>
+                    {request.issueDescription}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                    <span>
+                      Reported by: {request.reportedBy === "service_tech" ? "Service Tech" : request.reportedBy === "customer" ? "Customer" : "Office"}
+                      {request.reportedByName && ` (${request.reportedByName})`}
+                    </span>
+                    {request.createdAt && (
+                      <span>
+                        {new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                  <Select
+                    onValueChange={(techId) => {
+                      const tech = (technicians || []).find((t: Technician) => String(t.id) === techId);
+                      if (tech) {
+                        assignRepairRequestMutation.mutate({
+                          requestId: request.id,
+                          technicianId: String(tech.id),
+                          technicianName: `${tech.firstName} ${tech.lastName}`,
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white border-none" data-testid={`select-assign-tech-${request.id}`}>
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="Assign for Assessment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(technicians || [])
+                        .filter((t: Technician) => t.role === "repair" && t.active)
+                        .map((tech: Technician) => (
+                          <SelectItem key={tech.id} value={String(tech.id)}>
+                            {tech.firstName} {tech.lastName}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ))}
+            
+            {pendingRepairRequests.length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                <Wrench className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                <p>No repair requests pending</p>
+                <Button
+                  onClick={() => {
+                    setShowRepairsNeededSidebar(false);
+                    setShowCreateRepairRequestModal(true);
+                  }}
+                  className="mt-4 bg-[#f97316] hover:bg-[#ea580c] text-white"
+                  data-testid="button-empty-state-create-repair"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Create Repair Request
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create Repair Request Modal */}
+      <Dialog open={showCreateRepairRequestModal} onOpenChange={setShowCreateRepairRequestModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-[#f97316]" />
+              New Repair Request
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Property */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Property</Label>
+              <Select
+                value={repairRequestForm.propertyId}
+                onValueChange={(value) => {
+                  const customer = (customersData?.customers || []).find((c: any) => c.id === value);
+                  setRepairRequestForm({
+                    ...repairRequestForm,
+                    propertyId: value,
+                    propertyName: customer?.name || "",
+                  });
+                }}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-repair-property">
+                  <SelectValue placeholder="Select property..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(customersData?.customers || []).map((customer: any) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Issue Description */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Issue Description</Label>
+              <Textarea
+                value={repairRequestForm.issueDescription}
+                onChange={(e) => setRepairRequestForm({ ...repairRequestForm, issueDescription: e.target.value })}
+                placeholder="Describe the repair issue..."
+                className="mt-1"
+                rows={3}
+                data-testid="input-issue-description"
+              />
+            </div>
+
+            {/* Reported By */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Reported By</Label>
+              <Select
+                value={repairRequestForm.reportedBy}
+                onValueChange={(value: "service_tech" | "customer" | "office") => setRepairRequestForm({ ...repairRequestForm, reportedBy: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-reported-by">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="office">Office</SelectItem>
+                  <SelectItem value="service_tech">Service Tech</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Priority */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Priority</Label>
+              <Select
+                value={repairRequestForm.priority}
+                onValueChange={(value: "low" | "medium" | "high" | "urgent") => setRepairRequestForm({ ...repairRequestForm, priority: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Notes (Optional)</Label>
+              <Textarea
+                value={repairRequestForm.notes}
+                onChange={(e) => setRepairRequestForm({ ...repairRequestForm, notes: e.target.value })}
+                placeholder="Additional notes..."
+                className="mt-1"
+                rows={2}
+                data-testid="input-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateRepairRequestModal(false)}
+              data-testid="button-cancel-repair-request"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (repairRequestForm.propertyId && repairRequestForm.issueDescription) {
+                  createRepairRequestMutation.mutate({
+                    propertyId: repairRequestForm.propertyId,
+                    propertyName: repairRequestForm.propertyName,
+                    issueDescription: repairRequestForm.issueDescription,
+                    reportedBy: repairRequestForm.reportedBy,
+                    reportedByName: repairRequestForm.reportedByName || undefined,
+                    priority: repairRequestForm.priority,
+                    notes: repairRequestForm.notes || undefined,
+                  });
+                }
+              }}
+              disabled={!repairRequestForm.propertyId || !repairRequestForm.issueDescription || createRepairRequestMutation.isPending}
+              className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+              data-testid="button-submit-repair-request"
+            >
+              {createRepairRequestMutation.isPending ? "Creating..." : "Submit Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
