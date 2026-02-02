@@ -31,10 +31,12 @@ import {
 import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
   User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
-  Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera
+  Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera,
+  FileEdit, Send, Paperclip, ExternalLink
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { RepairRequestForm } from "@/components/RepairRequestForm";
 import type { ServiceRepairJob, Technician, Emergency, RepairRequest } from "@shared/schema";
 
@@ -164,6 +166,23 @@ export default function RepairQueue() {
 
   // Create repair request state
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
+  
+  // Repair request detail panel state
+  const [selectedRepairRequest, setSelectedRepairRequest] = useState<RepairRequest | null>(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
+  
+  // Approval request modal state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalForm, setApprovalForm] = useState({
+    estimatedCost: "",
+    approvalRequestedFrom: "",
+    approvalNotes: "",
+    urgency: "standard",
+    attachments: [] as string[],
+  });
+  
+  // Convert to estimate state
+  const [showConvertModal, setShowConvertModal] = useState(false);
 
   // Get unique properties for filter dropdown
   const uniqueProperties = useMemo(() => {
@@ -759,6 +778,155 @@ export default function RepairQueue() {
       toast({ title: "Error", description: "Failed to move job", variant: "destructive" });
     },
   });
+
+  // Approval request mutation
+  const createApprovalRequestMutation = useMutation({
+    mutationFn: async (data: {
+      repairRequestId: string;
+      repairRequestNumber: string | null;
+      propertyId: string;
+      propertyName: string;
+      issueDescription: string | null;
+      estimatedCost: number;
+      approvalRequestedFrom: string;
+      approvalNotes: string;
+      urgency: string;
+      attachments: string[];
+    }) => {
+      const response = await fetch("/api/approval-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create approval request");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/approval-requests"] });
+      toast({ title: "Approval Request Sent", description: "The approval request has been submitted" });
+      setShowApprovalModal(false);
+      setApprovalForm({ estimatedCost: "", approvalRequestedFrom: "", approvalNotes: "", urgency: "standard", attachments: [] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to send approval request", variant: "destructive" });
+    },
+  });
+
+  // Convert to estimate mutation
+  const convertToEstimateMutation = useMutation({
+    mutationFn: async (repairRequest: RepairRequest) => {
+      const response = await fetch("/api/estimates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: repairRequest.propertyId,
+          propertyName: repairRequest.propertyName,
+          customerName: repairRequest.customerName,
+          customerEmail: repairRequest.customerEmail,
+          address: repairRequest.address,
+          title: `Repair: ${repairRequest.issueDescription?.slice(0, 100) || "Repair Request"}`,
+          description: repairRequest.issueDescription,
+          sourceType: "repair_request",
+          sourceRepairRequestId: repairRequest.id,
+          sourceRepairRequestNumber: repairRequest.requestNumber,
+          photos: repairRequest.photos || [],
+          items: (repairRequest.lineItems as any[] || []).map((item, idx) => ({
+            lineNumber: idx + 1,
+            productService: item.partName || item.description || "Service",
+            description: item.description || item.partName || "",
+            quantity: item.quantity || 1,
+            rate: (item.unitPrice || 0),
+            amount: (item.quantity || 1) * (item.unitPrice || 0),
+            taxable: false,
+          })),
+          status: "draft",
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create estimate");
+      const estimate = await response.json();
+      
+      // Update repair request with link to estimate
+      await fetch(`/api/repair-requests/${repairRequest.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          status: "estimated",
+          estimateId: estimate.id 
+        }),
+      });
+      
+      return estimate;
+    },
+    onSuccess: (estimate) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      toast({ 
+        title: "Estimate Created", 
+        description: `Estimate ${estimate.estimateNumber || estimate.id} has been created from repair request` 
+      });
+      setShowConvertModal(false);
+      setSelectedRepairRequest(null);
+      setShowDetailPanel(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to convert to estimate", variant: "destructive" });
+    },
+  });
+
+  // Helper functions for repair request actions
+  const handleRowClick = (request: RepairRequest) => {
+    setSelectedRepairRequest(request);
+    setShowDetailPanel(true);
+  };
+
+  const handleRequestApproval = (request: RepairRequest) => {
+    setSelectedRepairRequest(request);
+    setApprovalForm({
+      estimatedCost: "",
+      approvalRequestedFrom: "",
+      approvalNotes: "",
+      urgency: "standard",
+      attachments: [],
+    });
+    setShowApprovalModal(true);
+  };
+
+  const handleConvertToEstimate = (request: RepairRequest) => {
+    setSelectedRepairRequest(request);
+    setShowConvertModal(true);
+  };
+
+  const submitApprovalRequest = () => {
+    if (!selectedRepairRequest || !approvalForm.approvalRequestedFrom) return;
+    
+    createApprovalRequestMutation.mutate({
+      repairRequestId: selectedRepairRequest.id,
+      repairRequestNumber: selectedRepairRequest.requestNumber,
+      propertyId: selectedRepairRequest.propertyId,
+      propertyName: selectedRepairRequest.propertyName,
+      issueDescription: selectedRepairRequest.issueDescription,
+      estimatedCost: Math.round(parseFloat(approvalForm.estimatedCost || "0") * 100), // Convert to cents
+      approvalRequestedFrom: approvalForm.approvalRequestedFrom,
+      approvalNotes: approvalForm.approvalNotes,
+      urgency: approvalForm.urgency,
+      attachments: approvalForm.attachments,
+    });
+  };
+
+  const confirmConvertToEstimate = () => {
+    if (!selectedRepairRequest) return;
+    convertToEstimateMutation.mutate(selectedRepairRequest);
+  };
+
+  const getReportedByLabel = (reportedBy: string, name?: string | null) => {
+    const roleLabel = reportedBy === "service_tech" ? "Service Tech" :
+      reportedBy === "repair_tech" ? "Repair Tech" :
+      reportedBy === "supervisor" ? "Supervisor" :
+      reportedBy === "office_staff" ? "Office Staff" :
+      reportedBy === "customer" ? "Customer" : reportedBy;
+    return name ? `${name} (${roleLabel})` : roleLabel;
+  };
 
   const openReassignModal = (repair: ServiceRepairJob) => {
     setSelectedRepairForReassign(repair);
@@ -1661,23 +1829,15 @@ export default function RepairQueue() {
                         </tr>
                       </thead>
                       <tbody>
-                        {pendingRepairRequests.map((request: RepairRequest, index: number) => {
-                          const getReportedByLabel = (reportedBy: string, name?: string | null) => {
-                            const roleLabel = reportedBy === "service_tech" ? "Service Tech" :
-                              reportedBy === "repair_tech" ? "Repair Tech" :
-                              reportedBy === "supervisor" ? "Supervisor" :
-                              reportedBy === "office_staff" ? "Office Staff" :
-                              reportedBy === "customer" ? "Customer" : reportedBy;
-                            return name ? `${name} (${roleLabel})` : roleLabel;
-                          };
-                          return (
+                        {pendingRepairRequests.map((request: RepairRequest, index: number) => (
                             <tr 
                               key={request.id} 
-                              className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
+                              className={`border-b border-slate-100 hover:bg-blue-50 transition-colors cursor-pointer ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
                               data-testid={`row-repair-request-${request.id}`}
+                              onClick={() => handleRowClick(request)}
                             >
                               <td className="px-4 py-3">
-                                <span className="font-semibold text-slate-900 text-sm">{request.requestNumber || "—"}</span>
+                                <span className="font-semibold text-[#0077b6] text-sm hover:underline">{request.requestNumber || "—"}</span>
                               </td>
                               <td className="px-4 py-3">
                                 <span className="text-sm text-slate-700 font-medium">{request.propertyName || "—"}</span>
@@ -1708,29 +1868,58 @@ export default function RepairQueue() {
                                    request.createdAt ? new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-1">
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="text-[#0077b6] border-[#0077b6] hover:bg-[#0077b6]/10 h-7 px-2 text-xs"
-                                    data-testid={`button-assign-${request.id}`}
+                                    className="text-[#0078D4] border-[#0078D4] hover:bg-[#0078D4]/10 h-7 px-2 text-xs"
+                                    onClick={(e) => { e.stopPropagation(); handleConvertToEstimate(request); }}
+                                    data-testid={`button-convert-${request.id}`}
                                   >
-                                    <User className="w-3 h-3 mr-1" /> Assign
+                                    <FileEdit className="w-3 h-3 mr-1" /> Estimate
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="text-slate-600 border-slate-300 hover:bg-slate-50 h-7 px-2 text-xs"
-                                    data-testid={`button-view-request-${request.id}`}
+                                    className="text-[#f97316] border-[#f97316] hover:bg-[#f97316]/10 h-7 px-2 text-xs"
+                                    onClick={(e) => { e.stopPropagation(); handleRequestApproval(request); }}
+                                    data-testid={`button-approval-${request.id}`}
                                   >
-                                    <Eye className="w-3 h-3 mr-1" /> View
+                                    <Send className="w-3 h-3 mr-1" /> Approval
                                   </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-7 w-7 p-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                        data-testid={`button-more-${request.id}`}
+                                      >
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleRowClick(request)}>
+                                        <Eye className="w-4 h-4 mr-2" /> View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem>
+                                        <User className="w-4 h-4 mr-2" /> Assign Technician
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => handleConvertToEstimate(request)}>
+                                        <FileEdit className="w-4 h-4 mr-2" /> Convert to Estimate
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleRequestApproval(request)}>
+                                        <Send className="w-4 h-4 mr-2" /> Request Approval
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </td>
                             </tr>
-                          );
-                        })}
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -2584,6 +2773,379 @@ export default function RepairQueue() {
           queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
         }}
       />
+
+      {/* Repair Request Detail Panel */}
+      <Sheet open={showDetailPanel} onOpenChange={setShowDetailPanel}>
+        <SheetContent className="w-[500px] sm:w-[600px] overflow-y-auto">
+          <SheetHeader className="bg-[#1e3a5f] -mx-6 -mt-6 px-6 py-4 mb-4">
+            <SheetTitle className="text-white flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Repair Request Details
+            </SheetTitle>
+            <SheetDescription className="text-white/70">
+              {selectedRepairRequest?.requestNumber || ""}
+            </SheetDescription>
+          </SheetHeader>
+          
+          {selectedRepairRequest && (
+            <div className="space-y-6">
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 bg-[#0078D4] hover:bg-[#0078D4]/90 text-white"
+                  onClick={() => handleConvertToEstimate(selectedRepairRequest)}
+                  data-testid="button-detail-convert"
+                >
+                  <FileEdit className="w-4 h-4 mr-2" />
+                  Convert to Estimate
+                </Button>
+                <Button
+                  className="flex-1 bg-[#f97316] hover:bg-[#f97316]/90 text-white"
+                  onClick={() => handleRequestApproval(selectedRepairRequest)}
+                  data-testid="button-detail-approval"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Request Approval
+                </Button>
+              </div>
+
+              {/* Basic Info */}
+              <div className="bg-slate-50 rounded-lg p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">RR #</p>
+                    <p className="text-sm font-semibold text-slate-900">{selectedRepairRequest.requestNumber || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">Priority</p>
+                    <Badge variant="outline" className={
+                      selectedRepairRequest.priority === "urgent" ? "bg-red-100 text-red-700 border-red-200" :
+                      selectedRepairRequest.priority === "high" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                      selectedRepairRequest.priority === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                      "bg-slate-100 text-slate-600 border-slate-200"
+                    }>
+                      {selectedRepairRequest.priority?.charAt(0).toUpperCase() + selectedRepairRequest.priority?.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Property</p>
+                  <p className="text-sm font-medium text-slate-900">{selectedRepairRequest.propertyName}</p>
+                  {selectedRepairRequest.address && (
+                    <p className="text-xs text-slate-500">{selectedRepairRequest.address}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Reported By</p>
+                  <p className="text-sm text-slate-700">{getReportedByLabel(selectedRepairRequest.reportedBy, selectedRepairRequest.reportedByName)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Date</p>
+                  <p className="text-sm text-slate-700">
+                    {selectedRepairRequest.requestDate ? new Date(selectedRepairRequest.requestDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "—"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Issue Description */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 mb-2">Issue Description</h4>
+                <p className="text-sm text-slate-600 bg-white border border-slate-200 rounded-lg p-3">
+                  {selectedRepairRequest.issueDescription || "No description provided"}
+                </p>
+              </div>
+
+              {/* Office Notes */}
+              {selectedRepairRequest.officeNotes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Office Notes (Internal)
+                  </h4>
+                  <p className="text-sm text-amber-700">{selectedRepairRequest.officeNotes}</p>
+                </div>
+              )}
+
+              {/* Photos */}
+              {selectedRepairRequest.photos && selectedRepairRequest.photos.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                    <Camera className="w-4 h-4" />
+                    Photos ({selectedRepairRequest.photos.length})
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedRepairRequest.photos.map((photo, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200">
+                        <img 
+                          src={photo} 
+                          alt={`Photo ${idx + 1}`} 
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90"
+                          onClick={() => window.open(photo, '_blank')}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Line Items / Parts Needed */}
+              {selectedRepairRequest.lineItems && (selectedRepairRequest.lineItems as any[]).length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    Line Items / Parts Needed
+                  </h4>
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium text-slate-600">Item</th>
+                          <th className="text-center px-3 py-2 font-medium text-slate-600">Qty</th>
+                          <th className="text-right px-3 py-2 font-medium text-slate-600">Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectedRepairRequest.lineItems as any[]).map((item, idx) => (
+                          <tr key={idx} className="border-t border-slate-100">
+                            <td className="px-3 py-2 text-slate-700">{item.partName || item.description || "Item"}</td>
+                            <td className="px-3 py-2 text-center text-slate-600">{item.quantity || 1}</td>
+                            <td className="px-3 py-2 text-right text-slate-600">{formatCurrency((item.unitPrice || 0) * 100)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Notes */}
+              {selectedRepairRequest.customerNote && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900 mb-2">Customer Notes</h4>
+                  <p className="text-sm text-slate-600 bg-white border border-slate-200 rounded-lg p-3">
+                    {selectedRepairRequest.customerNote}
+                  </p>
+                </div>
+              )}
+
+              {/* Memo */}
+              {selectedRepairRequest.memo && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900 mb-2">Memo</h4>
+                  <p className="text-sm text-slate-600 bg-white border border-slate-200 rounded-lg p-3">
+                    {selectedRepairRequest.memo}
+                  </p>
+                </div>
+              )}
+
+              {/* Tech Notes */}
+              {selectedRepairRequest.techNotes && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900 mb-2">Tech Notes</h4>
+                  <p className="text-sm text-slate-600 bg-white border border-slate-200 rounded-lg p-3">
+                    {selectedRepairRequest.techNotes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Approval Request Modal */}
+      <Dialog open={showApprovalModal} onOpenChange={setShowApprovalModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader className="bg-[#1e3a5f] -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Request Approval
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-2">
+            {/* Auto-filled fields */}
+            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Repair Request #</p>
+                  <p className="text-sm font-semibold text-slate-900">{selectedRepairRequest?.requestNumber || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Property</p>
+                  <p className="text-sm font-medium text-slate-700">{selectedRepairRequest?.propertyName || "—"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">Issue Description</p>
+                <p className="text-sm text-slate-600 truncate">{selectedRepairRequest?.issueDescription || "—"}</p>
+              </div>
+            </div>
+
+            {/* Estimated Cost */}
+            <div>
+              <Label htmlFor="estimated-cost" className="text-sm font-medium">Estimated Cost</Label>
+              <div className="relative mt-1">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  id="estimated-cost"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={approvalForm.estimatedCost}
+                  onChange={(e) => setApprovalForm({ ...approvalForm, estimatedCost: e.target.value })}
+                  className="pl-10"
+                  data-testid="input-estimated-cost"
+                />
+              </div>
+            </div>
+
+            {/* Approval Requested From */}
+            <div>
+              <Label htmlFor="approval-from" className="text-sm font-medium">Approval Requested From</Label>
+              <Select
+                value={approvalForm.approvalRequestedFrom}
+                onValueChange={(value) => setApprovalForm({ ...approvalForm, approvalRequestedFrom: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-approval-from">
+                  <SelectValue placeholder="Select approver..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="supervisor">Supervisor</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                  <SelectItem value="office_admin">Office Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Urgency */}
+            <div>
+              <Label htmlFor="urgency" className="text-sm font-medium">Urgency</Label>
+              <Select
+                value={approvalForm.urgency}
+                onValueChange={(value) => setApprovalForm({ ...approvalForm, urgency: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-urgency">
+                  <SelectValue placeholder="Select urgency..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="priority">Priority</SelectItem>
+                  <SelectItem value="emergency">Emergency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Approval Notes */}
+            <div>
+              <Label htmlFor="approval-notes" className="text-sm font-medium">Approval Notes</Label>
+              <Textarea
+                id="approval-notes"
+                placeholder="Enter justification or additional details..."
+                value={approvalForm.approvalNotes}
+                onChange={(e) => setApprovalForm({ ...approvalForm, approvalNotes: e.target.value })}
+                className="mt-1 min-h-[80px]"
+                data-testid="textarea-approval-notes"
+              />
+            </div>
+
+            {/* Attachments placeholder */}
+            <div>
+              <Label className="text-sm font-medium">Attachments</Label>
+              <div className="mt-1 border-2 border-dashed border-slate-200 rounded-lg p-4 text-center text-slate-500 text-sm">
+                <Paperclip className="w-5 h-5 mx-auto mb-1 opacity-50" />
+                <p>Attach photos or documents (optional)</p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowApprovalModal(false)}
+              data-testid="button-cancel-approval"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#f97316] hover:bg-[#f97316]/90 text-white"
+              onClick={submitApprovalRequest}
+              disabled={!approvalForm.approvalRequestedFrom || createApprovalRequestMutation.isPending}
+              data-testid="button-send-approval"
+            >
+              {createApprovalRequestMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Send Approval Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert to Estimate Confirmation Modal */}
+      <Dialog open={showConvertModal} onOpenChange={setShowConvertModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileEdit className="w-5 h-5 text-[#0078D4]" />
+              Convert to Estimate
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-slate-600 mb-4">
+              This will create a new estimate from repair request <strong>{selectedRepairRequest?.requestNumber}</strong> for:
+            </p>
+            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+              <div>
+                <p className="text-xs font-medium text-slate-500">Property</p>
+                <p className="text-sm font-semibold text-slate-900">{selectedRepairRequest?.propertyName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">Issue</p>
+                <p className="text-sm text-slate-700">{selectedRepairRequest?.issueDescription}</p>
+              </div>
+              {selectedRepairRequest?.lineItems && (selectedRepairRequest.lineItems as any[]).length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Line Items</p>
+                  <p className="text-sm text-slate-700">{(selectedRepairRequest.lineItems as any[]).length} items will be carried over</p>
+                </div>
+              )}
+              {selectedRepairRequest?.photos && selectedRepairRequest.photos.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-slate-500">Photos</p>
+                  <p className="text-sm text-slate-700">{selectedRepairRequest.photos.length} photos will be attached</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConvertModal(false)}
+              data-testid="button-cancel-convert"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0078D4] hover:bg-[#0078D4]/90 text-white"
+              onClick={confirmConvertToEstimate}
+              disabled={convertToEstimateMutation.isPending}
+              data-testid="button-confirm-convert"
+            >
+              {convertToEstimateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <FileEdit className="w-4 h-4 mr-2" />
+              )}
+              Create Estimate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

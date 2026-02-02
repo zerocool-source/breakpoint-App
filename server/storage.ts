@@ -26,6 +26,7 @@ import {
   type Estimate, type InsertEstimate,
   type ServiceRepairJob, type InsertServiceRepairJob,
   type RepairRequest, type InsertRepairRequest,
+  type ApprovalRequest, type InsertApprovalRequest,
   type Route, type InsertRoute,
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
@@ -56,7 +57,7 @@ import {
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
-  estimates, serviceRepairJobs, repairRequests, routes, routeStops, routeMoves, unscheduledStops,
+  estimates, serviceRepairJobs, repairRequests, approvalRequests, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
@@ -349,6 +350,13 @@ export interface IStorage {
   createRepairRequest(request: InsertRepairRequest): Promise<RepairRequest>;
   updateRepairRequest(id: string, updates: Partial<InsertRepairRequest>): Promise<RepairRequest | undefined>;
   deleteRepairRequest(id: string): Promise<void>;
+
+  // Approval Requests
+  getApprovalRequests(status?: string): Promise<ApprovalRequest[]>;
+  getApprovalRequest(id: string): Promise<ApprovalRequest | undefined>;
+  createApprovalRequest(request: InsertApprovalRequest): Promise<ApprovalRequest>;
+  updateApprovalRequest(id: string, updates: Partial<InsertApprovalRequest>): Promise<ApprovalRequest | undefined>;
+  deleteApprovalRequest(id: string): Promise<void>;
 
   // Routes
   getRoutes(dayOfWeek?: number): Promise<Route[]>;
@@ -2182,6 +2190,38 @@ export class DbStorage implements IStorage {
 
   async deleteRepairRequest(id: string): Promise<void> {
     await db.delete(repairRequests).where(eq(repairRequests.id, id));
+  }
+
+  // Approval Requests
+  async getApprovalRequests(status?: string): Promise<ApprovalRequest[]> {
+    if (status) {
+      return db.select().from(approvalRequests)
+        .where(eq(approvalRequests.status, status))
+        .orderBy(desc(approvalRequests.createdAt));
+    }
+    return db.select().from(approvalRequests).orderBy(desc(approvalRequests.createdAt));
+  }
+
+  async getApprovalRequest(id: string): Promise<ApprovalRequest | undefined> {
+    const result = await db.select().from(approvalRequests).where(eq(approvalRequests.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createApprovalRequest(request: InsertApprovalRequest): Promise<ApprovalRequest> {
+    const result = await db.insert(approvalRequests).values(request as any).returning();
+    return result[0];
+  }
+
+  async updateApprovalRequest(id: string, updates: Partial<InsertApprovalRequest>): Promise<ApprovalRequest | undefined> {
+    const result = await db.update(approvalRequests)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(approvalRequests.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteApprovalRequest(id: string): Promise<void> {
+    await db.delete(approvalRequests).where(eq(approvalRequests.id, id));
   }
 
   // Routes

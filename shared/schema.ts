@@ -1198,6 +1198,53 @@ export const insertRepairRequestSchema = createInsertSchema(repairRequests).omit
 export type InsertRepairRequest = z.infer<typeof insertRepairRequestSchema>;
 export type RepairRequest = typeof repairRequests.$inferSelect;
 
+// Approval Requests (for repair requests that need approval before proceeding)
+export const approvalRequests = pgTable("approval_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Link to repair request
+  repairRequestId: text("repair_request_id").notNull(),
+  repairRequestNumber: text("repair_request_number"),
+  
+  // Property info (copied for quick access)
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  issueDescription: text("issue_description"),
+  
+  // Approval details
+  estimatedCost: integer("estimated_cost").default(0), // In cents
+  approvalRequestedFrom: text("approval_requested_from").notNull(), // supervisor, manager, customer, office_admin
+  approvalNotes: text("approval_notes"),
+  urgency: text("urgency").notNull().default("standard"), // standard, priority, emergency
+  
+  // Attachments
+  attachments: text("attachments").array(),
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // pending, approved, rejected, expired
+  approvedBy: text("approved_by"),
+  approvedByName: text("approved_by_name"),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Request metadata
+  requestedBy: text("requested_by"),
+  requestedByName: text("requested_by_name"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertApprovalRequestSchema = createInsertSchema(approvalRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertApprovalRequest = z.infer<typeof insertApprovalRequestSchema>;
+export type ApprovalRequest = typeof approvalRequests.$inferSelect;
+
 // Routes (Service routes for technicians)
 export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
