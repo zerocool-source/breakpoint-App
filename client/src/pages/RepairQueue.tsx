@@ -33,7 +33,9 @@ import {
   User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
   Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera
 } from "lucide-react";
-import type { ServiceRepairJob, Technician, Emergency } from "@shared/schema";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus } from "lucide-react";
+import type { ServiceRepairJob, Technician, Emergency, RepairRequest } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20", icon: Clock, label: "Pending" },
@@ -134,6 +136,70 @@ export default function RepairQueue() {
       const response = await fetch("/api/emergencies");
       if (!response.ok) throw new Error("Failed to fetch emergencies");
       return response.json();
+    },
+  });
+
+  // Fetch repair requests
+  const { data: repairRequestsData } = useQuery<{ requests: RepairRequest[] }>({
+    queryKey: ["/api/repair-requests"],
+    queryFn: async () => {
+      const response = await fetch("/api/repair-requests");
+      if (!response.ok) throw new Error("Failed to fetch repair requests");
+      return response.json();
+    },
+  });
+  const repairRequests = repairRequestsData?.requests || [];
+  const pendingRepairRequests = repairRequests.filter(r => r.status === "pending");
+
+  // Fetch customers for property dropdown
+  const { data: customersData } = useQuery<{ customers: any[] }>({
+    queryKey: ["/api/customers/stored"],
+    queryFn: async () => {
+      const response = await fetch("/api/customers/stored");
+      if (!response.ok) throw new Error("Failed to fetch customers");
+      return response.json();
+    },
+  });
+
+  // Create repair request state
+  const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
+  const [repairRequestForm, setRepairRequestForm] = useState({
+    propertyId: "",
+    propertyName: "",
+    issueDescription: "",
+    reportedBy: "office" as "service_tech" | "customer" | "office",
+    reportedByName: "",
+    priority: "medium" as "low" | "medium" | "high" | "urgent",
+    notes: "",
+  });
+
+  // Create repair request mutation
+  const createRepairRequestMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/repair-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create repair request");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
+      setShowCreateRepairRequestModal(false);
+      setRepairRequestForm({
+        propertyId: "",
+        propertyName: "",
+        issueDescription: "",
+        reportedBy: "office",
+        reportedByName: "",
+        priority: "medium",
+        notes: "",
+      });
+      toast({ title: "Success", description: "Repair request created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create repair request", variant: "destructive" });
     },
   });
 
@@ -1368,6 +1434,13 @@ export default function RepairQueue() {
               <Wrench className="w-4 h-4 mr-2" /> Active Jobs ({pendingRepairs.length + inProgressRepairs.length})
             </TabsTrigger>
             <TabsTrigger 
+              value="repairs-needed" 
+              data-testid="tab-repairs-needed"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" /> Repairs Needed ({pendingRepairRequests.length})
+            </TabsTrigger>
+            <TabsTrigger 
               value="completed" 
               data-testid="tab-completed"
               className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
@@ -1413,9 +1486,19 @@ export default function RepairQueue() {
                 <div className="lg:col-span-2">
                   <Card className="bg-white shadow-sm rounded-xl">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg font-semibold text-slate-900">
-                        {selectedTech ? `${selectedTech}'s Jobs` : "All Active Jobs"}
-                      </CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-semibold text-slate-900">
+                          {selectedTech ? `${selectedTech}'s Jobs` : "All Active Jobs"}
+                        </CardTitle>
+                        <Button
+                          onClick={() => setShowCreateRepairRequestModal(true)}
+                          className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+                          data-testid="button-create-repair-request-header"
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Repair Request
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-[550px]">
@@ -1462,6 +1545,76 @@ export default function RepairQueue() {
                 {filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").map(renderRepairCard)}
               </div>
             )}
+          </TabsContent>
+
+          {/* Repairs Needed Tab - Shows repair requests awaiting evaluation */}
+          <TabsContent value="repairs-needed" className="mt-4">
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-slate-900">Repair Requests</CardTitle>
+                  <Button
+                    onClick={() => setShowCreateRepairRequestModal(true)}
+                    className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+                    data-testid="button-create-repair-request-tab"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Repair Request
+                  </Button>
+                </div>
+                <p className="text-sm text-slate-500 mt-1">Repair requests that need to be evaluated before creating an estimate</p>
+              </CardHeader>
+              <CardContent>
+                {pendingRepairRequests.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500">
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No repair requests pending</p>
+                    <Button
+                      onClick={() => setShowCreateRepairRequestModal(true)}
+                      className="mt-4 bg-[#f97316] hover:bg-[#ea580c] text-white"
+                      data-testid="button-empty-create-repair"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Create Repair Request
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {pendingRepairRequests.map((request: RepairRequest) => (
+                      <Card key={request.id} className="border-l-4 border-l-[#f97316] shadow-sm hover:shadow-md transition-shadow" data-testid={`card-repair-request-${request.id}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h4 className="font-semibold text-slate-900 text-sm truncate" title={request.propertyName || ""}>
+                              {request.propertyName}
+                            </h4>
+                            {request.priority && (
+                              <Badge variant="outline" className={
+                                request.priority === "urgent" ? "bg-red-100 text-red-700 border-red-200" :
+                                request.priority === "high" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                request.priority === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                "bg-slate-100 text-slate-600 border-slate-200"
+                              }>
+                                {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600 line-clamp-2 mb-3">{request.issueDescription}</p>
+                          <div className="flex items-center justify-between text-xs text-slate-500">
+                            <span>
+                              {request.reportedBy === "service_tech" ? "Service Tech" : 
+                               request.reportedBy === "customer" ? "Customer" : "Office"}
+                            </span>
+                            <span>
+                              {request.createdAt && new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4">
@@ -2296,6 +2449,140 @@ export default function RepairQueue() {
               ) : (
                 "Reassign"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Repair Request Modal */}
+      <Dialog open={showCreateRepairRequestModal} onOpenChange={setShowCreateRepairRequestModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-[#f97316]" />
+              New Repair Request
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Property */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Property</Label>
+              <Select
+                value={repairRequestForm.propertyId}
+                onValueChange={(value) => {
+                  const customer = (customersData?.customers || []).find((c: any) => c.id === value);
+                  setRepairRequestForm({
+                    ...repairRequestForm,
+                    propertyId: value,
+                    propertyName: customer?.name || "",
+                  });
+                }}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-repair-property">
+                  <SelectValue placeholder="Select property..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(customersData?.customers || []).map((customer: any) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Issue Description */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Issue Description</Label>
+              <Textarea
+                value={repairRequestForm.issueDescription}
+                onChange={(e) => setRepairRequestForm({ ...repairRequestForm, issueDescription: e.target.value })}
+                placeholder="Describe the repair issue..."
+                className="mt-1"
+                rows={3}
+                data-testid="input-issue-description"
+              />
+            </div>
+
+            {/* Reported By */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Reported By</Label>
+              <Select
+                value={repairRequestForm.reportedBy}
+                onValueChange={(value: "service_tech" | "customer" | "office") => setRepairRequestForm({ ...repairRequestForm, reportedBy: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-reported-by">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="office">Office</SelectItem>
+                  <SelectItem value="service_tech">Service Tech</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Priority */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Priority</Label>
+              <Select
+                value={repairRequestForm.priority}
+                onValueChange={(value: "low" | "medium" | "high" | "urgent") => setRepairRequestForm({ ...repairRequestForm, priority: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Notes (Optional)</Label>
+              <Textarea
+                value={repairRequestForm.notes}
+                onChange={(e) => setRepairRequestForm({ ...repairRequestForm, notes: e.target.value })}
+                placeholder="Additional notes..."
+                className="mt-1"
+                rows={2}
+                data-testid="input-notes"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateRepairRequestModal(false)}
+              data-testid="button-cancel-repair-request"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (repairRequestForm.propertyId && repairRequestForm.issueDescription) {
+                  createRepairRequestMutation.mutate({
+                    propertyId: repairRequestForm.propertyId,
+                    propertyName: repairRequestForm.propertyName,
+                    issueDescription: repairRequestForm.issueDescription,
+                    reportedBy: repairRequestForm.reportedBy,
+                    reportedByName: repairRequestForm.reportedByName || undefined,
+                    priority: repairRequestForm.priority,
+                    notes: repairRequestForm.notes || undefined,
+                  });
+                }
+              }}
+              disabled={!repairRequestForm.propertyId || !repairRequestForm.issueDescription || createRepairRequestMutation.isPending}
+              className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+              data-testid="button-submit-repair-request"
+            >
+              {createRepairRequestMutation.isPending ? "Creating..." : "Submit Request"}
             </Button>
           </DialogFooter>
         </DialogContent>
