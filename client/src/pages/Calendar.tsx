@@ -442,17 +442,17 @@ export default function Calendar() {
   });
 
   // Fetch Repair Requests for repair tab
-  const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<any[]>({
+  const { data: repairRequestsData, refetch: refetchRepairRequests } = useQuery<{ requests: any[] }>({
     queryKey: ["/api/repair-requests", "pending"],
     queryFn: async () => {
       const res = await fetch(`/api/repair-requests?status=pending`);
-      if (!res.ok) return [];
+      if (!res.ok) return { requests: [] };
       return res.json();
     },
     enabled: roleFilter === "repair",
   });
 
-  const pendingRepairRequests = repairRequestsData || [];
+  const pendingRepairRequests = repairRequestsData?.requests || [];
 
   // Fetch estimates for repair technicians - needs_scheduling (ready to assign) and scheduled (assigned)
   const { data: scheduledEstimatesData, refetch: refetchScheduledEstimates } = useQuery<{ estimates: ScheduledRepair[], unassigned: ScheduledRepair[] }>({
