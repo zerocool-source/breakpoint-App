@@ -16,6 +16,11 @@ export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   
+  const sessionSecret = process.env.SESSION_SECRET || 'breakpoint-fallback-secret-change-in-production';
+  if (!process.env.SESSION_SECRET) {
+    console.warn('WARNING: SESSION_SECRET not set, using fallback. Set SESSION_SECRET in production!');
+  }
+  
   let connectionString = process.env.DATABASE_URL || '';
   if (!connectionString.includes('sslmode=')) {
     connectionString += (connectionString.includes('?') ? '&' : '?') + 'sslmode=require';
@@ -26,10 +31,13 @@ export function getSession() {
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "session",
+    errorLog: (err: Error) => {
+      console.error('Session store error:', err.message);
+    },
   });
   const isProduction = process.env.NODE_ENV === "production";
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: sessionSecret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
