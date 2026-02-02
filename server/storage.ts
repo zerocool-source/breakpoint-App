@@ -25,6 +25,7 @@ import {
   type ChannelRead, type InsertChannelRead,
   type Estimate, type InsertEstimate,
   type ServiceRepairJob, type InsertServiceRepairJob,
+  type RepairRequest, type InsertRepairRequest,
   type Route, type InsertRoute,
   type RouteStop, type InsertRouteStop,
   type RouteMove, type InsertRouteMove,
@@ -55,7 +56,7 @@ import {
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
-  estimates, serviceRepairJobs, routes, routeStops, routeMoves, unscheduledStops,
+  estimates, serviceRepairJobs, repairRequests, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
@@ -341,6 +342,13 @@ export interface IStorage {
   updateServiceRepairJob(id: string, updates: Partial<InsertServiceRepairJob>): Promise<ServiceRepairJob | undefined>;
   updateServiceRepairJobsStatus(ids: string[], status: string, estimateId?: string, invoiceId?: string): Promise<void>;
   deleteServiceRepairJob(id: string): Promise<void>;
+
+  // Repair Requests
+  getRepairRequests(status?: string): Promise<RepairRequest[]>;
+  getRepairRequest(id: string): Promise<RepairRequest | undefined>;
+  createRepairRequest(request: InsertRepairRequest): Promise<RepairRequest>;
+  updateRepairRequest(id: string, updates: Partial<InsertRepairRequest>): Promise<RepairRequest | undefined>;
+  deleteRepairRequest(id: string): Promise<void>;
 
   // Routes
   getRoutes(dayOfWeek?: number): Promise<Route[]>;
@@ -2142,6 +2150,38 @@ export class DbStorage implements IStorage {
 
   async deleteServiceRepairJob(id: string): Promise<void> {
     await db.delete(serviceRepairJobs).where(eq(serviceRepairJobs.id, id));
+  }
+
+  // Repair Requests
+  async getRepairRequests(status?: string): Promise<RepairRequest[]> {
+    if (status) {
+      return db.select().from(repairRequests)
+        .where(eq(repairRequests.status, status))
+        .orderBy(desc(repairRequests.createdAt));
+    }
+    return db.select().from(repairRequests).orderBy(desc(repairRequests.createdAt));
+  }
+
+  async getRepairRequest(id: string): Promise<RepairRequest | undefined> {
+    const result = await db.select().from(repairRequests).where(eq(repairRequests.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createRepairRequest(request: InsertRepairRequest): Promise<RepairRequest> {
+    const result = await db.insert(repairRequests).values(request as any).returning();
+    return result[0];
+  }
+
+  async updateRepairRequest(id: string, updates: Partial<InsertRepairRequest>): Promise<RepairRequest | undefined> {
+    const result = await db.update(repairRequests)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(eq(repairRequests.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteRepairRequest(id: string): Promise<void> {
+    await db.delete(repairRequests).where(eq(repairRequests.id, id));
   }
 
   // Routes
