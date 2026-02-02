@@ -23,9 +23,9 @@ export function getSession() {
   
   const sessionStore = new pgStore({
     conString: connectionString,
-    createTableIfMissing: false,
+    createTableIfMissing: true,
     ttl: sessionTtl,
-    tableName: "sessions",
+    tableName: "session",
   });
   const isProduction = process.env.NODE_ENV === "production";
   return session({
