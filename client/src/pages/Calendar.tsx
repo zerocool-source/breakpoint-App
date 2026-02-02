@@ -4237,24 +4237,6 @@ export default function Calendar() {
                       </div>
                     )}
                   </div>
-                  <Button
-                    onClick={() => {
-                      setSelectedRepairRequest(request);
-                      setRepairAssignmentForm({
-                        technicianId: "",
-                        technicianName: "",
-                        scheduledDate: new Date().toISOString().split('T')[0],
-                        scheduledTime: "",
-                        notes: "",
-                      });
-                      setShowRepairAssignmentModal(true);
-                    }}
-                    className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white"
-                    data-testid={`button-assign-${request.id}`}
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Assign for Assessment
-                  </Button>
                 </div>
               </div>
             ))}
