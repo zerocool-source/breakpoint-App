@@ -206,7 +206,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-4xl h-[90vh] overflow-hidden flex flex-col p-0">
         <div className="bg-[#1e3a5f] text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold tracking-wide">REPAIR REQUEST</h2>
@@ -218,7 +218,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
             {/* Office Notes Section - Top of form */}
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
