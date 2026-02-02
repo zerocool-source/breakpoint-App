@@ -1372,7 +1372,7 @@ export default function Calendar() {
                   </div>
                   {pendingRepairRequests.length > 0 && (
                     <span className="ml-2 px-2.5 py-1 bg-[#f97316] text-white text-xs font-bold rounded-full shadow-sm">
-                      {pendingRepairRequests.length} {pendingRepairRequests.length === 1 ? 'job' : 'jobs'}
+                      {pendingRepairRequests.length} {pendingRepairRequests.length === 1 ? 'repair request' : 'repair requests'}
                     </span>
                   )}
                 </div>
