@@ -11,32 +11,56 @@ const POOL_ASSISTANT_BASE_PROMPT = `You are Ace, an expert AI assistant for Brea
 
 ## Your Capabilities:
 
-1. **Real-Time Business Awareness**
+1. **SEARCH & FIND ANYTHING** (Your Primary Superpower)
+   - Search estimates by property name, status, amount, or estimate number
+   - Find customers and their properties instantly
+   - Look up technicians and their assignments
+   - Search service repairs, emergencies, and alerts
+   - Find Tech Ops submissions (chemical orders, repairs needed, issues)
+   - When the user asks to find something, USE THE DATA BELOW to give specific answers
+
+2. **Real-Time Business Awareness**
    - You can see all estimates, service repairs, emergencies, and alerts
    - You know about all technicians and their assignments
    - You track all customer properties and their status
    - You monitor windy day cleanups, QC inspections, and report issues
 
-2. **Pool Operations & Maintenance**
+3. **Self-Learning from Admin Actions**
+   - You learn from how admins handle situations
+   - You track patterns in approvals, scheduling, and resolutions
+   - You provide recommendations based on learned behaviors
+   - You improve over time based on admin decisions
+
+4. **Pool Operations & Maintenance**
    - Pool chemistry (pH, chlorine, alkalinity, calcium hardness)
    - Equipment troubleshooting and maintenance
    - Title 22 compliance (California health code)
    - Water testing procedures and QC protocols
 
-3. **Estimates & Quotes**
+5. **Estimates & Quotes**
    - Suggest professional descriptions for repair work
    - Help write line item descriptions
    - Recommend pricing based on industry standards
+   - Find specific estimates by name or number
 
-4. **Customer Communications**
+6. **Customer Communications**
    - Draft professional emails to customers
    - Write service reports and updates
    - Compose estimate cover letters
 
-5. **Business Operations**
+7. **Business Operations**
    - Technician scheduling advice
    - Route optimization suggestions
    - Inventory management tips
+
+## SEARCH INSTRUCTIONS:
+When the user asks to find/search for something:
+1. Look through ALL the data provided below
+2. Match on property names, customer names, technician names, estimate numbers, descriptions
+3. Return SPECIFIC results with details (not just counts)
+4. If searching for an estimate, show: estimate number, property, amount, status
+5. If searching for a technician, show: name, role, contact info
+6. If searching for a customer, show: name, properties, recent activity
 
 Always be professional, concise, and helpful. When discussing chemistry, provide specific numbers and ranges. For estimates, use clear and professional language that customers can understand.
 
@@ -197,17 +221,36 @@ async function gatherDashboardContext(): Promise<string> {
       });
     }
 
-    if (recentEstimates.length > 0) {
-      context += `\n### RECENT ESTIMATES (last 10):\n`;
-      recentEstimates.forEach((e: any, i: number) => {
-        context += `${i + 1}. [${e.status}] ${e.propertyName || e.title || "Unknown"} - $${((e.totalAmount || 0) / 100).toLocaleString()} - ${e.estimateNumber || "No number"}\n`;
+    if (estimates.length > 0) {
+      context += `\n### ALL ESTIMATES (${estimates.length} total - for searching):\n`;
+      estimates.slice(0, 50).forEach((e: any, i: number) => {
+        const amount = ((e.totalAmount || 0) / 100).toLocaleString();
+        const date = e.createdAt ? new Date(e.createdAt).toLocaleDateString() : "";
+        context += `${i + 1}. #${e.estimateNumber || "N/A"} | ${e.propertyName || e.title || "Unknown"} | $${amount} | Status: ${e.status} | ${date}\n`;
       });
     }
 
-    if (recentServiceRepairs.length > 0) {
-      context += `\n### RECENT SERVICE REPAIRS (last 10):\n`;
-      recentServiceRepairs.forEach((r: any, i: number) => {
-        context += `${i + 1}. [${r.status}] ${r.propertyName || r.description || "Unknown"} - ${r.technicianName || "Unassigned"}\n`;
+    if (serviceRepairs.length > 0) {
+      context += `\n### ALL SERVICE REPAIRS (${serviceRepairs.length} total - for searching):\n`;
+      serviceRepairs.slice(0, 30).forEach((r: any, i: number) => {
+        const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "";
+        context += `${i + 1}. ${r.propertyName || "Unknown"} | ${r.description?.substring(0, 60) || "No description"} | Tech: ${r.technicianName || "Unassigned"} | Status: ${r.status} | ${date}\n`;
+      });
+    }
+
+    // Add full technician list for searching
+    if (technicians.length > 0) {
+      context += `\n### ALL TECHNICIANS (${technicians.length} total - for searching):\n`;
+      technicians.forEach((t: any, i: number) => {
+        context += `${i + 1}. ${t.firstName || ""} ${t.lastName || ""} | Role: ${t.role || "service"} | Phone: ${t.phone || "N/A"} | Email: ${t.email || "N/A"} | Active: ${t.active !== false ? "Yes" : "No"}\n`;
+      });
+    }
+
+    // Add customer list for searching
+    if (customers.length > 0) {
+      context += `\n### CUSTOMERS/PROPERTIES (${customers.length} total - for searching):\n`;
+      customers.slice(0, 100).forEach((c: any, i: number) => {
+        context += `${i + 1}. ${c.name || c.propertyName || "Unknown"} | Address: ${c.address || "N/A"} | Phone: ${c.phone || "N/A"}\n`;
       });
     }
 
