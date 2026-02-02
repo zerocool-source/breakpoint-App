@@ -1163,6 +1163,7 @@ export const repairRequests = pgTable("repair_requests", {
   
   // Notes sections
   customerNote: text("customer_note"), // Visible on request
+  officeNotes: text("office_notes"), // Internal office notes
   memo: text("memo"), // Internal memo
   techNotes: text("tech_notes"), // Technical notes
   notes: text("notes"), // Legacy/general notes field

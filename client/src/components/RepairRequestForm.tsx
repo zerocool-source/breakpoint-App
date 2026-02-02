@@ -33,6 +33,7 @@ interface FormData {
   lineItems: RepairRequestLineItem[];
   photos: string[];
   customerNote: string;
+  officeNotes: string;
   memo: string;
   techNotes: string;
   reportedBy: string;
@@ -61,6 +62,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
     lineItems: [],
     photos: [],
     customerNote: "",
+    officeNotes: "",
     memo: "",
     techNotes: "",
     reportedBy: "office_staff",
@@ -135,6 +137,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       lineItems: [],
       photos: [],
       customerNote: "",
+      officeNotes: "",
       memo: "",
       techNotes: "",
       reportedBy: "office_staff",
@@ -189,6 +192,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       lineItems: formData.lineItems,
       photos: formData.photos.length > 0 ? formData.photos : undefined,
       customerNote: formData.customerNote || undefined,
+      officeNotes: formData.officeNotes || undefined,
       memo: formData.memo || undefined,
       techNotes: formData.techNotes || undefined,
       reportedBy: formData.reportedBy,
@@ -539,6 +543,17 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                   rows={2}
                   className="mt-1 resize-none"
                   data-testid="textarea-customer-note"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-slate-500">Office Notes (internal)</Label>
+                <Textarea
+                  value={formData.officeNotes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
+                  placeholder="Office notes..."
+                  rows={2}
+                  className="mt-1 resize-none"
+                  data-testid="textarea-office-notes"
                 />
               </div>
               <div>
