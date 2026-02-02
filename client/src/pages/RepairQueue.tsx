@@ -164,45 +164,6 @@ export default function RepairQueue() {
 
   // Create repair request state
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
-  const [repairRequestForm, setRepairRequestForm] = useState({
-    propertyId: "",
-    propertyName: "",
-    issueDescription: "",
-    reportedBy: "office" as "service_tech" | "customer" | "office",
-    reportedByName: "",
-    priority: "medium" as "low" | "medium" | "high" | "urgent",
-    notes: "",
-  });
-
-  // Create repair request mutation
-  const createRepairRequestMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch("/api/repair-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create repair request");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
-      setShowCreateRepairRequestModal(false);
-      setRepairRequestForm({
-        propertyId: "",
-        propertyName: "",
-        issueDescription: "",
-        reportedBy: "office",
-        reportedByName: "",
-        priority: "medium",
-        notes: "",
-      });
-      toast({ title: "Success", description: "Repair request created successfully" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create repair request", variant: "destructive" });
-    },
-  });
 
   // Get unique properties for filter dropdown
   const uniqueProperties = useMemo(() => {

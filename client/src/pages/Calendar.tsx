@@ -317,15 +317,6 @@ export default function Calendar() {
   // Repairs Needed state
   const [showRepairsNeededSidebar, setShowRepairsNeededSidebar] = useState(false);
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
-  const [repairRequestForm, setRepairRequestForm] = useState({
-    propertyId: "",
-    propertyName: "",
-    issueDescription: "",
-    reportedBy: "office" as "service_tech" | "customer" | "office",
-    reportedByName: "",
-    priority: "medium" as "low" | "medium" | "high" | "urgent",
-    notes: "",
-  });
   const [qcInspectionForm, setQcInspectionForm] = useState({
     propertyId: "",
     inspectionType: "",
@@ -668,47 +659,6 @@ export default function Calendar() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to assign estimate", variant: "destructive" });
-    },
-  });
-
-  // Mutation to create repair request
-  const createRepairRequestMutation = useMutation({
-    mutationFn: async (data: {
-      propertyId: string;
-      propertyName: string;
-      issueDescription: string;
-      reportedBy: string;
-      reportedByName?: string;
-      priority: string;
-      notes?: string;
-    }) => {
-      const res = await fetch("/api/repair-requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Failed to create repair request");
-      return res.json();
-    },
-    onSuccess: () => {
-      refetchRepairRequests();
-      setShowCreateRepairRequestModal(false);
-      setRepairRequestForm({
-        propertyId: "",
-        propertyName: "",
-        issueDescription: "",
-        reportedBy: "office",
-        reportedByName: "",
-        priority: "medium",
-        notes: "",
-      });
-      toast({
-        title: "Repair Request Created",
-        description: "The repair request has been submitted for evaluation.",
-      });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create repair request", variant: "destructive" });
     },
   });
 
