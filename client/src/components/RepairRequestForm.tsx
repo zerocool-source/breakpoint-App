@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import {
-  Wrench, Plus, X, Trash2, Camera, DollarSign, FileText, User, Calendar, Tag, Upload
+  Wrench, Plus, X, Trash2, Camera, DollarSign, FileText, User, Calendar, Tag, Upload, ClipboardList
 } from "lucide-react";
 import type { RepairRequestLineItem } from "@shared/schema";
 
@@ -220,6 +220,23 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
 
         <ScrollArea className="flex-1">
           <div className="p-6 space-y-6">
+            {/* Office Notes Section - Top of form */}
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                <ClipboardList className="w-4 h-4 text-amber-600" />
+                Office Notes
+                <span className="text-xs font-normal text-amber-600 ml-1">(Internal use only)</span>
+              </Label>
+              <Textarea
+                value={formData.officeNotes}
+                onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
+                placeholder="Add office notes..."
+                rows={3}
+                className="resize-none bg-white"
+                data-testid="textarea-office-notes-top"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border">
               <div className="col-span-2">
                 <Label className="text-xs text-slate-500 font-medium">Customer / Property</Label>
@@ -543,17 +560,6 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                   rows={2}
                   className="mt-1 resize-none"
                   data-testid="textarea-customer-note"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-slate-500">Office Notes (internal)</Label>
-                <Textarea
-                  value={formData.officeNotes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
-                  placeholder="Office notes..."
-                  rows={2}
-                  className="mt-1 resize-none"
-                  data-testid="textarea-office-notes"
                 />
               </div>
               <div>
