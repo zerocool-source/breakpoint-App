@@ -1435,7 +1435,7 @@ export default function Calendar() {
                     data-testid="button-create-repair-request"
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    + Repair Request
+                    Repair Request
                   </Button>
                   <button
                     onClick={() => setShowRepairsNeededSidebar(true)}
