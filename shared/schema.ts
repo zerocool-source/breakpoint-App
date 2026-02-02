@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, json, real, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, json, jsonb, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1122,25 +1122,55 @@ export const insertServiceRepairJobSchema = createInsertSchema(serviceRepairJobs
 export type InsertServiceRepairJob = z.infer<typeof insertServiceRepairJobSchema>;
 export type ServiceRepairJob = typeof serviceRepairJobs.$inferSelect;
 
+// Repair Request Line Item type (stored as JSON)
+export interface RepairRequestLineItem {
+  lineNumber: number;
+  itemName: string;
+  description?: string;
+  quantity: number;
+  unitPrice?: number;
+  amount?: number;
+}
+
 // Repair Requests (requests for repair evaluation/assessment)
 export const repairRequests = pgTable("repair_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Request identification
+  requestNumber: text("request_number"), // Auto-generated (e.g., "RR-265959")
+  requestDate: timestamp("request_date").defaultNow(),
   
   // Property information
   propertyId: text("property_id").notNull(),
   propertyName: text("property_name").notNull(),
   customerId: text("customer_id"),
   customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
   address: text("address"),
   
   // Request details
   issueDescription: text("issue_description").notNull(),
-  reportedBy: text("reported_by").notNull(), // service_tech, customer, office
+  reportedBy: text("reported_by").notNull(), // service_tech, repair_tech, supervisor, office_staff, customer
   reportedByName: text("reported_by_name"),
   reportedByTechId: text("reported_by_tech_id"),
   priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
-  notes: text("notes"),
+  
+  // Line items (parts/items needed) - stored as JSON
+  lineItems: jsonb("line_items").$type<RepairRequestLineItem[]>().default([]),
+  
+  // Photos
   photos: text("photos").array(),
+  
+  // Notes sections
+  customerNote: text("customer_note"), // Visible on request
+  memo: text("memo"), // Internal memo
+  techNotes: text("tech_notes"), // Technical notes
+  notes: text("notes"), // Legacy/general notes field
+  
+  // Cost tracking
+  subtotal: integer("subtotal").default(0), // In cents
+  estimatedCost: integer("estimated_cost").default(0), // In cents
+  totalAmount: integer("total_amount").default(0), // In cents
   
   // Status tracking
   status: text("status").notNull().default("pending"), // pending, assigned, in_assessment, estimated, completed, cancelled

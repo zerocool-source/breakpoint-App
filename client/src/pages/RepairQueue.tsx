@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
+import { RepairRequestForm } from "@/components/RepairRequestForm";
 import type { ServiceRepairJob, Technician, Emergency, RepairRequest } from "@shared/schema";
 
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
@@ -2455,138 +2456,13 @@ export default function RepairQueue() {
       </Dialog>
 
       {/* Create Repair Request Modal */}
-      <Dialog open={showCreateRepairRequestModal} onOpenChange={setShowCreateRepairRequestModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-[#f97316]" />
-              New Repair Request
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {/* Property */}
-            <div>
-              <Label className="text-sm font-medium text-slate-700">Property</Label>
-              <Select
-                value={repairRequestForm.propertyId}
-                onValueChange={(value) => {
-                  const customer = (customersData?.customers || []).find((c: any) => c.id === value);
-                  setRepairRequestForm({
-                    ...repairRequestForm,
-                    propertyId: value,
-                    propertyName: customer?.name || "",
-                  });
-                }}
-              >
-                <SelectTrigger className="mt-1" data-testid="select-repair-property">
-                  <SelectValue placeholder="Select property..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(customersData?.customers || []).map((customer: any) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Issue Description */}
-            <div>
-              <Label className="text-sm font-medium text-slate-700">Issue Description</Label>
-              <Textarea
-                value={repairRequestForm.issueDescription}
-                onChange={(e) => setRepairRequestForm({ ...repairRequestForm, issueDescription: e.target.value })}
-                placeholder="Describe the repair issue..."
-                className="mt-1"
-                rows={3}
-                data-testid="input-issue-description"
-              />
-            </div>
-
-            {/* Reported By */}
-            <div>
-              <Label className="text-sm font-medium text-slate-700">Reported By</Label>
-              <Select
-                value={repairRequestForm.reportedBy}
-                onValueChange={(value: "service_tech" | "customer" | "office") => setRepairRequestForm({ ...repairRequestForm, reportedBy: value })}
-              >
-                <SelectTrigger className="mt-1" data-testid="select-reported-by">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="office">Office</SelectItem>
-                  <SelectItem value="service_tech">Service Tech</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Priority */}
-            <div>
-              <Label className="text-sm font-medium text-slate-700">Priority</Label>
-              <Select
-                value={repairRequestForm.priority}
-                onValueChange={(value: "low" | "medium" | "high" | "urgent") => setRepairRequestForm({ ...repairRequestForm, priority: value })}
-              >
-                <SelectTrigger className="mt-1" data-testid="select-priority">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <Label className="text-sm font-medium text-slate-700">Notes (Optional)</Label>
-              <Textarea
-                value={repairRequestForm.notes}
-                onChange={(e) => setRepairRequestForm({ ...repairRequestForm, notes: e.target.value })}
-                placeholder="Additional notes..."
-                className="mt-1"
-                rows={2}
-                data-testid="input-notes"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateRepairRequestModal(false)}
-              data-testid="button-cancel-repair-request"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (repairRequestForm.propertyId && repairRequestForm.issueDescription) {
-                  createRepairRequestMutation.mutate({
-                    propertyId: repairRequestForm.propertyId,
-                    propertyName: repairRequestForm.propertyName,
-                    issueDescription: repairRequestForm.issueDescription,
-                    reportedBy: repairRequestForm.reportedBy,
-                    reportedByName: repairRequestForm.reportedByName || undefined,
-                    priority: repairRequestForm.priority,
-                    notes: repairRequestForm.notes || undefined,
-                  });
-                }
-              }}
-              disabled={!repairRequestForm.propertyId || !repairRequestForm.issueDescription || createRepairRequestMutation.isPending}
-              className="bg-[#f97316] hover:bg-[#ea580c] text-white"
-              data-testid="button-submit-repair-request"
-            >
-              {createRepairRequestMutation.isPending ? "Creating..." : "Submit Request"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RepairRequestForm
+        open={showCreateRepairRequestModal}
+        onOpenChange={setShowCreateRepairRequestModal}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
+        }}
+      />
     </AppLayout>
   );
 }

@@ -1,0 +1,71 @@
+```
+Throughout the entire application, when clicking any "+ Repair Request" button (on the Calendar page under Repair filter, on the Repair Queue page, or anywhere else), open a form/modal with a layout similar to the Estimate form:
+
+**FORM HEADER:**
+- Title: "REPAIR REQUEST" (dark navy background like the Estimate form)
+- Subtitle: "New Request"
+- Top right: Show "Amount: $0.00" (updates as parts are added)
+
+**FORM SECTIONS:**
+
+**1. Customer / Property:**
+- Property dropdown: "Select customer/property..."
+- Auto-populate customer info when property is selected
+
+**2. Request Details:**
+- Request #: Auto-generated (e.g., "RR-265959")
+- Request Date: Auto-fill with today's date
+- Priority: Dropdown (Low, Medium, High, Urgent)
+- Status: "Pending Assessment" (default)
+
+**3. Issue Description:**
+- Large text area: "Describe the repair issue..."
+- Option to add voice or text (like the Quote Description section)
+
+**4. Line Items / Parts Needed:**
+- "+ Add Item" button (ocean blue)
+- When adding items:
+  - Part/Item name
+  - Quantity
+  - Unit price (optional)
+  - Description
+- Show "No items added yet" when empty
+- List added parts with ability to edit/remove
+
+**5. Photos:**
+- "+ Add Photos" button
+- Upload multiple photos of the issue
+- Show photo thumbnails with ability to remove
+- Caption field for each photo (optional)
+
+**6. Notes:**
+- Customer Note (visible on request): Text field
+- Memo (internal): Text field for internal notes
+- Tech Notes (internal): Text field for technical notes
+
+**7. Reported By:**
+- Dropdown: Service Tech, Repair Tech, Supervisor, Office Staff, Customer
+- Auto-fill name if logged in user
+
+**8. Summary (bottom):**
+- Subtotal: $0.00
+- Estimated Cost: $0.00
+- TOTAL: $0.00
+
+**BOTTOM BUTTONS:**
+- "Save Draft" - outline button on left
+- "Submit Request" - solid orange button on right
+
+**STYLING:**
+- Match the Estimate form layout and styling
+- Dark navy header
+- White form background
+- Clean sections with subtle dividers
+- Orange accent for primary actions
+- Mobile-friendly scrollable form
+
+**APPLY TO ALL LOCATIONS:**
+- Calendar page > Repair filter > Repairs Needed bar > "+ Repair Request" button
+- Repair Queue page > "+ Repair Request" button
+- Any other location with a "+ Repair Request" button
+```
