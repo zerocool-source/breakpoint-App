@@ -1227,6 +1227,17 @@ export const approvalRequests = pgTable("approval_requests", {
   approvedAt: timestamp("approved_at"),
   rejectionReason: text("rejection_reason"),
   
+  // Approval method (how approval was obtained)
+  approvalMethod: text("approval_method"), // email, phone_call, text_message, chat
+  approvalType: text("approval_type"), // email, verbal
+  
+  // Repair technician assigned
+  repairTechnicianId: text("repair_technician_id"),
+  repairTechnicianName: text("repair_technician_name"),
+  
+  // Confirmation notes (for verbal approvals)
+  confirmationNotes: text("confirmation_notes"),
+  
   // Request metadata
   requestedBy: text("requested_by"),
   requestedByName: text("requested_by_name"),

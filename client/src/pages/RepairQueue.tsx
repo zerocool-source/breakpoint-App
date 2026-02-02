@@ -32,7 +32,7 @@ import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
   User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
   Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera,
-  FileEdit, Send, Paperclip, ExternalLink
+  FileEdit, Send, Paperclip, ExternalLink, Mail, Phone, MessageSquare
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
@@ -173,12 +173,19 @@ export default function RepairQueue() {
   
   // Approval request modal state
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalType, setApprovalType] = useState<"email" | "verbal">("verbal");
   const [approvalForm, setApprovalForm] = useState({
+    repairTechnicianId: "",
+    issueDescription: "",
     estimatedCost: "",
-    approvalRequestedFrom: "",
-    approvalNotes: "",
-    urgency: "standard",
-    attachments: [] as string[],
+    approvalMethod: "phone_call", // email, phone_call, text_message, chat
+    confirmationNotes: "",
+    approvedBy: "",
+    approvalDateTime: new Date().toISOString().slice(0, 16),
+    // Email-specific fields
+    emailRecipient: "",
+    emailSubject: "",
+    emailBody: "",
   });
   
   // Convert to estimate state
@@ -792,24 +799,90 @@ export default function RepairQueue() {
       approvalNotes: string;
       urgency: string;
       attachments: string[];
+      status?: string;
+      approvedBy?: string;
+      approvedByName?: string;
+      approvalMethod?: string;
+      approvalType?: string;
+      repairTechnicianId?: string;
+      repairTechnicianName?: string;
+      confirmationNotes?: string;
+      approvalDateTime?: Date;
     }) => {
-      const response = await fetch("/api/approval-requests", {
+      // First create approval request
+      const approvalResponse = await fetch("/api/approval-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Failed to create approval request");
-      return response.json();
+      if (!approvalResponse.ok) throw new Error("Failed to create approval request");
+      const approvalResult = await approvalResponse.json();
+      
+      // Then convert to estimate
+      if (selectedRepairRequest) {
+        const estimateResponse = await fetch("/api/estimates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            propertyId: selectedRepairRequest.propertyId,
+            propertyName: selectedRepairRequest.propertyName,
+            customerName: selectedRepairRequest.customerName,
+            customerEmail: selectedRepairRequest.customerEmail,
+            address: selectedRepairRequest.address,
+            title: `Repair: ${data.issueDescription?.slice(0, 100) || "Repair Request"}`,
+            description: data.issueDescription,
+            sourceType: "repair_request",
+            sourceRepairRequestId: selectedRepairRequest.id,
+            sourceRepairRequestNumber: selectedRepairRequest.requestNumber,
+            lineItems: selectedRepairRequest.lineItems || [],
+            photos: selectedRepairRequest.photos || [],
+            status: data.status === "approved" ? "approved" : "pending_approval",
+            totalAmount: data.estimatedCost,
+            repairTechnicianId: approvalForm.repairTechnicianId || null,
+          }),
+        });
+        if (!estimateResponse.ok) throw new Error("Failed to create estimate");
+        const estimateResult = await estimateResponse.json();
+        
+        // Update repair request status to converted
+        await fetch(`/api/repair-requests/${selectedRepairRequest.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "converted" }),
+        });
+        
+        return { approval: approvalResult, estimate: estimateResult };
+      }
+      
+      return { approval: approvalResult };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/approval-requests"] });
-      toast({ title: "Approval Request Sent", description: "The approval request has been submitted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      const estimateNumber = result.estimate?.estimateNumber || result.estimate?.id;
+      toast({ 
+        title: "Approval Logged & Estimate Created", 
+        description: estimateNumber 
+          ? `Estimate ${estimateNumber} has been created from repair request` 
+          : "The repair request has been converted to an estimate"
+      });
       setShowApprovalModal(false);
-      setApprovalForm({ estimatedCost: "", approvalRequestedFrom: "", approvalNotes: "", urgency: "standard", attachments: [] });
+      setApprovalForm({
+        repairTechnicianId: "",
+        issueDescription: "",
+        estimatedCost: "",
+        approvalMethod: "phone_call",
+        confirmationNotes: "",
+        approvedBy: "",
+        approvalDateTime: new Date().toISOString().slice(0, 16),
+        emailRecipient: "",
+        emailSubject: "",
+        emailBody: "",
+      });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to send approval request", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to process approval request", variant: "destructive" });
     },
   });
 
@@ -880,14 +953,37 @@ export default function RepairQueue() {
     setShowDetailPanel(true);
   };
 
-  const handleRequestApproval = (request: RepairRequest) => {
+  const handleOpenApprovalModal = (request: RepairRequest, type: "email" | "verbal") => {
     setSelectedRepairRequest(request);
+    setApprovalType(type);
+    
+    // Generate email subject and body if email type
+    const emailSubject = `Approval Request: Repair at ${request.propertyName || "Property"}`;
+    const emailBody = `Hello,
+
+We are requesting approval for the following repair work:
+
+Property: ${request.propertyName || "N/A"}
+Repair Request #: ${request.requestNumber || "N/A"}
+Issue: ${request.issueDescription || "N/A"}
+
+Estimated Cost: $[Enter Amount]
+
+Please confirm if you approve this repair to proceed.
+
+Thank you.`;
+
     setApprovalForm({
+      repairTechnicianId: "",
+      issueDescription: request.issueDescription || "",
       estimatedCost: "",
-      approvalRequestedFrom: "",
-      approvalNotes: "",
-      urgency: "standard",
-      attachments: [],
+      approvalMethod: type === "email" ? "email" : "phone_call",
+      confirmationNotes: "",
+      approvedBy: "",
+      approvalDateTime: new Date().toISOString().slice(0, 16),
+      emailRecipient: request.customerEmail || "",
+      emailSubject,
+      emailBody,
     });
     setShowApprovalModal(true);
   };
@@ -897,20 +993,34 @@ export default function RepairQueue() {
     setShowConvertModal(true);
   };
 
-  const submitApprovalRequest = () => {
-    if (!selectedRepairRequest || !approvalForm.approvalRequestedFrom) return;
+  const submitApprovalAndConvert = () => {
+    if (!selectedRepairRequest) return;
     
+    // Find the technician name if selected
+    const selectedTech = repairTechnicians.find(t => t.id === approvalForm.repairTechnicianId);
+    const techName = selectedTech ? `${selectedTech.firstName} ${selectedTech.lastName}` : null;
+    
+    // Create approval request and convert to estimate
     createApprovalRequestMutation.mutate({
       repairRequestId: selectedRepairRequest.id,
       repairRequestNumber: selectedRepairRequest.requestNumber,
       propertyId: selectedRepairRequest.propertyId,
-      propertyName: selectedRepairRequest.propertyName,
-      issueDescription: selectedRepairRequest.issueDescription,
-      estimatedCost: Math.round(parseFloat(approvalForm.estimatedCost || "0") * 100), // Convert to cents
-      approvalRequestedFrom: approvalForm.approvalRequestedFrom,
-      approvalNotes: approvalForm.approvalNotes,
-      urgency: approvalForm.urgency,
-      attachments: approvalForm.attachments,
+      propertyName: selectedRepairRequest.propertyName || "",
+      issueDescription: approvalForm.issueDescription,
+      estimatedCost: Math.round(parseFloat(approvalForm.estimatedCost || "0") * 100),
+      approvalRequestedFrom: approvalType === "verbal" ? "verbal" : "email", // Required field
+      approvalNotes: approvalForm.confirmationNotes,
+      urgency: "standard", // Required field with default
+      attachments: [],
+      status: approvalType === "verbal" ? "approved" : "pending",
+      approvedBy: approvalForm.approvedBy || undefined,
+      approvedByName: approvalForm.approvedBy || undefined,
+      approvalMethod: approvalForm.approvalMethod,
+      approvalType: approvalType,
+      repairTechnicianId: approvalForm.repairTechnicianId || undefined,
+      repairTechnicianName: techName || undefined,
+      confirmationNotes: approvalForm.confirmationNotes || undefined,
+      approvalDateTime: approvalForm.approvalDateTime ? new Date(approvalForm.approvalDateTime) : undefined,
     });
   };
 
@@ -1870,24 +1980,27 @@ export default function RepairQueue() {
                               </td>
                               <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-end gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-[#0078D4] border-[#0078D4] hover:bg-[#0078D4]/10 h-7 px-2 text-xs"
-                                    onClick={(e) => { e.stopPropagation(); handleConvertToEstimate(request); }}
-                                    data-testid={`button-convert-${request.id}`}
-                                  >
-                                    <FileEdit className="w-3 h-3 mr-1" /> Estimate
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-[#f97316] border-[#f97316] hover:bg-[#f97316]/10 h-7 px-2 text-xs"
-                                    onClick={(e) => { e.stopPropagation(); handleRequestApproval(request); }}
-                                    data-testid={`button-approval-${request.id}`}
-                                  >
-                                    <Send className="w-3 h-3 mr-1" /> Approval
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        size="sm"
+                                        className="bg-[#f97316] hover:bg-[#f97316]/90 text-white h-7 px-3 text-xs"
+                                        onClick={(e) => e.stopPropagation()}
+                                        data-testid={`button-send-approval-${request.id}`}
+                                      >
+                                        <Send className="w-3 h-3 mr-1" /> Send for Approval
+                                        <ChevronDown className="w-3 h-3 ml-1" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleOpenApprovalModal(request, "email")}>
+                                        <Send className="w-4 h-4 mr-2" /> Send Email for Approval
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleOpenApprovalModal(request, "verbal")}>
+                                        <CheckCircle className="w-4 h-4 mr-2" /> Log Verbal Approval
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button
@@ -1908,11 +2021,11 @@ export default function RepairQueue() {
                                         <User className="w-4 h-4 mr-2" /> Assign Technician
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem onClick={() => handleConvertToEstimate(request)}>
-                                        <FileEdit className="w-4 h-4 mr-2" /> Convert to Estimate
+                                      <DropdownMenuItem onClick={() => handleOpenApprovalModal(request, "email")}>
+                                        <Send className="w-4 h-4 mr-2" /> Send Email for Approval
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleRequestApproval(request)}>
-                                        <Send className="w-4 h-4 mr-2" /> Request Approval
+                                      <DropdownMenuItem onClick={() => handleOpenApprovalModal(request, "verbal")}>
+                                        <CheckCircle className="w-4 h-4 mr-2" /> Log Verbal Approval
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -2791,22 +2904,26 @@ export default function RepairQueue() {
             <div className="space-y-6">
               {/* Action Buttons */}
               <div className="flex gap-2">
-                <Button
-                  className="flex-1 bg-[#0078D4] hover:bg-[#0078D4]/90 text-white"
-                  onClick={() => handleConvertToEstimate(selectedRepairRequest)}
-                  data-testid="button-detail-convert"
-                >
-                  <FileEdit className="w-4 h-4 mr-2" />
-                  Convert to Estimate
-                </Button>
-                <Button
-                  className="flex-1 bg-[#f97316] hover:bg-[#f97316]/90 text-white"
-                  onClick={() => handleRequestApproval(selectedRepairRequest)}
-                  data-testid="button-detail-approval"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Request Approval
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      className="flex-1 bg-[#f97316] hover:bg-[#f97316]/90 text-white"
+                      data-testid="button-detail-approval"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Send for Approval
+                      <ChevronDown className="w-4 h-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="w-56">
+                    <DropdownMenuItem onClick={() => { setShowDetailPanel(false); handleOpenApprovalModal(selectedRepairRequest, "email"); }}>
+                      <Send className="w-4 h-4 mr-2" /> Send Email for Approval
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setShowDetailPanel(false); handleOpenApprovalModal(selectedRepairRequest, "verbal"); }}>
+                      <CheckCircle className="w-4 h-4 mr-2" /> Log Verbal Approval
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Basic Info */}
@@ -2954,17 +3071,17 @@ export default function RepairQueue() {
 
       {/* Approval Request Modal */}
       <Dialog open={showApprovalModal} onOpenChange={setShowApprovalModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="bg-[#1e3a5f] -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
             <DialogTitle className="text-white flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Request Approval
+              {approvalType === "email" ? <Mail className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+              {approvalType === "email" ? "Send Email for Approval" : "Log Verbal Approval"}
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 pt-2">
             {/* Auto-filled fields */}
-            <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+            <div className="bg-slate-50 rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-medium text-slate-500">Repair Request #</p>
@@ -2975,10 +3092,36 @@ export default function RepairQueue() {
                   <p className="text-sm font-medium text-slate-700">{selectedRepairRequest?.propertyName || "—"}</p>
                 </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500">Issue Description</p>
-                <p className="text-sm text-slate-600 truncate">{selectedRepairRequest?.issueDescription || "—"}</p>
-              </div>
+            </div>
+
+            {/* Repair Technician */}
+            <div>
+              <Label htmlFor="repair-tech" className="text-sm font-medium">Repair Technician</Label>
+              <Select
+                value={approvalForm.repairTechnicianId}
+                onValueChange={(value) => setApprovalForm({ ...approvalForm, repairTechnicianId: value })}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-repair-tech">
+                  <SelectValue placeholder="Select repair technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {repairTechnicians.map((tech) => (
+                    <SelectItem key={tech.id} value={tech.id}>{tech.firstName} {tech.lastName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Issue Description */}
+            <div>
+              <Label htmlFor="issue-description" className="text-sm font-medium">Issue Description</Label>
+              <Textarea
+                id="issue-description"
+                value={approvalForm.issueDescription}
+                onChange={(e) => setApprovalForm({ ...approvalForm, issueDescription: e.target.value })}
+                className="mt-1 min-h-[60px]"
+                data-testid="textarea-issue-description"
+              />
             </div>
 
             {/* Estimated Cost */}
@@ -2999,63 +3142,128 @@ export default function RepairQueue() {
               </div>
             </div>
 
-            {/* Approval Requested From */}
+            {/* Approval Method */}
             <div>
-              <Label htmlFor="approval-from" className="text-sm font-medium">Approval Requested From</Label>
-              <Select
-                value={approvalForm.approvalRequestedFrom}
-                onValueChange={(value) => setApprovalForm({ ...approvalForm, approvalRequestedFrom: value })}
-              >
-                <SelectTrigger className="mt-1" data-testid="select-approval-from">
-                  <SelectValue placeholder="Select approver..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="office_admin">Office Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Urgency */}
-            <div>
-              <Label htmlFor="urgency" className="text-sm font-medium">Urgency</Label>
-              <Select
-                value={approvalForm.urgency}
-                onValueChange={(value) => setApprovalForm({ ...approvalForm, urgency: value })}
-              >
-                <SelectTrigger className="mt-1" data-testid="select-urgency">
-                  <SelectValue placeholder="Select urgency..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="priority">Priority</SelectItem>
-                  <SelectItem value="emergency">Emergency</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Approval Notes */}
-            <div>
-              <Label htmlFor="approval-notes" className="text-sm font-medium">Approval Notes</Label>
-              <Textarea
-                id="approval-notes"
-                placeholder="Enter justification or additional details..."
-                value={approvalForm.approvalNotes}
-                onChange={(e) => setApprovalForm({ ...approvalForm, approvalNotes: e.target.value })}
-                className="mt-1 min-h-[80px]"
-                data-testid="textarea-approval-notes"
-              />
-            </div>
-
-            {/* Attachments placeholder */}
-            <div>
-              <Label className="text-sm font-medium">Attachments</Label>
-              <div className="mt-1 border-2 border-dashed border-slate-200 rounded-lg p-4 text-center text-slate-500 text-sm">
-                <Paperclip className="w-5 h-5 mx-auto mb-1 opacity-50" />
-                <p>Attach photos or documents (optional)</p>
+              <Label className="text-sm font-medium">Approval Method</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant={approvalForm.approvalMethod === "email" ? "default" : "outline"}
+                  className={approvalForm.approvalMethod === "email" ? "bg-[#0078D4] hover:bg-[#0078D4]/90" : ""}
+                  onClick={() => setApprovalForm({ ...approvalForm, approvalMethod: "email" })}
+                  data-testid="button-method-email"
+                >
+                  <Mail className="w-4 h-4 mr-2" /> Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={approvalForm.approvalMethod === "phone_call" ? "default" : "outline"}
+                  className={approvalForm.approvalMethod === "phone_call" ? "bg-[#0078D4] hover:bg-[#0078D4]/90" : ""}
+                  onClick={() => setApprovalForm({ ...approvalForm, approvalMethod: "phone_call" })}
+                  data-testid="button-method-phone"
+                >
+                  <Phone className="w-4 h-4 mr-2" /> Phone Call
+                </Button>
+                <Button
+                  type="button"
+                  variant={approvalForm.approvalMethod === "text_message" ? "default" : "outline"}
+                  className={approvalForm.approvalMethod === "text_message" ? "bg-[#0078D4] hover:bg-[#0078D4]/90" : ""}
+                  onClick={() => setApprovalForm({ ...approvalForm, approvalMethod: "text_message" })}
+                  data-testid="button-method-text"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" /> Text Message
+                </Button>
+                <Button
+                  type="button"
+                  variant={approvalForm.approvalMethod === "chat" ? "default" : "outline"}
+                  className={approvalForm.approvalMethod === "chat" ? "bg-[#0078D4] hover:bg-[#0078D4]/90" : ""}
+                  onClick={() => setApprovalForm({ ...approvalForm, approvalMethod: "chat" })}
+                  data-testid="button-method-chat"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" /> Chat
+                </Button>
               </div>
+            </div>
+
+            {/* Email Fields - Only show if email type */}
+            {approvalType === "email" && (
+              <div className="space-y-4 border-t pt-4">
+                <div>
+                  <Label htmlFor="email-recipient" className="text-sm font-medium">Email Recipient</Label>
+                  <Input
+                    id="email-recipient"
+                    type="email"
+                    placeholder="recipient@example.com"
+                    value={approvalForm.emailRecipient}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, emailRecipient: e.target.value })}
+                    className="mt-1"
+                    data-testid="input-email-recipient"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email-subject" className="text-sm font-medium">Email Subject</Label>
+                  <Input
+                    id="email-subject"
+                    value={approvalForm.emailSubject}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, emailSubject: e.target.value })}
+                    className="mt-1"
+                    data-testid="input-email-subject"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email-body" className="text-sm font-medium">Email Body Preview</Label>
+                  <Textarea
+                    id="email-body"
+                    value={approvalForm.emailBody}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, emailBody: e.target.value })}
+                    className="mt-1 min-h-[150px] font-mono text-xs"
+                    data-testid="textarea-email-body"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Verbal Approval Fields */}
+            {approvalType === "verbal" && (
+              <div className="space-y-4 border-t pt-4">
+                <div>
+                  <Label htmlFor="approved-by" className="text-sm font-medium">Approved By</Label>
+                  <Input
+                    id="approved-by"
+                    placeholder="Name of person who approved"
+                    value={approvalForm.approvedBy}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, approvedBy: e.target.value })}
+                    className="mt-1"
+                    data-testid="input-approved-by"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="approval-datetime" className="text-sm font-medium">Approval Date/Time</Label>
+                  <Input
+                    id="approval-datetime"
+                    type="datetime-local"
+                    value={approvalForm.approvalDateTime}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, approvalDateTime: e.target.value })}
+                    className="mt-1"
+                    data-testid="input-approval-datetime"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Confirmation Notes */}
+            <div>
+              <Label htmlFor="confirmation-notes" className="text-sm font-medium">Confirmation Notes</Label>
+              <Textarea
+                id="confirmation-notes"
+                placeholder={approvalType === "verbal" 
+                  ? "e.g., Spoke with property manager John Smith, confirmed repair is approved to proceed" 
+                  : "Add any additional notes..."}
+                value={approvalForm.confirmationNotes}
+                onChange={(e) => setApprovalForm({ ...approvalForm, confirmationNotes: e.target.value })}
+                className="mt-1 min-h-[80px]"
+                data-testid="textarea-confirmation-notes"
+              />
             </div>
           </div>
 
@@ -3069,16 +3277,16 @@ export default function RepairQueue() {
             </Button>
             <Button
               className="bg-[#f97316] hover:bg-[#f97316]/90 text-white"
-              onClick={submitApprovalRequest}
-              disabled={!approvalForm.approvalRequestedFrom || createApprovalRequestMutation.isPending}
-              data-testid="button-send-approval"
+              onClick={submitApprovalAndConvert}
+              disabled={createApprovalRequestMutation.isPending || (approvalType === "verbal" && !approvalForm.approvedBy)}
+              data-testid="button-submit-approval"
             >
               {createApprovalRequestMutation.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <Send className="w-4 h-4 mr-2" />
+                <FileEdit className="w-4 h-4 mr-2" />
               )}
-              Send Approval Request
+              Convert to Estimate & Log Approval
             </Button>
           </DialogFooter>
         </DialogContent>
