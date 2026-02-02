@@ -4207,15 +4207,34 @@ export default function Calendar() {
                   <p className="text-sm text-slate-600 mb-2 line-clamp-2" title={request.issueDescription}>
                     {request.issueDescription}
                   </p>
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
-                    <span>
-                      Reported by: {request.reportedBy === "service_tech" ? "Service Tech" : request.reportedBy === "customer" ? "Customer" : "Office"}
-                      {request.reportedByName && ` (${request.reportedByName})`}
-                    </span>
-                    {request.createdAt && (
+                  <div className="text-xs text-slate-500 mb-3 space-y-1">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3 text-slate-400" />
+                      <span className="font-medium text-slate-600">Reported by:</span>
                       <span>
-                        {new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {request.reportedByName || (request.reportedBy === "service_tech" ? "Service Tech" : request.reportedBy === "customer" ? "Customer" : "Office")}
                       </span>
+                    </div>
+                    {request.assignedTechName ? (
+                      <div className="flex items-center gap-1">
+                        <UserCheck className="w-3 h-3 text-[#0ea5e9]" />
+                        <span className="font-medium text-slate-600">Assigned to:</span>
+                        <span className="text-[#0ea5e9]">{request.assignedTechName}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <UserPlus className="w-3 h-3 text-slate-400" />
+                        <span className="font-medium text-slate-600">Assigned to:</span>
+                        <span className="text-slate-400 italic">Not assigned</span>
+                      </div>
+                    )}
+                    {request.createdAt && (
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-slate-400" />
+                        <span>
+                          {new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
                     )}
                   </div>
                   <Button
