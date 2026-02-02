@@ -30,6 +30,7 @@ interface FormData {
   address: string;
   jobType: string;
   scheduledTime: string;
+  title: string;
   officeNotes: string;
   photoAttachments: PhotoAttachment[];
 }
@@ -57,6 +58,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
     address: "",
     jobType: "",
     scheduledTime: "08:00",
+    title: "",
     officeNotes: "",
     photoAttachments: [],
   });
@@ -103,6 +105,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       address: "",
       jobType: "",
       scheduledTime: "08:00",
+      title: "",
       officeNotes: "",
       photoAttachments: [],
     });
@@ -159,61 +162,74 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
           <div className="p-6 space-y-5">
             {/* Office Notes Section - Top of form */}
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
                 <ClipboardList className="w-4 h-4 text-amber-600" />
                 Office Notes
                 <span className="text-xs font-normal text-amber-600 ml-1">(Internal use only)</span>
               </Label>
-              <Textarea
-                value={formData.officeNotes}
-                onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
-                placeholder="Add office notes..."
-                rows={3}
-                className="resize-none bg-white"
-                data-testid="textarea-office-notes"
-              />
-            </div>
-
-            {/* Property Name */}
-            <div className="p-4 bg-slate-50 rounded-lg border">
-              <Label className="text-sm font-medium text-slate-700 mb-2 block">Property Name</Label>
-              <Select
-                value={formData.propertyId}
-                onValueChange={(id) => {
-                  const customer = customers.find((c: any) => c.id === id);
-                  setFormData(prev => ({
-                    ...prev,
-                    propertyId: id,
-                    propertyName: customer?.name || "",
-                    address: customer?.address || "",
-                  }));
-                }}
-              >
-                <SelectTrigger data-testid="select-rr-property">
-                  <SelectValue placeholder="Select property..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer: any) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Property Address - Auto-filled */}
-            {formData.address && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
-                  <MapPin className="w-4 h-4 text-blue-600" />
-                  Property Address
-                </Label>
-                <p className="text-sm text-slate-700 font-medium" data-testid="text-property-address">
-                  {formData.address}
-                </p>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs text-slate-600 mb-1 block">Title (Optional)</Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter a title for this request..."
+                    className="bg-white"
+                    data-testid="input-request-title"
+                  />
+                </div>
+                <Textarea
+                  value={formData.officeNotes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
+                  placeholder="Add office notes..."
+                  rows={3}
+                  className="resize-none bg-white"
+                  data-testid="textarea-office-notes"
+                />
               </div>
-            )}
+            </div>
+
+            {/* Property Name and Address */}
+            <div className="p-4 bg-slate-50 rounded-lg border space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-slate-700 mb-2 block">Property Name</Label>
+                <Select
+                  value={formData.propertyId}
+                  onValueChange={(id) => {
+                    const customer = customers.find((c: any) => c.id === id);
+                    setFormData(prev => ({
+                      ...prev,
+                      propertyId: id,
+                      propertyName: customer?.name || "",
+                      address: customer?.address || prev.address,
+                    }));
+                  }}
+                >
+                  <SelectTrigger data-testid="select-rr-property">
+                    <SelectValue placeholder="Select property..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer: any) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs text-slate-600 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  Property Address (Optional)
+                </Label>
+                <Input
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Enter address manually..."
+                  data-testid="input-property-address"
+                />
+              </div>
+            </div>
 
             {/* Job Type / Repair Type */}
             <div className="p-4 bg-slate-50 rounded-lg border">
