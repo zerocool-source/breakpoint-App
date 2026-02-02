@@ -7,7 +7,7 @@ export function registerRepairRequestRoutes(app: any) {
     try {
       const status = req.query.status as string | undefined;
       const requests = await storage.getRepairRequests(status);
-      res.json(requests);
+      res.json({ requests });
     } catch (error) {
       console.error("Error fetching repair requests:", error);
       res.status(500).json({ error: "Failed to fetch repair requests" });

@@ -1,0 +1,32 @@
+```
+On the Repair Queue page, under the "Repairs Needed" tab, add 10 sample repair requests using properties and technicians already in the app:
+
+**SAMPLE REPAIR REQUESTS:**
+
+1. **RR-459001** | Palm Court Apartments | Pool pump making grinding noise | Reported by: Kevin Enriquez (Service Tech) | Priority: High | Date: Feb 1, 2026
+
+2. **RR-459002** | Sunset Hills HOA | Heater not igniting - pilot light issue | Reported by: Eric Gritzke (Service Tech) | Priority: Urgent | Date: Feb 1, 2026
+
+3. **RR-459003** | Lakewood Country Club | Cracked skimmer basket needs replacement | Reported by: Office Staff | Priority: Medium | Date: Jan 31, 2026
+
+4. **RR-459004** | Shady Trails HOA | Filter pressure gauge reading high | Reported by: Ian Anderson (Service Tech) | Priority: Medium | Date: Jan 31, 2026
+
+5. **RR-459005** | Canyon Ridge HOA | Automatic chlorinator not dispensing | Reported by: Customer | Priority: High | Date: Jan 30, 2026
+
+6. **RR-459006** | Bella Vista HOA | Pool light flickering - possible electrical issue | Reported by: Paul Fuhrman (Supervisor) | Priority: Urgent | Date: Jan 30, 2026
+
+7. **RR-459007** | Riverside Apartments | Tile damage on pool edge - safety concern | Reported by: Aisham Ba (Service Tech) | Priority: High | Date: Jan 29, 2026
+
+8. **RR-459008** | CHARDONNAY HILLS HOA | Variable speed pump error code E04 | Reported by: Kyle Chubb (Service Tech) | Priority: Medium | Date: Jan 29, 2026
+
+9. **RR-459009** | Amelia Square HOA | Main drain cover loose | Reported by: Sean Darden (Service Tech) | Priority: Urgent | Date: Jan 28, 2026
+
+10. **RR-459010** | Arroyo Vista | Salt cell needs cleaning or replacement | Reported by: Office Staff | Priority: Low | Date: Jan 28, 2026
+
+**SEED THIS DATA:**
+- Add these repair requests to the database
+- Display them in rows under the "Repairs Needed" tab
+- Update the tab count to show "Repairs Needed (10)"
+- Each row shows: RR #, Property, Issue Description, Reported By, Priority badge, Date, Actions [Assign] [View]
+- Priority badges: Urgent (red), High (orange), Medium (yellow), Low (gray)
+```
