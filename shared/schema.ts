@@ -1122,6 +1122,51 @@ export const insertServiceRepairJobSchema = createInsertSchema(serviceRepairJobs
 export type InsertServiceRepairJob = z.infer<typeof insertServiceRepairJobSchema>;
 export type ServiceRepairJob = typeof serviceRepairJobs.$inferSelect;
 
+// Repair Requests (requests for repair evaluation/assessment)
+export const repairRequests = pgTable("repair_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Property information
+  propertyId: text("property_id").notNull(),
+  propertyName: text("property_name").notNull(),
+  customerId: text("customer_id"),
+  customerName: text("customer_name"),
+  address: text("address"),
+  
+  // Request details
+  issueDescription: text("issue_description").notNull(),
+  reportedBy: text("reported_by").notNull(), // service_tech, customer, office
+  reportedByName: text("reported_by_name"),
+  reportedByTechId: text("reported_by_tech_id"),
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  notes: text("notes"),
+  photos: text("photos").array(),
+  
+  // Status tracking
+  status: text("status").notNull().default("pending"), // pending, assigned, in_assessment, estimated, completed, cancelled
+  
+  // Assignment for assessment
+  assignedTechId: text("assigned_tech_id"),
+  assignedTechName: text("assigned_tech_name"),
+  assignedDate: timestamp("assigned_date"),
+  
+  // Links to estimate
+  estimateId: text("estimate_id"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRepairRequestSchema = createInsertSchema(repairRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRepairRequest = z.infer<typeof insertRepairRequestSchema>;
+export type RepairRequest = typeof repairRequests.$inferSelect;
+
 // Routes (Service routes for technicians)
 export const routes = pgTable("routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
