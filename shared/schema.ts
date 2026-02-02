@@ -1180,6 +1180,8 @@ export const repairRequests = pgTable("repair_requests", {
   assignedTechId: text("assigned_tech_id"),
   assignedTechName: text("assigned_tech_name"),
   assignedDate: timestamp("assigned_date"),
+  scheduledTime: text("scheduled_time"), // e.g., "08:30"
+  assignmentNotes: text("assignment_notes"), // Additional instructions for the technician
   
   // Links to estimate
   estimateId: text("estimate_id"),

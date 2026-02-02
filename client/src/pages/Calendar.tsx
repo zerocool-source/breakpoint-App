@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -317,6 +317,15 @@ export default function Calendar() {
   // Repairs Needed state
   const [showRepairsNeededSidebar, setShowRepairsNeededSidebar] = useState(false);
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
+  const [showRepairAssignmentModal, setShowRepairAssignmentModal] = useState(false);
+  const [selectedRepairRequest, setSelectedRepairRequest] = useState<any>(null);
+  const [repairAssignmentForm, setRepairAssignmentForm] = useState({
+    technicianId: "",
+    technicianName: "",
+    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledTime: "",
+    notes: "",
+  });
   const [qcInspectionForm, setQcInspectionForm] = useState({
     propertyId: "",
     inspectionType: "",
@@ -453,6 +462,29 @@ export default function Calendar() {
   });
 
   const pendingRepairRequests = repairRequestsData?.requests || [];
+
+  // Fetch assigned repair requests for calendar display
+  const { data: assignedRepairRequestsData } = useQuery<{ requests: any[] }>({
+    queryKey: ["/api/repair-requests", "assigned", weekDates[0]?.toISOString()],
+    queryFn: async () => {
+      const res = await fetch(`/api/repair-requests?status=assigned`);
+      if (!res.ok) return { requests: [] };
+      return res.json();
+    },
+    enabled: roleFilter === "repair",
+  });
+  const assignedRepairRequests = assignedRepairRequestsData?.requests || [];
+
+  // Get assigned repair requests for a specific technician and date
+  const getAssignedRepairRequestsForTechAndDate = (techId: string | number, date: Date): any[] => {
+    const dateStr = date.toISOString().split("T")[0];
+    return assignedRepairRequests.filter((req) => {
+      if (String(req.assignedTechId) !== String(techId)) return false;
+      if (!req.assignedDate) return false;
+      const reqDateStr = new Date(req.assignedDate).toISOString().split("T")[0];
+      return reqDateStr === dateStr;
+    });
+  };
 
   // Fetch estimates for repair technicians - needs_scheduling (ready to assign) and scheduled (assigned)
   const { data: scheduledEstimatesData, refetch: refetchScheduledEstimates } = useQuery<{ estimates: ScheduledRepair[], unassigned: ScheduledRepair[] }>({
@@ -664,17 +696,47 @@ export default function Calendar() {
 
   // Mutation to assign repair request to tech for assessment
   const assignRepairRequestMutation = useMutation({
-    mutationFn: async ({ requestId, technicianId, technicianName }: { requestId: string; technicianId: string; technicianName: string }) => {
+    mutationFn: async ({ 
+      requestId, 
+      technicianId, 
+      technicianName,
+      scheduledDate,
+      scheduledTime,
+      notes,
+    }: { 
+      requestId: string; 
+      technicianId: string; 
+      technicianName: string;
+      scheduledDate: string;
+      scheduledTime?: string;
+      notes?: string;
+    }) => {
       const res = await fetch(`/api/repair-requests/${requestId}/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ technicianId, technicianName }),
+        body: JSON.stringify({ 
+          technicianId, 
+          technicianName,
+          scheduledDate,
+          scheduledTime,
+          notes,
+        }),
       });
       if (!res.ok) throw new Error("Failed to assign repair request");
       return res.json();
     },
     onSuccess: () => {
       refetchRepairRequests();
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "assigned"] });
+      setShowRepairAssignmentModal(false);
+      setSelectedRepairRequest(null);
+      setRepairAssignmentForm({
+        technicianId: "",
+        technicianName: "",
+        scheduledDate: new Date().toISOString().split('T')[0],
+        scheduledTime: "",
+        notes: "",
+      });
       toast({
         title: "Repair Request Assigned",
         description: "The repair request has been assigned for assessment.",
@@ -1968,8 +2030,13 @@ export default function Calendar() {
                         );
                       }
 
-                      // Render scheduled repairs for repair technicians (always show even without schedule)
-                      if (tech.role === "repair" && scheduledRepairsForDay.length > 0) {
+                      // Get assigned repair requests for this tech and date
+                      const assignedRepairRequestsForDay = tech.role === "repair"
+                        ? getAssignedRepairRequestsForTechAndDate(tech.id, date)
+                        : [];
+
+                      // Render scheduled repairs and assigned repair requests for repair technicians
+                      if (tech.role === "repair" && (scheduledRepairsForDay.length > 0 || assignedRepairRequestsForDay.length > 0)) {
                         return (
                           <div
                             key={displayIndex}
@@ -1977,6 +2044,51 @@ export default function Calendar() {
                             data-testid={`cell-repair-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
+                              {/* Assigned Repair Requests (Assessments) */}
+                              {assignedRepairRequestsForDay.map((request: any) => (
+                                <div
+                                  key={`rr-${request.id}`}
+                                  data-testid={`card-repair-request-${request.id}`}
+                                  className="rounded-lg p-2 border-l-[3px] bg-[#0ea5e915] border-l-[#0ea5e9] cursor-pointer hover:shadow-md transition-shadow"
+                                  onClick={() => {
+                                    setSelectedRepairRequest(request);
+                                    // Could open a detail view here
+                                  }}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
+                                    <ClipboardList className="w-3 h-3 text-[#0ea5e9]" />
+                                    <span className="truncate">Assessment</span>
+                                  </div>
+                                  <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-rr-property-${request.id}`}>
+                                    <MapPin className="w-3 h-3 shrink-0" />
+                                    {request.propertyName}
+                                  </p>
+                                  {request.scheduledTime && (
+                                    <p className="text-[10px] text-[#64748B] flex items-center gap-1">
+                                      <Clock className="w-3 h-3 shrink-0" />
+                                      {request.scheduledTime}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-1.5 mt-1.5">
+                                    <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-[#0ea5e9] text-white">
+                                      Pending Assessment
+                                    </span>
+                                    {request.priority && (
+                                      <span className={cn(
+                                        "px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                        request.priority === "urgent" && "bg-red-500 text-white",
+                                        request.priority === "high" && "bg-orange-500 text-white",
+                                        request.priority === "medium" && "bg-yellow-500 text-white",
+                                        request.priority === "low" && "bg-slate-400 text-white"
+                                      )}>
+                                        {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+
+                              {/* Scheduled Repairs (Estimates) */}
                               {scheduledRepairsForDay.map((repair) => (
                                 <div
                                   key={repair.id}
@@ -4106,32 +4218,24 @@ export default function Calendar() {
                       </span>
                     )}
                   </div>
-                  <Select
-                    onValueChange={(techId) => {
-                      const tech = (technicians || []).find((t: Technician) => String(t.id) === techId);
-                      if (tech) {
-                        assignRepairRequestMutation.mutate({
-                          requestId: request.id,
-                          technicianId: String(tech.id),
-                          technicianName: `${tech.firstName} ${tech.lastName}`,
-                        });
-                      }
+                  <Button
+                    onClick={() => {
+                      setSelectedRepairRequest(request);
+                      setRepairAssignmentForm({
+                        technicianId: "",
+                        technicianName: "",
+                        scheduledDate: new Date().toISOString().split('T')[0],
+                        scheduledTime: "",
+                        notes: "",
+                      });
+                      setShowRepairAssignmentModal(true);
                     }}
+                    className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white"
+                    data-testid={`button-assign-${request.id}`}
                   >
-                    <SelectTrigger className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white border-none" data-testid={`select-assign-tech-${request.id}`}>
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      <SelectValue placeholder="Assign for Assessment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(technicians || [])
-                        .filter((t: Technician) => t.role === "repair" && t.active)
-                        .map((tech: Technician) => (
-                          <SelectItem key={tech.id} value={String(tech.id)}>
-                            {tech.firstName} {tech.lastName}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Assign for Assessment
+                  </Button>
                 </div>
               </div>
             ))}
@@ -4165,6 +4269,125 @@ export default function Calendar() {
           queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
         }}
       />
+
+      {/* Repair Request Assignment Modal */}
+      <Dialog open={showRepairAssignmentModal} onOpenChange={setShowRepairAssignmentModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-[#0077b6]" />
+              Assign for Assessment
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500">
+              {selectedRepairRequest && (
+                <>
+                  <span className="font-medium text-slate-700">{selectedRepairRequest.propertyName}</span>
+                  {selectedRepairRequest.issueDescription && (
+                    <span className="block text-slate-500 mt-1 line-clamp-2">{selectedRepairRequest.issueDescription}</span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Assign to Repair Technician</Label>
+              <Select
+                value={repairAssignmentForm.technicianId}
+                onValueChange={(value) => {
+                  const tech = (technicians || []).find((t: Technician) => String(t.id) === value);
+                  setRepairAssignmentForm(prev => ({
+                    ...prev,
+                    technicianId: value,
+                    technicianName: tech ? `${tech.firstName} ${tech.lastName}` : "",
+                  }));
+                }}
+              >
+                <SelectTrigger className="mt-1" data-testid="select-assignment-tech">
+                  <SelectValue placeholder="Select a repair technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(technicians || [])
+                    .filter((t: Technician) => t.role === "repair" && t.active)
+                    .map((tech: Technician) => (
+                      <SelectItem key={tech.id} value={String(tech.id)}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-slate-700">Scheduled Date</Label>
+              <Input
+                type="date"
+                value={repairAssignmentForm.scheduledDate}
+                onChange={(e) => setRepairAssignmentForm(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                className="mt-1"
+                data-testid="input-assignment-date"
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-slate-700">
+                Scheduled Time <span className="text-slate-400 font-normal">(Optional)</span>
+              </Label>
+              <Input
+                type="time"
+                value={repairAssignmentForm.scheduledTime}
+                onChange={(e) => setRepairAssignmentForm(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                className="mt-1"
+                data-testid="input-assignment-time"
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-slate-700">
+                Notes <span className="text-slate-400 font-normal">(Optional)</span>
+              </Label>
+              <Textarea
+                value={repairAssignmentForm.notes}
+                onChange={(e) => setRepairAssignmentForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Add any additional instructions..."
+                rows={3}
+                className="mt-1 resize-none"
+                data-testid="textarea-assignment-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowRepairAssignmentModal(false)}
+              data-testid="button-cancel-assignment"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!repairAssignmentForm.technicianId || !repairAssignmentForm.scheduledDate || !selectedRepairRequest) {
+                  toast({ title: "Error", description: "Please select a technician and date", variant: "destructive" });
+                  return;
+                }
+                assignRepairRequestMutation.mutate({
+                  requestId: selectedRepairRequest.id,
+                  technicianId: repairAssignmentForm.technicianId,
+                  technicianName: repairAssignmentForm.technicianName,
+                  scheduledDate: repairAssignmentForm.scheduledDate,
+                  scheduledTime: repairAssignmentForm.scheduledTime || undefined,
+                  notes: repairAssignmentForm.notes || undefined,
+                });
+              }}
+              disabled={assignRepairRequestMutation.isPending}
+              className="bg-[#f97316] hover:bg-[#ea580c] text-white"
+              data-testid="button-assign"
+            >
+              {assignRepairRequestMutation.isPending ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

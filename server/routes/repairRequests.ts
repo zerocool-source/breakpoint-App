@@ -56,7 +56,7 @@ export function registerRepairRequestRoutes(app: any) {
 
   app.post("/api/repair-requests/:id/assign", async (req: Request, res: Response) => {
     try {
-      const { technicianId, technicianName, scheduledDate } = req.body;
+      const { technicianId, technicianName, scheduledDate, scheduledTime, notes } = req.body;
       if (!technicianId || !technicianName) {
         return res.status(400).json({ error: "technicianId and technicianName are required" });
       }
@@ -65,6 +65,8 @@ export function registerRepairRequestRoutes(app: any) {
         assignedTechId: technicianId,
         assignedTechName: technicianName,
         assignedDate: scheduledDate ? new Date(scheduledDate) : new Date(),
+        scheduledTime: scheduledTime || null,
+        assignmentNotes: notes || null,
         status: "assigned",
       });
       
