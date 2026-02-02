@@ -20,6 +20,11 @@ interface RepairRequestFormProps {
   onSuccess?: () => void;
 }
 
+interface PhotoAttachment {
+  url: string;
+  caption: string;
+}
+
 interface FormData {
   propertyId: string;
   propertyName: string;
@@ -32,12 +37,15 @@ interface FormData {
   issueDescription: string;
   lineItems: RepairRequestLineItem[];
   photos: string[];
+  photoAttachments: PhotoAttachment[];
   customerNote: string;
   officeNotes: string;
   memo: string;
   techNotes: string;
   reportedBy: string;
   reportedByName: string;
+  repairTechnicianId: string;
+  scheduledTime: string;
 }
 
 const generateRequestNumber = () => {
@@ -61,12 +69,15 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
     issueDescription: "",
     lineItems: [],
     photos: [],
+    photoAttachments: [],
     customerNote: "",
     officeNotes: "",
     memo: "",
     techNotes: "",
     reportedBy: "office_staff",
     reportedByName: "",
+    repairTechnicianId: "",
+    scheduledTime: "08:00",
   });
 
   const [showAddItemForm, setShowAddItemForm] = useState(false);
@@ -87,6 +98,17 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
   });
 
   const customers = customersData?.customers || [];
+
+  // Fetch repair technicians
+  const { data: techniciansData } = useQuery<{ technicians: any[] }>({
+    queryKey: ["/api/technicians/stored", "repair"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians/stored?role=repair");
+      if (!response.ok) throw new Error("Failed to fetch technicians");
+      return response.json();
+    },
+  });
+  const repairTechnicians = techniciansData?.technicians || [];
 
   const calculateTotals = useMemo(() => {
     const subtotal = formData.lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
@@ -136,11 +158,14 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       issueDescription: "",
       lineItems: [],
       photos: [],
+      photoAttachments: [],
       customerNote: "",
       officeNotes: "",
       memo: "",
       techNotes: "",
       reportedBy: "office_staff",
+      repairTechnicianId: "",
+      scheduledTime: "08:00",
       reportedByName: "",
     });
     setShowAddItemForm(false);
@@ -314,6 +339,36 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                   disabled
                 />
               </div>
+
+              <div>
+                <Label className="text-xs text-slate-500 font-medium">Assigned Repair Technician</Label>
+                <Select
+                  value={formData.repairTechnicianId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, repairTechnicianId: value }))}
+                >
+                  <SelectTrigger className="mt-1 h-9" data-testid="select-rr-technician">
+                    <SelectValue placeholder="Select technician..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {repairTechnicians.map((tech: any) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs text-slate-500 font-medium">Scheduled Time</Label>
+                <Input
+                  type="time"
+                  value={formData.scheduledTime}
+                  onChange={(e) => setFormData(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                  className="mt-1 h-9"
+                  data-testid="input-rr-scheduled-time"
+                />
+              </div>
             </div>
 
             <div className="p-4 bg-slate-50 rounded-lg border">
@@ -465,9 +520,9 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
             <div className="p-4 bg-slate-50 rounded-lg border">
               <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
                 <Camera className="w-4 h-4" />
-                Photos
+                Attachments from Office
               </Label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-3">
                 <ObjectUploader
                   maxNumberOfFiles={10}
                   maxFileSize={10485760}
@@ -491,7 +546,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                   }}
                   onComplete={async (result) => {
                     const uploadedFiles = result.successful || [];
-                    const newPhotoUrls: string[] = [];
+                    const newAttachments: PhotoAttachment[] = [];
                     for (const file of uploadedFiles) {
                       const objectPath = (file as any).meta?.objectPath;
                       if (objectPath) {
@@ -501,50 +556,75 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ objectPath }),
                           });
-                          newPhotoUrls.push(objectPath);
+                          newAttachments.push({ url: objectPath, caption: "" });
                         } catch (error) {
                           console.error("Failed to confirm upload:", error);
                         }
                       }
                     }
-                    if (newPhotoUrls.length > 0) {
+                    if (newAttachments.length > 0) {
                       setFormData(prev => ({ 
                         ...prev, 
-                        photos: [...prev.photos, ...newPhotoUrls] 
+                        photoAttachments: [...prev.photoAttachments, ...newAttachments],
+                        photos: [...prev.photos, ...newAttachments.map(a => a.url)] 
                       }));
                     }
                   }}
-                  buttonClassName="bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
+                  buttonClassName="bg-[#0077b6] text-white hover:bg-[#005f8f]"
                 >
                   <Upload className="w-3 h-3 mr-1" />
                   Add Photos
                 </ObjectUploader>
                 <span className="text-xs text-slate-400">Max 10 MB per photo</span>
               </div>
-              {formData.photos.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {formData.photos.map((photo, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={photo}
-                        alt={`Photo ${index + 1}`}
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            photos: prev.photos.filter((_, i) => i !== index),
-                          }));
-                        }}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        data-testid={`button-remove-photo-${index}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+              {formData.photoAttachments.length > 0 ? (
+                <div className="space-y-4">
+                  {formData.photoAttachments.map((attachment, index) => (
+                    <div key={index} className="bg-white rounded-lg border p-3">
+                      <div className="flex gap-3">
+                        <div className="relative group flex-shrink-0">
+                          <img
+                            src={attachment.url}
+                            alt={`Attachment ${index + 1}`}
+                            className="w-24 h-24 object-cover rounded-lg border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                photoAttachments: prev.photoAttachments.filter((_, i) => i !== index),
+                                photos: prev.photos.filter(p => p !== attachment.url),
+                              }));
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            data-testid={`button-remove-photo-${index}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div className="flex-1">
+                          <Label className="text-xs text-slate-500">Caption</Label>
+                          <Input
+                            value={attachment.caption}
+                            onChange={(e) => {
+                              const newAttachments = [...formData.photoAttachments];
+                              newAttachments[index] = { ...newAttachments[index], caption: e.target.value };
+                              setFormData(prev => ({ ...prev, photoAttachments: newAttachments }));
+                            }}
+                            placeholder="e.g., Current pump motor - note the rust on housing"
+                            className="mt-1 text-sm"
+                            data-testid={`input-photo-caption-${index}`}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-slate-400 border-2 border-dashed rounded-lg">
+                  <Camera className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No attachments added yet</p>
                 </div>
               )}
             </div>

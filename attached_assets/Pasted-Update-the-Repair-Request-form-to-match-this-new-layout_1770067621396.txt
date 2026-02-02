@@ -1,0 +1,62 @@
+Update the Repair Request form to match this new layout:
+
+**FORM HEADER:**
+- Title: "REPAIR REQUEST" (dark navy background)
+- Subtitle: "New Request"
+- Top right: "Amount: $0.00"
+
+**FORM SECTIONS:**
+
+**1. Office Notes (Internal use only):**
+- Yellow/cream background to highlight it's internal
+- Text area: "Add office notes..."
+- File upload button (blue upload icon) to attach documents/images
+
+**2. Customer / Property:**
+- Property dropdown: "Select customer/property..."
+
+**3. Request Details:**
+- Request #: Auto-generated (e.g., "RR-700699")
+- Request Date: Date picker (auto-fill today)
+- Priority: Dropdown (Low, Medium, High, Urgent)
+- Status: "Pending Assessment" (read-only/gray)
+
+**4. Issue Description:**
+- Icon with section header
+- Large text area: "Describe the repair issue..."
+
+**5. Line Items / Parts Needed:**
+- Section header with tag icon
+- "+ Add Item" button (blue)
+- Shows "No items added yet" when empty
+- When adding items: Part name, Quantity, Unit price, Description
+
+**6. Attachments from Office:**
+- Section to upload photos/images
+- Show image thumbnails
+- Caption field below images (like "Current pump motor - note the rust on housing")
+
+**BOTTOM BUTTONS:**
+- Left: "Save Draft" (outline button)
+- Right: "Cancel" (outline) and "Submit Request" (orange/peach solid button)
+
+**ADDITIONAL FIELDS TO ADD (from first screenshot context):**
+- Assigned Repair Technician: Dropdown to assign tech
+- Scheduled Time: Time picker (e.g., "8:30 AM")
+- Property Address: Auto-filled when property selected
+- Distance: Show distance if available
+
+**AFTER SUBMISSION:**
+- Job appears in repair tech's mobile app under "Today's Jobs"
+- Shows property name, job type, time, distance
+- Shows "ATTACHMENTS FROM OFFICE" with uploaded photos
+- Shows caption/notes from office
+- Buttons: [Navigate] [Details] [View Repair History] [Verify & Complete]
+
+**STYLING:**
+- Match the clean form layout shown
+- Yellow/cream background for Office Notes section
+- White background for other sections
+- Blue accent for "+ Add Item" button
+- Orange/peach for "Submit Request" button
+- Subtle borders and rounded corners
