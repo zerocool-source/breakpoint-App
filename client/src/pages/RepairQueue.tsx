@@ -1632,7 +1632,7 @@ export default function RepairQueue() {
                 </div>
                 <p className="text-sm text-slate-500 mt-1">Repair requests that need to be evaluated before creating an estimate</p>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {pendingRepairRequests.length === 0 ? (
                   <div className="py-12 text-center text-slate-500">
                     <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -1647,38 +1647,92 @@ export default function RepairQueue() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {pendingRepairRequests.map((request: RepairRequest) => (
-                      <Card key={request.id} className="border-l-4 border-l-[#f97316] shadow-sm hover:shadow-md transition-shadow" data-testid={`card-repair-request-${request.id}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h4 className="font-semibold text-slate-900 text-sm truncate" title={request.propertyName || ""}>
-                              {request.propertyName}
-                            </h4>
-                            {request.priority && (
-                              <Badge variant="outline" className={
-                                request.priority === "urgent" ? "bg-red-100 text-red-700 border-red-200" :
-                                request.priority === "high" ? "bg-orange-100 text-orange-700 border-orange-200" :
-                                request.priority === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                                "bg-slate-100 text-slate-600 border-slate-200"
-                              }>
-                                {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-600 line-clamp-2 mb-3">{request.issueDescription}</p>
-                          <div className="flex items-center justify-between text-xs text-slate-500">
-                            <span>
-                              {request.reportedBy === "service_tech" ? "Service Tech" : 
-                               request.reportedBy === "customer" ? "Customer" : "Office"}
-                            </span>
-                            <span>
-                              {request.createdAt && new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">RR #</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Property</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Issue Description</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Reported By</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Priority</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
+                          <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingRepairRequests.map((request: RepairRequest, index: number) => {
+                          const getReportedByLabel = (reportedBy: string, name?: string | null) => {
+                            const roleLabel = reportedBy === "service_tech" ? "Service Tech" :
+                              reportedBy === "repair_tech" ? "Repair Tech" :
+                              reportedBy === "supervisor" ? "Supervisor" :
+                              reportedBy === "office_staff" ? "Office Staff" :
+                              reportedBy === "customer" ? "Customer" : reportedBy;
+                            return name ? `${name} (${roleLabel})` : roleLabel;
+                          };
+                          return (
+                            <tr 
+                              key={request.id} 
+                              className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
+                              data-testid={`row-repair-request-${request.id}`}
+                            >
+                              <td className="px-4 py-3">
+                                <span className="font-semibold text-slate-900 text-sm">{request.requestNumber || "—"}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm text-slate-700 font-medium">{request.propertyName || "—"}</span>
+                              </td>
+                              <td className="px-4 py-3 max-w-[250px]">
+                                <span className="text-sm text-slate-600 truncate block" title={request.issueDescription || ""}>
+                                  {request.issueDescription || "—"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm text-slate-600">{getReportedByLabel(request.reportedBy, request.reportedByName)}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                {request.priority && (
+                                  <Badge variant="outline" className={
+                                    request.priority === "urgent" ? "bg-red-100 text-red-700 border-red-200" :
+                                    request.priority === "high" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                    request.priority === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
+                                    "bg-slate-100 text-slate-600 border-slate-200"
+                                  }>
+                                    {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm text-slate-500">
+                                  {request.requestDate ? new Date(request.requestDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 
+                                   request.createdAt ? new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-[#0077b6] border-[#0077b6] hover:bg-[#0077b6]/10 h-7 px-2 text-xs"
+                                    data-testid={`button-assign-${request.id}`}
+                                  >
+                                    <User className="w-3 h-3 mr-1" /> Assign
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-slate-600 border-slate-300 hover:bg-slate-50 h-7 px-2 text-xs"
+                                    data-testid={`button-view-request-${request.id}`}
+                                  >
+                                    <Eye className="w-3 h-3 mr-1" /> View
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </CardContent>
