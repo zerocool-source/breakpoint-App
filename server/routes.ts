@@ -16,6 +16,7 @@ import { registerEstimateRoutes } from "./routes/estimates";
 import { registerQuickbooksRoutes } from "./routes/quickbooks";
 import { registerReportRoutes } from "./routes/reports";
 import { registerServiceRepairRoutes } from "./routes/serviceRepairs";
+import { registerRepairRequestRoutes } from "./routes/repairRequests";
 import { registerTechOpsRoutes } from "./routes/techOps";
 import { registerDashboardRoutes } from "./routes/dashboard";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
@@ -56,6 +57,7 @@ function setupRoutes(app: any) {
   registerQuickbooksRoutes(app);
   registerReportRoutes(app);
   registerServiceRepairRoutes(app);
+  registerRepairRequestRoutes(app);
   registerTechOpsRoutes(app);
   registerDashboardRoutes(app);
   registerObjectStorageRoutes(app);
