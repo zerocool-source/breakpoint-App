@@ -752,6 +752,28 @@ export type ThreadMessage = typeof threadMessages.$inferSelect;
 export type InsertMessageReadReceipt = z.infer<typeof insertMessageReadReceiptSchema>;
 export type MessageReadReceipt = typeof messageReadReceipts.$inferSelect;
 
+// Department Channels (Office, Dispatch, HR sections for field techs to communicate with)
+export const departmentChannels = pgTable("department_channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  department: text("department").notNull(), // "office", "dispatch", "hr"
+  description: text("description"),
+  icon: text("icon").default("hash"), // Icon name for the channel
+  isPrivate: boolean("is_private").default(false),
+  allowedRoles: text("allowed_roles").array(), // Which roles can access: "repair_tech", "service_tech", "foreman", "supervisor", "office"
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDepartmentChannelSchema = createInsertSchema(departmentChannels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDepartmentChannel = z.infer<typeof insertDepartmentChannelSchema>;
+export type DepartmentChannel = typeof departmentChannels.$inferSelect;
+
 // Property Channels (Slack-style messaging for each property/pool)
 export const propertyChannels = pgTable("property_channels", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -759,6 +781,7 @@ export const propertyChannels = pgTable("property_channels", {
   propertyName: text("property_name").notNull(),
   customerName: text("customer_name"),
   address: text("address"),
+  category: text("category").default("general"), // Category for grouping: "residential", "commercial", "hoa", "municipal"
   description: text("description"), // Channel topic/description
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
