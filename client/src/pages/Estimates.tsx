@@ -350,7 +350,10 @@ export default function Estimates() {
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
+  const [convertedWoIds, setConvertedWoIds] = useState<Set<string>>(new Set()); // Track work orders that have been converted
   const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
+  const [convertingWoId, setConvertingWoId] = useState<string | null>(null); // Track which WO is being converted
+  const [convertingWoNumber, setConvertingWoNumber] = useState<string>(""); // Store WO number for toast message
   const [lightboxImage, setLightboxImage] = useState<{ url: string; label: string; caption: string } | null>(null); // Photo lightbox state
   const [lightboxImages, setLightboxImages] = useState<Array<{ url: string; label: string; caption: string }>>([]); // All images for navigation
   const [lightboxIndex, setLightboxIndex] = useState(0); // Current image index
@@ -941,10 +944,31 @@ export default function Estimates() {
       if (!estimateData.sourceType) {
         estimateData.sourceType = "office_staff";
       }
+      
+      // If converting from Work Order, mark the WO as converted
+      if (isConvertingFromWo && convertingWoId) {
+        setConvertedWoIds(prev => new Set(Array.from(prev).concat(convertingWoId)));
+        // Also remove from selected if it was selected
+        setSelectedCompletedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(convertingWoId);
+          return newSet;
+        });
+        // Show success toast with WO and Estimate numbers
+        setTimeout(() => {
+          toast({
+            title: "Work Order Converted",
+            description: `${convertingWoNumber} converted to Estimate ${formData.estimateNumber}`,
+          });
+        }, 500);
+      }
+      
       createMutation.mutate(estimateData);
     }
-    // Reset the Work Order conversion flag
+    // Reset the Work Order conversion flags
     setIsConvertingFromWo(false);
+    setConvertingWoId(null);
+    setConvertingWoNumber("");
   };
 
   const openSendApprovalDialog = async (estimate: Estimate) => {
@@ -2432,11 +2456,13 @@ export default function Estimates() {
                 ? realCompletedWithoutApproval 
                 : sampleCompletedJobs;
               
-              // Add WO numbers to items
-              const completedWithWo = completedWithoutApproval.map((item, idx) => ({
-                ...item,
-                woNumber: generateWoNumber(idx),
-              }));
+              // Add WO numbers to items and filter out already converted ones
+              const completedWithWo = completedWithoutApproval
+                .filter((item) => !convertedWoIds.has(item.id))
+                .map((item, idx) => ({
+                  ...item,
+                  woNumber: generateWoNumber(idx),
+                }));
               
               const toggleSelect = (id: string) => {
                 setSelectedCompletedIds(prev => {
@@ -2556,14 +2582,15 @@ export default function Estimates() {
                 });
                 setIsEditing(false);
                 setIsConvertingFromWo(true); // Mark as converting from Work Order
+                setConvertingWoId(item.id); // Store which WO is being converted
+                setConvertingWoNumber(item.woNumber); // Store WO number for success toast
                 setShowFormDialog(true);
-                
-                // Show toast to confirm
-                toast({
-                  title: "Converting to Estimate",
-                  description: `Pre-filled estimate for ${item.propertyName} (${item.woNumber})`,
-                });
               };
+              
+              // Hide container if no work orders left
+              if (completedWithWo.length === 0) {
+                return null;
+              }
               
               return (
                 <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-[#EAB308] overflow-hidden">
@@ -2635,14 +2662,20 @@ export default function Estimates() {
                         {completedWithWo.map((item) => (
                           <tr 
                             key={item.id} 
-                            className={`border-t border-slate-100 hover:bg-slate-50 ${urgentWoItems.has(item.id) ? 'bg-red-50' : ''}`}
+                            className={`border-t border-slate-100 cursor-pointer transition-colors duration-200 ${
+                              urgentWoItems.has(item.id) 
+                                ? 'bg-red-50 hover:bg-red-100' 
+                                : 'hover:bg-[#f0fdf4]'
+                            }`}
+                            onClick={() => handleConvertToEstimate(item)}
+                            data-testid={`row-wo-${item.id}`}
                           >
-                            <td className="py-2.5 px-3">
+                            <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={selectedCompletedIds.has(item.id)}
                                 onChange={() => toggleSelect(item.id)}
-                                className="rounded border-slate-300"
+                                className="rounded border-slate-300 cursor-pointer"
                               />
                             </td>
                             <td className="py-2.5 px-3 font-mono text-xs text-slate-600">{item.woNumber}</td>
@@ -4421,7 +4454,7 @@ export default function Estimates() {
             </div>
 
             <DialogFooter className={`border-t pt-4 flex-shrink-0 ${isConvertingFromWo ? 'px-6 pb-6 bg-white' : ''}`}>
-              <Button variant="outline" onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); }}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); setConvertingWoId(null); setConvertingWoNumber(""); }}>Cancel</Button>
               <Button
                 onClick={handleSaveEstimate}
                 disabled={!formData.propertyName}
