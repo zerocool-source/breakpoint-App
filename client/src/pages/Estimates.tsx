@@ -751,6 +751,11 @@ export default function Estimates() {
           const source = inferSourceType(e);
           return source === "repair_tech" || source === "repair_foreman";
         });
+      } else if (sourceFilter === "work_order") {
+        // Work Order = estimates converted from work orders (have sourceType work_order or woReceived flag)
+        result = result.filter((e: Estimate) => 
+          e.sourceType === "work_order" || e.woReceived === true
+        );
       } else {
         result = result.filter((e: Estimate) => inferSourceType(e) === sourceFilter);
       }
@@ -2889,6 +2894,7 @@ export default function Estimates() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="work_order">Work Order</SelectItem>
                   <SelectItem value="field">Field Estimates</SelectItem>
                   <SelectItem value="office_staff">Office Estimates</SelectItem>
                   <SelectItem value="service_tech">SR Estimates</SelectItem>
