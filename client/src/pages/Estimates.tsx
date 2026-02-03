@@ -22,7 +22,7 @@ import {
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle, Flag
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -189,6 +189,7 @@ interface EstimateFormData {
   workType: string;
   woReceived: boolean;
   woNumber: string;
+  sourceType: string;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -246,6 +247,7 @@ const emptyFormData: EstimateFormData = {
   workType: "repairs",
   woReceived: false,
   woNumber: "",
+  sourceType: "",
 };
 
 function generateEstimateNumber(): string {
@@ -297,6 +299,7 @@ export default function Estimates() {
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
+  const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
@@ -380,6 +383,7 @@ export default function Estimates() {
       if (st === "service_tech" || st === "service_repair") return "service_tech";
       if (st === "emergency" || st === "sos") return "emergency";
       if (st === "office_staff" || st === "manual" || st === "office") return "office_staff";
+      if (st === "work_order" || st === "wo") return "work_order";
     }
     if (estimate.sourceEmergencyId) return "emergency";
     if (estimate.sourceRepairJobId || (estimate.serviceRepairCount && estimate.serviceRepairCount > 0)) return "service_tech";
@@ -395,6 +399,7 @@ export default function Estimates() {
       case "service_tech": return "SR Estimate";
       case "office_staff": return "Office Estimate";
       case "emergency": return "SOS Estimate";
+      case "work_order": return "Work Order";
       default: return "Office Estimate";
     }
   };
@@ -407,6 +412,7 @@ export default function Estimates() {
       case "service_tech": return "bg-[#17BEBB33] text-[#0D9488]";
       case "office_staff": return "bg-[#17BEBB33] text-[#0D9488]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
+      case "work_order": return "bg-[#14b8a6]/20 text-[#0D9488]"; // Teal color for Work Order
       default: return "bg-[#17BEBB33] text-[#0D9488]";
     }
   };
@@ -780,6 +786,7 @@ export default function Estimates() {
       workType: estimate.workType || "repairs",
       woReceived: estimate.woReceived || false,
       woNumber: estimate.woNumber || "",
+      sourceType: estimate.sourceType || "",
     });
     setSelectedEstimate(estimate);
     setShowFormDialog(true);
@@ -2067,16 +2074,22 @@ export default function Estimates() {
               </div>
             </div>
 
-            {/* Completed Without Approval Container */}
+            {/* Completed Without Approval (Work Order) Container */}
             {(() => {
+              // Generate WO number based on year and index
+              const generateWoNumber = (index: number) => {
+                const year = new Date().getFullYear().toString().slice(-2);
+                return `WO-${year}-${String(index + 1).padStart(5, '0')}`;
+              };
+              
               // Sample data for completed jobs without approval
               const sampleCompletedJobs = [
-                { id: 'cwa1', propertyName: 'Palm Court Apartments', description: 'Pool pump motor replaced', amount: 45000, techName: 'Rick Jacobs', completedDate: new Date('2026-02-02') },
-                { id: 'cwa2', propertyName: 'Sunset Hills HOA', description: 'Filter cartridge replacement', amount: 28500, techName: 'Matt Cummins', completedDate: new Date('2026-02-01') },
-                { id: 'cwa3', propertyName: 'Lakewood Country Club', description: 'Heater pilot assembly repair', amount: 37500, techName: 'Alan Bateman', completedDate: new Date('2026-01-31') },
-                { id: 'cwa4', propertyName: 'Shady Trails HOA', description: 'Skimmer basket and weir door replaced', amount: 12500, techName: 'Kevin Enriquez', completedDate: new Date('2026-01-30') },
-                { id: 'cwa5', propertyName: 'Canyon Ridge HOA', description: 'Chemical feeder repair', amount: 19500, techName: 'Vit Kruml', completedDate: new Date('2026-01-29') },
-                { id: 'cwa6', propertyName: 'Bella Vista HOA', description: 'Pool light fixture replaced', amount: 32000, techName: 'Jose Puente', completedDate: new Date('2026-01-28') },
+                { id: 'cwa1', propertyName: 'Palm Court Apartments', description: 'Pool pump motor replaced', amount: 45000, techName: 'Rick Jacobs', completedDate: new Date('2026-02-02'), isUrgent: false },
+                { id: 'cwa2', propertyName: 'Sunset Hills HOA', description: 'Filter cartridge replacement', amount: 28500, techName: 'Matt Cummins', completedDate: new Date('2026-02-01'), isUrgent: true },
+                { id: 'cwa3', propertyName: 'Lakewood Country Club', description: 'Heater pilot assembly repair', amount: 37500, techName: 'Alan Bateman', completedDate: new Date('2026-01-31'), isUrgent: false },
+                { id: 'cwa4', propertyName: 'Shady Trails HOA', description: 'Skimmer basket and weir door replaced', amount: 12500, techName: 'Kevin Enriquez', completedDate: new Date('2026-01-30'), isUrgent: false },
+                { id: 'cwa5', propertyName: 'Canyon Ridge HOA', description: 'Chemical feeder repair', amount: 19500, techName: 'Vit Kruml', completedDate: new Date('2026-01-29'), isUrgent: true },
+                { id: 'cwa6', propertyName: 'Bella Vista HOA', description: 'Pool light fixture replaced', amount: 32000, techName: 'Jose Puente', completedDate: new Date('2026-01-28'), isUrgent: false },
               ];
               
               // Pull completed jobs that never went through approval process
@@ -2090,12 +2103,19 @@ export default function Estimates() {
                 techName: e.repairTechName || e.createdByTechName || "—",
                 completedDate: e.completedAt ? new Date(e.completedAt) : new Date(),
                 isReal: true,
+                isUrgent: false,
               }));
               
               // Combine real data with sample data (sample data fills in if no real data)
               const completedWithoutApproval = realCompletedWithoutApproval.length > 0 
                 ? realCompletedWithoutApproval 
                 : sampleCompletedJobs;
+              
+              // Add WO numbers to items
+              const completedWithWo = completedWithoutApproval.map((item, idx) => ({
+                ...item,
+                woNumber: generateWoNumber(idx),
+              }));
               
               const toggleSelect = (id: string) => {
                 setSelectedCompletedIds(prev => {
@@ -2110,14 +2130,27 @@ export default function Estimates() {
               };
               
               const toggleSelectAll = () => {
-                if (selectedCompletedIds.size === completedWithoutApproval.length) {
+                if (selectedCompletedIds.size === completedWithWo.length) {
                   setSelectedCompletedIds(new Set());
                 } else {
-                  setSelectedCompletedIds(new Set(completedWithoutApproval.map(e => e.id)));
+                  setSelectedCompletedIds(new Set(completedWithWo.map(e => e.id)));
                 }
               };
               
-              const handleConvertToEstimate = (item: typeof completedWithoutApproval[0]) => {
+              // Use top-level urgent state
+              const toggleUrgent = (id: string) => {
+                setUrgentWoItems(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(id)) {
+                    newSet.delete(id);
+                  } else {
+                    newSet.add(id);
+                  }
+                  return newSet;
+                });
+              };
+              
+              const handleConvertToEstimate = (item: typeof completedWithWo[0]) => {
                 // Pre-fill the estimate form with all data from the completed job
                 setFormData({
                   ...emptyFormData,
@@ -2135,6 +2168,11 @@ export default function Estimates() {
                   estimateDate: new Date(),
                   // Reported date - use the completed date from original job
                   reportedDate: item.completedDate,
+                  // Source - mark as Work Order
+                  sourceType: "work_order",
+                  // WO Number
+                  woNumber: item.woNumber,
+                  woReceived: true,
                   // Line items with the job description and amount
                   items: [{
                     lineNumber: 1,
@@ -2152,7 +2190,7 @@ export default function Estimates() {
                 // Show toast to confirm
                 toast({
                   title: "Converting to Estimate",
-                  description: `Pre-filled estimate for ${item.propertyName}`,
+                  description: `Pre-filled estimate for ${item.propertyName} (${item.woNumber})`,
                 });
               };
               
@@ -2162,12 +2200,12 @@ export default function Estimates() {
                     <div>
                       <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-[#EAB308]" />
-                        Completed Without Approval
+                        Completed Without Approval (Work Order)
                         <span className="px-2 py-0.5 bg-[#EAB308] text-white text-xs font-medium rounded-full">
-                          {completedWithoutApproval.length}
+                          {completedWithWo.length}
                         </span>
                       </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Estimates completed but pending approval - {completedWithoutApproval.length} items</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Work orders completed but pending approval - {completedWithWo.length} items</p>
                     </div>
                     <Button
                       size="sm"
@@ -2206,24 +2244,26 @@ export default function Estimates() {
                           <th className="py-2 px-3 text-left w-10">
                             <input
                               type="checkbox"
-                              checked={selectedCompletedIds.size === completedWithoutApproval.length && completedWithoutApproval.length > 0}
+                              checked={selectedCompletedIds.size === completedWithWo.length && completedWithWo.length > 0}
                               onChange={toggleSelectAll}
                               className="rounded border-slate-300"
                             />
                           </th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">WO #</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Property</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Description</th>
                           <th className="py-2 px-3 text-right text-xs font-medium text-slate-500">Amount</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Technician</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Completed</th>
+                          <th className="py-2 px-3 text-center text-xs font-medium text-slate-500">Urgent</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {completedWithoutApproval.map((item) => (
+                        {completedWithWo.map((item) => (
                           <tr 
                             key={item.id} 
-                            className="border-t border-slate-100 hover:bg-slate-50"
+                            className={`border-t border-slate-100 hover:bg-slate-50 ${urgentWoItems.has(item.id) ? 'bg-red-50' : ''}`}
                           >
                             <td className="py-2.5 px-3">
                               <input
@@ -2233,14 +2273,39 @@ export default function Estimates() {
                                 className="rounded border-slate-300"
                               />
                             </td>
+                            <td className="py-2.5 px-3 font-mono text-xs text-slate-600">{item.woNumber}</td>
                             <td className="py-2.5 px-3 font-medium text-slate-800">{item.propertyName}</td>
-                            <td className="py-2.5 px-3 text-slate-600 max-w-[180px] truncate" title={item.description}>{item.description}</td>
+                            <td className="py-2.5 px-3 text-slate-600 max-w-[150px] truncate" title={item.description}>{item.description}</td>
                             <td className="py-2.5 px-3 text-right font-semibold text-[#10b981]">
                               ${(item.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </td>
                             <td className="py-2.5 px-3 text-slate-600">{item.techName}</td>
                             <td className="py-2.5 px-3 text-slate-400">
                               {format(item.completedDate, "MMM d")}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleUrgent(item.id);
+                                }}
+                                className={`p-1 rounded transition-colors ${
+                                  urgentWoItems.has(item.id) 
+                                    ? 'text-red-600 bg-red-100 hover:bg-red-200' 
+                                    : 'text-slate-400 hover:text-red-500 hover:bg-slate-100'
+                                }`}
+                                title={urgentWoItems.has(item.id) ? "Remove urgent flag" : "Mark as urgent"}
+                                data-testid={`button-urgent-${item.id}`}
+                              >
+                                {urgentWoItems.has(item.id) ? (
+                                  <span className="flex items-center gap-1 text-xs font-medium">
+                                    <Flag className="w-3 h-3" />
+                                    Urgent
+                                  </span>
+                                ) : (
+                                  <Flag className="w-3 h-3" />
+                                )}
+                              </button>
                             </td>
                             <td className="py-2.5 px-3">
                               <Button
