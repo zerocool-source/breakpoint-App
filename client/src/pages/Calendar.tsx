@@ -319,6 +319,9 @@ export default function Calendar() {
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
   const [showRepairAssignmentModal, setShowRepairAssignmentModal] = useState(false);
   const [selectedRepairRequest, setSelectedRepairRequest] = useState<any>(null);
+  const [repairsSidebarFilter, setRepairsSidebarFilter] = useState<"all" | "unassigned" | "assigned">("all");
+  const [editingRepairTechId, setEditingRepairTechId] = useState<string | null>(null);
+  const [editingRepairDateId, setEditingRepairDateId] = useState<string | null>(null);
   const [repairAssignmentForm, setRepairAssignmentForm] = useState({
     technicianId: "",
     technicianName: "",
@@ -463,6 +466,29 @@ export default function Calendar() {
 
   const pendingRepairRequests = repairRequestsData?.requests || [];
 
+  // Fetch ALL repair requests for sidebar (pending + assigned)
+  const { data: allRepairRequestsData, refetch: refetchAllRepairRequests } = useQuery<{ requests: any[] }>({
+    queryKey: ["/api/repair-requests", "all"],
+    queryFn: async () => {
+      const res = await fetch(`/api/repair-requests`);
+      if (!res.ok) return { requests: [] };
+      return res.json();
+    },
+    enabled: roleFilter === "repair",
+  });
+
+  const allRepairRequests = allRepairRequestsData?.requests || [];
+
+  // Filtered repair requests for sidebar based on filter selection
+  const sidebarRepairRequests = useMemo(() => {
+    if (repairsSidebarFilter === "unassigned") {
+      return allRepairRequests.filter((r: any) => !r.assignedTechId);
+    } else if (repairsSidebarFilter === "assigned") {
+      return allRepairRequests.filter((r: any) => r.assignedTechId);
+    }
+    return allRepairRequests;
+  }, [allRepairRequests, repairsSidebarFilter]);
+
   // Fetch assigned repair requests for calendar display
   const { data: assignedRepairRequestsData } = useQuery<{ requests: any[] }>({
     queryKey: ["/api/repair-requests", "assigned", weekDates[0]?.toISOString()],
@@ -583,6 +609,7 @@ export default function Calendar() {
   });
 
   const technicians = techniciansData?.technicians || [];
+  const repairTechnicians = technicians.filter((t: Technician) => t.role === "repair" && t.active);
   const schedules = schedulesData?.schedules || [];
   const coverages = coveragesData?.coverages || [];
   const timeOffs = timeOffData?.timeOffs || [];
@@ -744,6 +771,45 @@ export default function Calendar() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to assign repair request", variant: "destructive" });
+    },
+  });
+
+  // Mutation for inline reassignment from sidebar
+  const inlineReassignMutation = useMutation({
+    mutationFn: async ({ requestId, technicianId, technicianName, assignedDate }: { 
+      requestId: string; 
+      technicianId: string | null; 
+      technicianName: string | null;
+      assignedDate?: string;
+    }) => {
+      const res = await fetch(`/api/repair-requests/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignedTechId: technicianId,
+          assignedTechName: technicianName,
+          assignedDate: assignedDate || (technicianId ? new Date().toISOString().split('T')[0] : null),
+          status: technicianId ? "assigned" : "pending",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to reassign repair request");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "assigned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "all"] });
+      setEditingRepairTechId(null);
+      setEditingRepairDateId(null);
+      toast({
+        title: variables.technicianId ? "Reassigned" : "Unassigned",
+        description: variables.technicianId 
+          ? `Reassigned to ${variables.technicianName}` 
+          : "Repair request unassigned",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reassign repair request", variant: "destructive" });
     },
   });
 
@@ -4162,32 +4228,77 @@ export default function Calendar() {
           data-testid="sidebar-repairs-needed"
         >
           {/* Header */}
-          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-[#fff7ed] to-white">
-            <div>
+          <div className="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-[#fff7ed] to-white">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
                 <Wrench className="w-5 h-5 text-[#f97316]" />
                 Repairs Needed
               </h2>
-              <p className="text-sm text-slate-500">{pendingRepairRequests.length} repair requests awaiting evaluation</p>
+              <button
+                onClick={() => setShowRepairsNeededSidebar(false)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                data-testid="button-close-repairs-sidebar"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
             </div>
-            <button
-              onClick={() => setShowRepairsNeededSidebar(false)}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              data-testid="button-close-repairs-sidebar"
-            >
-              <X className="w-5 h-5 text-slate-500" />
-            </button>
+            <p className="text-sm text-slate-500 mb-3">{sidebarRepairRequests.length} repair requests</p>
+            {/* Filter buttons */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setRepairsSidebarFilter("all")}
+                className={cn(
+                  "px-3 py-1 text-xs rounded-full transition-colors",
+                  repairsSidebarFilter === "all" 
+                    ? "bg-[#f97316] text-white" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+                data-testid="button-filter-all"
+              >
+                All ({allRepairRequests.length})
+              </button>
+              <button
+                onClick={() => setRepairsSidebarFilter("unassigned")}
+                className={cn(
+                  "px-3 py-1 text-xs rounded-full transition-colors",
+                  repairsSidebarFilter === "unassigned" 
+                    ? "bg-[#f97316] text-white" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+                data-testid="button-filter-unassigned"
+              >
+                Unassigned ({allRepairRequests.filter((r: any) => !r.assignedTechId).length})
+              </button>
+              <button
+                onClick={() => setRepairsSidebarFilter("assigned")}
+                className={cn(
+                  "px-3 py-1 text-xs rounded-full transition-colors",
+                  repairsSidebarFilter === "assigned" 
+                    ? "bg-[#f97316] text-white" 
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+                data-testid="button-filter-assigned"
+              >
+                Assigned ({allRepairRequests.filter((r: any) => r.assignedTechId).length})
+              </button>
+            </div>
           </div>
           
           {/* Repair Requests List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {pendingRepairRequests.map((request: any) => (
+            {sidebarRepairRequests.map((request: any) => (
               <div
                 key={request.id}
-                className="bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md hover:border-[#f97316] transition-all overflow-hidden"
+                className={cn(
+                  "bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden",
+                  request.assignedTechId ? "hover:border-[#0ea5e9]" : "hover:border-[#f97316]"
+                )}
                 data-testid={`sidebar-repair-${request.id}`}
               >
-                <div className="p-4 border-l-4 border-l-[#f97316]">
+                <div className={cn(
+                  "p-4 border-l-4",
+                  request.assignedTechId ? "border-l-[#0ea5e9]" : "border-l-[#f97316]"
+                )}>
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <p className="text-base font-semibold text-[#0F172A]" title={request.propertyName}>
                       {request.propertyName}
@@ -4207,7 +4318,7 @@ export default function Calendar() {
                   <p className="text-sm text-slate-600 mb-2 line-clamp-2" title={request.issueDescription}>
                     {request.issueDescription}
                   </p>
-                  <div className="text-xs text-slate-500 mb-3 space-y-1">
+                  <div className="text-xs text-slate-500 space-y-2">
                     <div className="flex items-center gap-1">
                       <Users className="w-3 h-3 text-slate-400" />
                       <span className="font-medium text-slate-600">Reported by:</span>
@@ -4215,36 +4326,108 @@ export default function Calendar() {
                         {request.reportedByName || (request.reportedBy === "service_tech" ? "Service Tech" : request.reportedBy === "customer" ? "Customer" : "Office")}
                       </span>
                     </div>
-                    {request.assignedTechName ? (
-                      <div className="flex items-center gap-1">
-                        <UserCheck className="w-3 h-3 text-[#0ea5e9]" />
-                        <span className="font-medium text-slate-600">Assigned to:</span>
-                        <span className="text-[#0ea5e9]">{request.assignedTechName}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <UserPlus className="w-3 h-3 text-slate-400" />
-                        <span className="font-medium text-slate-600">Assigned to:</span>
-                        <span className="text-slate-400 italic">Not assigned</span>
-                      </div>
-                    )}
-                    {request.createdAt && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        <span>
-                          {new Date(request.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    )}
+                    
+                    {/* Inline Technician Assignment/Reassignment */}
+                    <div className="flex items-center gap-1">
+                      <UserCheck className={cn("w-3 h-3", request.assignedTechId ? "text-[#0ea5e9]" : "text-slate-400")} />
+                      <span className="font-medium text-slate-600">Assigned to:</span>
+                      {editingRepairTechId === request.id ? (
+                        <Select
+                          value={request.assignedTechId || "unassigned"}
+                          onValueChange={(value) => {
+                            if (value === "unassigned") {
+                              inlineReassignMutation.mutate({
+                                requestId: request.id,
+                                technicianId: null,
+                                technicianName: null,
+                              });
+                            } else {
+                              const tech = repairTechnicians.find((t: any) => t.id.toString() === value);
+                              if (tech) {
+                                inlineReassignMutation.mutate({
+                                  requestId: request.id,
+                                  technicianId: value,
+                                  technicianName: `${tech.firstName} ${tech.lastName}`,
+                                  assignedDate: request.assignedDate 
+                                    ? new Date(request.assignedDate).toISOString().split('T')[0]
+                                    : new Date().toISOString().split('T')[0],
+                                });
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-6 text-xs w-36 px-2">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {repairTechnicians.map((tech: any) => (
+                              <SelectItem key={tech.id} value={tech.id.toString()}>
+                                {tech.firstName} {tech.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <button
+                          onClick={() => setEditingRepairTechId(request.id)}
+                          className={cn(
+                            "flex items-center gap-1 hover:underline cursor-pointer",
+                            request.assignedTechId ? "text-[#0ea5e9]" : "text-slate-400 italic"
+                          )}
+                        >
+                          {request.assignedTechName || "Not assigned"}
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Inline Date Assignment */}
+                    <div className="flex items-center gap-1">
+                      <CalendarDays className={cn("w-3 h-3", request.assignedDate ? "text-[#0ea5e9]" : "text-slate-400")} />
+                      <span className="font-medium text-slate-600">Scheduled:</span>
+                      {editingRepairDateId === request.id ? (
+                        <Input
+                          type="date"
+                          defaultValue={request.assignedDate ? new Date(request.assignedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                          className="h-6 text-xs w-32 px-2"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              inlineReassignMutation.mutate({
+                                requestId: request.id,
+                                technicianId: request.assignedTechId,
+                                technicianName: request.assignedTechName,
+                                assignedDate: e.target.value,
+                              });
+                            }
+                          }}
+                          onBlur={() => setEditingRepairDateId(null)}
+                          autoFocus
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setEditingRepairDateId(request.id)}
+                          className={cn(
+                            "flex items-center gap-1 hover:underline cursor-pointer",
+                            request.assignedDate ? "text-[#0ea5e9]" : "text-slate-400 italic"
+                          )}
+                        >
+                          {request.assignedDate 
+                            ? new Date(request.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : "Not scheduled"}
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
             
-            {pendingRepairRequests.length === 0 && (
+            {sidebarRepairRequests.length === 0 && (
               <div className="text-center py-8 text-slate-500">
                 <Wrench className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p>No repair requests pending</p>
+                <p>No repair requests {repairsSidebarFilter !== "all" ? `(${repairsSidebarFilter})` : ""}</p>
                 <Button
                   onClick={() => {
                     setShowRepairsNeededSidebar(false);

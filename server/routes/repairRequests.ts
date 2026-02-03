@@ -53,7 +53,16 @@ export function registerRepairRequestRoutes(app: any) {
 
   app.patch("/api/repair-requests/:id", async (req: Request, res: Response) => {
     try {
-      const request = await storage.updateRepairRequest(req.params.id, req.body);
+      // Convert date strings to Date objects for timestamp fields
+      const body = { ...req.body };
+      if (body.assignedDate && typeof body.assignedDate === 'string') {
+        body.assignedDate = new Date(body.assignedDate);
+      }
+      if (body.requestDate && typeof body.requestDate === 'string') {
+        body.requestDate = new Date(body.requestDate);
+      }
+      
+      const request = await storage.updateRepairRequest(req.params.id, body);
       if (!request) {
         return res.status(404).json({ error: "Repair request not found" });
       }
