@@ -1,0 +1,82 @@
+We are getting API Error: 500 {"type":"error","error":{"type":"api_error","message":"Internal server error"},"request_id":"req_011CXm..."} from the Anthropic Claude API when using the poolbrain AI chat feature.
+
+Please do a FULL audit and fix of the server-side code, specifically the AI/poolbrain functionality. Here is everything to check and fix:
+
+1. POOLBRAIN AI ROUTE — Find the route/file that handles poolbrain or AI chat (search for "poolbrain", "anthropic", "openai", "claude", "ai/chat", "/api/ai", "messages"). This is the source of the 500 error. Fix it by ensuring:
+
+   a. The Anthropic API call uses the CORRECT format:
+```typescript
+   const response = await fetch('https://api.anthropic.com/v1/messages', {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/json',
+       'x-api-key': process.env.ANTHROPIC_API_KEY,
+       'anthropic-version': '2023-06-01'
+     },
+     body: JSON.stringify({
+       model: 'claude-sonnet-4-20250514',
+       max_tokens: 1024,
+       messages: [{ role: 'user', content: userMessage }]
+     })
+   });
+```
+
+   b. The API key is read from the correct env variable — if the recent commit changed it to OPENAI_API_KEY but we're calling Anthropic, fix it back
+   
+   c. The request body MUST include: model, max_tokens, and messages (all three are REQUIRED)
+   
+   d. The messages array must not be empty and must follow Anthropic's format (role: "user" or "assistant", content: string)
+   
+   e. If we're using the OpenAI SDK or format to call Anthropic, that's wrong — Anthropic has its own format
+   
+   f. Add proper error handling with try/catch that logs the FULL error response body from Anthropic, not just the status code
+
+2. RESPONSE PARSING — Make sure we correctly parse the Anthropic response:
+```typescript
+   const data = await response.json();
+   // Anthropic returns: data.content[0].text (NOT data.choices[0].message.content)
+   const aiMessage = data.content[0].text;
+```
+   If the code uses OpenAI response format (data.choices), fix it for Anthropic format.
+
+3. SYSTEM PROMPT — If poolbrain uses a system prompt, make sure it's passed correctly:
+```typescript
+   // Anthropic format - system is a TOP-LEVEL field, not in messages array
+   body: JSON.stringify({
+     model: 'claude-sonnet-4-20250514',
+     max_tokens: 1024,
+     system: 'You are PoolBrain, an AI assistant for Breakpoint Commercial Pool Systems...',
+     messages: [{ role: 'user', content: userMessage }]
+   })
+```
+   The system prompt must NOT be in the messages array as {"role": "system", ...} — that's OpenAI format and will cause errors with Anthropic.
+
+4. ENV VARIABLES — Verify these are set in Replit Secrets:
+   - ANTHROPIC_API_KEY (must start with "sk-ant-")
+   - Add a startup check that logs whether the key is present (not the actual key value)
+
+5. OPENGRAPH — The recent commit "Update poolbrain and opengraph" may have introduced the bug. Check the opengraph changes didn't break the poolbrain route or any shared middleware.
+
+6. ADMIN LOGIN CREDENTIALS — Check the recent commit "Add admin login credentials for the business intelligence" didn't break the auth middleware that protects the poolbrain route. Make sure:
+   - The JWT auth middleware works correctly
+   - Admin users can access the poolbrain endpoint
+   - The auth token is being passed correctly in the request headers
+
+7. Add detailed error logging to the poolbrain route:
+```typescript
+   try {
+     const response = await fetch('https://api.anthropic.com/v1/messages', { ... });
+     if (!response.ok) {
+       const errorBody = await response.text();
+       console.error('Anthropic API Error:', response.status, errorBody);
+       return res.status(502).json({ error: 'AI service error', details: errorBody });
+     }
+     const data = await response.json();
+     // ... handle success
+   } catch (error) {
+     console.error('Poolbrain Error:', error);
+     return res.status(500).json({ error: 'Internal server error', message: error.message });
+   }
+```
+
+Fix all of these issues and show me what you changed.
