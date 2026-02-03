@@ -509,19 +509,21 @@ export default function Calendar() {
     });
   };
 
-  // Fetch estimates for repair technicians - needs_scheduling (ready to assign) and scheduled (assigned)
+  // Fetch estimates for repair technicians - approved/needs_scheduling (ready to assign) and scheduled (assigned)
   const { data: scheduledEstimatesData, refetch: refetchScheduledEstimates } = useQuery<{ estimates: ScheduledRepair[], unassigned: ScheduledRepair[] }>({
     queryKey: ["/api/estimates/for-calendar", weekDates[0]?.toISOString()],
     queryFn: async () => {
       const startDate = weekDates[0]?.toISOString().split("T")[0];
       const endDate = weekDates[6]?.toISOString().split("T")[0];
       
-      // Fetch estimates that need scheduling (ready to assign) and already scheduled
-      const [needsSchedulingRes, scheduledRes] = await Promise.all([
+      // Fetch estimates that are approved, need scheduling (ready to assign), and already scheduled
+      const [approvedRes, needsSchedulingRes, scheduledRes] = await Promise.all([
+        fetch(`/api/estimates?status=approved`),
         fetch(`/api/estimates?status=needs_scheduling`),
         fetch(`/api/estimates?status=scheduled`),
       ]);
       
+      const approvedData = approvedRes.ok ? await approvedRes.json() : { estimates: [] };
       const needsSchedulingData = needsSchedulingRes.ok ? await needsSchedulingRes.json() : { estimates: [] };
       const scheduledData = scheduledRes.ok ? await scheduledRes.json() : { estimates: [] };
       
@@ -539,8 +541,10 @@ export default function Calendar() {
         createdAt: e.createdAt,
       });
       
-      // Unassigned = needs_scheduling status (ready to be assigned to a tech)
-      const unassigned = (needsSchedulingData.estimates || []).map(mapEstimate);
+      // Unassigned = approved + needs_scheduling status (ready to be assigned to a tech)
+      const approvedEstimates = (approvedData.estimates || []).map(mapEstimate);
+      const needsSchedulingEstimates = (needsSchedulingData.estimates || []).map(mapEstimate);
+      const unassigned = [...approvedEstimates, ...needsSchedulingEstimates];
       
       // Assigned = scheduled status with repairTechId and scheduledDate in current week
       const scheduled = (scheduledData.estimates || []).map(mapEstimate);
@@ -723,7 +727,10 @@ export default function Calendar() {
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate all estimate-related queries to sync Calendar and Estimates pages
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
       queryClient.invalidateQueries({ queryKey: ["/api/estimates/scheduled"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/for-calendar"] });
       refetchScheduledEstimates();
       setShowAssignEstimateModal(false);
       setSelectedEstimateForAssign(null);
@@ -3475,8 +3482,12 @@ export default function Calendar() {
                       <span className="text-sm font-bold text-[#f97316]">
                         EST#{estimate.estimateNumber || estimate.id.slice(0, 8)}
                       </span>
-                      <span className="px-2 py-0.5 bg-[#f97316] text-white text-[10px] font-medium rounded-full whitespace-nowrap">
-                        Needs Scheduling
+                      <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap ${
+                        estimate.status === "approved" 
+                          ? "bg-[#22D69A] text-white" 
+                          : "bg-[#f97316] text-white"
+                      }`}>
+                        {estimate.status === "approved" ? "Approved" : "Ready to Schedule"}
                       </span>
                     </div>
                     <p className="text-base font-semibold text-[#0F172A] mb-1" title={estimate.propertyName}>
