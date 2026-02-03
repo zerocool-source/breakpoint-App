@@ -413,9 +413,11 @@ export default function RepairQueue() {
       tech: string; 
       techId: string | null;
       repairs: ServiceRepairJob[]; 
+      workOrders: WorkOrder[];
       pending: number; 
       inProgress: number; 
       completed: number; 
+      workOrderCount: number;
       totalValue: number;
       initials: string;
     }> = {};
@@ -428,9 +430,11 @@ export default function RepairQueue() {
         tech: fullName, 
         techId: tech.id,
         repairs: [], 
+        workOrders: [],
         pending: 0, 
         inProgress: 0, 
         completed: 0, 
+        workOrderCount: 0,
         totalValue: 0,
         initials,
       };
@@ -441,9 +445,11 @@ export default function RepairQueue() {
       tech: "Unassigned", 
       techId: null,
       repairs: [], 
+      workOrders: [],
       pending: 0, 
       inProgress: 0, 
       completed: 0, 
+      workOrderCount: 0,
       totalValue: 0,
       initials: "UA",
     };
@@ -460,16 +466,25 @@ export default function RepairQueue() {
       else if (repair.status === "completed") targetGroup.completed++;
     });
 
+    // Add work orders to technicians
+    workOrders.forEach(wo => {
+      const techName = wo.repairTechName || "Unassigned";
+      const targetGroup = grouped[techName] || grouped["Unassigned"];
+      targetGroup.workOrders.push(wo);
+      targetGroup.workOrderCount++;
+      targetGroup.totalValue += wo.totalAmount || 0;
+    });
+
     return Object.values(grouped).sort((a, b) => {
       if (a.tech === "Unassigned") return 1;
       if (b.tech === "Unassigned") return -1;
       // Sort by active jobs first, then alphabetically
-      const aActive = a.pending + a.inProgress;
-      const bActive = b.pending + b.inProgress;
+      const aActive = a.pending + a.inProgress + a.workOrderCount;
+      const bActive = b.pending + b.inProgress + b.workOrderCount;
       if (aActive !== bActive) return bActive - aActive;
       return a.tech.localeCompare(b.tech);
     });
-  }, [filteredRepairs, repairTechnicians]);
+  }, [filteredRepairs, repairTechnicians, workOrders]);
 
   const dashboardMetrics = useMemo(() => {
     // Compute filtered status arrays inline to avoid dependency issues
