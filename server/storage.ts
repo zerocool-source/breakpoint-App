@@ -3363,6 +3363,49 @@ export class DbStorage implements IStorage {
       .returning();
     return result[0];
   }
+
+  // Admin Actions for AI Learning
+  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
+    const result = await db.insert(adminActions).values(action as any).returning();
+    return result[0];
+  }
+
+  async getAdminActions(filters: {
+    userId?: string;
+    actionCategory?: string;
+    limit?: number;
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<AdminAction[]> {
+    const conditions = [];
+    if (filters.userId) conditions.push(eq(adminActions.userId, filters.userId));
+    if (filters.actionCategory) conditions.push(eq(adminActions.actionCategory, filters.actionCategory));
+    
+    const query = db.select().from(adminActions).orderBy(desc(adminActions.createdAt));
+    if (conditions.length > 0) {
+      return query.where(and(...conditions)).limit(filters.limit || 100);
+    }
+    return query.limit(filters.limit || 100);
+  }
+
+  async getRecentAdminActionPatterns(limit: number = 50): Promise<{ patterns: any[]; recentActions: AdminAction[] }> {
+    const recentActions = await db.select().from(adminActions)
+      .orderBy(desc(adminActions.createdAt))
+      .limit(limit);
+    return { patterns: [], recentActions };
+  }
+
+  async getAiLearningInsights(category?: string): Promise<AiLearningInsight[]> {
+    if (category) {
+      return db.select().from(aiLearningInsights).where(eq(aiLearningInsights.category, category));
+    }
+    return db.select().from(aiLearningInsights);
+  }
+
+  async upsertAiLearningInsight(insight: InsertAiLearningInsight): Promise<AiLearningInsight> {
+    const result = await db.insert(aiLearningInsights).values(insight as any).returning();
+    return result[0];
+  }
 }
 
 export const storage = new DbStorage();

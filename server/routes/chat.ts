@@ -369,13 +369,13 @@ export function registerChatRoutes(app: any) {
         const chatMessage = {
           role: "user" as const,
           content: message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         };
         
         const assistantMessage = {
           role: "assistant" as const,
           content: aiResponse,
-          timestamp: new Date().toISOString()
+          timestamp: new Date()
         };
 
         await storage.saveChatMessage(chatMessage);
