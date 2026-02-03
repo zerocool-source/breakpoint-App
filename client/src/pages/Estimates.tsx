@@ -1904,8 +1904,8 @@ export default function Estimates() {
               </div>
             </div>
 
-            {/* Bottom Row */}
-            <div className="grid grid-cols-1 gap-4">
+            {/* Bottom Row - By Source and Field Estimates Inbox side by side */}
+            <div className="grid grid-cols-2 gap-4">
               {/* By Source - Donut Chart */}
               <div className="bg-white rounded-2xl shadow-sm p-5">
                 <h4 className="text-sm font-medium text-slate-700 mb-4">By Source</h4>
@@ -1994,6 +1994,66 @@ export default function Estimates() {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Field Estimates Inbox */}
+              <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-medium text-slate-700">Field Estimates Inbox</h4>
+                  {(() => {
+                    const fieldEstimates = estimates.filter(e => 
+                      e.status === "draft" && 
+                      (e.sourceType === "repair_tech" || e.sourceType === "service_tech" || e.sourceType === "repair_foreman")
+                    );
+                    return fieldEstimates.length > 0 ? (
+                      <span className="px-2 py-0.5 bg-[#f97316] text-white text-xs font-medium rounded-full">
+                        {fieldEstimates.length} new
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+                <div className="flex-1 overflow-y-auto max-h-[200px] space-y-2">
+                  {(() => {
+                    const fieldEstimates = estimates.filter(e => 
+                      e.status === "draft" && 
+                      (e.sourceType === "repair_tech" || e.sourceType === "service_tech" || e.sourceType === "repair_foreman")
+                    ).sort((a, b) => {
+                      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return dateB - dateA;
+                    });
+                    
+                    if (fieldEstimates.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-slate-400">
+                          <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No new field estimates</p>
+                        </div>
+                      );
+                    }
+                    
+                    return fieldEstimates.map((estimate) => (
+                      <div 
+                        key={estimate.id}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors border-l-4 border-l-[#0077b6]"
+                        onClick={() => openEditDialog(estimate)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-slate-800 truncate">{estimate.customerName || "Unknown Property"}</p>
+                            <span className="text-sm font-semibold text-[#10b981]">
+                              ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 truncate">{estimate.title || estimate.description || "Field Estimate"}</p>
+                          <p className="text-xs text-slate-400">
+                            {estimate.createdByTechName || "Field Tech"} · {estimate.createdAt ? format(new Date(estimate.createdAt), "MMM d") : ""}
+                          </p>
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
