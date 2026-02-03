@@ -25,8 +25,11 @@ import {
   Camera,
   Mail,
   Wrench,
-  User
+  User,
+  Send,
+  ClipboardList
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import type { Invoice } from "@shared/schema";
 
@@ -63,7 +66,9 @@ export default function Invoices() {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: invoicesData, isLoading, refetch, isRefetching } = useQuery<{ invoices: Invoice[] }>({
     queryKey: ["/api/invoices"],
@@ -122,6 +127,45 @@ export default function Invoices() {
       alert("Failed to sync payments from QuickBooks");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleSendToQuickBooks = async (invoice: Invoice) => {
+    setSendingInvoiceId(invoice.id);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/send-to-quickbooks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerEmail: invoice.emailedTo || "",
+          sendEmail: true,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        toast({
+          title: "Invoice Sent to QuickBooks",
+          description: `${invoice.invoiceNumber} → QB #${data.qbNumber}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      } else {
+        toast({
+          title: "Failed to Send Invoice",
+          description: data.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error sending invoice to QuickBooks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send invoice to QuickBooks",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingInvoiceId(null);
     }
   };
 
@@ -374,6 +418,17 @@ export default function Invoices() {
                                 </span>
                               </div>
                             )}
+                            {invoice.sourceType === "work_order" && (
+                              <div className="mt-1">
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-teal-50 text-teal-700 border-teal-200 text-[10px] px-1.5 py-0 gap-0.5"
+                                >
+                                  <ClipboardList className="w-2.5 h-2.5" />
+                                  Work Order
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -449,21 +504,45 @@ export default function Invoices() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          {invoice.quickbooksInvoiceId && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`https://app.qbo.intuit.com/app/invoice?txnId=${invoice.quickbooksInvoiceId}`, '_blank');
-                              }}
-                              data-testid={`btn-view-qb-${invoice.id}`}
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              View in QB
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {/* Send Invoice button for draft work order invoices */}
+                            {invoice.status === "draft" && invoice.sourceType === "work_order" && !invoice.quickbooksInvoiceId && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="gap-1 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                                disabled={sendingInvoiceId === invoice.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendToQuickBooks(invoice);
+                                }}
+                                data-testid={`btn-send-invoice-${invoice.id}`}
+                              >
+                                {sendingInvoiceId === invoice.id ? (
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Send className="w-3 h-3" />
+                                )}
+                                Send Invoice
+                              </Button>
+                            )}
+                            {/* View in QB button for synced invoices */}
+                            {invoice.quickbooksInvoiceId && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`https://app.qbo.intuit.com/app/invoice?txnId=${invoice.quickbooksInvoiceId}`, '_blank');
+                                }}
+                                data-testid={`btn-view-qb-${invoice.id}`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                View in QB
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

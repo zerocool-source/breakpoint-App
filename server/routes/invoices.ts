@@ -130,4 +130,69 @@ export function registerInvoiceRoutes(app: Express) {
       res.status(500).json({ error: "Failed to generate invoice number" });
     }
   });
+
+  // Send invoice to QuickBooks
+  app.post("/api/invoices/:id/send-to-quickbooks", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { customerEmail, sendEmail = true } = req.body;
+      
+      // 1. Get the invoice from our database
+      const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.quickbooksInvoiceId) {
+        return res.status(400).json({ error: "Invoice already sent to QuickBooks" });
+      }
+      
+      // 2. Forward the request to QuickBooks route (reuse existing logic)
+      const qbResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/quickbooks/create-invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: invoice.customerName,
+          customerEmail: customerEmail || invoice.emailedTo,
+          lineItems: invoice.lineItems || [],
+          memo: invoice.notes,
+          sendEmail: sendEmail,
+          estimateId: invoice.estimateId,
+        })
+      });
+      
+      if (!qbResponse.ok) {
+        const errorData = await qbResponse.json();
+        return res.status(qbResponse.status).json(errorData);
+      }
+      
+      const qbResult = await qbResponse.json();
+      
+      // 3. Update our invoice with QuickBooks info
+      const [updated] = await db
+        .update(invoices)
+        .set({
+          quickbooksInvoiceId: qbResult.qbInvoiceId,
+          quickbooksDocNumber: qbResult.qbDocNumber,
+          quickbooksSyncedAt: new Date(),
+          quickbooksSyncStatus: 'synced',
+          status: 'sent',
+          sentAt: new Date(),
+          emailedTo: customerEmail || invoice.emailedTo,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, id))
+        .returning();
+      
+      res.json({ 
+        success: true, 
+        invoice: updated,
+        qbNumber: qbResult.qbDocNumber,
+        qbInvoiceId: qbResult.qbInvoiceId,
+      });
+    } catch (error: any) {
+      console.error("Error sending invoice to QuickBooks:", error);
+      res.status(500).json({ error: "Failed to send invoice to QuickBooks", message: error.message });
+    }
+  });
 }
