@@ -15,8 +15,8 @@ export function useAiWidgets() {
   const context = useContext(AiWidgetsContext);
   if (!context) {
     return {
-      showMonitor: true,
-      showHelper: true,
+      showMonitor: false,
+      showHelper: false,
       toggleMonitor: () => {},
       toggleHelper: () => {},
       showAll: () => {},
@@ -27,8 +27,8 @@ export function useAiWidgets() {
 }
 
 export function AiWidgetsProvider({ children }: { children: ReactNode }) {
-  const [showMonitor, setShowMonitor] = useState(true);
-  const [showHelper, setShowHelper] = useState(true);
+  const [showMonitor, setShowMonitor] = useState(false);
+  const [showHelper, setShowHelper] = useState(false);
 
   return (
     <AiWidgetsContext.Provider
