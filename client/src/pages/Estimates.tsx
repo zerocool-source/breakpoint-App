@@ -3178,10 +3178,10 @@ export default function Estimates() {
         </div>
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogContent className={`max-w-6xl max-h-[90vh] overflow-hidden flex flex-col ${isConvertingFromWo ? 'p-0' : ''}`}>
             {isConvertingFromWo ? (
               /* Work Order Conversion Layout - Matches Estimate Details View */
-              <DialogHeader className="border-b pb-4 flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-700 -m-6 mb-0 p-6 rounded-t-lg">
+              <DialogHeader className="border-b pb-4 flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-700 p-6 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                   <div>
                     <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
@@ -3216,7 +3216,7 @@ export default function Estimates() {
               </DialogHeader>
             )}
 
-            <ScrollArea className="flex-1 -mx-6">
+            <div className={`flex-1 overflow-y-auto overflow-x-hidden ${isConvertingFromWo ? '' : '-mx-6'}`} style={{ scrollBehavior: 'smooth' }}>
               <div className="px-6 py-4">
                 {isConvertingFromWo ? (
                   /* Work Order Conversion Layout */
@@ -4247,9 +4247,9 @@ export default function Estimates() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="border-t pt-4 flex-shrink-0">
+            <DialogFooter className={`border-t pt-4 flex-shrink-0 ${isConvertingFromWo ? 'px-6 pb-6 bg-white' : ''}`}>
               <Button variant="outline" onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); }}>Cancel</Button>
               <Button
                 onClick={handleSaveEstimate}
