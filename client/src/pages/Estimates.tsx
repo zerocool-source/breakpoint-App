@@ -2357,9 +2357,9 @@ export default function Estimates() {
                           )}
                           {estimate.status === "approved" && (
                             <>
-                              <Badge className="bg-[#ECFDF5] text-[#2CA01C] border-[#A7F3D0] rounded-full">
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Approved
+                              <Badge className="bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33 rounded-full">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Sent for Approval
                               </Badge>
                               {estimate.customerApproverName && (
                                 <div className="flex items-center gap-1 text-xs text-[#16A679] bg-[#22D69A]1A px-2 py-1 rounded-full">
@@ -2392,9 +2392,9 @@ export default function Estimates() {
                           )}
                           {estimate.status === "needs_scheduling" && (
                             <>
-                              <Badge className="bg-[#ECFDF5] text-[#2CA01C] border-[#A7F3D0] rounded-full">
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Approved
+                              <Badge className="bg-[#FF8000]1A text-[#D35400] border-[#FF8000]33 rounded-full">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Sent for Approval
                               </Badge>
                               {estimate.customerApproverName && (
                                 <div className="flex items-center gap-1 text-xs text-[#16A679] bg-[#22D69A]1A px-2 py-1 rounded-full">
