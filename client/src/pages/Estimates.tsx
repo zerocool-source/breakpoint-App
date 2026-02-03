@@ -3170,22 +3170,390 @@ export default function Estimates() {
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
           <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-            <DialogHeader className="border-b pb-4 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-2xl font-bold text-slate-900">ESTIMATE</DialogTitle>
-                  <p className="text-sm text-slate-500">{isEditing ? "Edit Estimate" : "Create New Estimate"}</p>
+            {isConvertingFromWo ? (
+              /* Work Order Conversion Layout - Matches Estimate Details View */
+              <DialogHeader className="border-b pb-4 flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-700 -m-6 mb-0 p-6 rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                      <Wrench className="w-5 h-5" />
+                      Repair: {formData.title || "Untitled"}
+                    </DialogTitle>
+                    <p className="text-sm text-slate-300 mt-1 flex items-center gap-2">
+                      <Badge className="bg-teal-500/20 text-teal-300 border-teal-400/30">
+                        {formData.woNumber || "WO-XX-XXXXX"}
+                      </Badge>
+                      <span>• Converting to Estimate</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400 uppercase tracking-wide">Total Amount</p>
+                    <p className="text-3xl font-bold text-white">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">Amount</p>
-                  <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</p>
+              </DialogHeader>
+            ) : (
+              <DialogHeader className="border-b pb-4 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-2xl font-bold text-slate-900">ESTIMATE</DialogTitle>
+                    <p className="text-sm text-slate-500">{isEditing ? "Edit Estimate" : "Create New Estimate"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Amount</p>
+                    <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  </div>
                 </div>
-              </div>
-            </DialogHeader>
+              </DialogHeader>
+            )}
 
             <ScrollArea className="flex-1 -mx-6">
               <div className="px-6 py-4">
-                <div className="flex gap-6">
+                {isConvertingFromWo ? (
+                  /* Work Order Conversion Layout */
+                  <div className="space-y-4">
+                    {/* Quote Description Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                          <ClipboardList className="w-4 h-4" />
+                          Quote Description
+                        </h4>
+                      </div>
+                      <div className="p-4">
+                        <Textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Enter quote description..."
+                          rows={3}
+                          className="resize-none"
+                          data-testid="input-wo-description"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Info Grid Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-4 divide-x divide-y">
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            Property/Location
+                          </Label>
+                          <Select
+                            value={formData.propertyId}
+                            onValueChange={(id) => {
+                              const customer = customers.find((c: any) => c.id === id);
+                              setFormData(prev => ({
+                                ...prev,
+                                propertyId: id,
+                                propertyName: customer?.name || "",
+                                customerName: customer?.name || "",
+                                customerEmail: customer?.email || "",
+                                address: customer?.address || "",
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 mt-1 text-sm">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map((customer: any) => (
+                                <SelectItem key={customer.id} value={customer.id}>
+                                  {customer.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            Customer/HOA
+                          </Label>
+                          <p className="text-sm font-medium mt-1">{formData.customerName || "N/A"}</p>
+                        </div>
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            Estimate Date
+                          </Label>
+                          <p className="text-sm font-medium mt-1">
+                            {formData.estimateDate ? format(formData.estimateDate, "M/d/yyyy") : "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <FileText className="w-3 h-3" />
+                            Estimate No.
+                          </Label>
+                          <p className="text-sm font-medium mt-1">{formData.estimateNumber || "Auto-generated"}</p>
+                        </div>
+                        <div className="p-3">
+                          <TechnicianSelect
+                            label="Repair Tech"
+                            value={formData.repairTechId}
+                            onChange={(id: string, name: string) => setFormData(prev => ({ 
+                              ...prev, 
+                              repairTechId: id,
+                              repairTechName: name
+                            }))}
+                          />
+                        </div>
+                        <div className="p-3">
+                          <TechnicianSelect
+                            label="Service Tech"
+                            value={formData.serviceTechId}
+                            onChange={(id: string, name: string) => setFormData(prev => ({ 
+                              ...prev, 
+                              serviceTechId: id,
+                              serviceTechName: name
+                            }))}
+                          />
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            Reported Date
+                          </Label>
+                          <p className="text-sm font-medium mt-1">
+                            {formData.reportedDate ? format(formData.reportedDate, "MMM d, yyyy") : "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Status
+                          </Label>
+                          <Badge className={`mt-1 ${statusConfig[formData.status]?.color || "bg-slate-100"}`}>
+                            {statusConfig[formData.status]?.label || "Draft"}
+                          </Badge>
+                        </div>
+                        <div className="p-3 col-span-2 border-t">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <ClipboardList className="w-3 h-3" />
+                            WO Number
+                          </Label>
+                          <Badge className="mt-1 bg-teal-100 text-teal-700 border-teal-200">
+                            {formData.woNumber || "WO-XX-XXXXX"}
+                          </Badge>
+                        </div>
+                        <div className="p-3 col-span-2 border-t">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <Tag className="w-3 h-3" />
+                            Work Type
+                          </Label>
+                          <p className="text-sm font-medium mt-1 capitalize">{formData.workType || "Repairs"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Line Items Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                          <Tag className="w-4 h-4" />
+                          Line Items
+                        </h4>
+                        <Button
+                          size="sm"
+                          onClick={addLineItem}
+                          className="bg-[#0078D4] hover:bg-[#0078D4]/90 h-7 text-xs"
+                          data-testid="button-add-wo-line"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          + Add Item
+                        </Button>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="w-[200px] font-semibold text-xs">Item/Part</TableHead>
+                            <TableHead className="font-semibold text-xs">Description</TableHead>
+                            <TableHead className="w-14 font-semibold text-xs text-center">Qty</TableHead>
+                            <TableHead className="w-24 font-semibold text-xs text-right">Unit Price</TableHead>
+                            <TableHead className="w-24 font-semibold text-xs text-right">Amount</TableHead>
+                            <TableHead className="w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {formData.items.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-6 text-slate-400 text-sm">
+                                No line items. Click "+ Add Item" to add parts and services.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            formData.items.map((item, idx) => (
+                              <TableRow key={idx} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                                <TableCell className="py-2">
+                                  <Select
+                                    value={item.productService}
+                                    onValueChange={(value) => {
+                                      const catalogItem = partsCatalog.find(p => p.name === value);
+                                      updateLineItem(idx, { 
+                                        productService: value,
+                                        description: value,
+                                        rate: catalogItem?.defaultRate || item.rate,
+                                        amount: (catalogItem?.defaultRate || item.rate) * item.quantity
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs">
+                                      <SelectValue placeholder="Select..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[200px]">
+                                      <div className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-50">Parts</div>
+                                      {partsCatalog.filter(p => p.category === "parts").slice(0, 10).map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-xs">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Labor</div>
+                                      {partsCatalog.filter(p => p.category === "labor").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-xs">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Services</div>
+                                      {partsCatalog.filter(p => p.category === "services").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-xs">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(idx, { description: e.target.value })}
+                                    placeholder="Description"
+                                    className="h-7 text-xs"
+                                  />
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateLineItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
+                                    className="h-7 text-xs text-center"
+                                    min={0}
+                                  />
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Input
+                                    type="number"
+                                    value={item.rate}
+                                    onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
+                                    className="h-7 text-xs text-right"
+                                    min={0}
+                                    step={0.01}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-xs py-2">
+                                  {formatCurrency(item.amount)}
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 hover:bg-red-50"
+                                    onClick={() => removeLineItem(idx)}
+                                  >
+                                    <X className="w-3 h-3 text-red-500" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                      <div className="border-t bg-slate-50 px-4 py-2">
+                        <div className="flex justify-end">
+                          <div className="w-48 space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-600">Subtotal:</span>
+                              <span className="font-medium">{formatCurrency(formData.items.reduce((sum, item) => sum + item.amount, 0))}</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-semibold border-t pt-1">
+                              <span className="text-slate-900">Total Amount:</span>
+                              <span className="text-[#0078D4]">{formatCurrency(formData.items.reduce((sum, item) => sum + item.amount, 0))}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Customer Response Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Customer Response
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-4 divide-x text-center">
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500">Response</Label>
+                          <p className="text-sm font-medium mt-1 text-amber-600">Pending</p>
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500">Responded By</Label>
+                          <p className="text-sm font-medium mt-1 text-slate-400">N/A</p>
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500">Response Date</Label>
+                          <p className="text-sm font-medium mt-1 text-slate-400">N/A</p>
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500">Sent To</Label>
+                          <p className="text-sm font-medium mt-1 text-slate-400">{formData.customerEmail || "N/A"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Photos Section */}
+                    {formData.photos && formData.photos.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <div className="bg-slate-100 px-4 py-2 border-b">
+                          <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                            <Camera className="w-4 h-4" />
+                            Photos
+                          </h4>
+                        </div>
+                        <div className="p-4">
+                          <div className="grid grid-cols-4 gap-3">
+                            {formData.photos.map((photo, idx) => (
+                              <div key={idx} className="relative group">
+                                <img
+                                  src={photo}
+                                  alt={`Photo ${idx + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-5 w-5 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      photos: prev.photos.filter((_, i) => i !== idx)
+                                    }));
+                                  }}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Standard Estimate Form Layout */
+                  <div className="flex gap-6">
                   <div className="flex-1 space-y-6">
                     <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border">
                       <div className="col-span-2">
@@ -3859,7 +4227,8 @@ export default function Estimates() {
                       </div>
                     </div>
                   </div>
-                </div>
+                  </div>
+                )}
               </div>
             </ScrollArea>
 
