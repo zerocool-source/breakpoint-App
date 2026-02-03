@@ -322,6 +322,10 @@ export default function Calendar() {
   const [highlightedRepairRequestId, setHighlightedRepairRequestId] = useState<string | null>(null);
   const [editingRepairTechId, setEditingRepairTechId] = useState<string | null>(null);
   const [editingRepairDateId, setEditingRepairDateId] = useState<string | null>(null);
+  const [showCancelRepairModal, setShowCancelRepairModal] = useState(false);
+  const [repairToCancel, setRepairToCancel] = useState<any>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelNotes, setCancelNotes] = useState("");
   const [repairAssignmentForm, setRepairAssignmentForm] = useState({
     technicianId: "",
     technicianName: "",
@@ -479,8 +483,8 @@ export default function Calendar() {
 
   const allRepairRequests = allRepairRequestsData?.requests || [];
 
-  // All repair requests for sidebar display
-  const sidebarRepairRequests = allRepairRequests;
+  // All repair requests for sidebar display (exclude cancelled)
+  const sidebarRepairRequests = allRepairRequests.filter((r: any) => r.status !== "cancelled");
 
   // Fetch assigned repair requests for calendar display
   const { data: assignedRepairRequestsData } = useQuery<{ requests: any[] }>({
@@ -823,6 +827,44 @@ export default function Calendar() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to reassign repair request", variant: "destructive" });
+    },
+  });
+
+  // Mutation to cancel a repair request
+  const cancelRepairMutation = useMutation({
+    mutationFn: async ({ requestId, reason, notes }: { 
+      requestId: string; 
+      reason: string;
+      notes: string;
+    }) => {
+      const res = await fetch(`/api/repair-requests/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "cancelled",
+          cancelReason: reason,
+          cancelNotes: notes,
+          cancelledAt: new Date().toISOString(),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to cancel repair request");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "assigned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests", "all"] });
+      setShowCancelRepairModal(false);
+      setRepairToCancel(null);
+      setCancelReason("");
+      setCancelNotes("");
+      toast({
+        title: "Repair request cancelled",
+        description: "The repair request has been removed from the calendar.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to cancel repair request", variant: "destructive" });
     },
   });
 
@@ -4279,20 +4321,45 @@ export default function Calendar() {
                   request.assignedTechId ? "border-l-[#0ea5e9]" : "border-l-[#f97316]"
                 )}>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="text-base font-semibold text-[#0F172A]" title={request.propertyName}>
+                    <p className="text-base font-semibold text-[#0F172A] flex-1" title={request.propertyName}>
                       {request.propertyName}
                     </p>
-                    {request.priority && (
-                      <span className={cn(
-                        "px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap",
-                        request.priority === "urgent" && "bg-red-100 text-red-700",
-                        request.priority === "high" && "bg-orange-100 text-orange-700",
-                        request.priority === "medium" && "bg-yellow-100 text-yellow-700",
-                        request.priority === "low" && "bg-slate-100 text-slate-600"
-                      )}>
-                        {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {request.priority && (
+                        <span className={cn(
+                          "px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap",
+                          request.priority === "urgent" && "bg-red-100 text-red-700",
+                          request.priority === "high" && "bg-orange-100 text-orange-700",
+                          request.priority === "medium" && "bg-yellow-100 text-yellow-700",
+                          request.priority === "low" && "bg-slate-100 text-slate-600"
+                        )}>
+                          {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                        </span>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button 
+                            className="p-1 hover:bg-slate-100 rounded transition-colors"
+                            data-testid={`button-repair-menu-${request.id}`}
+                          >
+                            <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem 
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            onClick={() => {
+                              setRepairToCancel(request);
+                              setShowCancelRepairModal(true);
+                            }}
+                            data-testid={`button-cancel-repair-${request.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Cancel Request
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <p className="text-sm text-slate-600 mb-2 line-clamp-2" title={request.issueDescription}>
                     {request.issueDescription}
@@ -4547,6 +4614,86 @@ export default function Calendar() {
               data-testid="button-assign"
             >
               {assignRepairRequestMutation.isPending ? "Assigning..." : "Assign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Repair Request Confirmation Modal */}
+      <Dialog open={showCancelRepairModal} onOpenChange={(open) => {
+        setShowCancelRepairModal(open);
+        if (!open) {
+          setRepairToCancel(null);
+          setCancelReason("");
+          setCancelNotes("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" />
+              Cancel Repair Request?
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this repair request for <span className="font-semibold">{repairToCancel?.propertyName}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700">Reason (optional)</label>
+              <Select value={cancelReason} onValueChange={setCancelReason}>
+                <SelectTrigger className="mt-1" data-testid="select-cancel-reason">
+                  <SelectValue placeholder="Select a reason..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_needed">Not needed</SelectItem>
+                  <SelectItem value="duplicate">Duplicate request</SelectItem>
+                  <SelectItem value="resolved">Already resolved</SelectItem>
+                  <SelectItem value="customer_cancelled">Customer cancelled</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">Notes (optional)</label>
+              <Textarea
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+                placeholder="Add cancellation reason..."
+                rows={3}
+                className="mt-1 resize-none"
+                data-testid="textarea-cancel-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCancelRepairModal(false);
+                setRepairToCancel(null);
+                setCancelReason("");
+                setCancelNotes("");
+              }}
+              data-testid="button-keep-repair"
+            >
+              No, Keep It
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (repairToCancel) {
+                  cancelRepairMutation.mutate({
+                    requestId: repairToCancel.id,
+                    reason: cancelReason,
+                    notes: cancelNotes,
+                  });
+                }
+              }}
+              disabled={cancelRepairMutation.isPending}
+              data-testid="button-confirm-cancel"
+            >
+              {cancelRepairMutation.isPending ? "Cancelling..." : "Yes, Cancel Request"}
             </Button>
           </DialogFooter>
         </DialogContent>
