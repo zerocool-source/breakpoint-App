@@ -22,7 +22,7 @@ import {
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -2069,6 +2069,8 @@ export default function Estimates() {
 
             {/* Completed Without Approval Container */}
             {(() => {
+              // Pull completed jobs that never went through approval process
+              // This matches the Overview dashboard "Completed Without Approval" metric
               const completedWithoutApproval = estimates.filter(e => 
                 e.status === "completed" && !e.approvedAt
               ).sort((a, b) => {
@@ -2076,8 +2078,6 @@ export default function Estimates() {
                 const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
                 return dateB - dateA;
               });
-              
-              if (completedWithoutApproval.length === 0) return null;
               
               const toggleSelect = (id: string) => {
                 setSelectedCompletedIds(prev => {
@@ -2100,17 +2100,17 @@ export default function Estimates() {
               };
               
               return (
-                <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200">
-                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-[#EAB308] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#FEFCE8] to-white">
                     <div>
                       <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-[#f97316]" />
+                        <AlertTriangle className="w-4 h-4 text-[#EAB308]" />
                         Completed Without Approval
-                        <span className="px-2 py-0.5 bg-[#f97316] text-white text-xs font-medium rounded-full">
+                        <span className="px-2 py-0.5 bg-[#EAB308] text-white text-xs font-medium rounded-full">
                           {completedWithoutApproval.length}
                         </span>
                       </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Estimates completed but pending approval</p>
+                      <p className="text-xs text-slate-500 mt-0.5">Estimates completed but pending approval - {completedWithoutApproval.length} items</p>
                     </div>
                     <Button
                       size="sm"
