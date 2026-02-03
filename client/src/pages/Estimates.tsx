@@ -296,6 +296,7 @@ export default function Estimates() {
   const [revenueFlowPeriod, setRevenueFlowPeriod] = useState<"today" | "week" | "month" | "30days">("30days");
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
+  const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
@@ -657,7 +658,15 @@ export default function Estimates() {
 
     // Apply source filter (use inferSourceType for intelligent detection)
     if (sourceFilter !== "all") {
-      result = result.filter((e: Estimate) => inferSourceType(e) === sourceFilter);
+      if (sourceFilter === "field") {
+        // Field Estimates = repair_tech + repair_foreman
+        result = result.filter((e: Estimate) => {
+          const source = inferSourceType(e);
+          return source === "repair_tech" || source === "repair_foreman";
+        });
+      } else {
+        result = result.filter((e: Estimate) => inferSourceType(e) === sourceFilter);
+      }
     }
 
     // Apply date range filter
@@ -2057,6 +2066,124 @@ export default function Estimates() {
                 </div>
               </div>
             </div>
+
+            {/* Completed Without Approval Container */}
+            {(() => {
+              const completedWithoutApproval = estimates.filter(e => 
+                e.status === "completed" && !e.approvedAt
+              ).sort((a, b) => {
+                const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+                const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+                return dateB - dateA;
+              });
+              
+              if (completedWithoutApproval.length === 0) return null;
+              
+              const toggleSelect = (id: string) => {
+                setSelectedCompletedIds(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(id)) {
+                    newSet.delete(id);
+                  } else {
+                    newSet.add(id);
+                  }
+                  return newSet;
+                });
+              };
+              
+              const toggleSelectAll = () => {
+                if (selectedCompletedIds.size === completedWithoutApproval.length) {
+                  setSelectedCompletedIds(new Set());
+                } else {
+                  setSelectedCompletedIds(new Set(completedWithoutApproval.map(e => e.id)));
+                }
+              };
+              
+              return (
+                <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200">
+                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-[#f97316]" />
+                        Completed Without Approval
+                        <span className="px-2 py-0.5 bg-[#f97316] text-white text-xs font-medium rounded-full">
+                          {completedWithoutApproval.length}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Estimates completed but pending approval</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={selectedCompletedIds.size === 0}
+                      className="bg-[#0077b6] hover:bg-[#005f8f] text-white disabled:opacity-50"
+                      onClick={() => {
+                        toast({
+                          title: "Invoice Created",
+                          description: `Created invoice for ${selectedCompletedIds.size} estimate(s)`,
+                        });
+                        selectedCompletedIds.forEach(id => {
+                          updateStatusMutation.mutate({ id, status: "invoiced" });
+                        });
+                        setSelectedCompletedIds(new Set());
+                      }}
+                      data-testid="button-invoice-completed"
+                    >
+                      <Receipt className="w-4 h-4 mr-1" />
+                      Invoice {selectedCompletedIds.size > 0 ? `(${selectedCompletedIds.size})` : ""}
+                    </Button>
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 sticky top-0">
+                        <tr>
+                          <th className="py-2 px-4 text-left w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedCompletedIds.size === completedWithoutApproval.length && completedWithoutApproval.length > 0}
+                              onChange={toggleSelectAll}
+                              className="rounded border-slate-300"
+                            />
+                          </th>
+                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Property</th>
+                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Description</th>
+                          <th className="py-2 px-4 text-right text-xs font-medium text-slate-500">Amount</th>
+                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Technician</th>
+                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Completed</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {completedWithoutApproval.map((estimate) => (
+                          <tr 
+                            key={estimate.id} 
+                            className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"
+                            onClick={() => toggleSelect(estimate.id)}
+                          >
+                            <td className="py-2.5 px-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedCompletedIds.has(estimate.id)}
+                                onChange={() => toggleSelect(estimate.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="rounded border-slate-300"
+                              />
+                            </td>
+                            <td className="py-2.5 px-4 font-medium text-slate-800">{estimate.customerName || "Unknown"}</td>
+                            <td className="py-2.5 px-4 text-slate-600 max-w-[200px] truncate">{estimate.title || estimate.description || "—"}</td>
+                            <td className="py-2.5 px-4 text-right font-semibold text-[#10b981]">
+                              ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-2.5 px-4 text-slate-600">{estimate.repairTechName || estimate.createdByTechName || "—"}</td>
+                            <td className="py-2.5 px-4 text-slate-400">
+                              {estimate.completedAt ? format(new Date(estimate.completedAt), "MMM d") : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -2093,10 +2220,11 @@ export default function Estimates() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="field">Field Estimates</SelectItem>
+                  <SelectItem value="office_staff">Office Estimates</SelectItem>
+                  <SelectItem value="service_tech">SR Estimates</SelectItem>
                   <SelectItem value="repair_foreman">Repair Foreman</SelectItem>
                   <SelectItem value="repair_tech">Repair Technician</SelectItem>
-                  <SelectItem value="service_tech">Service Technician</SelectItem>
-                  <SelectItem value="office_staff">Office Entry</SelectItem>
                 </SelectContent>
               </Select>
 
