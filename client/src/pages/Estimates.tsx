@@ -374,6 +374,7 @@ export default function Estimates() {
   const inferSourceType = (estimate: Estimate): string => {
     if (estimate.sourceType) {
       const st = estimate.sourceType.toLowerCase();
+      if (st === "repair_foreman" || st === "foreman") return "repair_foreman";
       if (st === "repair_tech" || st === "field") return "repair_tech";
       if (st === "service_tech" || st === "service_repair") return "service_tech";
       if (st === "emergency" || st === "sos") return "emergency";
@@ -388,6 +389,7 @@ export default function Estimates() {
   const getSourceLabel = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
+      case "repair_foreman": return "Foreman Estimate";
       case "repair_tech": return "Field Estimate";
       case "service_tech": return "SR Estimate";
       case "office_staff": return "Office Estimate";
@@ -399,6 +401,7 @@ export default function Estimates() {
   const getSourceBadgeColor = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
+      case "repair_foreman": return "bg-[#8B5CF6]/20 text-[#7C3AED]";
       case "repair_tech": return "bg-[#17BEBB33] text-[#0D9488]";
       case "service_tech": return "bg-[#17BEBB33] text-[#0D9488]";
       case "office_staff": return "bg-[#17BEBB33] text-[#0D9488]";
@@ -539,11 +542,16 @@ export default function Estimates() {
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
   const sourceMetrics = useMemo(() => {
+    const repairForeman = estimates.filter((e: Estimate) => inferSourceType(e) === "repair_foreman");
     const repairTech = estimates.filter((e: Estimate) => inferSourceType(e) === "repair_tech");
     const serviceTech = estimates.filter((e: Estimate) => inferSourceType(e) === "service_tech");
     const officeStaff = estimates.filter((e: Estimate) => inferSourceType(e) === "office_staff");
     
     return {
+      repairForeman: {
+        count: repairForeman.length,
+        totalValue: repairForeman.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
+      },
       repairTech: {
         count: repairTech.length,
         totalValue: repairTech.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
@@ -1906,7 +1914,8 @@ export default function Estimates() {
                   <div className="relative w-28 h-28 flex-shrink-0">
                     <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
                       {(() => {
-                        const total = sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count;
+                        const total = sourceMetrics.repairForeman.count + sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count;
+                        const foremanPct = total > 0 ? (sourceMetrics.repairForeman.count / total) * 100 : 0;
                         const repairPct = total > 0 ? (sourceMetrics.repairTech.count / total) * 100 : 0;
                         const servicePct = total > 0 ? (sourceMetrics.serviceTech.count / total) * 100 : 0;
                         const officePct = total > 0 ? (sourceMetrics.officeStaff.count / total) * 100 : 0;
@@ -1914,16 +1923,17 @@ export default function Estimates() {
                         return (
                           <>
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#0077b6" strokeWidth="12" strokeDasharray={`${(repairPct / 100) * circumference} ${circumference}`} strokeDashoffset="0" />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#14b8a6" strokeWidth="12" strokeDasharray={`${(servicePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-(repairPct / 100) * circumference}`} />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#6b7280" strokeWidth="12" strokeDasharray={`${(officePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((repairPct + servicePct) / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#8B5CF6" strokeWidth="12" strokeDasharray={`${(foremanPct / 100) * circumference} ${circumference}`} strokeDashoffset="0" />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#0077b6" strokeWidth="12" strokeDasharray={`${(repairPct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-(foremanPct / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#14b8a6" strokeWidth="12" strokeDasharray={`${(servicePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((foremanPct + repairPct) / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#6b7280" strokeWidth="12" strokeDasharray={`${(officePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((foremanPct + repairPct + servicePct) / 100) * circumference}`} />
                           </>
                         );
                       })()}
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
-                        <span className="text-xl font-bold text-slate-700">{sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count}</span>
+                        <span className="text-xl font-bold text-slate-700">{sourceMetrics.repairForeman.count + sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count}</span>
                         <p className="text-xs text-slate-400">total</p>
                       </div>
                     </div>
@@ -1931,6 +1941,19 @@ export default function Estimates() {
                   
                   {/* Legend */}
                   <div className="flex-1 space-y-3">
+                    <div 
+                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                      onClick={() => setSourceFilter("repair_foreman")}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+                        <span className="text-sm text-slate-700">Repair Foreman</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-slate-700">{sourceMetrics.repairForeman.count}</span>
+                        <span className="text-xs text-slate-400 ml-2">${(sourceMetrics.repairForeman.totalValue / 100 / 1000).toFixed(1)}k</span>
+                      </div>
+                    </div>
                     <div 
                       className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                       onClick={() => setSourceFilter("repair_tech")}
@@ -2010,6 +2033,7 @@ export default function Estimates() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="repair_foreman">Repair Foreman</SelectItem>
                   <SelectItem value="repair_tech">Repair Technician</SelectItem>
                   <SelectItem value="service_tech">Service Technician</SelectItem>
                   <SelectItem value="office_staff">Office Entry</SelectItem>
