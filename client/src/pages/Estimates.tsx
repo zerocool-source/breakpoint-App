@@ -354,6 +354,7 @@ export default function Estimates() {
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
+  const [isWoContainerCollapsed, setIsWoContainerCollapsed] = useState(false); // Collapse state for WO container
   // Track work orders that have been converted - persist to localStorage
   const [convertedWoIds, setConvertedWoIds] = useState<Set<string>>(() => {
     try {
@@ -2656,22 +2657,33 @@ export default function Estimates() {
               
               return (
                 <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-[#EAB308] overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#FEFCE8] to-white">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-[#EAB308]" />
-                        Completed Without Approval (Work Order)
-                        <span className="px-2 py-0.5 bg-[#EAB308] text-white text-xs font-medium rounded-full">
-                          {completedWithWo.length}
-                        </span>
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-0.5">Work orders completed but pending approval - {completedWithWo.length} items</p>
+                  <div 
+                    className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#FEFCE8] to-white cursor-pointer hover:from-[#FEF9C3] transition-colors duration-200"
+                    onClick={() => setIsWoContainerCollapsed(!isWoContainerCollapsed)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ChevronDown 
+                        className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${isWoContainerCollapsed ? '-rotate-90' : ''}`} 
+                      />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-[#EAB308]" />
+                          Completed Without Approval (Work Order)
+                          <span className="px-2 py-0.5 bg-[#EAB308] text-white text-xs font-medium rounded-full">
+                            {completedWithWo.length}
+                          </span>
+                        </h4>
+                        {!isWoContainerCollapsed && (
+                          <p className="text-xs text-slate-500 mt-0.5">Work orders completed but pending approval - {completedWithWo.length} items</p>
+                        )}
+                      </div>
                     </div>
                     <Button
                       size="sm"
                       disabled={selectedCompletedIds.size === 0}
                       className="bg-[#0077b6] hover:bg-[#005f8f] text-white disabled:opacity-50"
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation(); // Prevent header click from toggling collapse
                         // Get selected items for invoice
                         const selectedItems = completedWithWo.filter(item => selectedCompletedIds.has(item.id));
                         
@@ -2750,7 +2762,13 @@ export default function Estimates() {
                       Invoice {selectedCompletedIds.size > 0 ? `(${selectedCompletedIds.size})` : ""}
                     </Button>
                   </div>
-                  <div className="max-h-[280px] overflow-y-auto">
+                  {/* Collapsible content */}
+                  <div 
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                      isWoContainerCollapsed ? 'max-h-0' : 'max-h-[280px]'
+                    }`}
+                  >
+                    <div className="overflow-y-auto max-h-[280px]">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 sticky top-0">
                         <tr>
@@ -2854,6 +2872,7 @@ export default function Estimates() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
               );

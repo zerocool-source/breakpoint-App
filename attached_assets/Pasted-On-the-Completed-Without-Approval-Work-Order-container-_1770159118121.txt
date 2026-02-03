@@ -1,0 +1,80 @@
+On the "Completed Without Approval (Work Order)" container, add a collapse/expand feature:
+
+**ADD COLLAPSE/EXPAND FUNCTIONALITY:**
+
+1. **Add collapse toggle button/icon:**
+- Position: On the header row, on the right side (near the Invoice button) or on the left side next to the title
+- Icon: Chevron down (▼) when expanded, Chevron right (▶) when collapsed
+- Or use a minus (−) when expanded, plus (+) when collapsed
+
+2. **Header should be clickable to toggle:**
+- Click anywhere on the header bar to collapse/expand
+- Or click the chevron icon specifically
+
+**EXPANDED STATE (default):**
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ⚠️ Completed Without Approval (Work Order) [2]                              [▼]    [Invoice]      │
+├─────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ ☐ | WO #        | Property        | Description              | Amount  | Tech    | ... | Actions  │
+│ ☐ | WO-26-00001 | Canyon Ridge HOA| Chemical feeder repair   | $195.00 | Vit K.  | ... | Convert  │
+│ ☐ | WO-26-00002 | Bella Vista HOA | Pool light fixture...    | $320.00 | Jose P. | ... | Convert  │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**COLLAPSED STATE:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ ⚠️ Completed Without Approval (Work Order) [2]                              [▶]    [Invoice]      │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**STYLING:**
+```css
+.wo-container-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wo-container-header:hover {
+  background-color: #fefce8; /* Light yellow tint on hover */
+}
+
+.collapse-icon {
+  transition: transform 0.2s ease;
+  margin-left: 8px;
+}
+
+.collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.wo-container-content {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.wo-container-content.collapsed {
+  max-height: 0;
+  padding: 0;
+}
+```
+
+**JAVASCRIPT:**
+```javascript
+const [isCollapsed, setIsCollapsed] = useState(false);
+
+const toggleCollapse = () => {
+  setIsCollapsed(!isCollapsed);
+};
+```
+
+**FEATURES:**
+- Smooth animation when collapsing/expanding
+- Remember collapse state (optional - save to localStorage)
+- Show the count badge even when collapsed so user knows how many items
+- Invoice button still visible when collapsed (optional)
