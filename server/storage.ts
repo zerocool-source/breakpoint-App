@@ -58,7 +58,8 @@ import {
   settings, alerts, workflows, technicians, technicianNotes, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
-  propertyChannels, channelMembers, channelMessages, channelReactions, channelReads,
+  propertyChannels, channelMembers, channelMessages, channelReactions, channelReads, departmentChannels,
+  type DepartmentChannel, type InsertDepartmentChannel,
   estimates, serviceRepairJobs, repairRequests, approvalRequests, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
@@ -206,6 +207,13 @@ export interface IStorage {
   updateThreadMessage(id: string, updates: Partial<InsertThreadMessage>): Promise<ThreadMessage | undefined>;
   deleteThreadMessage(id: string): Promise<void>;
   pinMessage(id: string, pinned: boolean): Promise<ThreadMessage | undefined>;
+
+  // Department Channels
+  getDepartmentChannels(): Promise<DepartmentChannel[]>;
+  getDepartmentChannelsByDepartment(department: string): Promise<DepartmentChannel[]>;
+  getDepartmentChannel(id: string): Promise<DepartmentChannel | undefined>;
+  createDepartmentChannel(channel: InsertDepartmentChannel): Promise<DepartmentChannel>;
+  updateDepartmentChannel(id: string, updates: Partial<InsertDepartmentChannel>): Promise<DepartmentChannel | undefined>;
 
   // Property Channels
   getPropertyChannels(): Promise<PropertyChannel[]>;
@@ -1181,6 +1189,34 @@ export class DbStorage implements IStorage {
 
   async pinMessage(id: string, pinned: boolean): Promise<ThreadMessage | undefined> {
     const result = await db.update(threadMessages).set({ pinned }).where(eq(threadMessages.id, id)).returning();
+    return result[0];
+  }
+
+  // Department Channels
+  async getDepartmentChannels(): Promise<DepartmentChannel[]> {
+    return db.select().from(departmentChannels).orderBy(departmentChannels.department, departmentChannels.name);
+  }
+
+  async getDepartmentChannelsByDepartment(department: string): Promise<DepartmentChannel[]> {
+    return db.select().from(departmentChannels).where(eq(departmentChannels.department, department)).orderBy(departmentChannels.name);
+  }
+
+  async getDepartmentChannel(id: string): Promise<DepartmentChannel | undefined> {
+    const result = await db.select().from(departmentChannels).where(eq(departmentChannels.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createDepartmentChannel(channel: InsertDepartmentChannel): Promise<DepartmentChannel> {
+    const result = await db.insert(departmentChannels).values(channel).returning();
+    return result[0];
+  }
+
+  async updateDepartmentChannel(id: string, updates: Partial<InsertDepartmentChannel>): Promise<DepartmentChannel | undefined> {
+    const result = await db
+      .update(departmentChannels)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(departmentChannels.id, id))
+      .returning();
     return result[0];
   }
 

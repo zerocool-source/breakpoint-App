@@ -105,6 +105,74 @@ export function registerChannelRoutes(app: any) {
     }
   });
 
+  // ==================== DEPARTMENT CHANNELS ====================
+
+  app.get("/api/department-channels", async (req: Request, res: Response) => {
+    try {
+      const { department } = req.query;
+      let channels;
+      if (department) {
+        channels = await storage.getDepartmentChannelsByDepartment(department as string);
+      } else {
+        channels = await storage.getDepartmentChannels();
+      }
+      res.json({ channels });
+    } catch (error: any) {
+      console.error("Error fetching department channels:", error);
+      res.status(500).json({ error: "Failed to fetch department channels" });
+    }
+  });
+
+  app.get("/api/department-channels/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const channel = await storage.getDepartmentChannel(id);
+      if (!channel) {
+        return res.status(404).json({ error: "Department channel not found" });
+      }
+      res.json({ channel });
+    } catch (error: any) {
+      console.error("Error fetching department channel:", error);
+      res.status(500).json({ error: "Failed to fetch department channel" });
+    }
+  });
+
+  app.post("/api/department-channels", async (req: Request, res: Response) => {
+    try {
+      const { name, department, description, icon, isPrivate, allowedRoles } = req.body;
+      if (!name || !department) {
+        return res.status(400).json({ error: "name and department are required" });
+      }
+      const channel = await storage.createDepartmentChannel({
+        name,
+        department,
+        description,
+        icon,
+        isPrivate,
+        allowedRoles
+      });
+      res.json({ channel });
+    } catch (error: any) {
+      console.error("Error creating department channel:", error);
+      res.status(500).json({ error: "Failed to create department channel" });
+    }
+  });
+
+  app.patch("/api/department-channels/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const channel = await storage.updateDepartmentChannel(id, updates);
+      if (!channel) {
+        return res.status(404).json({ error: "Department channel not found" });
+      }
+      res.json({ channel });
+    } catch (error: any) {
+      console.error("Error updating department channel:", error);
+      res.status(500).json({ error: "Failed to update department channel" });
+    }
+  });
+
   // ==================== PROPERTY CHANNELS ====================
 
   app.get("/api/channels", async (req: Request, res: Response) => {
