@@ -1,0 +1,148 @@
+On the photo lightbox/popup, make the image display much bigger immediately when clicked - filling most of the screen to handle high-resolution photos (12MP, 24MP, 48MP from phones):
+
+**FIX THE LIGHTBOX TO SHOW LARGE IMAGES:**
+
+**1. FULL-SCREEN LIGHTBOX OVERLAY:**
+```css
+.lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+}
+```
+
+**2. LARGE IMAGE CONTAINER:**
+```css
+.lightbox-image-container {
+  position: relative;
+  width: 95vw;
+  height: 90vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.lightbox-image {
+  max-width: 95vw;
+  max-height: 85vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+```
+
+**3. ZOOM CONTROLS - POSITIONED ON IMAGE:**
+```css
+.lightbox-controls {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+}
+```
+
+**4. ZOOM FUNCTIONALITY:**
+```javascript
+let zoomLevel = 100;
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
+
+// Zoom in - increase by 50% each click for high-res images
+function zoomIn() {
+  zoomLevel = Math.min(zoomLevel + 50, 400); // Allow up to 400%
+  applyZoom();
+}
+
+// Zoom out
+function zoomOut() {
+  zoomLevel = Math.max(zoomLevel - 50, 50);
+  applyZoom();
+}
+
+// Reset to fit screen
+function resetZoom() {
+  zoomLevel = 100;
+  applyZoom();
+}
+
+// Apply zoom transform
+function applyZoom() {
+  const image = document.querySelector('.lightbox-image');
+  image.style.transform = `scale(${zoomLevel / 100})`;
+  
+  // Update zoom display
+  document.querySelector('.zoom-level').textContent = `${zoomLevel}%`;
+  
+  // Enable dragging when zoomed past 100%
+  if (zoomLevel > 100) {
+    image.style.cursor = 'grab';
+  } else {
+    image.style.cursor = 'zoom-in';
+  }
+}
+
+// Mouse wheel zoom
+function handleWheel(e) {
+  e.preventDefault();
+  if (e.deltaY < 0) {
+    zoomIn();
+  } else {
+    zoomOut();
+  }
+}
+
+// Double-click to toggle zoom
+function handleDoubleClick() {
+  if (zoomLevel === 100) {
+    zoomLevel = 200;
+  } else {
+    zoomLevel = 100;
+  }
+  applyZoom();
+}
+```
+
+**5. IMAGE SHOULD FILL SCREEN IMMEDIATELY:**
+- When clicking on thumbnail, the lightbox opens with image at maximum size that fits the viewport
+- Image should be at least 85-95% of the screen width or height
+- For a 4032×3024 image on a 1920×1080 screen, it should display large and clear
+- High-res images should be sharp and detailed
+
+**6. CAPTION BELOW IMAGE:**
+```css
+.lightbox-caption {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px 20px;
+  border-radius: 8px;
+}
+```
+
+**MAKE SURE:**
+- Image fills most of the screen (95vw × 90vh max)
+- Zoom buttons work correctly (+50% per click)
+- Mouse scroll wheel zooms in/out
+- Double-click toggles between fit and 200%
+- Can drag/pan when zoomed in
+- High resolution images (12MP, 24MP, 48MP) display clearly
+- X button closes the lightbox

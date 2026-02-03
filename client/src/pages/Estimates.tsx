@@ -5505,128 +5505,133 @@ export default function Estimates() {
         </Dialog>
       </div>
 
-      {/* Photo Lightbox Modal */}
+      {/* Photo Lightbox Modal - Full Screen */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center animate-in fade-in duration-200"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+          className="fixed inset-0 flex items-center justify-center animate-in fade-in duration-200"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            zIndex: 99999,
+            width: '100vw',
+            height: '100vh'
+          }}
           onClick={closeLightbox}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseUp={() => setIsDragging(false)}
+          onMouseLeave={() => setIsDragging(false)}
           tabIndex={0}
           role="dialog"
           aria-modal="true"
           aria-label="Photo lightbox"
         >
-          {/* Image Container with Controls */}
+          {/* Large Image Container - 95vw x 90vh */}
           <div 
-            className="relative flex flex-col items-center"
+            className="relative flex items-center justify-center"
+            style={{ width: '95vw', height: '90vh' }}
             onClick={(e) => e.stopPropagation()}
-            onWheel={handleWheelZoom}
+            onWheel={(e) => {
+              e.preventDefault();
+              if (e.deltaY < 0) {
+                setLightboxZoom(z => Math.min(z + 50, 400));
+              } else {
+                setLightboxZoom(z => Math.max(z - 50, 50));
+              }
+            }}
           >
-            {/* Controls Bar - Positioned above image */}
+            {/* Zoom Controls - Positioned on top right of image */}
             <div 
-              className="flex items-center justify-end gap-2 w-full mb-2"
-              style={{ width: '85vw' }}
+              className="absolute top-5 right-5 flex items-center gap-3 px-4 py-2 rounded-lg"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', zIndex: 100 }}
             >
-              <div 
-                className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+              {/* Zoom Out */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setLightboxZoom(z => Math.max(z - 50, 50));
+                }}
+                disabled={lightboxZoom <= 50}
+                className="w-9 h-9 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom out"
+                data-testid="button-zoom-out"
               >
-                {/* Zoom Controls */}
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setLightboxZoom(z => Math.max(z - 25, 50));
-                    }}
-                    disabled={lightboxZoom <= 50}
-                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Zoom out"
-                    data-testid="button-zoom-out"
-                  >
-                    <Minus className="w-5 h-5" />
-                  </button>
-                  <span className="text-white text-sm font-medium min-w-[50px] text-center">
-                    {lightboxZoom}%
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      setLightboxZoom(z => Math.min(z + 25, 300));
-                    }}
-                    disabled={lightboxZoom >= 300}
-                    className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Zoom in"
-                    data-testid="button-zoom-in"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <div className="w-px h-5 bg-white/30" />
-                
-                {/* Reset Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setLightboxZoom(100);
-                    setLightboxPan({ x: 0, y: 0 });
-                  }}
-                  className="flex items-center gap-1 px-2 py-1.5 text-white text-sm hover:bg-white/20 rounded transition-colors"
-                  aria-label="Reset zoom"
-                  data-testid="button-reset-zoom"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Reset</span>
-                </button>
-                
-                <div className="w-px h-5 bg-white/30" />
-                
-                {/* Close Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    closeLightbox();
-                  }}
-                  className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors"
-                  aria-label="Close lightbox"
-                  data-testid="button-close-lightbox"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+                <Minus className="w-6 h-6" />
+              </button>
+              
+              {/* Zoom Level */}
+              <span className="text-white text-base font-semibold min-w-[60px] text-center">
+                {lightboxZoom}%
+              </span>
+              
+              {/* Zoom In */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setLightboxZoom(z => Math.min(z + 50, 400));
+                }}
+                disabled={lightboxZoom >= 400}
+                className="w-9 h-9 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom in"
+                data-testid="button-zoom-in"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+              
+              <div className="w-px h-6 bg-white/30" />
+              
+              {/* Reset */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setLightboxZoom(100);
+                  setLightboxPan({ x: 0, y: 0 });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-white text-sm hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Reset zoom"
+                data-testid="button-reset-zoom"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>Reset</span>
+              </button>
+              
+              <div className="w-px h-6 bg-white/30" />
+              
+              {/* Close */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  closeLightbox();
+                }}
+                className="w-9 h-9 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close lightbox"
+                data-testid="button-close-lightbox"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
-            {/* Image Container - 85vw x 80vh */}
-            <div 
-              className="relative flex items-center justify-center overflow-hidden"
-              style={{ width: '85vw', height: '80vh' }}
-            >
-              {/* Zoomable/Pannable Image */}
-              <img
-                src={lightboxImage.url}
-                alt={lightboxImage.label}
-                className={`rounded-lg shadow-2xl select-none ${lightboxZoom > 100 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
-                onMouseDown={(e) => {
-                  if (lightboxZoom > 100) {
-                    e.preventDefault();
-                    setIsDragging(true);
-                    setDragStart({ x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y });
-                  }
-                }}
-                onMouseMove={(e) => {
-                  if (isDragging && lightboxZoom > 100) {
-                    setLightboxPan({
-                      x: e.clientX - dragStart.x,
-                      y: e.clientY - dragStart.y
-                    });
-                  }
-                }}
+            {/* Zoomable/Pannable Image - Fills Container */}
+            <img
+              src={lightboxImage.url}
+              alt={lightboxImage.label}
+              className={`rounded-lg shadow-2xl select-none ${lightboxZoom > 100 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+              onMouseDown={(e) => {
+                if (lightboxZoom > 100) {
+                  e.preventDefault();
+                  setIsDragging(true);
+                  setDragStart({ x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y });
+                }
+              }}
+              onMouseMove={(e) => {
+                if (isDragging && lightboxZoom > 100) {
+                  setLightboxPan({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y
+                  });
+                }
+              }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
                   if (lightboxZoom === 100) {
@@ -5647,21 +5652,23 @@ export default function Estimates() {
                 draggable={false}
                 data-testid="img-lightbox-photo"
               />
-            </div>
-            
-            {/* Caption Area */}
-            <div className="mt-6 text-center">
-              <div className="flex items-center justify-center gap-2 text-white mb-2">
-                <Camera className="w-5 h-5" />
-                <span className={`font-bold text-xl ${lightboxImage.label === 'Before' ? 'text-orange-400' : 'text-green-400'}`}>
+
+            {/* Caption - Positioned at bottom */}
+            <div 
+              className="absolute bottom-5 left-1/2 text-center px-5 py-3 rounded-lg"
+              style={{ 
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)'
+              }}
+            >
+              <div className="flex items-center justify-center gap-2 text-white mb-1">
+                <Camera className="w-4 h-4" />
+                <span className={`font-bold text-lg ${lightboxImage.label === 'Before' ? 'text-orange-400' : 'text-green-400'}`}>
                   {lightboxImage.label}
                 </span>
               </div>
-              <p className="text-gray-300 text-base max-w-lg italic">
+              <p className="text-gray-200 text-sm max-w-md italic">
                 "{lightboxImage.caption}"
-              </p>
-              <p className="text-gray-500 text-xs mt-2">
-                Scroll to zoom • Double-click to toggle zoom • Drag to pan when zoomed
               </p>
             </div>
           </div>
