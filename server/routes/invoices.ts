@@ -34,6 +34,7 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const invoiceData = req.body;
       
+      // Generate invoice number if not provided
       if (!invoiceData.invoiceNumber) {
         const year = new Date().getFullYear().toString().slice(-2);
         const countResult = await db
@@ -42,6 +43,17 @@ export function registerInvoiceRoutes(app: Express) {
           .where(sql`invoice_number LIKE ${'INV-' + year + '-%'}`);
         const nextNum = (countResult[0]?.count || 1).toString().padStart(5, '0');
         invoiceData.invoiceNumber = `INV-${year}-${nextNum}`;
+      }
+      
+      // Convert date strings to Date objects
+      if (invoiceData.dueDate && typeof invoiceData.dueDate === 'string') {
+        invoiceData.dueDate = new Date(invoiceData.dueDate);
+      }
+      if (invoiceData.paidDate && typeof invoiceData.paidDate === 'string') {
+        invoiceData.paidDate = new Date(invoiceData.paidDate);
+      }
+      if (invoiceData.sentAt && typeof invoiceData.sentAt === 'string') {
+        invoiceData.sentAt = new Date(invoiceData.sentAt);
       }
       
       const [newInvoice] = await db.insert(invoices).values(invoiceData).returning();
