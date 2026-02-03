@@ -319,6 +319,7 @@ export default function Calendar() {
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
   const [showRepairAssignmentModal, setShowRepairAssignmentModal] = useState(false);
   const [selectedRepairRequest, setSelectedRepairRequest] = useState<any>(null);
+  const [highlightedRepairRequestId, setHighlightedRepairRequestId] = useState<string | null>(null);
   const [editingRepairTechId, setEditingRepairTechId] = useState<string | null>(null);
   const [editingRepairDateId, setEditingRepairDateId] = useState<string | null>(null);
   const [repairAssignmentForm, setRepairAssignmentForm] = useState({
@@ -660,6 +661,26 @@ export default function Calendar() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Scroll to highlighted repair request in sidebar when it opens
+  React.useEffect(() => {
+    if (showRepairsNeededSidebar && highlightedRepairRequestId) {
+      // Small delay to allow sidebar to render
+      setTimeout(() => {
+        const element = document.getElementById(`sidebar-repair-item-${highlightedRepairRequestId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [showRepairsNeededSidebar, highlightedRepairRequestId]);
+
+  // Clear highlighted repair request when sidebar closes
+  React.useEffect(() => {
+    if (!showRepairsNeededSidebar) {
+      setHighlightedRepairRequestId(null);
+    }
+  }, [showRepairsNeededSidebar]);
 
   // Mutation to toggle route lock
   const toggleRouteLockMutation = useMutation({
@@ -2110,7 +2131,8 @@ export default function Calendar() {
                                   className="rounded-lg p-2 border-l-[3px] bg-[#0ea5e915] border-l-[#0ea5e9] cursor-pointer hover:shadow-md transition-shadow"
                                   onClick={() => {
                                     setSelectedRepairRequest(request);
-                                    // Could open a detail view here
+                                    setHighlightedRepairRequestId(request.id);
+                                    setShowRepairsNeededSidebar(true);
                                   }}
                                 >
                                   <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
@@ -4242,8 +4264,12 @@ export default function Calendar() {
             {sidebarRepairRequests.map((request: any) => (
               <div
                 key={request.id}
+                id={`sidebar-repair-item-${request.id}`}
                 className={cn(
-                  "bg-white border border-slate-200 rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden",
+                  "bg-white border rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden",
+                  highlightedRepairRequestId === request.id 
+                    ? "border-[#0ea5e9] ring-2 ring-[#0ea5e9] ring-offset-1" 
+                    : "border-slate-200",
                   request.assignedTechId ? "hover:border-[#0ea5e9]" : "hover:border-[#f97316]"
                 )}
                 data-testid={`sidebar-repair-${request.id}`}
