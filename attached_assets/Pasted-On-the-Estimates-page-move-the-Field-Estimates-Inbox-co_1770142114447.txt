@@ -1,0 +1,34 @@
+On the Estimates page, move the "Field Estimates Inbox" container to be positioned next to the "By Source" container:
+
+**LAYOUT CHANGE:**
+- Move "Field Estimates Inbox" from the top of the page
+- Position it side-by-side with the "By Source" container at the bottom
+- Both containers should be in the same row
+
+**NEW LAYOUT:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Estimates                                              [+ New Estimate]    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ [Draft 0] [Pending 3] [Approved 0] [Rejected 0] [Scheduled 0] [Completed 0]│
+│ [Invoiced 0] [Paid 0] [Archived 0]                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐ │
+│ │ Approval Rate   │ │ Revenue Flow            │ │ Time Metrics            │ │
+│ │ 0%              │ │ $0k $0k $0k $0k $0k     │ │ Avg Approval: 0h        │ │
+│ │ Target: 75%     │ │                         │ │ Avg Completion: 0h      │ │
+│ └─────────────────┘ └─────────────────────────┘ └─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ ┌─────────────────────────────────────┐ │
+│ │ By Source                       │ │ Field Estimates Inbox    [2 new]   │ │
+│ │ ● Repair Technician    2 $2.3k  │ │ Altis Master Association  $599.49  │ │
+│ │ ● Service Technician   0 $0.0k  │ │ Test Property            $1,743.99 │ │
+│ │ ● Office Entry         3 $5.2k  │ │                          [Review]  │ │
+│ └─────────────────────────────────┘ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**STYLING:**
+- Both containers should have equal or proportional widths (50/50 or 40/60)
+- Match the card styling (white background, subtle shadow, rounded corners)
+- Keep the "Field Estimates Inbox" scrollable if there are many items

@@ -1791,150 +1791,6 @@ export default function Estimates() {
           </div>
         </div>
 
-        {/* Field Estimates Inbox - Estimates from repair techs in the field */}
-        <div className="bg-gradient-to-r from-[#0077C5]/5 to-[#14b8a6]/5 rounded-lg shadow-sm border border-[#0077C5]/20" data-testid="field-estimates-inbox">
-          <div 
-            className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-[#0077C5]/5 transition-colors rounded-t-lg"
-            onClick={() => setFieldInboxExpanded(!fieldInboxExpanded)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-[#0077C5] shadow-sm">
-                <Smartphone className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-[#1E293B] flex items-center gap-2">
-                  Field Estimates Inbox
-                  {fieldInboxEstimates.length > 0 ? (
-                    <Badge className="bg-[#f97316] text-white border-0 text-xs px-2 py-0.5">
-                      {fieldInboxEstimates.length} new
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-slate-400 text-white border-0 text-xs px-2 py-0.5">
-                      0 pending
-                    </Badge>
-                  )}
-                </h2>
-                <p className="text-sm text-[#6B7280]">Estimates submitted by repair technicians & foremen from mobile app</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" className="text-[#6B7280]">
-              {fieldInboxExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-            </Button>
-          </div>
-          
-          {fieldInboxExpanded && (
-            <div className="px-6 pb-4">
-              {fieldInboxEstimates.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">
-                  <div className="p-3 rounded-full bg-slate-100 w-fit mx-auto mb-3">
-                    <Inbox className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <p className="text-[#6B7280] font-medium">No field estimates pending review</p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Estimates from repair technicians in the field will appear here
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {fieldInboxEstimates.slice(0, 5).map((estimate) => (
-                    <div 
-                      key={estimate.id}
-                      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:border-[#0077C5]/40"
-                      onClick={() => {
-                        setSelectedEstimate(estimate);
-                        setShowDetailDialog(true);
-                      }}
-                      data-testid={`field-inbox-estimate-${estimate.id}`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className="p-2 rounded-lg bg-[#14b8a6]/10 mt-0.5">
-                            <Wrench className="w-4 h-4 text-[#14b8a6]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-[#1E293B]">{estimate.propertyName}</h3>
-                              {estimate.estimateNumber && (
-                                <span className="text-xs text-[#6B7280] bg-slate-100 px-2 py-0.5 rounded">
-                                  #{estimate.estimateNumber}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-[#1E293B] mt-0.5">{estimate.title}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-[#6B7280]">
-                              {estimate.createdByTechName && (
-                                <span className="flex items-center gap-1">
-                                  <UserCircle2 className="w-3.5 h-3.5" />
-                                  {estimate.createdByTechName}
-                                </span>
-                              )}
-                              {estimate.repairForemanName && (
-                                <span className="flex items-center gap-1 text-[#0077C5]">
-                                  <Users className="w-3.5 h-3.5" />
-                                  Foreman: {estimate.repairForemanName}
-                                </span>
-                              )}
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                {format(new Date(estimate.createdAt), "MMM d, h:mm a")}
-                              </span>
-                            </div>
-                            {estimate.techNotes && (
-                              <p className="text-xs text-[#6B7280] mt-2 bg-slate-50 px-3 py-2 rounded-lg border-l-2 border-[#14b8a6]">
-                                <span className="font-medium">Tech Notes:</span> {estimate.techNotes.substring(0, 100)}{estimate.techNotes.length > 100 ? "..." : ""}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right flex flex-col items-end gap-2">
-                          <span className="text-lg font-bold text-[#1E293B]">
-                            ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </span>
-                          {estimate.photos && estimate.photos.length > 0 && (
-                            <span className="text-xs text-[#6B7280] flex items-center gap-1">
-                              <Camera className="w-3.5 h-3.5" />
-                              {estimate.photos.length} photo{estimate.photos.length > 1 ? "s" : ""}
-                            </span>
-                          )}
-                          <Button 
-                            size="sm" 
-                            className="bg-[#0077C5] hover:bg-[#005fa3] text-white text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedEstimate(estimate);
-                              setShowDetailDialog(true);
-                            }}
-                            data-testid={`review-field-estimate-${estimate.id}`}
-                          >
-                            <Eye className="w-3.5 h-3.5 mr-1" />
-                            Review
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {fieldInboxEstimates.length > 5 && (
-                    <div className="text-center pt-2">
-                      <Button 
-                        variant="link" 
-                        className="text-[#0077C5]"
-                        onClick={() => {
-                          setSourceFilter("repair_tech");
-                          setActiveTab("draft");
-                        }}
-                        data-testid="view-all-field-estimates"
-                      >
-                        View all {fieldInboxEstimates.length} field estimates
-                        <ArrowRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Light Theme Workflow Metrics */}
         {metrics && (
           <div className="space-y-6">
@@ -2065,8 +1921,8 @@ export default function Estimates() {
               </div>
             </div>
 
-            {/* Bottom Row */}
-            <div className="grid grid-cols-1 gap-4">
+            {/* Bottom Row - By Source and Field Estimates Inbox side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* By Source - Donut Chart */}
               <div className="bg-white rounded-2xl shadow-sm p-5">
                 <h4 className="text-sm font-medium text-slate-700 mb-4">By Source</h4>
@@ -2140,6 +1996,92 @@ export default function Estimates() {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Field Estimates Inbox - Compact version for side panel */}
+              <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col" data-testid="field-estimates-inbox">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-[#0077C5]">
+                      <Smartphone className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        Field Estimates Inbox
+                        {fieldInboxEstimates.length > 0 ? (
+                          <Badge className="bg-[#f97316] text-white border-0 text-[10px] px-1.5 py-0">
+                            {fieldInboxEstimates.length} new
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-slate-400 text-white border-0 text-[10px] px-1.5 py-0">
+                            0 pending
+                          </Badge>
+                        )}
+                      </h4>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto max-h-[200px]">
+                  {fieldInboxEstimates.length === 0 ? (
+                    <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-gray-200">
+                      <Inbox className="w-6 h-6 text-slate-400 mx-auto mb-2" />
+                      <p className="text-xs text-[#6B7280]">No field estimates pending</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {fieldInboxEstimates.slice(0, 4).map((estimate) => (
+                        <div 
+                          key={estimate.id}
+                          className="bg-slate-50 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-pointer border border-transparent hover:border-[#0077C5]/30"
+                          onClick={() => {
+                            setSelectedEstimate(estimate);
+                            setShowDetailDialog(true);
+                          }}
+                          data-testid={`field-inbox-estimate-${estimate.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-700 truncate">{estimate.propertyName}</p>
+                              <p className="text-xs text-slate-500 truncate mt-0.5">{estimate.title}</p>
+                              <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                                {estimate.createdByTechName && (
+                                  <span className="flex items-center gap-0.5">
+                                    <UserCircle2 className="w-3 h-3" />
+                                    {estimate.createdByTechName}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-0.5">
+                                  <Clock className="w-3 h-3" />
+                                  {format(new Date(estimate.createdAt), "MMM d")}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-bold text-slate-700">
+                                ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {fieldInboxEstimates.length > 4 && (
+                        <Button 
+                          variant="link" 
+                          className="text-[#0077C5] text-xs p-0 h-auto w-full justify-center"
+                          onClick={() => {
+                            setSourceFilter("repair_tech");
+                            setActiveTab("draft");
+                          }}
+                          data-testid="view-all-field-estimates"
+                        >
+                          View all {fieldInboxEstimates.length} estimates
+                          <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
