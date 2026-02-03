@@ -60,6 +60,14 @@ export const poolBrainClient = {
     return poolBrainRequest("/v2/product_list");
   },
 
+  async getCustomers(offset = 0, limit = 500) {
+    return poolBrainRequest(`/v2/customer_detail?offset=${offset}&limit=${limit}`);
+  },
+
+  async getTechnicians(offset = 0, limit = 500) {
+    return poolBrainRequest(`/v2/technician_detail?offset=${offset}&limit=${limit}`);
+  },
+
   async testConnection() {
     try {
       const result = await poolBrainRequest("/v2/product_list");
