@@ -319,7 +319,6 @@ export default function Calendar() {
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
   const [showRepairAssignmentModal, setShowRepairAssignmentModal] = useState(false);
   const [selectedRepairRequest, setSelectedRepairRequest] = useState<any>(null);
-  const [repairsSidebarFilter, setRepairsSidebarFilter] = useState<"all" | "unassigned" | "assigned">("all");
   const [editingRepairTechId, setEditingRepairTechId] = useState<string | null>(null);
   const [editingRepairDateId, setEditingRepairDateId] = useState<string | null>(null);
   const [repairAssignmentForm, setRepairAssignmentForm] = useState({
@@ -479,15 +478,8 @@ export default function Calendar() {
 
   const allRepairRequests = allRepairRequestsData?.requests || [];
 
-  // Filtered repair requests for sidebar based on filter selection
-  const sidebarRepairRequests = useMemo(() => {
-    if (repairsSidebarFilter === "unassigned") {
-      return allRepairRequests.filter((r: any) => !r.assignedTechId);
-    } else if (repairsSidebarFilter === "assigned") {
-      return allRepairRequests.filter((r: any) => r.assignedTechId);
-    }
-    return allRepairRequests;
-  }, [allRepairRequests, repairsSidebarFilter]);
+  // All repair requests for sidebar display
+  const sidebarRepairRequests = allRepairRequests;
 
   // Fetch assigned repair requests for calendar display
   const { data: assignedRepairRequestsData } = useQuery<{ requests: any[] }>({
@@ -4243,45 +4235,6 @@ export default function Calendar() {
               </button>
             </div>
             <p className="text-sm text-slate-500 mb-3">{sidebarRepairRequests.length} repair requests</p>
-            {/* Filter buttons */}
-            <div className="flex gap-1">
-              <button
-                onClick={() => setRepairsSidebarFilter("all")}
-                className={cn(
-                  "px-3 py-1 text-xs rounded-full transition-colors",
-                  repairsSidebarFilter === "all" 
-                    ? "bg-[#f97316] text-white" 
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                )}
-                data-testid="button-filter-all"
-              >
-                All ({allRepairRequests.length})
-              </button>
-              <button
-                onClick={() => setRepairsSidebarFilter("unassigned")}
-                className={cn(
-                  "px-3 py-1 text-xs rounded-full transition-colors",
-                  repairsSidebarFilter === "unassigned" 
-                    ? "bg-[#f97316] text-white" 
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                )}
-                data-testid="button-filter-unassigned"
-              >
-                Unassigned ({allRepairRequests.filter((r: any) => !r.assignedTechId).length})
-              </button>
-              <button
-                onClick={() => setRepairsSidebarFilter("assigned")}
-                className={cn(
-                  "px-3 py-1 text-xs rounded-full transition-colors",
-                  repairsSidebarFilter === "assigned" 
-                    ? "bg-[#f97316] text-white" 
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                )}
-                data-testid="button-filter-assigned"
-              >
-                Assigned ({allRepairRequests.filter((r: any) => r.assignedTechId).length})
-              </button>
-            </div>
           </div>
           
           {/* Repair Requests List */}
@@ -4427,7 +4380,7 @@ export default function Calendar() {
             {sidebarRepairRequests.length === 0 && (
               <div className="text-center py-8 text-slate-500">
                 <Wrench className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                <p>No repair requests {repairsSidebarFilter !== "all" ? `(${repairsSidebarFilter})` : ""}</p>
+                <p>No repair requests</p>
                 <Button
                   onClick={() => {
                     setShowRepairsNeededSidebar(false);
