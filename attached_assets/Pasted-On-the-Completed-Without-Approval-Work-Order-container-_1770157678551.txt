@@ -1,0 +1,105 @@
+On the "Completed Without Approval (Work Order)" container, fix the data persistence issue so converted items don't reappear after page refresh:
+
+**THE PROBLEM:**
+- When a work order is converted to an estimate or invoice, it's removed from the UI
+- But when the page is refreshed, the work orders reappear in the container
+- The conversion status is not being saved to the database properly
+
+**FIX THE DATABASE PERSISTENCE:**
+
+1. **When converting to Estimate, update the work order status in the database:**
+```javascript
+// API endpoint for converting work order to estimate
+app.post('/api/work-orders/:id/convert-to-estimate', async (req, res) => {
+  const { id } = req.params;
+  const estimateData = req.body;
+  
+  try {
+    // 1. Create the estimate
+    const estimate = await db.estimates.create({
+      data: estimateData
+    });
+    
+    // 2. UPDATE the work order status in database - THIS IS THE KEY FIX
+    await db.workOrders.update({
+      where: { id: id },
+      data: {
+        status: 'converted',
+        converted_to: 'estimate',
+        converted_id: estimate.id,
+        converted_at: new Date()
+      }
+    });
+    
+    res.json({ success: true, estimate });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+2. **When fetching work orders for the container, filter out converted ones:**
+```javascript
+// API endpoint to get pending work orders
+app.get('/api/work-orders/pending', async (req, res) => {
+  try {
+    // Only fetch work orders that have NOT been converted
+    const workOrders = await db.workOrders.findMany({
+      where: {
+        status: {
+          notIn: ['converted', 'invoiced', 'archived']
+        }
+      },
+      orderBy: { completed_date: 'desc' }
+    });
+    
+    res.json(workOrders);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+3. **Same for Invoice conversion:**
+```javascript
+// API endpoint for converting work order to invoice
+app.post('/api/work-orders/convert-to-invoice', async (req, res) => {
+  const { workOrderIds } = req.body;
+  
+  try {
+    for (const woId of workOrderIds) {
+      // Create invoice...
+      const invoice = await createInvoice(woId);
+      
+      // Update work order status
+      await db.workOrders.update({
+        where: { id: woId },
+        data: {
+          status: 'invoiced',
+          converted_to: 'invoice',
+          converted_id: invoice.id,
+          converted_at: new Date()
+        }
+      });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+```
+
+4. **Database schema - ensure work_orders table has these columns:**
+```sql
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending';
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS converted_to VARCHAR(50);
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS converted_id INTEGER;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS converted_at TIMESTAMP;
+```
+
+**MAKE SURE:**
+- The status update happens in the SAME transaction as creating the estimate/invoice
+- The API returns success only after BOTH operations complete
+- The fetch query filters by status = 'pending' (or NOT IN ['converted', 'invoiced'])
+- After page refresh, only unconverted work orders appear in the container

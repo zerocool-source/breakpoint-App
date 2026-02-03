@@ -354,7 +354,23 @@ export default function Estimates() {
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
-  const [convertedWoIds, setConvertedWoIds] = useState<Set<string>>(new Set()); // Track work orders that have been converted
+  // Track work orders that have been converted - persist to localStorage
+  const [convertedWoIds, setConvertedWoIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('convertedWoIds');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  
+  // Persist convertedWoIds to localStorage whenever it changes
+  useEffect(() => {
+    if (convertedWoIds.size > 0) {
+      localStorage.setItem('convertedWoIds', JSON.stringify(Array.from(convertedWoIds)));
+    }
+  }, [convertedWoIds]);
+  
   const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
   const [convertingWoId, setConvertingWoId] = useState<string | null>(null); // Track which WO is being converted
   const [convertingWoNumber, setConvertingWoNumber] = useState<string>(""); // Store WO number for toast message
@@ -961,13 +977,19 @@ export default function Estimates() {
           return newSet;
         });
         
-        // Update the original estimate's status in the database to mark it as archived/converted
-        // This ensures it doesn't reappear after page refresh
-        fetch(`/api/estimates/${convertingWoId}/status`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'archived' })
-        }).catch(err => console.error('Failed to archive original work order:', err));
+        // Only update database for real estimates (not sample data with IDs like cwa1, cwa2)
+        // Sample IDs start with 'cwa' and don't exist in the database
+        const isSampleData = convertingWoId.startsWith('cwa');
+        if (!isSampleData) {
+          // Update the original estimate's status in the database to mark it as archived/converted
+          // This ensures it doesn't reappear after page refresh
+          fetch(`/api/estimates/${convertingWoId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'archived' })
+          }).catch(err => console.error('Failed to archive original work order:', err));
+        }
+        // Sample data conversions are persisted via localStorage (convertedWoIds)
         
         // Show success toast with WO and Estimate numbers
         setTimeout(() => {
