@@ -1747,7 +1747,8 @@ export default function Estimates() {
             onChange("", "");
             return;
           }
-          const tech = technicians.find((t: any) => t.id === id);
+          // Handle both string and numeric IDs
+          const tech = technicians.find((t: any) => String(t.id) === String(id));
           onChange(id, tech ? `${tech.firstName} ${tech.lastName}` : "");
         }}
       >
@@ -1757,7 +1758,7 @@ export default function Estimates() {
         <SelectContent>
           <SelectItem value="__none__">None</SelectItem>
           {technicians.map((tech: any) => (
-            <SelectItem key={tech.id} value={tech.id}>
+            <SelectItem key={tech.id} value={String(tech.id)}>
               {tech.firstName} {tech.lastName}
             </SelectItem>
           ))}
@@ -2159,21 +2160,39 @@ export default function Estimates() {
                 // Generate estimate number for Work Order conversion
                 const generatedEstimateNumber = generateEstimateNumber();
                 
+                // Find matching customer by name
+                const matchingCustomer = customers.find((c: any) => 
+                  c.name?.toLowerCase() === item.propertyName?.toLowerCase()
+                );
+                
+                // Find matching technician by name (check both full name and partial matches)
+                const matchingTech = technicians.find((t: any) => {
+                  const fullName = `${t.firstName} ${t.lastName}`.toLowerCase();
+                  const itemTechName = item.techName?.toLowerCase() || "";
+                  return fullName === itemTechName || 
+                         fullName.includes(itemTechName) || 
+                         itemTechName.includes(fullName);
+                });
+                
                 // Pre-fill the estimate form with all data from the completed job
                 setFormData({
                   ...emptyFormData,
                   // Auto-generate estimate number
                   estimateNumber: generatedEstimateNumber,
-                  // Customer / Property - use propertyName for both fields
-                  customerName: item.propertyName,
-                  propertyName: item.propertyName,
+                  // Customer / Property - set ID and names
+                  propertyId: matchingCustomer?.id || "",
+                  customerName: matchingCustomer?.name || item.propertyName,
+                  propertyName: matchingCustomer?.name || item.propertyName,
+                  customerEmail: matchingCustomer?.email || "",
+                  address: matchingCustomer?.address || "",
                   // Work Type
-                  workType: "Repairs",
+                  workType: "repairs",
                   // Title and Description
                   title: item.description,
                   description: item.description,
-                  // Repair Tech - pre-select technician who completed the job
-                  repairTechName: item.techName,
+                  // Repair Tech - set ID and name
+                  repairTechId: matchingTech?.id?.toString() || "",
+                  repairTechName: matchingTech ? `${matchingTech.firstName} ${matchingTech.lastName}` : item.techName,
                   // Estimate date - today's date
                   estimateDate: new Date(),
                   // Reported date - use the completed date from original job
@@ -3069,7 +3088,11 @@ export default function Estimates() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="repairs">Repairs</SelectItem>
+                            <SelectItem value="service">Service</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
                             <SelectItem value="chemicals">Chemicals</SelectItem>
+                            <SelectItem value="installation">Installation</SelectItem>
+                            <SelectItem value="inspection">Inspection</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
