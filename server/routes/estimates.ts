@@ -1029,7 +1029,20 @@ export function registerEstimateRoutes(app: any) {
 
   app.post("/api/estimates", async (req: Request, res: Response) => {
     try {
-      const estimate = await storage.createEstimate(req.body);
+      const data = req.body;
+      
+      // Convert date strings to Date objects for all date fields
+      const dateFields = ['estimateDate', 'expirationDate', 'acceptedDate', 'reportedDate', 
+        'scheduledDate', 'completedDate', 'invoicedAt', 'sentForApprovalAt', 'approvedAt', 
+        'rejectedAt', 'archivedAt'];
+      
+      for (const field of dateFields) {
+        if (data[field] && typeof data[field] === 'string') {
+          data[field] = new Date(data[field]);
+        }
+      }
+      
+      const estimate = await storage.createEstimate(data);
       res.json({ estimate });
     } catch (error: any) {
       console.error("Error creating estimate:", error);

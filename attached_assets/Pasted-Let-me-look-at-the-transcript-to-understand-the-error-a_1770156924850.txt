@@ -1,0 +1,130 @@
+Let me look at the transcript to understand the error and fix the "Failed to create estimate" issue.Based on the error "Failed to create estimate", the issue is likely with the API endpoint or data format. Here's the fix:
+
+**FIX THE "FAILED TO CREATE ESTIMATE" ERROR:**
+
+The error occurs when clicking "Save Estimate" or "Convert to Estimate". The issue is likely:
+
+1. **Date format issue** - The reported_date might be passed as a string that needs parsing
+2. **Missing required fields** - Some required fields may not be populated
+3. **Property ID not being sent** - The Customer/Property dropdown shows text but may not send the ID
+
+**DEBUG AND FIX:**
+
+1. **Check the API endpoint for estimates:**
+   - Ensure it accepts all the fields being sent
+   - Handle date strings properly (convert to Date objects)
+   - Make property_id optional or handle when it's missing
+
+2. **Fix the form submission:**
+   ```javascript
+   const handleConvertToEstimate = async () => {
+     try {
+       // Prepare the data
+       const estimateData = {
+         // Required fields
+         estimate_number: estimateNumber, // e.g., "EST-260933"
+         customer_name: customerHOA, // "SUN LAKES COUNTRY CLUB"
+         property_id: selectedPropertyId || null, // May be null
+         
+         // Quote details
+         job_title: jobTitle, // "Filter cartridge replacement"
+         quote_description: quoteDescription,
+         
+         // Amounts
+         subtotal: parseFloat(subtotal),
+         total_amount: parseFloat(totalAmount),
+         
+         // Dates - ensure proper format
+         estimate_date: new Date().toISOString(),
+         reported_date: reportedDate ? new Date(reportedDate).toISOString() : null,
+         
+         // Work order reference
+         wo_number: woNumber, // "WO-26-00001"
+         work_order_received: true,
+         
+         // Technician
+         repair_tech: repairTech,
+         service_tech: serviceTech || null,
+         
+         // Status
+         status: "Draft",
+         work_type: "Repairs",
+         
+         // Line items
+         line_items: lineItems.map(item => ({
+           description: item.description,
+           quantity: item.qty || 1,
+           unit_price: parseFloat(item.unitPrice),
+           amount: parseFloat(item.amount)
+         })),
+         
+         // Photos
+         photos: photos || []
+       };
+       
+       const response = await fetch('/api/estimates', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify(estimateData)
+       });
+       
+       if (!response.ok) {
+         const error = await response.json();
+         throw new Error(error.message || 'Failed to create estimate');
+       }
+       
+       const newEstimate = await response.json();
+       
+       // Remove from Work Order container
+       removeWorkOrderFromList(woNumber);
+       
+       // Show success
+       toast.success(`Estimate ${newEstimate.estimate_number} created successfully`);
+       
+       // Close the modal
+       onClose();
+       
+     } catch (error) {
+       console.error('Error creating estimate:', error);
+       toast.error('Failed to create estimate: ' + error.message);
+     }
+   };
+   ```
+
+3. **Fix the API route to handle the data:**
+   ```javascript
+   // In the estimates API route
+   app.post('/api/estimates', async (req, res) => {
+     try {
+       const data = req.body;
+       
+       // Parse dates if they're strings
+       if (data.reported_date && typeof data.reported_date === 'string') {
+         data.reported_date = new Date(data.reported_date);
+       }
+       if (data.estimate_date && typeof data.estimate_date === 'string') {
+         data.estimate_date = new Date(data.estimate_date);
+       }
+       
+       // Create the estimate in database
+       const estimate = await db.estimates.create({
+         data: {
+           ...data,
+           created_at: new Date(),
+           updated_at: new Date()
+         }
+       });
+       
+       res.json(estimate);
+     } catch (error) {
+       console.error('Error creating estimate:', error);
+       res.status(500).json({ message: error.message });
+     }
+   });
+   ```
+
+**ALSO ENSURE:**
+- The Work Order is removed from the container after successful conversion
+- The new estimate appears in the Estimates list with status "Draft"
+- The count badge updates (6 → 5 → 4, etc.)
+- All data transfers correctly (description, line items, photos, WO number)
