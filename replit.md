@@ -42,6 +42,12 @@ Preferred communication style: Simple, everyday language.
     - Windy Day Clean Up - Property-grouped entries with filtering
     - Report Issues - Table format with expandable rows, comprehensive filtering (property search, position type, technician, status, priority, issue type, date range), photo thumbnails, resolution tracking
     - Emergencies - Priority-based emergency tracking with workflow actions
+  - **Communication Hub** - Multi-department messaging system:
+    - Department Channels: Office (General, Estimates, Parts & Supplies), Dispatch (Scheduling, Route Changes, Emergency), HR (Time Off Requests, Benefits, Training)
+    - Property Channels: Organized by category (Residential, Commercial, HOA, Municipal)
+    - Collapsible sections with expand/collapse functionality
+    - Threaded messaging with reactions, pins, and member tracking
+    - Note: Access control (isPrivate/allowedRoles) displayed but not enforced server-side yet
 
 **Rationale:** Page-based architecture provides clear separation of concerns. TanStack Query handles caching and real-time data synchronization automatically. The custom theme creates a distinctive brand identity for the pool management industry.
 
