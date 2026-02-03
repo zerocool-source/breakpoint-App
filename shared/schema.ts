@@ -2107,20 +2107,32 @@ export const insertTechTimeOffSchema = createInsertSchema(techTimeOff).omit({
 export type InsertTechTimeOff = z.infer<typeof insertTechTimeOffSchema>;
 export type TechTimeOff = typeof techTimeOff.$inferSelect;
 
-<<<<<<< HEAD
 // Service Assignments (tasks assigned to service technicians)
 export const serviceAssignments = pgTable("service_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   technicianId: varchar("technician_id").notNull(),
-  propertyId: varchar("property_id"), // Customer/property ID
-  propertyName: text("property_name"), // Cached property name for display
-  assignmentType: text("assignment_type").notNull(), // "service_visit", "inspection", "follow_up", "special_task"
-  scheduledDate: text("scheduled_date").notNull(), // YYYY-MM-DD format
-  scheduledTime: text("scheduled_time"), // Optional time HH:MM format
-  status: text("status").default("pending"), // "pending", "in_progress", "completed"
+  propertyId: varchar("property_id"),
+  propertyName: text("property_name"),
+  assignmentType: text("assignment_type").notNull(),
+  scheduledDate: text("scheduled_date").notNull(),
+  scheduledTime: text("scheduled_time"),
+  status: text("status").default("pending"),
   notes: text("notes"),
   completedAt: timestamp("completed_at"),
-=======
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertServiceAssignmentSchema = createInsertSchema(serviceAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+export type InsertServiceAssignment = z.infer<typeof insertServiceAssignmentSchema>;
+export type ServiceAssignment = typeof serviceAssignments.$inferSelect;
+
 // SMS Messages - Log of sent SMS messages
 export const smsMessages = pgTable("sms_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2152,15 +2164,15 @@ export type SmsMessage = typeof smsMessages.$inferSelect;
 // AI Learning - Admin Actions tracking for self-learning AI
 export const adminActions = pgTable("admin_actions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(), // Admin user who performed the action
-  actionType: text("action_type").notNull(), // "estimate_approved", "technician_assigned", "emergency_resolved", etc.
-  actionCategory: text("action_category").notNull(), // "estimates", "technicians", "emergencies", "service_repairs", etc.
-  entityId: varchar("entity_id"), // ID of the entity acted upon
-  entityType: text("entity_type"), // Type of entity: "estimate", "technician", "customer", etc.
-  actionDetails: json("action_details"), // JSON with full context of the action
-  previousState: json("previous_state"), // State before action (for learning patterns)
-  newState: json("new_state"), // State after action
-  metadata: json("metadata"), // Additional context like time of day, day of week, etc.
+  userId: varchar("user_id").notNull(),
+  actionType: text("action_type").notNull(),
+  actionCategory: text("action_category").notNull(),
+  entityId: varchar("entity_id"),
+  entityType: text("entity_type"),
+  actionDetails: json("action_details"),
+  previousState: json("previous_state"),
+  newState: json("new_state"),
+  metadata: json("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2175,29 +2187,17 @@ export type AdminAction = typeof adminActions.$inferSelect;
 // AI Learning Insights - Patterns and insights learned from admin actions
 export const aiLearningInsights = pgTable("ai_learning_insights", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  insightType: text("insight_type").notNull(), // "pattern", "preference", "workflow", "decision_rule"
-  category: text("category").notNull(), // "scheduling", "estimates", "emergencies", etc.
-  description: text("description").notNull(), // Human-readable description of the insight
-  pattern: json("pattern"), // JSON pattern data
-  confidence: real("confidence").default(0), // Confidence level 0-1
-  occurrences: integer("occurrences").default(1), // How many times this pattern was observed
+  insightType: text("insight_type").notNull(),
+  category: text("category").notNull(),
+  description: text("description").notNull(),
+  pattern: json("pattern"),
+  confidence: real("confidence").default(0),
+  occurrences: integer("occurrences").default(1),
   lastObserved: timestamp("last_observed").defaultNow(),
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-<<<<<<< HEAD
-export const insertServiceAssignmentSchema = createInsertSchema(serviceAssignments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  completedAt: true,
-});
-
-export type InsertServiceAssignment = z.infer<typeof insertServiceAssignmentSchema>;
-export type ServiceAssignment = typeof serviceAssignments.$inferSelect;
-=======
 export const insertAiLearningInsightSchema = createInsertSchema(aiLearningInsights).omit({
   id: true,
   createdAt: true,
@@ -2206,4 +2206,3 @@ export const insertAiLearningInsightSchema = createInsertSchema(aiLearningInsigh
 
 export type InsertAiLearningInsight = z.infer<typeof insertAiLearningInsightSchema>;
 export type AiLearningInsight = typeof aiLearningInsights.$inferSelect;
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a

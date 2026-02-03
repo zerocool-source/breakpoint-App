@@ -4,10 +4,19 @@ import { techOpsEntries, estimates, alerts } from "@shared/schema";
 import { desc, sql, eq } from "drizzle-orm";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is not configured");
+    }
+    openai = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+  }
+  return openai;
+}
 
 interface SystemSnapshot {
   recentTechOps: any[];
@@ -140,7 +149,7 @@ export function registerAiInsightsRoutes(app: any) {
       const snapshot = await getSystemSnapshot();
       const prompt = buildInsightPrompt(snapshot);
 
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAI().chat.completions.create({
         model: "gpt-5-mini",
         messages: [
           { role: "system", content: "You are Ace, an AI assistant monitoring pool service operations. Respond only with valid JSON." },

@@ -51,13 +51,10 @@ import {
   type SupervisorActivity, type InsertSupervisorActivity,
   type ChemicalVendor, type InsertChemicalVendor,
   type InvoiceTemplate, type InsertInvoiceTemplate,
-<<<<<<< HEAD
   type SystemUser, type InsertSystemUser,
   type CustomerZone, type InsertCustomerZone,
-=======
   type AdminAction, type InsertAdminAction,
   type AiLearningInsight, type InsertAiLearningInsight,
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
   settings, alerts, workflows, technicians, technicianNotes, customers, customerAddresses, customerContacts, pools, equipment, routeSchedules, routeAssignments, serviceOccurrences,
   chatMessages, completedAlerts,
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
@@ -67,12 +64,9 @@ import {
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
   customerTags, customerTagAssignments, emergencies, estimateHistoryLog, supervisorActivity,
-<<<<<<< HEAD
-  chemicalVendors, invoiceTemplates, systemUsers, customerZones
-=======
-  chemicalVendors, invoiceTemplates, smsMessages, InsertSmsMessage, SmsMessage,
+  chemicalVendors, invoiceTemplates, systemUsers, customerZones,
+  smsMessages, InsertSmsMessage, SmsMessage,
   adminActions, aiLearningInsights
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, inArray, and, ilike, or, gte, lte, sql } from "drizzle-orm";
@@ -487,7 +481,6 @@ export interface IStorage {
   deleteInvoiceTemplate(id: string): Promise<void>;
   getDefaultInvoiceTemplate(): Promise<InvoiceTemplate | undefined>;
 
-<<<<<<< HEAD
   // System Users
   getSystemUsers(role?: string): Promise<SystemUser[]>;
   getSystemUser(id: number): Promise<SystemUser | undefined>;
@@ -503,13 +496,12 @@ export interface IStorage {
   updateCustomerZone(id: string, updates: Partial<InsertCustomerZone>): Promise<CustomerZone | undefined>;
   deleteCustomerZone(id: string): Promise<void>;
   getCustomerCountByZone(zoneId: string): Promise<number>;
-=======
+
   // SMS Messages
   getSmsMessages(filters?: { technicianId?: string; customerId?: string; limit?: number }): Promise<SmsMessage[]>;
   getSmsMessage(id: string): Promise<SmsMessage | undefined>;
   createSmsMessage(message: InsertSmsMessage): Promise<SmsMessage>;
   updateSmsMessage(id: string, updates: Partial<SmsMessage>): Promise<SmsMessage | undefined>;
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
 }
 
 export class DbStorage implements IStorage {
@@ -3256,7 +3248,6 @@ export class DbStorage implements IStorage {
     await db.delete(invoiceTemplates).where(eq(invoiceTemplates.id, id));
   }
 
-<<<<<<< HEAD
   // System Users
   async getSystemUsers(role?: string): Promise<SystemUser[]> {
     if (role) {
@@ -3284,7 +3275,51 @@ export class DbStorage implements IStorage {
     const result = await db.update(systemUsers)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(systemUsers.id, id))
-=======
+      .returning();
+    return result[0];
+  }
+
+  async deleteSystemUser(id: number): Promise<void> {
+    await db.delete(systemUsers).where(eq(systemUsers.id, id));
+  }
+
+  // Customer Zones
+  async getCustomerZones(): Promise<CustomerZone[]> {
+    return db.select().from(customerZones).orderBy(customerZones.name);
+  }
+
+  async getCustomerZone(id: string): Promise<CustomerZone | undefined> {
+    const result = await db.select().from(customerZones).where(eq(customerZones.id, id));
+    return result[0];
+  }
+
+  async createCustomerZone(zone: InsertCustomerZone): Promise<CustomerZone> {
+    const result = await db.insert(customerZones).values(zone).returning();
+    return result[0];
+  }
+
+  async updateCustomerZone(id: string, updates: Partial<InsertCustomerZone>): Promise<CustomerZone | undefined> {
+    const result = await db.update(customerZones)
+      .set(updates)
+      .where(eq(customerZones.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteCustomerZone(id: string): Promise<void> {
+    await db.update(customers)
+      .set({ zoneId: null })
+      .where(eq(customers.zoneId, id));
+    await db.delete(customerZones).where(eq(customerZones.id, id));
+  }
+
+  async getCustomerCountByZone(zoneId: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(customers)
+      .where(eq(customers.zoneId, zoneId));
+    return result[0]?.count || 0;
+  }
+
   // SMS Messages
   async getSmsMessages(filters?: { technicianId?: string; customerId?: string; limit?: number }): Promise<SmsMessage[]> {
     const conditions = [];
@@ -3325,150 +3360,9 @@ export class DbStorage implements IStorage {
     const result = await db.update(smsMessages)
       .set(updates as any)
       .where(eq(smsMessages.id, id))
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
       .returning();
     return result[0];
   }
-
-<<<<<<< HEAD
-  async deleteSystemUser(id: number): Promise<void> {
-    await db.delete(systemUsers).where(eq(systemUsers.id, id));
-  }
-
-  // Customer Zones
-  async getCustomerZones(): Promise<CustomerZone[]> {
-    return db.select().from(customerZones).orderBy(customerZones.name);
-  }
-
-  async getCustomerZone(id: string): Promise<CustomerZone | undefined> {
-    const result = await db.select().from(customerZones).where(eq(customerZones.id, id));
-    return result[0];
-  }
-
-  async createCustomerZone(zone: InsertCustomerZone): Promise<CustomerZone> {
-    const result = await db.insert(customerZones).values(zone).returning();
-    return result[0];
-  }
-
-  async updateCustomerZone(id: string, updates: Partial<InsertCustomerZone>): Promise<CustomerZone | undefined> {
-    const result = await db.update(customerZones)
-      .set(updates)
-      .where(eq(customerZones.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async deleteCustomerZone(id: string): Promise<void> {
-    // First, unassign all customers from this zone
-    await db.update(customers)
-      .set({ zoneId: null })
-      .where(eq(customers.zoneId, id));
-    // Then delete the zone
-    await db.delete(customerZones).where(eq(customerZones.id, id));
-  }
-
-  async getCustomerCountByZone(zoneId: string): Promise<number> {
-    const result = await db.select({ count: sql<number>`count(*)::int` })
-      .from(customers)
-      .where(eq(customers.zoneId, zoneId));
-    return result[0]?.count || 0;
-  }
-=======
-  // AI Learning - Admin Actions
-  async getAdminActions(filters?: { 
-    userId?: string; 
-    actionCategory?: string; 
-    limit?: number;
-    startDate?: Date;
-    endDate?: Date;
-  }): Promise<AdminAction[]> {
-    let query = db.select().from(adminActions).orderBy(desc(adminActions.createdAt));
-    
-    const conditions: any[] = [];
-    if (filters?.userId) {
-      conditions.push(eq(adminActions.userId, filters.userId));
-    }
-    if (filters?.actionCategory) {
-      conditions.push(eq(adminActions.actionCategory, filters.actionCategory));
-    }
-    if (filters?.startDate) {
-      conditions.push(gte(adminActions.createdAt, filters.startDate));
-    }
-    if (filters?.endDate) {
-      conditions.push(lte(adminActions.createdAt, filters.endDate));
-    }
-    
-    if (conditions.length > 0) {
-      query = db.select().from(adminActions)
-        .where(and(...conditions))
-        .orderBy(desc(adminActions.createdAt));
-    }
-    
-    const results = await query;
-    return filters?.limit ? results.slice(0, filters.limit) : results;
-  }
-
-  async createAdminAction(action: InsertAdminAction): Promise<AdminAction> {
-    const result = await db.insert(adminActions).values(action as any).returning();
-    return result[0];
-  }
-
-  async getRecentAdminActionPatterns(limit: number = 50): Promise<{
-    patterns: { actionType: string; count: number }[];
-    recentActions: AdminAction[];
-  }> {
-    const recent = await db.select().from(adminActions)
-      .orderBy(desc(adminActions.createdAt))
-      .limit(limit);
-    
-    const patternCounts: Record<string, number> = {};
-    recent.forEach(a => {
-      patternCounts[a.actionType] = (patternCounts[a.actionType] || 0) + 1;
-    });
-    
-    const patterns = Object.entries(patternCounts)
-      .map(([actionType, count]) => ({ actionType, count }))
-      .sort((a, b) => b.count - a.count);
-    
-    return { patterns, recentActions: recent };
-  }
-
-  // AI Learning Insights
-  async getAiLearningInsights(category?: string): Promise<AiLearningInsight[]> {
-    if (category) {
-      return db.select().from(aiLearningInsights)
-        .where(eq(aiLearningInsights.category, category))
-        .orderBy(desc(aiLearningInsights.confidence));
-    }
-    return db.select().from(aiLearningInsights).orderBy(desc(aiLearningInsights.confidence));
-  }
-
-  async upsertAiLearningInsight(insight: InsertAiLearningInsight): Promise<AiLearningInsight> {
-    const existing = await db.select().from(aiLearningInsights)
-      .where(and(
-        eq(aiLearningInsights.insightType, insight.insightType),
-        eq(aiLearningInsights.category, insight.category),
-        eq(aiLearningInsights.description, insight.description)
-      ))
-      .limit(1);
-    
-    if (existing.length > 0) {
-      const updated = await db.update(aiLearningInsights)
-        .set({
-          occurrences: (existing[0].occurrences || 0) + 1,
-          confidence: Math.min((existing[0].confidence || 0) + 0.1, 1.0),
-          lastObserved: new Date(),
-          updatedAt: new Date(),
-        } as any)
-        .where(eq(aiLearningInsights.id, existing[0].id))
-        .returning();
-      return updated[0];
-    }
-    
-    const result = await db.insert(aiLearningInsights).values(insight as any).returning();
-    return result[0];
-  }
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
 }
 
 export const storage = new DbStorage();

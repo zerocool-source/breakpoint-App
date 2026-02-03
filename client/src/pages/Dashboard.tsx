@@ -975,7 +975,6 @@ export default function Dashboard() {
             <h1 className="text-2xl font-semibold text-[#1E293B]">Overview</h1>
             <p className="text-[#64748B] text-sm">Real-time business intelligence dashboard</p>
           </div>
-<<<<<<< HEAD
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setShowEmployeeTypeModal(true)}
@@ -995,8 +994,6 @@ export default function Dashboard() {
               Add Property
             </Button>
           </div>
-=======
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
         </div>
 
         {/* Live Fleet Map + Truck Activity Section */}

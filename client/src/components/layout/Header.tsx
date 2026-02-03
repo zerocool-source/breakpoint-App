@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
-<<<<<<< HEAD
-import { Bell, Calendar, User } from "lucide-react";
+import { Bell, Calendar, User, LogOut, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UniversalSearch } from "./UniversalSearch";
-=======
-import { Bell, Search, Calendar, User, LogOut, Brain } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useAiWidgets } from "@/contexts/AiWidgetsContext";
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
 
 function DateDisplay() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -51,19 +46,7 @@ export function Header() {
   return (
     <header className="h-16 border-b border-[#E2E8F0] bg-white sticky top-0 z-40 flex items-center justify-between px-6">
       <div className="flex items-center gap-4 flex-1">
-<<<<<<< HEAD
         <UniversalSearch />
-=======
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" />
-          <input 
-            type="text"
-            placeholder="Search properties, alerts, customers..." 
-            className="w-full pl-10 pr-4 py-2 text-sm bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#60A5FA] focus:border-transparent transition-all"
-            data-testid="input-search"
-          />
-        </div>
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
       </div>
 
       <div className="flex items-center gap-4">

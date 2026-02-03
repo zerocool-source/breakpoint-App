@@ -2,10 +2,20 @@ import type { Request, Response } from "express";
 import { storage } from "../storage";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+// Lazy initialization to avoid startup failure when API key is missing
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+      throw new Error("OpenAI API key is not configured");
+    }
+    openai = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+  }
+  return openai;
+}
 
 const POOL_ASSISTANT_BASE_PROMPT = `You are Ace, an expert AI assistant for Breakpoint Commercial Pool Systems. You have FULL visibility into everything happening in the dashboard and business operations.
 
@@ -347,7 +357,7 @@ export function registerChatRoutes(app: any) {
         { role: "user", content: message }
       ];
 
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAI().chat.completions.create({
         model: "gpt-5-mini",
         messages,
         max_completion_tokens: 2048,

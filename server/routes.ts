@@ -30,19 +30,16 @@ import { registerPropertyTechnicianRoutes } from "./routes/propertyTechnicians";
 import { registerVendorRoutes } from "./routes/vendors";
 import { registerInvoiceRoutes } from "./routes/invoices";
 import { registerCalendarRoutes } from "./routes/calendar";
-<<<<<<< HEAD
 import { registerSearchRoutes } from "./routes/search";
 import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
-=======
 import { registerSmsRoutes } from "./routes/sms";
 import { registerPoolBrainRoutes } from "./routes/poolbrain";
 import { registerAiInsightsRoutes } from "./routes/aiInsights";
 import { registerApiV2Routes } from "./routes/apiv2";
 import { registerAiLearningRoutes } from "./routes/aiLearning";
 import adminUsersRouter from "./routes/adminUsers";
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -83,17 +80,14 @@ function setupRoutes(app: any) {
   registerVendorRoutes(app);
   registerInvoiceRoutes(app);
   registerCalendarRoutes(app);
-<<<<<<< HEAD
   registerSearchRoutes(app);
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
-=======
   registerSmsRoutes(app);
   registerPoolBrainRoutes(app);
   registerAiInsightsRoutes(app);
   registerApiV2Routes(app);
   registerAiLearningRoutes(app);
   app.use(adminUsersRouter);
->>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
 }
