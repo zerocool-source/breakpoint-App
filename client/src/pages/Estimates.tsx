@@ -1792,33 +1792,49 @@ export default function Estimates() {
         </div>
 
         {/* Field Estimates Inbox - Estimates from repair techs in the field */}
-        {fieldInboxEstimates.length > 0 && (
-          <div className="bg-gradient-to-r from-[#0077C5]/5 to-[#14b8a6]/5 rounded-lg shadow-sm border border-[#0077C5]/20" data-testid="field-estimates-inbox">
-            <div 
-              className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-[#0077C5]/5 transition-colors rounded-t-lg"
-              onClick={() => setFieldInboxExpanded(!fieldInboxExpanded)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-[#0077C5] shadow-sm">
-                  <Smartphone className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-[#1E293B] flex items-center gap-2">
-                    Field Estimates Inbox
+        <div className="bg-gradient-to-r from-[#0077C5]/5 to-[#14b8a6]/5 rounded-lg shadow-sm border border-[#0077C5]/20" data-testid="field-estimates-inbox">
+          <div 
+            className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-[#0077C5]/5 transition-colors rounded-t-lg"
+            onClick={() => setFieldInboxExpanded(!fieldInboxExpanded)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#0077C5] shadow-sm">
+                <Smartphone className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-[#1E293B] flex items-center gap-2">
+                  Field Estimates Inbox
+                  {fieldInboxEstimates.length > 0 ? (
                     <Badge className="bg-[#f97316] text-white border-0 text-xs px-2 py-0.5">
                       {fieldInboxEstimates.length} new
                     </Badge>
-                  </h2>
-                  <p className="text-sm text-[#6B7280]">Estimates submitted by repair technicians from mobile app</p>
-                </div>
+                  ) : (
+                    <Badge className="bg-slate-400 text-white border-0 text-xs px-2 py-0.5">
+                      0 pending
+                    </Badge>
+                  )}
+                </h2>
+                <p className="text-sm text-[#6B7280]">Estimates submitted by repair technicians & foremen from mobile app</p>
               </div>
-              <Button variant="ghost" size="sm" className="text-[#6B7280]">
-                {fieldInboxExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-              </Button>
             </div>
-            
-            {fieldInboxExpanded && (
-              <div className="px-6 pb-4">
+            <Button variant="ghost" size="sm" className="text-[#6B7280]">
+              {fieldInboxExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </Button>
+          </div>
+          
+          {fieldInboxExpanded && (
+            <div className="px-6 pb-4">
+              {fieldInboxEstimates.length === 0 ? (
+                <div className="text-center py-8 bg-white rounded-lg border border-dashed border-gray-300">
+                  <div className="p-3 rounded-full bg-slate-100 w-fit mx-auto mb-3">
+                    <Inbox className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <p className="text-[#6B7280] font-medium">No field estimates pending review</p>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Estimates from repair technicians in the field will appear here
+                  </p>
+                </div>
+              ) : (
                 <div className="space-y-3">
                   {fieldInboxEstimates.slice(0, 5).map((estimate) => (
                     <div 
@@ -1914,10 +1930,10 @@ export default function Estimates() {
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Light Theme Workflow Metrics */}
         {metrics && (
