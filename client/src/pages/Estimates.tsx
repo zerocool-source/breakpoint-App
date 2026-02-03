@@ -960,6 +960,15 @@ export default function Estimates() {
           newSet.delete(convertingWoId);
           return newSet;
         });
+        
+        // Update the original estimate's status in the database to mark it as archived/converted
+        // This ensures it doesn't reappear after page refresh
+        fetch(`/api/estimates/${convertingWoId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'archived' })
+        }).catch(err => console.error('Failed to archive original work order:', err));
+        
         // Show success toast with WO and Estimate numbers
         setTimeout(() => {
           toast({
@@ -2441,8 +2450,11 @@ export default function Estimates() {
               ];
               
               // Pull completed jobs that never went through approval process
+              // These are estimates that were completed but never got customer approval (work orders)
+              // We exclude archived ones (which have been converted to new estimates)
               const realCompletedWithoutApproval = estimates.filter(e => 
-                e.status === "completed" && !e.approvedAt
+                (e.status === "completed" && !e.approvedAt) || 
+                (e.woReceived && e.status === "completed")
               ).map(e => ({
                 id: e.id,
                 propertyName: e.customerName || "Unknown",
