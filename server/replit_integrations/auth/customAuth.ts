@@ -32,6 +32,9 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "session",
     errorLog: (err: Error) => {
+      if (err.message?.includes('already exists')) {
+        return;
+      }
       console.error('Session store error:', err.message);
     },
   });
