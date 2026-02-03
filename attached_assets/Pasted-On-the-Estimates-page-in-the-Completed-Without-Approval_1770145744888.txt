@@ -1,0 +1,44 @@
+On the Estimates page, in the "Completed Without Approval" container, add sample data and a "Convert to Estimate" button:
+
+**ADD SAMPLE DATA:**
+Add these sample completed jobs that don't have estimates:
+
+1. **Palm Court Apartments** | Pool pump motor replaced | $450.00 | Rick Jacobs | Feb 2, 2026
+2. **Sunset Hills HOA** | Filter cartridge replacement | $285.00 | Matt Cummins | Feb 1, 2026
+3. **Lakewood Country Club** | Heater pilot assembly repair | $375.00 | Alan Bateman | Jan 31, 2026
+4. **Shady Trails HOA** | Skimmer basket and weir door replaced | $125.00 | Kevin Enriquez | Jan 30, 2026
+5. **Canyon Ridge HOA** | Chemical feeder repair | $195.00 | Vit Kruml | Jan 29, 2026
+6. **Bella Vista HOA** | Pool light fixture replaced | $320.00 | Jose Puente | Jan 28, 2026
+
+**UPDATE CONTAINER LAYOUT:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│ ⚠️ Completed Without Approval  [6]                                        [Invoice]    │
+│ Estimates completed but pending approval - 6 items                                      │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│ ☐ │ Property              │ Description                    │ Amount  │ Technician │ Completed │ Actions              │
+│ ☐ │ Palm Court Apartments │ Pool pump motor replaced       │ $450.00 │ Rick Jacobs│ Feb 2     │ [Convert to Estimate]│
+│ ☐ │ Sunset Hills HOA      │ Filter cartridge replacement   │ $285.00 │ Matt Cummins│ Feb 1    │ [Convert to Estimate]│
+│ ☐ │ Lakewood Country Club │ Heater pilot assembly repair   │ $375.00 │ Alan Bateman│ Jan 31   │ [Convert to Estimate]│
+│ ☐ │ Shady Trails HOA      │ Skimmer basket and weir replaced│ $125.00│ Kevin Enriquez│ Jan 30 │ [Convert to Estimate]│
+│ ☐ │ Canyon Ridge HOA      │ Chemical feeder repair         │ $195.00 │ Vit Kruml  │ Jan 29    │ [Convert to Estimate]│
+│ ☐ │ Bella Vista HOA       │ Pool light fixture replaced    │ $320.00 │ Jose Puente│ Jan 28    │ [Convert to Estimate]│
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**ADD "CONVERT TO ESTIMATE" BUTTON:**
+- Position: Actions column on each row
+- Label: "Convert to Estimate" (small button or link)
+- Style: Ocean blue (#0077b6) text or outline button
+- When clicked:
+  - Opens the Estimate form pre-filled with:
+    - Property name
+    - Description
+    - Amount
+    - Technician info
+  - Allows office to review/edit before saving as estimate
+  - After conversion, remove from this list
+
+**UPDATE COUNT BADGE:**
+- Show "6" in the orange badge next to the title
+- Sync with Overview page "Completed Without Approval" count

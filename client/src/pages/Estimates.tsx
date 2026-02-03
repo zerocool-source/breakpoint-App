@@ -2069,15 +2069,33 @@ export default function Estimates() {
 
             {/* Completed Without Approval Container */}
             {(() => {
+              // Sample data for completed jobs without approval
+              const sampleCompletedJobs = [
+                { id: 'cwa1', propertyName: 'Palm Court Apartments', description: 'Pool pump motor replaced', amount: 45000, techName: 'Rick Jacobs', completedDate: new Date('2026-02-02') },
+                { id: 'cwa2', propertyName: 'Sunset Hills HOA', description: 'Filter cartridge replacement', amount: 28500, techName: 'Matt Cummins', completedDate: new Date('2026-02-01') },
+                { id: 'cwa3', propertyName: 'Lakewood Country Club', description: 'Heater pilot assembly repair', amount: 37500, techName: 'Alan Bateman', completedDate: new Date('2026-01-31') },
+                { id: 'cwa4', propertyName: 'Shady Trails HOA', description: 'Skimmer basket and weir door replaced', amount: 12500, techName: 'Kevin Enriquez', completedDate: new Date('2026-01-30') },
+                { id: 'cwa5', propertyName: 'Canyon Ridge HOA', description: 'Chemical feeder repair', amount: 19500, techName: 'Vit Kruml', completedDate: new Date('2026-01-29') },
+                { id: 'cwa6', propertyName: 'Bella Vista HOA', description: 'Pool light fixture replaced', amount: 32000, techName: 'Jose Puente', completedDate: new Date('2026-01-28') },
+              ];
+              
               // Pull completed jobs that never went through approval process
-              // This matches the Overview dashboard "Completed Without Approval" metric
-              const completedWithoutApproval = estimates.filter(e => 
+              const realCompletedWithoutApproval = estimates.filter(e => 
                 e.status === "completed" && !e.approvedAt
-              ).sort((a, b) => {
-                const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-                const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
-                return dateB - dateA;
-              });
+              ).map(e => ({
+                id: e.id,
+                propertyName: e.customerName || "Unknown",
+                description: e.title || e.description || "—",
+                amount: e.totalAmount || 0,
+                techName: e.repairTechName || e.createdByTechName || "—",
+                completedDate: e.completedAt ? new Date(e.completedAt) : new Date(),
+                isReal: true,
+              }));
+              
+              // Combine real data with sample data (sample data fills in if no real data)
+              const completedWithoutApproval = realCompletedWithoutApproval.length > 0 
+                ? realCompletedWithoutApproval 
+                : sampleCompletedJobs;
               
               const toggleSelect = (id: string) => {
                 setSelectedCompletedIds(prev => {
@@ -2097,6 +2115,29 @@ export default function Estimates() {
                 } else {
                   setSelectedCompletedIds(new Set(completedWithoutApproval.map(e => e.id)));
                 }
+              };
+              
+              const handleConvertToEstimate = (item: typeof completedWithoutApproval[0]) => {
+                // Pre-fill the estimate form with the job data
+                setFormData({
+                  ...emptyFormData,
+                  customerName: item.propertyName,
+                  propertyName: item.propertyName,
+                  title: item.description,
+                  description: item.description,
+                  repairTechName: item.techName,
+                  items: [{
+                    lineNumber: 1,
+                    productService: "Repair Service",
+                    description: item.description,
+                    quantity: 1,
+                    rate: item.amount,
+                    amount: item.amount,
+                    taxable: false,
+                  }],
+                });
+                setIsEditing(false);
+                setShowFormDialog(true);
               };
               
               return (
@@ -2122,7 +2163,10 @@ export default function Estimates() {
                           description: `Created invoice for ${selectedCompletedIds.size} estimate(s)`,
                         });
                         selectedCompletedIds.forEach(id => {
-                          updateStatusMutation.mutate({ id, status: "invoiced" });
+                          const realItem = realCompletedWithoutApproval.find(e => e.id === id);
+                          if (realItem) {
+                            updateStatusMutation.mutate({ id, status: "invoiced" });
+                          }
                         });
                         setSelectedCompletedIds(new Set());
                       }}
@@ -2132,11 +2176,11 @@ export default function Estimates() {
                       Invoice {selectedCompletedIds.size > 0 ? `(${selectedCompletedIds.size})` : ""}
                     </Button>
                   </div>
-                  <div className="max-h-[200px] overflow-y-auto">
+                  <div className="max-h-[280px] overflow-y-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 sticky top-0">
                         <tr>
-                          <th className="py-2 px-4 text-left w-10">
+                          <th className="py-2 px-3 text-left w-10">
                             <input
                               type="checkbox"
                               checked={selectedCompletedIds.size === completedWithoutApproval.length && completedWithoutApproval.length > 0}
@@ -2144,37 +2188,51 @@ export default function Estimates() {
                               className="rounded border-slate-300"
                             />
                           </th>
-                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Property</th>
-                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Description</th>
-                          <th className="py-2 px-4 text-right text-xs font-medium text-slate-500">Amount</th>
-                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Technician</th>
-                          <th className="py-2 px-4 text-left text-xs font-medium text-slate-500">Completed</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Property</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Description</th>
+                          <th className="py-2 px-3 text-right text-xs font-medium text-slate-500">Amount</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Technician</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Completed</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {completedWithoutApproval.map((estimate) => (
+                        {completedWithoutApproval.map((item) => (
                           <tr 
-                            key={estimate.id} 
-                            className="border-t border-slate-100 hover:bg-slate-50 cursor-pointer"
-                            onClick={() => toggleSelect(estimate.id)}
+                            key={item.id} 
+                            className="border-t border-slate-100 hover:bg-slate-50"
                           >
-                            <td className="py-2.5 px-4">
+                            <td className="py-2.5 px-3">
                               <input
                                 type="checkbox"
-                                checked={selectedCompletedIds.has(estimate.id)}
-                                onChange={() => toggleSelect(estimate.id)}
-                                onClick={(e) => e.stopPropagation()}
+                                checked={selectedCompletedIds.has(item.id)}
+                                onChange={() => toggleSelect(item.id)}
                                 className="rounded border-slate-300"
                               />
                             </td>
-                            <td className="py-2.5 px-4 font-medium text-slate-800">{estimate.customerName || "Unknown"}</td>
-                            <td className="py-2.5 px-4 text-slate-600 max-w-[200px] truncate">{estimate.title || estimate.description || "—"}</td>
-                            <td className="py-2.5 px-4 text-right font-semibold text-[#10b981]">
-                              ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            <td className="py-2.5 px-3 font-medium text-slate-800">{item.propertyName}</td>
+                            <td className="py-2.5 px-3 text-slate-600 max-w-[180px] truncate" title={item.description}>{item.description}</td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-[#10b981]">
+                              ${(item.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </td>
-                            <td className="py-2.5 px-4 text-slate-600">{estimate.repairTechName || estimate.createdByTechName || "—"}</td>
-                            <td className="py-2.5 px-4 text-slate-400">
-                              {estimate.completedAt ? format(new Date(estimate.completedAt), "MMM d") : "—"}
+                            <td className="py-2.5 px-3 text-slate-600">{item.techName}</td>
+                            <td className="py-2.5 px-3 text-slate-400">
+                              {format(item.completedDate, "MMM d")}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[#0077b6] hover:text-[#005f8f] hover:bg-[#0077b6]/10 text-xs px-2 py-1 h-auto"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConvertToEstimate(item);
+                                }}
+                                data-testid={`button-convert-${item.id}`}
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Convert to Estimate
+                              </Button>
                             </td>
                           </tr>
                         ))}
