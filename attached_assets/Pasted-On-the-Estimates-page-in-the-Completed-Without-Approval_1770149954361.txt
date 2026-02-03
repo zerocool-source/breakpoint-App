@@ -1,0 +1,61 @@
+On the Estimates page, in the "Completed Without Approval (Work Order)" container, add sample photos and ensure the system accepts multiple photo formats:
+
+**ADD SAMPLE PHOTOS TO EACH WORK ORDER:**
+
+**1. WO-26-00001 | Palm Court Apartments | Pool pump motor replaced**
+- Before Photo: Old rusty pump motor with visible wear
+- After Photo: New pump motor installed and running
+- Caption: "Before: Corroded motor" / "After: New 1.5HP motor installed"
+
+**2. WO-26-00002 | Sunset Hills HOA | Filter cartridge replacement**
+- Before Photo: Dirty/clogged filter cartridges
+- After Photo: New clean cartridges in filter housing
+- Caption: "Before: Clogged cartridges" / "After: New filters installed"
+
+**3. WO-26-00003 | Lakewood Country Club | Heater pilot assembly repair**
+- Before Photo: Corroded pilot assembly and burner
+- After Photo: New thermocouple and clean burner tray
+- Caption: "Before: Failed pilot" / "After: New thermocouple"
+
+**4. WO-26-00004 | Shady Trails HOA | Skimmer basket and weir door replaced**
+- Before Photo: Cracked skimmer basket
+- After Photo: New basket and weir door installed
+- Caption: "Before: Cracked basket" / "After: New skimmer parts"
+
+**5. WO-26-00005 | Canyon Ridge HOA | Chemical feeder repair**
+- Before Photo: Leaking chemical feeder tubing
+- After Photo: New check valve and tubing installed
+- Caption: "Before: Leaking connection" / "After: New tubing"
+
+**6. WO-26-00006 | Bella Vista HOA | Pool light fixture replaced**
+- Before Photo: Old light with water intrusion/condensation
+- After Photo: New LED light glowing underwater
+- Caption: "Before: Water damage" / "After: New LED light"
+
+**ADD PHOTO INDICATOR TO TABLE:**
+- Add a small camera icon (📷) or photo count column
+- Show "📷 2" to indicate 2 photos attached
+
+**SUPPORTED PHOTO FORMATS:**
+- Accept all common image formats:
+  - PNG (.png)
+  - JPEG (.jpg, .jpeg)
+  - HEIC (.heic) - iPhone photos
+  - HEIF (.heif)
+  - WebP (.webp)
+  - GIF (.gif)
+  - BMP (.bmp)
+  - TIFF (.tiff, .tif)
+
+**PHOTO UPLOAD SETTINGS:**
+- Max file size: 10 MB per photo
+- Auto-convert HEIC/HEIF to JPEG for display compatibility
+- Show upload progress indicator
+- Allow drag and drop upload
+- Accept attribute: `accept="image/png, image/jpeg, image/jpg, image/heic, image/heif, image/webp, image/gif"`
+
+**WHEN CONVERTING TO ESTIMATE:**
+- Photos appear in the "Photos" section of the form
+- Show as thumbnails with Before/After labels
+- Captions displayed below each photo
+- All formats display correctly after conversion

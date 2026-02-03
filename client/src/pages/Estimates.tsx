@@ -2475,6 +2475,7 @@ export default function Estimates() {
                           <th className="py-2 px-3 text-right text-xs font-medium text-slate-500">Amount</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Technician</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Completed</th>
+                          <th className="py-2 px-3 text-center text-xs font-medium text-slate-500">Photos</th>
                           <th className="py-2 px-3 text-center text-xs font-medium text-slate-500">Urgent</th>
                           <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Actions</th>
                         </tr>
@@ -2502,6 +2503,14 @@ export default function Estimates() {
                             <td className="py-2.5 px-3 text-slate-600">{item.techName}</td>
                             <td className="py-2.5 px-3 text-slate-400">
                               {format(item.completedDate, "MMM d")}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {item.photos && (
+                                <span className="inline-flex items-center gap-1 text-xs text-slate-500" title="Photos attached">
+                                  <Camera className="w-3 h-3" />
+                                  {(item.photos.before?.length || 0) + (item.photos.after?.length || 0)}
+                                </span>
+                              )}
                             </td>
                             <td className="py-2.5 px-3 text-center">
                               <button
@@ -4002,6 +4011,7 @@ export default function Estimates() {
                           <ObjectUploader
                             maxNumberOfFiles={10}
                             maxFileSize={10485760}
+                            allowedFileTypes={['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/tif']}
                             onGetUploadParameters={async (file) => {
                               const res = await fetch("/api/uploads/request-url", {
                                 method: "POST",

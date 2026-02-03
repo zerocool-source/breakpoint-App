@@ -12,6 +12,11 @@ interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
   /**
+   * Array of allowed MIME types or file extensions.
+   * Examples: ['image/*'], ['image/png', 'image/jpeg'], ['.jpg', '.png']
+   */
+  allowedFileTypes?: string[];
+  /**
    * Function to get upload parameters for each file.
    * IMPORTANT: This receives the file object - use file.name, file.size, file.type
    * to request per-file presigned URLs from your backend.
@@ -62,6 +67,7 @@ interface ObjectUploaderProps {
 export function ObjectUploader({
   maxNumberOfFiles = 1,
   maxFileSize = 10485760, // 10MB default
+  allowedFileTypes,
   onGetUploadParameters,
   onComplete,
   buttonClassName,
@@ -73,6 +79,7 @@ export function ObjectUploader({
       restrictions: {
         maxNumberOfFiles,
         maxFileSize,
+        allowedFileTypes,
       },
       autoProceed: false,
     })
