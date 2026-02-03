@@ -2223,8 +2223,6 @@ export default function Estimates() {
                   <SelectItem value="field">Field Estimates</SelectItem>
                   <SelectItem value="office_staff">Office Estimates</SelectItem>
                   <SelectItem value="service_tech">SR Estimates</SelectItem>
-                  <SelectItem value="repair_foreman">Repair Foreman</SelectItem>
-                  <SelectItem value="repair_tech">Repair Technician</SelectItem>
                 </SelectContent>
               </Select>
 
