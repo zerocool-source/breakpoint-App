@@ -5508,7 +5508,7 @@ export default function Estimates() {
       {/* Photo Lightbox Modal */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 z-[100] flex flex-col animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center animate-in fade-in duration-200"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
           onClick={closeLightbox}
           onMouseUp={handleMouseUp}
@@ -5518,67 +5518,76 @@ export default function Estimates() {
           aria-modal="true"
           aria-label="Photo lightbox"
         >
-          {/* Top Controls Bar */}
+          {/* Image Container with Controls */}
           <div 
-            className="flex items-center justify-end gap-2 px-4 py-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-lg p-1">
-              <button
-                onClick={zoomOut}
-                disabled={lightboxZoom <= 50}
-                className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Zoom out"
-                data-testid="button-zoom-out"
-              >
-                <Minus className="w-5 h-5" />
-              </button>
-              <span className="text-white text-sm font-medium min-w-[48px] text-center">
-                {lightboxZoom}%
-              </span>
-              <button
-                onClick={zoomIn}
-                disabled={lightboxZoom >= 300}
-                className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Zoom in"
-                data-testid="button-zoom-in"
-              >
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Reset Button */}
-            <button
-              onClick={resetZoom}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/10 backdrop-blur-sm text-white text-sm hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Reset zoom"
-              data-testid="button-reset-zoom"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Reset</span>
-            </button>
-            
-            {/* Close Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                closeLightbox();
-              }}
-              className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Close lightbox"
-              data-testid="button-close-lightbox"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* Image Container */}
-          <div 
-            className="flex-1 flex flex-col items-center justify-center overflow-hidden px-8"
+            className="relative flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
             onWheel={handleWheelZoom}
           >
+            {/* Controls Bar - Positioned above image */}
+            <div 
+              className="flex items-center justify-end gap-2 w-full mb-2 px-1"
+              style={{ maxWidth: '85vw' }}
+            >
+              <div 
+                className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+              >
+                {/* Zoom Controls */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={zoomOut}
+                    disabled={lightboxZoom <= 50}
+                    className="w-7 h-7 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Zoom out"
+                    data-testid="button-zoom-out"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-white text-sm font-medium min-w-[44px] text-center">
+                    {lightboxZoom}%
+                  </span>
+                  <button
+                    onClick={zoomIn}
+                    disabled={lightboxZoom >= 300}
+                    className="w-7 h-7 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Zoom in"
+                    data-testid="button-zoom-in"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="w-px h-5 bg-white/30" />
+                
+                {/* Reset Button */}
+                <button
+                  onClick={resetZoom}
+                  className="flex items-center gap-1 px-2 py-1 text-white text-sm hover:bg-white/20 rounded transition-colors"
+                  aria-label="Reset zoom"
+                  data-testid="button-reset-zoom"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Reset</span>
+                </button>
+                
+                <div className="w-px h-5 bg-white/30" />
+                
+                {/* Close Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeLightbox();
+                  }}
+                  className="w-7 h-7 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors"
+                  aria-label="Close lightbox"
+                  data-testid="button-close-lightbox"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
             {/* Zoomable/Pannable Image */}
             <div 
               className={`relative ${lightboxZoom > 100 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}

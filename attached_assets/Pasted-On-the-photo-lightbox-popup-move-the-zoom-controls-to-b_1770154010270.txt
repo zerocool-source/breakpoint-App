@@ -1,0 +1,53 @@
+On the photo lightbox/popup, move the zoom controls to be positioned directly above the image on the top right:
+
+**MOVE ZOOM CONTROLS:**
+- Position the zoom controls (−, 200%, +, Reset, X) directly above the image
+- Align to the top right of the image container, not the full screen
+- Keep them close to the image for easier access
+
+**UPDATED LAYOUT:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                 │
+│                                                                                 │
+│    ┌─────────────────────────────────────────────────────────────────────┐     │
+│    │                                        [−] [200%] [+] [Reset] [X]  │     │
+│    ├─────────────────────────────────────────────────────────────────────┤     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                    [ZOOMABLE IMAGE]                                 │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    └─────────────────────────────────────────────────────────────────────┘     │
+│                                                                                 │
+│                              📷 After                                          │
+│                   "New 1.5HP motor installed and running"                      │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**STYLING:**
+- Controls bar: Dark semi-transparent background (like current), rounded corners
+- Position: Absolute, top right corner of the image container
+- Margin: Small gap between controls and image edge (8-12px)
+- Z-index: Above the image
+- Keep the same button styling (−, %, +, Reset, X)
+
+**CSS EXAMPLE:**
+```css
+.lightbox-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+```
