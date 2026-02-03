@@ -29,8 +29,18 @@ export function registerRepairRequestRoutes(app: any) {
 
   app.post("/api/repair-requests", async (req: Request, res: Response) => {
     try {
-      const parsed = insertRepairRequestSchema.safeParse(req.body);
+      // Convert date strings to Date objects for timestamp fields
+      const body = { ...req.body };
+      if (body.assignedDate && typeof body.assignedDate === 'string') {
+        body.assignedDate = new Date(body.assignedDate);
+      }
+      if (body.requestDate && typeof body.requestDate === 'string') {
+        body.requestDate = new Date(body.requestDate);
+      }
+      
+      const parsed = insertRepairRequestSchema.safeParse(body);
       if (!parsed.success) {
+        console.error("Validation errors:", parsed.error.errors);
         return res.status(400).json({ error: "Invalid request body", details: parsed.error.errors });
       }
       const request = await storage.createRepairRequest(parsed.data);
