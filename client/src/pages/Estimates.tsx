@@ -187,6 +187,8 @@ interface EstimateFormData {
   techNotes: string;
   attachments: Attachment[];
   photos: string[];
+  beforePhotos: Array<{ url: string; caption: string }>;
+  afterPhotos: Array<{ url: string; caption: string }>;
   workType: string;
   woReceived: boolean;
   woNumber: string;
@@ -294,6 +296,8 @@ const emptyFormData: EstimateFormData = {
   techNotes: "",
   attachments: [],
   photos: [],
+  beforePhotos: [],
+  afterPhotos: [],
   workType: "repairs",
   woReceived: false,
   woNumber: "",
@@ -844,6 +848,8 @@ export default function Estimates() {
       techNotes: estimate.techNotes || "",
       attachments: estimate.attachments || [],
       photos: estimate.photos || [],
+      beforePhotos: [],
+      afterPhotos: [],
       workType: estimate.workType || "repairs",
       woReceived: estimate.woReceived || false,
       woNumber: estimate.woNumber || "",
@@ -2536,14 +2542,29 @@ export default function Estimates() {
                       taxable: false,
                     }];
                 
-                // Collect photos from work order (before and after)
+                // Collect photos from work order (before and after) separately
                 const woPhotos: string[] = [];
+                const beforePhotos: Array<{ url: string; caption: string }> = [];
+                const afterPhotos: Array<{ url: string; caption: string }> = [];
+                
                 if (item.photos) {
                   if (item.photos.before) {
-                    item.photos.before.forEach((p: any) => woPhotos.push(p.url));
+                    item.photos.before.forEach((p: any, idx: number) => {
+                      woPhotos.push(p.url);
+                      beforePhotos.push({ 
+                        url: p.url, 
+                        caption: p.caption || `Before photo ${idx + 1}` 
+                      });
+                    });
                   }
                   if (item.photos.after) {
-                    item.photos.after.forEach((p: any) => woPhotos.push(p.url));
+                    item.photos.after.forEach((p: any, idx: number) => {
+                      woPhotos.push(p.url);
+                      afterPhotos.push({ 
+                        url: p.url, 
+                        caption: p.caption || `After photo ${idx + 1}` 
+                      });
+                    });
                   }
                 }
                 
@@ -2579,6 +2600,8 @@ export default function Estimates() {
                   items: lineItems,
                   // Photos from work order
                   photos: woPhotos,
+                  beforePhotos: beforePhotos,
+                  afterPhotos: afterPhotos,
                 });
                 setIsEditing(false);
                 setIsConvertingFromWo(true); // Mark as converting from Work Order
@@ -3739,95 +3762,160 @@ export default function Estimates() {
                       </div>
                     </div>
 
-                    {/* Photos Section - Always visible with sample images */}
+                    {/* Photos Section - Multiple Before/After with horizontal scroll */}
                     <div className="border rounded-lg overflow-hidden">
-                      <div className="bg-slate-100 px-4 py-2 border-b">
+                      <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between">
                         <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
                           <Camera className="w-4 h-4" />
                           Photos
+                          <span className="text-xs text-slate-500 font-normal">
+                            ({formData.beforePhotos.length + formData.afterPhotos.length} photos)
+                          </span>
                         </h4>
                       </div>
-                      <div className="p-4">
-                        <div className="grid grid-cols-2 gap-6">
-                          {(() => {
-                            const beforeUrl = formData.photos?.[0] || "https://placehold.co/800x600/f97316/white?text=Before+Photo";
-                            const beforeCaption = formData.title?.includes("pump") ? "Old corroded motor with visible rust and wear" :
-                              formData.title?.includes("Filter") ? "Dirty/clogged filter cartridges" :
-                              formData.title?.includes("Heater") ? "Corroded pilot assembly and burner" :
-                              formData.title?.includes("Skimmer") ? "Cracked skimmer basket" :
-                              formData.title?.includes("Chemical") ? "Leaking chemical feeder connection" :
-                              formData.title?.includes("light") ? "Old light fixture with water damage" :
-                              "Equipment condition before repair";
-                            const afterUrl = formData.photos?.[1] || "https://placehold.co/800x600/22c55e/white?text=After+Photo";
-                            const afterCaption = formData.title?.includes("pump") ? "New 1.5HP motor installed and running" :
-                              formData.title?.includes("Filter") ? "New filter cartridges installed" :
-                              formData.title?.includes("Heater") ? "New thermocouple and clean burner" :
-                              formData.title?.includes("Skimmer") ? "New basket and weir door installed" :
-                              formData.title?.includes("Chemical") ? "New tubing and check valve installed" :
-                              formData.title?.includes("light") ? "New LED pool light glowing" :
-                              "Equipment condition after repair";
-                            const allImages = [
-                              { url: beforeUrl, label: "Before", caption: beforeCaption },
-                              { url: afterUrl, label: "After", caption: afterCaption }
-                            ];
-                            return (
-                              <>
-                                {/* Before Photo */}
-                                <div className="space-y-2">
+                      <div className="p-4 space-y-6">
+                        {/* BEFORE Photos Row */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded">BEFORE</span>
+                            <span className="text-xs text-slate-500">{formData.beforePhotos.length} photos</span>
+                          </div>
+                          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
+                            {(() => {
+                              // Generate sample before photos if none exist
+                              const beforePhotos = formData.beforePhotos.length > 0 
+                                ? formData.beforePhotos 
+                                : [
+                                    { url: "https://placehold.co/800x600/f97316/white?text=Before+1", caption: formData.title?.includes("pump") ? "Old motor showing corrosion" : "Equipment before repair" },
+                                    { url: "https://placehold.co/800x600/ea580c/white?text=Before+2", caption: formData.title?.includes("pump") ? "Serial number plate" : "Damage detail" },
+                                    { url: "https://placehold.co/800x600/c2410c/white?text=Before+3", caption: formData.title?.includes("pump") ? "Rust on housing" : "Additional view" },
+                                  ];
+                              
+                              // Combine all photos for lightbox navigation
+                              const allPhotosForLightbox = [
+                                ...beforePhotos.map(p => ({ url: p.url, label: "Before", caption: p.caption })),
+                                ...((formData.afterPhotos.length > 0 ? formData.afterPhotos : [
+                                  { url: "https://placehold.co/800x600/22c55e/white?text=After+1", caption: "New equipment installed" },
+                                  { url: "https://placehold.co/800x600/16a34a/white?text=After+2", caption: "System running" },
+                                ]) as Array<{url: string; caption: string}>).map(p => ({ url: p.url, label: "After", caption: p.caption }))
+                              ];
+                              
+                              return (
+                                <>
+                                  {beforePhotos.map((photo, idx) => (
+                                    <div key={`before-${idx}`} className="flex-shrink-0 w-[150px]">
+                                      <div 
+                                        className="relative group cursor-pointer"
+                                        onClick={() => openLightbox(allPhotosForLightbox, idx)}
+                                      >
+                                        <img
+                                          src={photo.url}
+                                          alt={`Before ${idx + 1}`}
+                                          className="w-[150px] h-[110px] object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                                          <span className="opacity-0 group-hover:opacity-100 text-white bg-black/60 px-2 py-1 rounded text-xs transition-opacity">
+                                            Click to enlarge
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 text-center truncate" title={photo.caption}>
+                                        {photo.caption}
+                                      </p>
+                                    </div>
+                                  ))}
+                                  {/* Add Photo Button */}
                                   <div 
-                                    className="relative group cursor-pointer" 
-                                    onClick={() => openLightbox(allImages, 0)}
+                                    className="flex-shrink-0 w-[150px] h-[110px] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#0077b6] hover:bg-slate-50 transition-colors"
+                                    onClick={() => {
+                                      toast({
+                                        title: "Add Before Photos",
+                                        description: "Photo upload feature coming soon",
+                                      });
+                                    }}
                                   >
-                                    <img
-                                      src={beforeUrl}
-                                      alt="Before"
-                                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors hover:shadow-lg"
-                                    />
-                                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded font-medium">
-                                      BEFORE
-                                    </div>
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
-                                      <span className="opacity-0 group-hover:opacity-100 text-white bg-black/50 px-2 py-1 rounded text-xs transition-opacity">
-                                        Click to enlarge
-                                      </span>
-                                    </div>
+                                    <Plus className="w-6 h-6 text-slate-400" />
+                                    <span className="text-xs text-slate-400 mt-1">Add Photo</span>
                                   </div>
-                                  <div className="flex items-center gap-1 text-xs text-slate-600">
-                                    <Camera className="w-3 h-3" />
-                                    <span className="font-medium">Before</span>
-                                  </div>
-                                  <p className="text-xs text-slate-500 italic">{beforeCaption}</p>
-                                </div>
-                                
-                                {/* After Photo */}
-                                <div className="space-y-2">
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* AFTER Photos Row */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded">AFTER</span>
+                            <span className="text-xs text-slate-500">{formData.afterPhotos.length} photos</span>
+                          </div>
+                          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
+                            {(() => {
+                              // Generate sample after photos if none exist
+                              const afterPhotos = formData.afterPhotos.length > 0 
+                                ? formData.afterPhotos 
+                                : [
+                                    { url: "https://placehold.co/800x600/22c55e/white?text=After+1", caption: formData.title?.includes("pump") ? "New motor installed" : "Equipment after repair" },
+                                    { url: "https://placehold.co/800x600/16a34a/white?text=After+2", caption: formData.title?.includes("pump") ? "System running" : "Completed work" },
+                                  ];
+                              
+                              const beforePhotos = formData.beforePhotos.length > 0 
+                                ? formData.beforePhotos 
+                                : [
+                                    { url: "https://placehold.co/800x600/f97316/white?text=Before+1", caption: "Before 1" },
+                                    { url: "https://placehold.co/800x600/ea580c/white?text=Before+2", caption: "Before 2" },
+                                    { url: "https://placehold.co/800x600/c2410c/white?text=Before+3", caption: "Before 3" },
+                                  ];
+                              
+                              // Combine all photos for lightbox navigation
+                              const allPhotosForLightbox = [
+                                ...beforePhotos.map(p => ({ url: p.url, label: "Before", caption: p.caption })),
+                                ...afterPhotos.map(p => ({ url: p.url, label: "After", caption: p.caption }))
+                              ];
+                              
+                              const beforeCount = beforePhotos.length;
+                              
+                              return (
+                                <>
+                                  {afterPhotos.map((photo, idx) => (
+                                    <div key={`after-${idx}`} className="flex-shrink-0 w-[150px]">
+                                      <div 
+                                        className="relative group cursor-pointer"
+                                        onClick={() => openLightbox(allPhotosForLightbox, beforeCount + idx)}
+                                      >
+                                        <img
+                                          src={photo.url}
+                                          alt={`After ${idx + 1}`}
+                                          className="w-[150px] h-[110px] object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-colors"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                                          <span className="opacity-0 group-hover:opacity-100 text-white bg-black/60 px-2 py-1 rounded text-xs transition-opacity">
+                                            Click to enlarge
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 text-center truncate" title={photo.caption}>
+                                        {photo.caption}
+                                      </p>
+                                    </div>
+                                  ))}
+                                  {/* Add Photo Button */}
                                   <div 
-                                    className="relative group cursor-pointer" 
-                                    onClick={() => openLightbox(allImages, 1)}
+                                    className="flex-shrink-0 w-[150px] h-[110px] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#0077b6] hover:bg-slate-50 transition-colors"
+                                    onClick={() => {
+                                      toast({
+                                        title: "Add After Photos",
+                                        description: "Photo upload feature coming soon",
+                                      });
+                                    }}
                                   >
-                                    <img
-                                      src={afterUrl}
-                                      alt="After"
-                                      className="w-full h-40 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-colors hover:shadow-lg"
-                                    />
-                                    <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded font-medium">
-                                      AFTER
-                                    </div>
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
-                                      <span className="opacity-0 group-hover:opacity-100 text-white bg-black/50 px-2 py-1 rounded text-xs transition-opacity">
-                                        Click to enlarge
-                                      </span>
-                                    </div>
+                                    <Plus className="w-6 h-6 text-slate-400" />
+                                    <span className="text-xs text-slate-400 mt-1">Add Photo</span>
                                   </div>
-                                  <div className="flex items-center gap-1 text-xs text-slate-600">
-                                    <Camera className="w-3 h-3" />
-                                    <span className="font-medium">After</span>
-                                  </div>
-                                  <p className="text-xs text-slate-500 italic">{afterCaption}</p>
-                                </div>
-                              </>
-                            );
-                          })()}
+                                </>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
                     </div>
