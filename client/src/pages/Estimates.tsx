@@ -2118,14 +2118,24 @@ export default function Estimates() {
               };
               
               const handleConvertToEstimate = (item: typeof completedWithoutApproval[0]) => {
-                // Pre-fill the estimate form with the job data
+                // Pre-fill the estimate form with all data from the completed job
                 setFormData({
                   ...emptyFormData,
+                  // Customer / Property
                   customerName: item.propertyName,
                   propertyName: item.propertyName,
+                  // Work Type
+                  workType: "Repairs",
+                  // Title and Description
                   title: item.description,
                   description: item.description,
+                  // Repair Tech - pre-select technician who completed the job
                   repairTechName: item.techName,
+                  // Estimate date - today's date
+                  estimateDate: new Date(),
+                  // Reported date - use the completed date from original job
+                  reportedDate: item.completedDate,
+                  // Line items with the job description and amount
                   items: [{
                     lineNumber: 1,
                     productService: "Repair Service",
@@ -2138,6 +2148,12 @@ export default function Estimates() {
                 });
                 setIsEditing(false);
                 setShowFormDialog(true);
+                
+                // Show toast to confirm
+                toast({
+                  title: "Converting to Estimate",
+                  description: `Pre-filled estimate for ${item.propertyName}`,
+                });
               };
               
               return (
@@ -2158,10 +2174,17 @@ export default function Estimates() {
                       disabled={selectedCompletedIds.size === 0}
                       className="bg-[#0077b6] hover:bg-[#005f8f] text-white disabled:opacity-50"
                       onClick={() => {
+                        // Get selected items for invoice description
+                        const selectedItems = completedWithoutApproval.filter(item => selectedCompletedIds.has(item.id));
+                        const totalAmount = selectedItems.reduce((sum, item) => sum + item.amount, 0);
+                        const descriptions = selectedItems.map(item => `${item.propertyName}: ${item.description}`).join(", ");
+                        
                         toast({
                           title: "Invoice Created",
-                          description: `Created invoice for ${selectedCompletedIds.size} estimate(s)`,
+                          description: `Created invoice for ${selectedCompletedIds.size} item(s) totaling $${(totalAmount / 100).toFixed(2)}`,
                         });
+                        
+                        // Update real estimates to invoiced status
                         selectedCompletedIds.forEach(id => {
                           const realItem = realCompletedWithoutApproval.find(e => e.id === id);
                           if (realItem) {
