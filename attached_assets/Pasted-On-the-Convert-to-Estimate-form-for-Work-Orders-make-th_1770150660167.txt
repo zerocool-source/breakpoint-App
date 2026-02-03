@@ -1,0 +1,45 @@
+On the "Convert to Estimate" form for Work Orders, make these updates:
+
+**1. REMOVE CUSTOMER RESPONSE CONTAINER:**
+- Remove the entire "Customer Response" section from the form
+- This section shows Response, Responded By, Response Date, Sent To
+- Remove it for now
+
+**2. ADD SAMPLE IMAGES TO PHOTOS SECTION:**
+- Display actual sample placeholder images in the Photos section
+- Show 2 images: Before and After
+
+**PHOTOS SECTION SHOULD SHOW:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 📷 Photos                                                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────┐  ┌─────────────────────┐                               │
+│ │                     │  │                     │                               │
+│ │   [BEFORE IMAGE]    │  │   [AFTER IMAGE]     │                               │
+│ │   Pool pump motor   │  │   New motor         │                               │
+│ │   with rust/wear    │  │   installed         │                               │
+│ │                     │  │                     │                               │
+│ └─────────────────────┘  └─────────────────────┘                               │
+│   📷 Before              📷 After                                              │
+│   "Old corroded motor"   "New 1.5HP motor installed"                           │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**USE PLACEHOLDER IMAGES:**
+- Use placeholder image URLs or generate simple colored boxes with text
+- Example: Use https://placehold.co/200x150/orange/white?text=Before+Photo
+- Example: Use https://placehold.co/200x150/green/white?text=After+Photo
+- Or use actual stock photos of pool equipment
+
+**FOR EACH WORK ORDER, SHOW DIFFERENT SAMPLE IMAGES:**
+- WO-26-00001: Pump motor before/after
+- WO-26-00002: Filter cartridges before/after
+- WO-26-00003: Heater pilot before/after
+- WO-26-00004: Skimmer basket before/after
+- WO-26-00005: Chemical feeder before/after
+
+**MAKE SURE:**
+- Images are actually visible (rendered as img tags)
+- Images have captions below them
+- Images are clickable to view larger version

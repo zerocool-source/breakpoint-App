@@ -3494,71 +3494,78 @@ export default function Estimates() {
                       </div>
                     </div>
 
-                    {/* Customer Response Section */}
+                    {/* Photos Section - Always visible with sample images */}
                     <div className="border rounded-lg overflow-hidden">
                       <div className="bg-slate-100 px-4 py-2 border-b">
                         <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4" />
-                          Customer Response
+                          <Camera className="w-4 h-4" />
+                          Photos
                         </h4>
                       </div>
-                      <div className="grid grid-cols-4 divide-x text-center">
-                        <div className="p-3">
-                          <Label className="text-xs text-slate-500">Response</Label>
-                          <p className="text-sm font-medium mt-1 text-amber-600">Pending</p>
-                        </div>
-                        <div className="p-3">
-                          <Label className="text-xs text-slate-500">Responded By</Label>
-                          <p className="text-sm font-medium mt-1 text-slate-400">N/A</p>
-                        </div>
-                        <div className="p-3">
-                          <Label className="text-xs text-slate-500">Response Date</Label>
-                          <p className="text-sm font-medium mt-1 text-slate-400">N/A</p>
-                        </div>
-                        <div className="p-3">
-                          <Label className="text-xs text-slate-500">Sent To</Label>
-                          <p className="text-sm font-medium mt-1 text-slate-400">{formData.customerEmail || "N/A"}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Photos Section */}
-                    {formData.photos && formData.photos.length > 0 && (
-                      <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-slate-100 px-4 py-2 border-b">
-                          <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-                            <Camera className="w-4 h-4" />
-                            Photos
-                          </h4>
-                        </div>
-                        <div className="p-4">
-                          <div className="grid grid-cols-4 gap-3">
-                            {formData.photos.map((photo, idx) => (
-                              <div key={idx} className="relative group">
-                                <img
-                                  src={photo}
-                                  alt={`Photo ${idx + 1}`}
-                                  className="w-full h-24 object-cover rounded-lg border"
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute top-1 right-1 h-5 w-5 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => {
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      photos: prev.photos.filter((_, i) => i !== idx)
-                                    }));
-                                  }}
-                                >
-                                  <X className="w-3 h-3" />
-                                </Button>
+                      <div className="p-4">
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* Before Photo */}
+                          <div className="space-y-2">
+                            <div className="relative group cursor-pointer" onClick={() => {
+                              const beforeUrl = formData.photos?.[0] || "https://placehold.co/400x300/f97316/white?text=Before+Photo";
+                              window.open(beforeUrl, '_blank');
+                            }}>
+                              <img
+                                src={formData.photos?.[0] || "https://placehold.co/400x300/f97316/white?text=Before+Photo"}
+                                alt="Before"
+                                className="w-full h-40 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
+                              />
+                              <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded font-medium">
+                                BEFORE
                               </div>
-                            ))}
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                              <Camera className="w-3 h-3" />
+                              <span className="font-medium">Before</span>
+                            </div>
+                            <p className="text-xs text-slate-500 italic">
+                              {formData.title?.includes("pump") ? "Old corroded motor with visible rust and wear" :
+                               formData.title?.includes("Filter") ? "Dirty/clogged filter cartridges" :
+                               formData.title?.includes("Heater") ? "Corroded pilot assembly and burner" :
+                               formData.title?.includes("Skimmer") ? "Cracked skimmer basket" :
+                               formData.title?.includes("Chemical") ? "Leaking chemical feeder connection" :
+                               formData.title?.includes("light") ? "Old light fixture with water damage" :
+                               "Equipment condition before repair"}
+                            </p>
+                          </div>
+                          
+                          {/* After Photo */}
+                          <div className="space-y-2">
+                            <div className="relative group cursor-pointer" onClick={() => {
+                              const afterUrl = formData.photos?.[1] || "https://placehold.co/400x300/22c55e/white?text=After+Photo";
+                              window.open(afterUrl, '_blank');
+                            }}>
+                              <img
+                                src={formData.photos?.[1] || "https://placehold.co/400x300/22c55e/white?text=After+Photo"}
+                                alt="After"
+                                className="w-full h-40 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-colors"
+                              />
+                              <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded font-medium">
+                                AFTER
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                              <Camera className="w-3 h-3" />
+                              <span className="font-medium">After</span>
+                            </div>
+                            <p className="text-xs text-slate-500 italic">
+                              {formData.title?.includes("pump") ? "New 1.5HP motor installed and running" :
+                               formData.title?.includes("Filter") ? "New filter cartridges installed" :
+                               formData.title?.includes("Heater") ? "New thermocouple and clean burner" :
+                               formData.title?.includes("Skimmer") ? "New basket and weir door installed" :
+                               formData.title?.includes("Chemical") ? "New tubing and check valve installed" :
+                               formData.title?.includes("light") ? "New LED pool light glowing" :
+                               "Equipment condition after repair"}
+                            </p>
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ) : (
                   /* Standard Estimate Form Layout */
