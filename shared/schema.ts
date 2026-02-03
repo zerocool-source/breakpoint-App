@@ -3,6 +3,9 @@ import { pgTable, text, varchar, integer, timestamp, boolean, json, jsonb, real,
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export * from "./models/auth";
+export * from "./models/chat";
+
 // System Settings (API keys, config)
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -306,44 +309,44 @@ export type InsertInvoiceTemplate = z.infer<typeof insertInvoiceTemplateSchema>;
 export type InvoiceTemplate = typeof invoiceTemplates.$inferSelect;
 
 // Tech Ops Entries (field technician submissions)
-export const techOpsEntries = pgTable("tech_ops_entries", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  serviceRepairNumber: text("service_repair_number"), // Auto-generated SR# for service repairs (format: YY-NNNNN)
-  entryType: text("entry_type").notNull(), // "repairs_needed", "service_repairs", "chemical_order", "chemicals_dropoff", "windy_day_cleanup", "report_issue", "supervisor_concerns", "add_notes"
-  technicianName: text("technician_name").notNull(),
-  technicianId: varchar("technician_id"), // Link to technician record
-  positionType: text("position_type"), // "service_technician", "supervisor", "repair_technician" - position of the person reporting
-  propertyId: varchar("property_id"),
-  propertyName: text("property_name"),
-  propertyAddress: text("property_address"), // Full property address
-  issueTitle: text("issue_title"), // Title for report issues
+export const techOpsEntries = pgTable("TechOpsEntry", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  serviceRepairNumber: text("serviceRepairNumber"),
+  entryType: text("entryType").notNull(),
+  technicianName: text("technicianName"),
+  technicianId: text("technicianId"),
+  positionType: text("positionType"),
+  propertyId: text("propertyId"),
+  propertyName: text("propertyName"),
+  propertyAddress: text("propertyAddress"),
+  issueTitle: text("issueTitle"),
   description: text("description"),
-  notes: text("notes"), // Additional notes field
-  priority: text("priority").default("normal"), // "low", "normal", "high", "urgent"
-  status: text("status").default("pending"), // "pending", "in_progress", "resolved", "dismissed"
-  isRead: boolean("is_read").default(false), // For tracking new/unread submissions
-  chemicals: text("chemicals"), // For chemical orders/dropoffs - list of chemicals
-  quantity: text("quantity"), // Quantity details for orders
-  issueType: text("issue_type"), // For report issue - "equipment_problem", "safety_concern", "access_issue", "customer_complaint", "other"
-  photos: text("photos").array(), // Array of photo URLs
-  reviewedBy: text("reviewed_by"),
-  reviewedAt: timestamp("reviewed_at"),
-  resolvedBy: text("resolved_by"), // Name of person who resolved the issue
-  resolvedAt: timestamp("resolved_at"), // When the issue was resolved
-  resolutionNotes: text("resolution_notes"), // Notes about how the issue was resolved
-  vendorId: varchar("vendor_id"), // For chemical orders - assigned vendor
-  vendorName: text("vendor_name"), // Denormalized vendor name for display
-  orderStatus: text("order_status").default("pending"), // "pending", "sent_to_vendor", "confirmed", "delivered"
-  invoiceSentAt: timestamp("invoice_sent_at"), // When invoice was sent
-  invoiceSentToVendorId: varchar("invoice_sent_to_vendor_id"), // Which vendor invoice was sent to
-  invoiceTemplateId: varchar("invoice_template_id"), // Which template was used
-  partsCost: integer("parts_cost").default(0), // Parts cost in cents for service repairs/windy day cleanup (for commission calculation)
-  commissionPercent: integer("commission_percent"), // Override commission % for this specific entry
-  commissionAmount: integer("commission_amount"), // Override commission amount in cents for this specific entry
-  convertedToEstimateId: varchar("converted_to_estimate_id"), // Links to estimate when service repair is converted
-  convertedAt: timestamp("converted_at"), // When the service repair was converted to estimate
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  notes: text("notes"),
+  priority: text("priority").default("normal"),
+  status: text("status").default("pending"),
+  isRead: boolean("isRead").default(false),
+  chemicals: text("chemicals"),
+  quantity: text("quantity"),
+  issueType: text("issueType"),
+  photos: text("photos").array(),
+  reviewedBy: text("reviewedBy"),
+  reviewedAt: timestamp("reviewedAt"),
+  resolvedBy: text("resolvedBy"),
+  resolvedAt: timestamp("resolvedAt"),
+  resolutionNotes: text("resolutionNotes"),
+  vendorId: text("vendorId"),
+  vendorName: text("vendorName"),
+  orderStatus: text("orderStatus").default("pending"),
+  invoiceSentAt: timestamp("invoiceSentAt"),
+  invoiceSentToVendorId: text("invoiceSentToVendorId"),
+  invoiceTemplateId: text("invoiceTemplateId"),
+  partsCost: integer("partsCost").default(0),
+  commissionPercent: integer("commissionPercent"),
+  commissionAmount: integer("commissionAmount"),
+  convertedToEstimateId: text("convertedToEstimateId"),
+  convertedAt: timestamp("convertedAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
 });
 
 export const insertTechOpsEntrySchema = createInsertSchema(techOpsEntries).omit({
@@ -2104,6 +2107,7 @@ export const insertTechTimeOffSchema = createInsertSchema(techTimeOff).omit({
 export type InsertTechTimeOff = z.infer<typeof insertTechTimeOffSchema>;
 export type TechTimeOff = typeof techTimeOff.$inferSelect;
 
+<<<<<<< HEAD
 // Service Assignments (tasks assigned to service technicians)
 export const serviceAssignments = pgTable("service_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -2116,10 +2120,74 @@ export const serviceAssignments = pgTable("service_assignments", {
   status: text("status").default("pending"), // "pending", "in_progress", "completed"
   notes: text("notes"),
   completedAt: timestamp("completed_at"),
+=======
+// SMS Messages - Log of sent SMS messages
+export const smsMessages = pgTable("sms_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  to: text("to").notNull(),
+  from: text("from"),
+  body: text("body").notNull(),
+  status: text("status").default("pending"),
+  twilioSid: text("twilio_sid"),
+  errorMessage: text("error_message"),
+  technicianId: varchar("technician_id"),
+  customerId: varchar("customer_id"),
+  relatedEntityType: text("related_entity_type"),
+  relatedEntityId: varchar("related_entity_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  sentAt: timestamp("sent_at"),
+});
+
+export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
+  id: true,
+  twilioSid: true,
+  errorMessage: true,
+  createdAt: true,
+  sentAt: true,
+});
+
+export type InsertSmsMessage = z.infer<typeof insertSmsMessageSchema>;
+export type SmsMessage = typeof smsMessages.$inferSelect;
+
+// AI Learning - Admin Actions tracking for self-learning AI
+export const adminActions = pgTable("admin_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(), // Admin user who performed the action
+  actionType: text("action_type").notNull(), // "estimate_approved", "technician_assigned", "emergency_resolved", etc.
+  actionCategory: text("action_category").notNull(), // "estimates", "technicians", "emergencies", "service_repairs", etc.
+  entityId: varchar("entity_id"), // ID of the entity acted upon
+  entityType: text("entity_type"), // Type of entity: "estimate", "technician", "customer", etc.
+  actionDetails: json("action_details"), // JSON with full context of the action
+  previousState: json("previous_state"), // State before action (for learning patterns)
+  newState: json("new_state"), // State after action
+  metadata: json("metadata"), // Additional context like time of day, day of week, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAdminActionSchema = createInsertSchema(adminActions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAdminAction = z.infer<typeof insertAdminActionSchema>;
+export type AdminAction = typeof adminActions.$inferSelect;
+
+// AI Learning Insights - Patterns and insights learned from admin actions
+export const aiLearningInsights = pgTable("ai_learning_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  insightType: text("insight_type").notNull(), // "pattern", "preference", "workflow", "decision_rule"
+  category: text("category").notNull(), // "scheduling", "estimates", "emergencies", etc.
+  description: text("description").notNull(), // Human-readable description of the insight
+  pattern: json("pattern"), // JSON pattern data
+  confidence: real("confidence").default(0), // Confidence level 0-1
+  occurrences: integer("occurrences").default(1), // How many times this pattern was observed
+  lastObserved: timestamp("last_observed").defaultNow(),
+>>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+<<<<<<< HEAD
 export const insertServiceAssignmentSchema = createInsertSchema(serviceAssignments).omit({
   id: true,
   createdAt: true,
@@ -2129,3 +2197,13 @@ export const insertServiceAssignmentSchema = createInsertSchema(serviceAssignmen
 
 export type InsertServiceAssignment = z.infer<typeof insertServiceAssignmentSchema>;
 export type ServiceAssignment = typeof serviceAssignments.$inferSelect;
+=======
+export const insertAiLearningInsightSchema = createInsertSchema(aiLearningInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiLearningInsight = z.infer<typeof insertAiLearningInsightSchema>;
+export type AiLearningInsight = typeof aiLearningInsights.$inferSelect;
+>>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a

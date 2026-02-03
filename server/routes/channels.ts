@@ -1,6 +1,5 @@
-import type { Request, Response } from "express";
+import type { Request, Response } from "express"
 import { storage } from "../storage";
-import { PoolBrainClient } from "../poolbrain-client";
 
 export function registerChannelRoutes(app: any) {
   // ==================== THREADS ====================
@@ -132,119 +131,14 @@ export function registerChannelRoutes(app: any) {
     }
   });
 
-  app.post("/api/channels/sync", async (req: Request, res: Response) => {
-    try {
-      const settings = await storage.getSettings();
-      const apiKey = process.env.POOLBRAIN_ACCESS_KEY || settings?.poolBrainApiKey;
-      const companyId = process.env.POOLBRAIN_COMPANY_ID || settings?.poolBrainCompanyId;
-
-      if (!apiKey) {
-        return res.status(400).json({ error: "Pool Brain API key not configured" });
-      }
-
-      const client = new PoolBrainClient({
-        apiKey,
-        companyId: companyId || undefined,
-      });
-
-      const [poolsListData, poolsData, customersData, customerListData] = await Promise.all([
-        client.getPoolsList({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerPoolDetails({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerDetail({ limit: 1000 }).catch(() => ({ data: [] })),
-        client.getCustomerList({ limit: 1000 }).catch(() => ({ data: [] }))
-      ]);
-      
-      console.log("Sync data counts:", {
-        poolsList: poolsListData.data?.length || 0,
-        poolsDetails: poolsData.data?.length || 0,
-        customerDetails: customersData.data?.length || 0,
-        customerList: customerListData.data?.length || 0
-      });
-
-      const customerMap: Record<string, any> = {};
-      if (customersData.data && Array.isArray(customersData.data)) {
-        customersData.data.forEach((c: any) => {
-          customerMap[String(c.RecordID)] = c;
-        });
-      }
-      
-      if (customerListData.data && Array.isArray(customerListData.data)) {
-        customerListData.data.forEach((c: any) => {
-          const id = String(c.RecordID || c.CustomerID);
-          if (id && !customerMap[id]) {
-            customerMap[id] = c;
-          }
-        });
-      }
-
-      const poolsListMap: Record<string, any> = {};
-      if (poolsListData.data && Array.isArray(poolsListData.data)) {
-        poolsListData.data.forEach((p: any) => {
-          poolsListMap[String(p.RecordID || p.PoolID)] = p;
-        });
-      }
-
-      const pools = poolsData.data || [];
-      const channels = [];
-      
-      if (pools.length > 0) {
-        console.log("Sample pool data fields:", Object.keys(pools[0]));
-        console.log("Sample pool data:", JSON.stringify(pools[0], null, 2));
-      }
-      if (poolsListData.data?.length > 0) {
-        console.log("Sample pools_list data fields:", Object.keys(poolsListData.data[0]));
-      }
-      if (customersData.data?.length > 0) {
-        console.log("Sample customer_detail data fields:", Object.keys(customersData.data[0]));
-      }
-      
-      for (const pool of pools) {
-        const poolId = pool.RecordID || pool.PoolID;
-        if (!poolId) continue;
-
-        const customerId = String(pool.CustomerID);
-        const customer = customerMap[customerId];
-        const poolListEntry = poolsListMap[String(poolId)];
-        
-        let customerName = 
-          customer?.Name || 
-          customer?.CustomerName ||
-          customer?.CompanyName ||
-          poolListEntry?.CustomerName ||
-          pool.CustomerName || 
-          pool.Customer ||
-          null;
-        
-        if (!customerName && customer?.FirstName) {
-          customerName = `${customer.FirstName} ${customer.LastName || ''}`.trim();
-        }
-        
-        const poolName = 
-          pool.PoolName || 
-          poolListEntry?.PoolName || 
-          `Pool ${poolId}`;
-          
-        const address = 
-          pool.PoolAddress || 
-          poolListEntry?.Address ||
-          customer?.Address || 
-          null;
-        
-        const channel = await storage.upsertPropertyChannel({
-          propertyId: String(poolId),
-          propertyName: poolName,
-          customerName: customerName,
-          address: address,
-          description: null,
-        });
-        channels.push(channel);
-      }
-
-      res.json({ success: true, syncedCount: channels.length, channels });
-    } catch (error: any) {
-      console.error("Error syncing channels:", error);
-      res.status(500).json({ error: "Failed to sync channels" });
-    }
+  // Channel sync endpoint - Pool Brain API disabled, use internal data
+  app.post("/api/channels/sync", async (_req: Request, res: Response) => {
+    res.json({ 
+      success: true, 
+      syncedCount: 0, 
+      channels: [],
+      message: "Pool Brain sync disabled - use internal data"
+    });
   });
 
   app.get("/api/channels/:channelId/members", async (req: Request, res: Response) => {

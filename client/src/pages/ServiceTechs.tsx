@@ -47,6 +47,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { authStorage } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface TechnicianPropertyWithSchedule {
   id: string;
@@ -150,25 +152,33 @@ function getAvatarColor(name: string): string {
 function AddTechnicianModal({ 
   open, 
   onClose, 
-  onAdd 
+  onAdd,
+  isLoading,
 }: { 
   open: boolean; 
   onClose: () => void;
-  onAdd: (tech: { firstName: string; lastName: string; phone: string; email: string }) => void;
+  onAdd: (tech: { firstName: string; lastName: string; phone: string; email: string; password: string; role: string; region: string }) => void;
+  isLoading?: boolean;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("technician");
+  const [region, setRegion] = useState("");
 
   const handleSubmit = () => {
-    if (!firstName.trim() || !lastName.trim()) return;
-    onAdd({ firstName: firstName.trim(), lastName: lastName.trim(), phone, email });
-    setFirstName("");
-    setLastName("");
-    setPhone("");
-    setEmail("");
-    onClose();
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) return;
+    onAdd({ 
+      firstName: firstName.trim(), 
+      lastName: lastName.trim(), 
+      phone, 
+      email: email.trim(), 
+      password,
+      role, 
+      region 
+    });
   };
 
   const handleClose = () => {
@@ -176,8 +186,13 @@ function AddTechnicianModal({
     setLastName("");
     setPhone("");
     setEmail("");
+    setPassword("");
+    setRole("technician");
+    setRegion("");
     onClose();
   };
+
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && password.trim() && password.length >= 6;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -187,6 +202,9 @@ function AddTechnicianModal({
             <Plus className="w-5 h-5" />
             Add Service Technician
           </DialogTitle>
+          <DialogDescription className="text-blue-100 text-sm mt-1">
+            Create a technician account for the mobile app
+          </DialogDescription>
         </DialogHeader>
         
         <div className="p-6 space-y-4">
@@ -197,14 +215,14 @@ function AddTechnicianModal({
             <div className="flex-1 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  placeholder="First Name"
+                  placeholder="First Name *"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                   data-testid="input-first-name"
                 />
                 <Input
-                  placeholder="Last Name"
+                  placeholder="Last Name *"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
@@ -213,6 +231,30 @@ function AddTechnicianModal({
               </div>
             </div>
           </div>
+          
+          <Input
+            type="email"
+            placeholder="Email Address *"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+            data-testid="input-email"
+          />
+          
+          <div className="space-y-1">
+            <Input
+              type="password"
+              placeholder="Password * (min 6 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+              data-testid="input-password"
+            />
+            {password && password.length < 6 && (
+              <p className="text-xs text-orange-400">Password must be at least 6 characters</p>
+            )}
+          </div>
+          
           <Input
             placeholder="Phone Number"
             value={phone}
@@ -220,29 +262,45 @@ function AddTechnicianModal({
             className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
             data-testid="input-phone"
           />
+          
           <Input
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Region (optional)"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
             className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
-            data-testid="input-email"
+            data-testid="input-region"
           />
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full h-10 px-3 rounded-md bg-slate-800 border border-slate-600 text-white"
+              data-testid="select-role"
+            >
+              <option value="technician">Service Technician</option>
+              <option value="repair">Repair Tech</option>
+              <option value="supervisor">Supervisor</option>
+            </select>
+          </div>
           
           <div className="flex justify-end gap-3 pt-2">
             <Button 
               variant="ghost" 
               onClick={handleClose}
               className="text-slate-300 hover:text-white hover:bg-slate-700"
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={!firstName.trim() || !lastName.trim()}
+              disabled={!isFormValid || isLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-add-tech-submit"
             >
-              Add Technician
+              {isLoading ? "Creating..." : "Add Technician"}
             </Button>
           </div>
         </div>
@@ -3012,18 +3070,73 @@ export default function ServiceTechs() {
 
   const propertyCounts = propertyCountsData?.counts || {};
 
+  const { toast } = useToast();
+
   const addTechnicianMutation = useMutation({
-    mutationFn: async (tech: { firstName: string; lastName: string; phone: string; email: string }) => {
-      const res = await fetch("/api/technicians/add", {
+    mutationFn: async (tech: { firstName: string; lastName: string; phone: string; email: string; password: string; role: string; region: string }) => {
+      const token = authStorage.getToken();
+      
+      // Step 1: Create in API v2 (for mobile app login)
+      const v2Res = await fetch("/api/v2/users", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ 
+          firstName: tech.firstName,
+          lastName: tech.lastName,
+          email: tech.email,
+          password: tech.password,
+          phone: tech.phone || null,
+          role: tech.role || "technician",
+          region: tech.region || null,
+        }),
+      });
+      
+      if (!v2Res.ok) {
+        const errorData = await v2Res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || "Failed to add technician to API v2");
+      }
+      
+      const v2Data = await v2Res.json();
+      
+      // Step 2: Also create in local database (for operational data like routes, schedules)
+      const localRes = await fetch("/api/technicians/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...tech, role: "service", active: true }),
+        body: JSON.stringify({ 
+          firstName: tech.firstName,
+          lastName: tech.lastName,
+          phone: tech.phone || null,
+          email: tech.email,
+          role: tech.role === "technician" ? "service" : tech.role,
+          active: true,
+        }),
       });
-      if (!res.ok) throw new Error("Failed to add technician");
-      return res.json();
+      
+      // Don't fail if local creation fails - the user can still log in
+      if (!localRes.ok) {
+        console.warn("Failed to create technician in local database, but API v2 succeeded");
+      }
+      
+      return v2Data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/v2/users"] });
+      setShowAddModal(false);
+      toast({
+        title: "Technician Created",
+        description: "The technician can now log into the mobile app with their credentials.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Create Technician",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -3034,11 +3147,25 @@ export default function ServiceTechs() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to update technician");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || "Failed to update technician");
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
+      toast({
+        title: "Technician Updated",
+        description: "The technician's information has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Update Technician",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -3047,11 +3174,25 @@ export default function ServiceTechs() {
       const res = await fetch(`/api/technicians/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete technician");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || "Failed to delete technician");
+      }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/technicians/stored"] });
+      toast({
+        title: "Technician Deleted",
+        description: "The technician has been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Delete Technician",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -3426,6 +3567,7 @@ export default function ServiceTechs() {
                 )}
               </div>
               
+<<<<<<< HEAD
               {/* Pagination Controls */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-2 py-3 border-t border-slate-200 bg-white mt-auto">
@@ -3433,22 +3575,56 @@ export default function ServiceTechs() {
                     Showing {startIndex + 1}-{Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length}
                   </p>
                   <div className="flex items-center gap-2">
+=======
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
+                  <span className="text-sm text-slate-500">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredTechnicians.length)} of {filteredTechnicians.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+>>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
+<<<<<<< HEAD
                     >
                       Previous
                     </Button>
                     <span className="text-sm text-slate-600">
                       Page {currentPage} of {totalPages}
                     </span>
+=======
+                      className="h-8 px-3"
+                    >
+                      Previous
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).slice(
+                      Math.max(0, currentPage - 3),
+                      Math.min(totalPages, currentPage + 2)
+                    ).map(page => (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+>>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
+<<<<<<< HEAD
+=======
+                      className="h-8 px-3"
+>>>>>>> 3995a905cdef6cf02f94a56773f46b4e0f42ce5a
                     >
                       Next
                     </Button>
@@ -3653,6 +3829,7 @@ export default function ServiceTechs() {
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={(tech) => addTechnicianMutation.mutate(tech)}
+        isLoading={addTechnicianMutation.isPending}
       />
 
       <EditTechnicianModal

@@ -1,7 +1,18 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getMockChemicalUsage } from "@/lib/poolbrain-mock";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+function getMockChemicalUsage() {
+  return [
+    { day: "Mon", usage: 2.1, optimal: 2.5 },
+    { day: "Tue", usage: 2.3, optimal: 2.5 },
+    { day: "Wed", usage: 2.0, optimal: 2.5 },
+    { day: "Thu", usage: 2.4, optimal: 2.5 },
+    { day: "Fri", usage: 2.2, optimal: 2.5 },
+    { day: "Sat", usage: 2.6, optimal: 2.5 },
+    { day: "Sun", usage: 2.1, optimal: 2.5 },
+  ];
+}
 
 export function PoolHealthChart() {
   const data = getMockChemicalUsage();
@@ -49,27 +60,33 @@ export function PoolHealthChart() {
               tickLine={false} 
               axisLine={false}
               fontFamily="Rajdhani"
+              domain={[0, 4]}
             />
             <Tooltip 
-              contentStyle={{ backgroundColor: "rgba(10, 10, 20, 0.9)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontFamily: "Rajdhani" }}
-              itemStyle={{ color: "#fff" }}
+              contentStyle={{ 
+                backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                fontFamily: 'Rajdhani'
+              }}
+              labelStyle={{ color: '#fff' }}
             />
             <Area 
               type="monotone" 
               dataKey="usage" 
               stroke="hsl(190 100% 50%)" 
               strokeWidth={2}
-              fillOpacity={1} 
               fill="url(#colorUsage)" 
+              name="Actual"
             />
             <Area 
               type="monotone" 
               dataKey="optimal" 
               stroke="hsl(260 100% 65%)" 
               strokeWidth={2}
-              strokeDasharray="5 5"
-              fillOpacity={1} 
               fill="url(#colorOptimal)" 
+              name="Optimal"
+              strokeDasharray="5 5"
             />
           </AreaChart>
         </ResponsiveContainer>

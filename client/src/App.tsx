@@ -6,6 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IntroVideo } from "@/components/IntroVideo";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { useAuth } from "@/hooks/use-auth";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Intelligence from "@/pages/Intelligence";
 import Automations from "@/pages/Automations";
@@ -47,6 +49,7 @@ import Calendar from "@/pages/Calendar";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import Reports from "@/pages/Reports";
 import Invoices from "@/pages/Invoices";
+import AdminUsers from "@/pages/AdminUsers";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -94,12 +97,96 @@ function Router() {
       <Route path="/api-test" component={ApiSmokeTest} />
       <Route path="/reports" component={Reports} />
       <Route path="/invoices" component={Invoices} />
+      <Route path="/admin-users" component={AdminUsers} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 type AppStage = "intro" | "loading" | "ready";
+
+function ServiceTechRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={TechOpsLanding} />
+      <Route path="/tech-ops" component={TechOpsLanding} />
+      <Route path="/tech-ops/:type" component={TechOps} />
+      <Route path="/service" component={Service} />
+      <Route path="/chemicals" component={Chemicals} />
+      <Route path="/visits" component={Visits} />
+      <Route path="/route-history" component={RouteHistory} />
+      <Route path="/report-equipment" component={EquipmentReports} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function RepairTechRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={RepairQueue} />
+      <Route path="/repair-queue" component={RepairQueue} />
+      <Route path="/repairs" component={RepairsUnified} />
+      <Route path="/service-repairs" component={ServiceRepairs} />
+      <Route path="/estimates" component={Estimates} />
+      <Route path="/estimate-history" component={EstimateHistory} />
+      <Route path="/equipment" component={Equipment} />
+      <Route path="/fleet/inventory" component={TruckInventory} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function SupervisorRouter() {
+  return (
+    <Switch>
+      <Route path="/" component={TechSupervisor} />
+      <Route path="/tech-supervisor" component={TechSupervisor} />
+      <Route path="/supervisor-teams" component={SupervisorTeams} />
+      <Route path="/tech-services" component={ServiceTechs} />
+      <Route path="/tech-repairs" component={RepairTechs} />
+      <Route path="/scheduling" component={Scheduling} />
+      <Route path="/calendar" component={Calendar} />
+      <Route path="/visits" component={Visits} />
+      <Route path="/route-history" component={RouteHistory} />
+      <Route path="/emergencies" component={Emergencies} />
+      <Route path="/customers" component={Customers} />
+      <Route path="/accounts/:accountId" component={AccountDetails} />
+      <Route path="/reports" component={Reports} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function AuthenticatedApp() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Only admin users have access
+  if (user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-8">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
+          <p className="text-gray-600">Only admin users can access this application.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <Router />;
+}
 
 function App() {
   // Skip intro and loading screens - set directly to "ready"
@@ -117,7 +204,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <AuthenticatedApp />
       </TooltipProvider>
     </QueryClientProvider>
   );
