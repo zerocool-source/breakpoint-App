@@ -18,11 +18,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { 
-  FileText, Plus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
+  FileText, Plus, Minus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle, Flag
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle, Flag,
+  ZoomIn, ZoomOut, RotateCcw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -351,6 +352,10 @@ export default function Estimates() {
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
   const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
   const [lightboxImage, setLightboxImage] = useState<{ url: string; label: string; caption: string } | null>(null); // Photo lightbox state
+  const [lightboxZoom, setLightboxZoom] = useState(100); // Zoom level percentage
+  const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 }); // Pan position
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
@@ -1700,16 +1705,111 @@ export default function Estimates() {
   // Check if Under $500 filter is active
   const isUnder500FilterActive = valueFilter === "under500";
 
-  // Handle ESC key to close lightbox
+  // Handle keyboard shortcuts for lightbox
   useEffect(() => {
+    if (!lightboxImage) return;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && lightboxImage) {
-        setLightboxImage(null);
+      switch (e.key) {
+        case 'Escape':
+          closeLightbox();
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+          e.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          resetZoom();
+          break;
+        case 'ArrowUp':
+          if (lightboxZoom > 100) {
+            e.preventDefault();
+            setLightboxPan(p => ({ ...p, y: p.y + 50 }));
+          }
+          break;
+        case 'ArrowDown':
+          if (lightboxZoom > 100) {
+            e.preventDefault();
+            setLightboxPan(p => ({ ...p, y: p.y - 50 }));
+          }
+          break;
+        case 'ArrowLeft':
+          if (lightboxZoom > 100) {
+            e.preventDefault();
+            setLightboxPan(p => ({ ...p, x: p.x + 50 }));
+          }
+          break;
+        case 'ArrowRight':
+          if (lightboxZoom > 100) {
+            e.preventDefault();
+            setLightboxPan(p => ({ ...p, x: p.x - 50 }));
+          }
+          break;
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxImage]);
+  }, [lightboxImage, lightboxZoom]);
+
+  // Zoom helper functions
+  const zoomIn = () => setLightboxZoom(z => Math.min(z + 25, 300));
+  const zoomOut = () => setLightboxZoom(z => Math.max(z - 25, 50));
+  const resetZoom = () => {
+    setLightboxZoom(100);
+    setLightboxPan({ x: 0, y: 0 });
+  };
+  const closeLightbox = () => {
+    setLightboxImage(null);
+    setLightboxZoom(100);
+    setLightboxPan({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  // Mouse wheel zoom handler
+  const handleWheelZoom = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      zoomIn();
+    } else {
+      zoomOut();
+    }
+  };
+
+  // Double click to toggle zoom
+  const handleDoubleClick = () => {
+    if (lightboxZoom === 100) {
+      setLightboxZoom(200);
+    } else {
+      resetZoom();
+    }
+  };
+
+  // Drag handlers for panning
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (lightboxZoom > 100) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && lightboxZoom > 100) {
+      setLightboxPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   // Clear selection when filter changes
   useEffect(() => {
@@ -5408,50 +5508,104 @@ export default function Estimates() {
       {/* Photo Lightbox Modal */}
       {lightboxImage && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex flex-col animate-in fade-in duration-200"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
-          onClick={() => setLightboxImage(null)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setLightboxImage(null);
-          }}
+          onClick={closeLightbox}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
           tabIndex={0}
           role="dialog"
           aria-modal="true"
           aria-label="Photo lightbox"
         >
-          {/* Close Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setLightboxImage(null);
-            }}
-            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white hover:text-gray-300 transition-colors z-10"
-            aria-label="Close lightbox"
-            data-testid="button-close-lightbox"
+          {/* Top Controls Bar */}
+          <div 
+            className="flex items-center justify-end gap-2 px-4 py-3"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X className="w-8 h-8" />
-          </button>
+            {/* Zoom Controls */}
+            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-lg p-1">
+              <button
+                onClick={zoomOut}
+                disabled={lightboxZoom <= 50}
+                className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom out"
+                data-testid="button-zoom-out"
+              >
+                <Minus className="w-5 h-5" />
+              </button>
+              <span className="text-white text-sm font-medium min-w-[48px] text-center">
+                {lightboxZoom}%
+              </span>
+              <button
+                onClick={zoomIn}
+                disabled={lightboxZoom >= 300}
+                className="w-8 h-8 flex items-center justify-center text-white hover:bg-white/20 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom in"
+                data-testid="button-zoom-in"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Reset Button */}
+            <button
+              onClick={resetZoom}
+              className="flex items-center gap-1 px-3 py-1.5 bg-white/10 backdrop-blur-sm text-white text-sm hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Reset zoom"
+              data-testid="button-reset-zoom"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Reset</span>
+            </button>
+            
+            {/* Close Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                closeLightbox();
+              }}
+              className="w-10 h-10 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Close lightbox"
+              data-testid="button-close-lightbox"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
 
           {/* Image Container */}
           <div 
-            className="flex flex-col items-center justify-center w-full h-full px-8 py-12"
+            className="flex-1 flex flex-col items-center justify-center overflow-hidden px-8"
             onClick={(e) => e.stopPropagation()}
+            onWheel={handleWheelZoom}
           >
-            {/* Image */}
-            <img
-              src={lightboxImage.url}
-              alt={lightboxImage.label}
-              className="rounded-lg shadow-2xl"
+            {/* Zoomable/Pannable Image */}
+            <div 
+              className={`relative ${lightboxZoom > 100 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onDoubleClick={handleDoubleClick}
               style={{
-                maxWidth: '90vw',
-                maxHeight: '85vh',
-                minWidth: 'min(600px, 70vw)',
-                width: 'auto',
-                height: 'auto',
-                objectFit: 'contain'
+                transform: `scale(${lightboxZoom / 100}) translate(${lightboxPan.x / (lightboxZoom / 100)}px, ${lightboxPan.y / (lightboxZoom / 100)}px)`,
+                transition: isDragging ? 'none' : 'transform 0.2s ease-out'
               }}
-              data-testid="img-lightbox-photo"
-            />
+            >
+              <img
+                src={lightboxImage.url}
+                alt={lightboxImage.label}
+                className="rounded-lg shadow-2xl select-none"
+                style={{
+                  maxWidth: '85vw',
+                  maxHeight: '70vh',
+                  minWidth: 'min(600px, 70vw)',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain'
+                }}
+                draggable={false}
+                data-testid="img-lightbox-photo"
+              />
+            </div>
             
             {/* Caption Area */}
             <div className="mt-6 text-center">
@@ -5463,6 +5617,9 @@ export default function Estimates() {
               </div>
               <p className="text-gray-300 text-base max-w-lg italic">
                 "{lightboxImage.caption}"
+              </p>
+              <p className="text-gray-500 text-xs mt-2">
+                Scroll to zoom • Double-click to toggle zoom • Drag to pan when zoomed
               </p>
             </div>
           </div>

@@ -1,0 +1,59 @@
+On the photo lightbox/popup, add a zoom in/out tool for the images:
+
+**ADD ZOOM FUNCTIONALITY:**
+
+**1. ZOOM CONTROLS:**
+- Add zoom in (+) button
+- Add zoom out (-) button
+- Add reset/fit to screen button
+- Display current zoom level (e.g., "100%", "150%", "200%")
+
+**2. ZOOM METHODS:**
+- Click zoom in button: Increase zoom by 25% each click
+- Click zoom out button: Decrease zoom by 25% each click
+- Mouse scroll wheel: Zoom in/out
+- Double-click on image: Toggle between fit-to-screen and 100% zoom
+- Pinch to zoom on touch devices
+
+**3. PAN/DRAG WHEN ZOOMED:**
+- When image is zoomed in beyond the container, allow click and drag to pan around the image
+- Show grab cursor when hovering over zoomed image
+- Show grabbing cursor when dragging
+
+**LIGHTBOX LAYOUT WITH ZOOM CONTROLS:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                              [−] [100%] [+] [⟲ Reset]     [X] │
+│                                                                                 │
+│    ┌─────────────────────────────────────────────────────────────────────┐     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                    [ZOOMABLE IMAGE]                                 │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    └─────────────────────────────────────────────────────────────────────┘     │
+│                                                                                 │
+│                              📷 After                                          │
+│                   "New 1.5HP motor installed and running"                      │
+│                                                                                 │
+│                           [← Prev]  [Next →]                                   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**ZOOM CONTROL STYLING:**
+- Buttons: White background, dark icons, rounded corners
+- Position: Top of lightbox, near the X close button
+- Zoom level display: Show percentage (50%, 100%, 150%, 200%, etc.)
+- Min zoom: 50%
+- Max zoom: 300%
+- Default: Fit to screen
+
+**KEYBOARD SHORTCUTS:**
+- `+` or `=` key: Zoom in
+- `-` key: Zoom out
+- `0` key: Reset to fit
+- Arrow keys: Pan when zoomed in
+- ESC: Close lightbox
