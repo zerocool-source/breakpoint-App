@@ -1,0 +1,51 @@
+On the photo lightbox/popup, make the image display much bigger:
+
+**FIX THE IMAGE SIZE:**
+- Currently the image is showing too small in the lightbox
+- Make the image fill more of the screen
+
+**LIGHTBOX IMAGE SIZING:**
+```css
+.lightbox-image {
+  max-width: 90vw;    /* 90% of viewport width */
+  max-height: 85vh;   /* 85% of viewport height */
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+```
+
+**LIGHTBOX LAYOUT:**
+- Image should be centered on screen
+- Image should be as large as possible while maintaining aspect ratio
+- Minimum size: At least 600px wide or 70% of screen width
+- Caption and label below the image
+- X close button in top right corner of the overlay (not the image)
+
+**EXAMPLE:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                            [X] │
+│                                                                                 │
+│    ┌─────────────────────────────────────────────────────────────────────┐     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                    [LARGE FULL SIZE IMAGE]                          │     │
+│    │                         (90vw x 85vh)                               │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    └─────────────────────────────────────────────────────────────────────┘     │
+│                                                                                 │
+│                              📷 After                                          │
+│                   "New 1.5HP motor installed and running"                      │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**MAKE SURE:**
+- Image takes up most of the screen space
+- Image is sharp and not pixelated
+- Caption is visible below the large image
+- X button is clearly visible in the corner

@@ -5434,26 +5434,34 @@ export default function Estimates() {
 
           {/* Image Container */}
           <div 
-            className="flex flex-col items-center max-w-[90vw] max-h-[90vh]"
+            className="flex flex-col items-center justify-center w-full h-full px-8 py-12"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Image */}
             <img
               src={lightboxImage.url}
               alt={lightboxImage.label}
-              className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              className="rounded-lg shadow-2xl"
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '85vh',
+                minWidth: 'min(600px, 70vw)',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
               data-testid="img-lightbox-photo"
             />
             
             {/* Caption Area */}
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <div className="flex items-center justify-center gap-2 text-white mb-2">
-                <Camera className="w-4 h-4" />
-                <span className={`font-semibold text-lg ${lightboxImage.label === 'Before' ? 'text-orange-400' : 'text-green-400'}`}>
+                <Camera className="w-5 h-5" />
+                <span className={`font-bold text-xl ${lightboxImage.label === 'Before' ? 'text-orange-400' : 'text-green-400'}`}>
                   {lightboxImage.label}
                 </span>
               </div>
-              <p className="text-gray-300 text-sm max-w-md italic">
+              <p className="text-gray-300 text-base max-w-lg italic">
                 "{lightboxImage.caption}"
               </p>
             </div>
