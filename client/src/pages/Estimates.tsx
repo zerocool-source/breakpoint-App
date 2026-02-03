@@ -350,6 +350,7 @@ export default function Estimates() {
   const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
   const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; label: string; caption: string } | null>(null); // Photo lightbox state
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
@@ -1698,6 +1699,17 @@ export default function Estimates() {
   
   // Check if Under $500 filter is active
   const isUnder500FilterActive = valueFilter === "under500";
+
+  // Handle ESC key to close lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && lightboxImage) {
+        setLightboxImage(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxImage]);
 
   // Clear selection when filter changes
   useEffect(() => {
@@ -3506,62 +3518,84 @@ export default function Estimates() {
                         <div className="grid grid-cols-2 gap-6">
                           {/* Before Photo */}
                           <div className="space-y-2">
-                            <div className="relative group cursor-pointer" onClick={() => {
-                              const beforeUrl = formData.photos?.[0] || "https://placehold.co/400x300/f97316/white?text=Before+Photo";
-                              window.open(beforeUrl, '_blank');
-                            }}>
-                              <img
-                                src={formData.photos?.[0] || "https://placehold.co/400x300/f97316/white?text=Before+Photo"}
-                                alt="Before"
-                                className="w-full h-40 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
-                              />
-                              <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded font-medium">
-                                BEFORE
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-slate-600">
-                              <Camera className="w-3 h-3" />
-                              <span className="font-medium">Before</span>
-                            </div>
-                            <p className="text-xs text-slate-500 italic">
-                              {formData.title?.includes("pump") ? "Old corroded motor with visible rust and wear" :
-                               formData.title?.includes("Filter") ? "Dirty/clogged filter cartridges" :
-                               formData.title?.includes("Heater") ? "Corroded pilot assembly and burner" :
-                               formData.title?.includes("Skimmer") ? "Cracked skimmer basket" :
-                               formData.title?.includes("Chemical") ? "Leaking chemical feeder connection" :
-                               formData.title?.includes("light") ? "Old light fixture with water damage" :
-                               "Equipment condition before repair"}
-                            </p>
+                            {(() => {
+                              const beforeUrl = formData.photos?.[0] || "https://placehold.co/800x600/f97316/white?text=Before+Photo";
+                              const beforeCaption = formData.title?.includes("pump") ? "Old corroded motor with visible rust and wear" :
+                                formData.title?.includes("Filter") ? "Dirty/clogged filter cartridges" :
+                                formData.title?.includes("Heater") ? "Corroded pilot assembly and burner" :
+                                formData.title?.includes("Skimmer") ? "Cracked skimmer basket" :
+                                formData.title?.includes("Chemical") ? "Leaking chemical feeder connection" :
+                                formData.title?.includes("light") ? "Old light fixture with water damage" :
+                                "Equipment condition before repair";
+                              return (
+                                <>
+                                  <div 
+                                    className="relative group cursor-pointer" 
+                                    onClick={() => setLightboxImage({ url: beforeUrl, label: "Before", caption: beforeCaption })}
+                                  >
+                                    <img
+                                      src={beforeUrl}
+                                      alt="Before"
+                                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors hover:shadow-lg"
+                                    />
+                                    <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs px-2 py-1 rounded font-medium">
+                                      BEFORE
+                                    </div>
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
+                                      <span className="opacity-0 group-hover:opacity-100 text-white bg-black/50 px-2 py-1 rounded text-xs transition-opacity">
+                                        Click to enlarge
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-slate-600">
+                                    <Camera className="w-3 h-3" />
+                                    <span className="font-medium">Before</span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 italic">{beforeCaption}</p>
+                                </>
+                              );
+                            })()}
                           </div>
                           
                           {/* After Photo */}
                           <div className="space-y-2">
-                            <div className="relative group cursor-pointer" onClick={() => {
-                              const afterUrl = formData.photos?.[1] || "https://placehold.co/400x300/22c55e/white?text=After+Photo";
-                              window.open(afterUrl, '_blank');
-                            }}>
-                              <img
-                                src={formData.photos?.[1] || "https://placehold.co/400x300/22c55e/white?text=After+Photo"}
-                                alt="After"
-                                className="w-full h-40 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-colors"
-                              />
-                              <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded font-medium">
-                                AFTER
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-slate-600">
-                              <Camera className="w-3 h-3" />
-                              <span className="font-medium">After</span>
-                            </div>
-                            <p className="text-xs text-slate-500 italic">
-                              {formData.title?.includes("pump") ? "New 1.5HP motor installed and running" :
-                               formData.title?.includes("Filter") ? "New filter cartridges installed" :
-                               formData.title?.includes("Heater") ? "New thermocouple and clean burner" :
-                               formData.title?.includes("Skimmer") ? "New basket and weir door installed" :
-                               formData.title?.includes("Chemical") ? "New tubing and check valve installed" :
-                               formData.title?.includes("light") ? "New LED pool light glowing" :
-                               "Equipment condition after repair"}
-                            </p>
+                            {(() => {
+                              const afterUrl = formData.photos?.[1] || "https://placehold.co/800x600/22c55e/white?text=After+Photo";
+                              const afterCaption = formData.title?.includes("pump") ? "New 1.5HP motor installed and running" :
+                                formData.title?.includes("Filter") ? "New filter cartridges installed" :
+                                formData.title?.includes("Heater") ? "New thermocouple and clean burner" :
+                                formData.title?.includes("Skimmer") ? "New basket and weir door installed" :
+                                formData.title?.includes("Chemical") ? "New tubing and check valve installed" :
+                                formData.title?.includes("light") ? "New LED pool light glowing" :
+                                "Equipment condition after repair";
+                              return (
+                                <>
+                                  <div 
+                                    className="relative group cursor-pointer" 
+                                    onClick={() => setLightboxImage({ url: afterUrl, label: "After", caption: afterCaption })}
+                                  >
+                                    <img
+                                      src={afterUrl}
+                                      alt="After"
+                                      className="w-full h-40 object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-colors hover:shadow-lg"
+                                    />
+                                    <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded font-medium">
+                                      AFTER
+                                    </div>
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg flex items-center justify-center">
+                                      <span className="opacity-0 group-hover:opacity-100 text-white bg-black/50 px-2 py-1 rounded text-xs transition-opacity">
+                                        Click to enlarge
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-slate-600">
+                                    <Camera className="w-3 h-3" />
+                                    <span className="font-medium">After</span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 italic">{afterCaption}</p>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -5370,6 +5404,62 @@ export default function Estimates() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Photo Lightbox Modal */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-200"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}
+          onClick={() => setLightboxImage(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setLightboxImage(null);
+          }}
+          tabIndex={0}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo lightbox"
+        >
+          {/* Close Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxImage(null);
+            }}
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white hover:text-gray-300 transition-colors z-10"
+            aria-label="Close lightbox"
+            data-testid="button-close-lightbox"
+          >
+            <X className="w-8 h-8" />
+          </button>
+
+          {/* Image Container */}
+          <div 
+            className="flex flex-col items-center max-w-[90vw] max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Image */}
+            <img
+              src={lightboxImage.url}
+              alt={lightboxImage.label}
+              className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
+              data-testid="img-lightbox-photo"
+            />
+            
+            {/* Caption Area */}
+            <div className="mt-4 text-center">
+              <div className="flex items-center justify-center gap-2 text-white mb-2">
+                <Camera className="w-4 h-4" />
+                <span className={`font-semibold text-lg ${lightboxImage.label === 'Before' ? 'text-orange-400' : 'text-green-400'}`}>
+                  {lightboxImage.label}
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm max-w-md italic">
+                "{lightboxImage.caption}"
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
