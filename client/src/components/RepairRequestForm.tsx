@@ -263,6 +263,21 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
               )}
             </div>
 
+            {/* Work Description */}
+            <div className="p-4 bg-slate-50 rounded-lg border">
+              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                <ClipboardList className="w-4 h-4 text-slate-500" />
+                Description of Work Needed
+              </Label>
+              <Textarea
+                value={formData.officeNotes}
+                onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
+                placeholder="Describe the repair work needed, any special instructions, or details for the technician..."
+                className="min-h-[100px] resize-none"
+                data-testid="textarea-work-description"
+              />
+            </div>
+
             {/* Scheduled Time */}
             <div className="p-4 bg-slate-50 rounded-lg border">
               <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
