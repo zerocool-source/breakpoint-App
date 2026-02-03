@@ -352,6 +352,8 @@ export default function Estimates() {
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
   const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
   const [lightboxImage, setLightboxImage] = useState<{ url: string; label: string; caption: string } | null>(null); // Photo lightbox state
+  const [lightboxImages, setLightboxImages] = useState<Array<{ url: string; label: string; caption: string }>>([]); // All images for navigation
+  const [lightboxIndex, setLightboxIndex] = useState(0); // Current image index
   const [lightboxZoom, setLightboxZoom] = useState(100); // Zoom level percentage
   const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 }); // Pan position
   const [isDragging, setIsDragging] = useState(false);
@@ -1727,6 +1729,22 @@ export default function Estimates() {
           e.preventDefault();
           resetZoom();
           break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (lightboxZoom > 100) {
+            setLightboxPan(p => ({ ...p, x: p.x + 50 }));
+          } else {
+            prevImage();
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (lightboxZoom > 100) {
+            setLightboxPan(p => ({ ...p, x: p.x - 50 }));
+          } else {
+            nextImage();
+          }
+          break;
         case 'ArrowUp':
           if (lightboxZoom > 100) {
             e.preventDefault();
@@ -1739,23 +1757,11 @@ export default function Estimates() {
             setLightboxPan(p => ({ ...p, y: p.y - 50 }));
           }
           break;
-        case 'ArrowLeft':
-          if (lightboxZoom > 100) {
-            e.preventDefault();
-            setLightboxPan(p => ({ ...p, x: p.x + 50 }));
-          }
-          break;
-        case 'ArrowRight':
-          if (lightboxZoom > 100) {
-            e.preventDefault();
-            setLightboxPan(p => ({ ...p, x: p.x - 50 }));
-          }
-          break;
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxImage, lightboxZoom]);
+  }, [lightboxImage, lightboxZoom, lightboxImages, lightboxIndex]);
 
   // Zoom helper functions
   const zoomIn = () => setLightboxZoom(z => Math.min(z + 25, 300));
@@ -1766,9 +1772,42 @@ export default function Estimates() {
   };
   const closeLightbox = () => {
     setLightboxImage(null);
+    setLightboxImages([]);
+    setLightboxIndex(0);
     setLightboxZoom(100);
     setLightboxPan({ x: 0, y: 0 });
     setIsDragging(false);
+  };
+
+  // Navigate to previous image
+  const prevImage = () => {
+    if (lightboxImages.length > 1 && lightboxIndex > 0) {
+      const newIndex = lightboxIndex - 1;
+      setLightboxIndex(newIndex);
+      setLightboxImage(lightboxImages[newIndex]);
+      setLightboxZoom(100);
+      setLightboxPan({ x: 0, y: 0 });
+    }
+  };
+
+  // Navigate to next image
+  const nextImage = () => {
+    if (lightboxImages.length > 1 && lightboxIndex < lightboxImages.length - 1) {
+      const newIndex = lightboxIndex + 1;
+      setLightboxIndex(newIndex);
+      setLightboxImage(lightboxImages[newIndex]);
+      setLightboxZoom(100);
+      setLightboxPan({ x: 0, y: 0 });
+    }
+  };
+
+  // Open lightbox with multiple images
+  const openLightbox = (images: Array<{ url: string; label: string; caption: string }>, startIndex: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(startIndex);
+    setLightboxImage(images[startIndex]);
+    setLightboxZoom(100);
+    setLightboxPan({ x: 0, y: 0 });
   };
 
   // Mouse wheel zoom handler
@@ -3616,22 +3655,34 @@ export default function Estimates() {
                       </div>
                       <div className="p-4">
                         <div className="grid grid-cols-2 gap-6">
-                          {/* Before Photo */}
-                          <div className="space-y-2">
-                            {(() => {
-                              const beforeUrl = formData.photos?.[0] || "https://placehold.co/800x600/f97316/white?text=Before+Photo";
-                              const beforeCaption = formData.title?.includes("pump") ? "Old corroded motor with visible rust and wear" :
-                                formData.title?.includes("Filter") ? "Dirty/clogged filter cartridges" :
-                                formData.title?.includes("Heater") ? "Corroded pilot assembly and burner" :
-                                formData.title?.includes("Skimmer") ? "Cracked skimmer basket" :
-                                formData.title?.includes("Chemical") ? "Leaking chemical feeder connection" :
-                                formData.title?.includes("light") ? "Old light fixture with water damage" :
-                                "Equipment condition before repair";
-                              return (
-                                <>
+                          {(() => {
+                            const beforeUrl = formData.photos?.[0] || "https://placehold.co/800x600/f97316/white?text=Before+Photo";
+                            const beforeCaption = formData.title?.includes("pump") ? "Old corroded motor with visible rust and wear" :
+                              formData.title?.includes("Filter") ? "Dirty/clogged filter cartridges" :
+                              formData.title?.includes("Heater") ? "Corroded pilot assembly and burner" :
+                              formData.title?.includes("Skimmer") ? "Cracked skimmer basket" :
+                              formData.title?.includes("Chemical") ? "Leaking chemical feeder connection" :
+                              formData.title?.includes("light") ? "Old light fixture with water damage" :
+                              "Equipment condition before repair";
+                            const afterUrl = formData.photos?.[1] || "https://placehold.co/800x600/22c55e/white?text=After+Photo";
+                            const afterCaption = formData.title?.includes("pump") ? "New 1.5HP motor installed and running" :
+                              formData.title?.includes("Filter") ? "New filter cartridges installed" :
+                              formData.title?.includes("Heater") ? "New thermocouple and clean burner" :
+                              formData.title?.includes("Skimmer") ? "New basket and weir door installed" :
+                              formData.title?.includes("Chemical") ? "New tubing and check valve installed" :
+                              formData.title?.includes("light") ? "New LED pool light glowing" :
+                              "Equipment condition after repair";
+                            const allImages = [
+                              { url: beforeUrl, label: "Before", caption: beforeCaption },
+                              { url: afterUrl, label: "After", caption: afterCaption }
+                            ];
+                            return (
+                              <>
+                                {/* Before Photo */}
+                                <div className="space-y-2">
                                   <div 
                                     className="relative group cursor-pointer" 
-                                    onClick={() => setLightboxImage({ url: beforeUrl, label: "Before", caption: beforeCaption })}
+                                    onClick={() => openLightbox(allImages, 0)}
                                   >
                                     <img
                                       src={beforeUrl}
@@ -3652,27 +3703,13 @@ export default function Estimates() {
                                     <span className="font-medium">Before</span>
                                   </div>
                                   <p className="text-xs text-slate-500 italic">{beforeCaption}</p>
-                                </>
-                              );
-                            })()}
-                          </div>
-                          
-                          {/* After Photo */}
-                          <div className="space-y-2">
-                            {(() => {
-                              const afterUrl = formData.photos?.[1] || "https://placehold.co/800x600/22c55e/white?text=After+Photo";
-                              const afterCaption = formData.title?.includes("pump") ? "New 1.5HP motor installed and running" :
-                                formData.title?.includes("Filter") ? "New filter cartridges installed" :
-                                formData.title?.includes("Heater") ? "New thermocouple and clean burner" :
-                                formData.title?.includes("Skimmer") ? "New basket and weir door installed" :
-                                formData.title?.includes("Chemical") ? "New tubing and check valve installed" :
-                                formData.title?.includes("light") ? "New LED pool light glowing" :
-                                "Equipment condition after repair";
-                              return (
-                                <>
+                                </div>
+                                
+                                {/* After Photo */}
+                                <div className="space-y-2">
                                   <div 
                                     className="relative group cursor-pointer" 
-                                    onClick={() => setLightboxImage({ url: afterUrl, label: "After", caption: afterCaption })}
+                                    onClick={() => openLightbox(allImages, 1)}
                                   >
                                     <img
                                       src={afterUrl}
@@ -3693,10 +3730,10 @@ export default function Estimates() {
                                     <span className="font-medium">After</span>
                                   </div>
                                   <p className="text-xs text-slate-500 italic">{afterCaption}</p>
-                                </>
-                              );
-                            })()}
-                          </div>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -5652,6 +5689,51 @@ export default function Estimates() {
                 draggable={false}
                 data-testid="img-lightbox-photo"
               />
+
+            {/* Navigation Arrows */}
+            {lightboxImages.length > 1 && (
+              <>
+                {/* Left Arrow */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    prevImage();
+                  }}
+                  disabled={lightboxIndex === 0}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                  aria-label="Previous image"
+                  data-testid="button-prev-image"
+                >
+                  <ChevronLeft className="w-8 h-8 text-white" />
+                </button>
+
+                {/* Right Arrow */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    nextImage();
+                  }}
+                  disabled={lightboxIndex === lightboxImages.length - 1}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                  aria-label="Next image"
+                  data-testid="button-next-image"
+                >
+                  <ChevronRight className="w-8 h-8 text-white" />
+                </button>
+
+                {/* Image Counter */}
+                <div 
+                  className="absolute bottom-20 right-5 px-3 py-1.5 rounded-lg text-white text-sm font-medium"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                >
+                  {lightboxIndex + 1} / {lightboxImages.length}
+                </div>
+              </>
+            )}
 
             {/* Caption - Positioned at bottom */}
             <div 

@@ -1,0 +1,57 @@
+The lightbox is now showing larger images. Now add the zoom controls and make sure all functionality works:
+
+**ADD ZOOM CONTROLS TO THE CURRENT LIGHTBOX:**
+
+Position the zoom controls at the top right of the image (inside the lightbox):
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                 │
+│    ┌─────────────────────────────────────────────────────────────────────┐     │
+│    │                                        [−] [100%] [+] [Reset] [X]  │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                    [LARGE IMAGE - CURRENT SIZE IS GOOD]             │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │  [<]                                                          [>]  │     │
+│    │                                                                     │     │
+│    │                                                                     │     │
+│    │                                            2 / 2                    │     │
+│    └─────────────────────────────────────────────────────────────────────┘     │
+│                                                                                 │
+│                              📷 After                                          │
+│                   "New 1.5HP motor installed and running"                      │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**ADD THESE FEATURES:**
+
+1. **Zoom Controls Bar (top right of image):**
+   - − button (zoom out)
+   - Percentage display (100%, 150%, 200%, etc.)
+   - + button (zoom in)
+   - Reset button
+   - X close button
+
+2. **Keep the existing navigation arrows (< >)**
+
+3. **Keep the image counter (2 / 2)**
+
+4. **Add caption below the image:**
+   - Show "Before" or "After" label
+   - Show the description text
+
+5. **Zoom Functionality:**
+   - + button: Zoom in by 50% per click
+   - − button: Zoom out by 50% per click
+   - Max zoom: 400%
+   - Min zoom: 50%
+   - Mouse scroll wheel to zoom
+   - Double-click to toggle between 100% and 200%
+   - Drag to pan when zoomed in past 100%
+
+**CURRENT IMAGE SIZE IS GOOD** - keep it this large by default!
