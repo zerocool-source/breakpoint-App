@@ -206,6 +206,55 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
 
+// Pre-defined parts, labor, and services for line item dropdown
+interface CatalogItem {
+  name: string;
+  category: "parts" | "labor" | "services";
+  defaultRate: number;
+}
+
+const partsCatalog: CatalogItem[] = [
+  // Parts
+  { name: "Pool Pump Motor (0.5HP)", category: "parts", defaultRate: 185.00 },
+  { name: "Pool Pump Motor (1.0HP)", category: "parts", defaultRate: 245.00 },
+  { name: "Pool Pump Motor (1.5HP)", category: "parts", defaultRate: 285.00 },
+  { name: "Pool Pump Motor (2.0HP)", category: "parts", defaultRate: 325.00 },
+  { name: "Filter Cartridge - Small", category: "parts", defaultRate: 45.00 },
+  { name: "Filter Cartridge - Large", category: "parts", defaultRate: 85.00 },
+  { name: "Skimmer Basket", category: "parts", defaultRate: 18.00 },
+  { name: "Weir Door", category: "parts", defaultRate: 22.00 },
+  { name: "Thermocouple Assembly", category: "parts", defaultRate: 65.00 },
+  { name: "O-Ring Set", category: "parts", defaultRate: 12.00 },
+  { name: "Check Valve", category: "parts", defaultRate: 38.00 },
+  { name: "Chemical Tubing (10ft)", category: "parts", defaultRate: 15.00 },
+  { name: "LED Pool Light Fixture", category: "parts", defaultRate: 175.00 },
+  { name: "Salt Cell", category: "parts", defaultRate: 450.00 },
+  { name: "Pressure Gauge", category: "parts", defaultRate: 28.00 },
+  { name: "Multiport Valve", category: "parts", defaultRate: 195.00 },
+  { name: "Impeller", category: "parts", defaultRate: 55.00 },
+  { name: "Motor Seal Kit", category: "parts", defaultRate: 45.00 },
+  { name: "Gasket Set", category: "parts", defaultRate: 32.00 },
+  { name: "Timer/Control Board", category: "parts", defaultRate: 125.00 },
+  { name: "Pump Lid", category: "parts", defaultRate: 48.00 },
+  { name: "Filter Grid Assembly", category: "parts", defaultRate: 220.00 },
+  // Labor
+  { name: "Labor - Standard Rate", category: "labor", defaultRate: 85.00 },
+  { name: "Labor - Emergency Rate", category: "labor", defaultRate: 125.00 },
+  { name: "Labor - After Hours", category: "labor", defaultRate: 150.00 },
+  { name: "Diagnostic Fee", category: "labor", defaultRate: 75.00 },
+  { name: "Service Call Fee", category: "labor", defaultRate: 65.00 },
+  { name: "Pool Draining/Refill", category: "labor", defaultRate: 250.00 },
+  // Services
+  { name: "Equipment Installation", category: "services", defaultRate: 150.00 },
+  { name: "Equipment Repair", category: "services", defaultRate: 120.00 },
+  { name: "Full Inspection", category: "services", defaultRate: 95.00 },
+  { name: "Winterization", category: "services", defaultRate: 175.00 },
+  { name: "Opening Service", category: "services", defaultRate: 185.00 },
+  { name: "Acid Wash", category: "services", defaultRate: 350.00 },
+  { name: "Tile Cleaning", category: "services", defaultRate: 125.00 },
+  { name: "Filter Cleaning", category: "services", defaultRate: 85.00 },
+];
+
 const emptyFormData: EstimateFormData = {
   propertyId: "",
   propertyName: "",
@@ -3360,8 +3409,8 @@ export default function Estimates() {
                     <div className="border rounded-lg overflow-hidden">
                       <div className="bg-slate-100 px-4 py-3 border-b flex items-center justify-between">
                         <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4" />
-                          Line Items
+                          <Tag className="w-4 h-4" />
+                          Line Items / Parts
                         </h4>
                         <div className="flex gap-2">
                           <Button
@@ -3380,59 +3429,84 @@ export default function Estimates() {
                             data-testid="button-add-line"
                           >
                             <Plus className="w-3 h-3 mr-1" />
-                            Add product or service
+                            + Add Item
                           </Button>
                         </div>
                       </div>
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-50">
-                            <TableHead className="w-10 font-semibold">#</TableHead>
-                            <TableHead className="w-28 font-semibold">Service Date</TableHead>
-                            <TableHead className="font-semibold">Product/Service</TableHead>
-                            <TableHead className="w-24 font-semibold">SKU</TableHead>
+                            <TableHead className="w-[200px] font-semibold">Item/Part</TableHead>
                             <TableHead className="font-semibold">Description</TableHead>
                             <TableHead className="w-16 font-semibold text-center">Qty</TableHead>
-                            <TableHead className="w-24 font-semibold text-right">Rate</TableHead>
-                            <TableHead className="w-24 font-semibold text-right">Amount</TableHead>
-                            <TableHead className="w-12 font-semibold text-center">Tax</TableHead>
+                            <TableHead className="w-28 font-semibold text-right">Unit Price</TableHead>
+                            <TableHead className="w-28 font-semibold text-right">Amount</TableHead>
                             <TableHead className="w-10"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {formData.items.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={10} className="text-center py-8 text-slate-400">
-                                No line items yet. Click "Add product or service" to add items.
+                              <TableCell colSpan={6} className="text-center py-8 text-slate-400">
+                                No line items yet. Click "+ Add Item" to add parts and services.
                               </TableCell>
                             </TableRow>
                           ) : (
                             formData.items.map((item, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell className="text-center font-medium text-slate-500">{item.lineNumber}</TableCell>
+                              <TableRow key={idx} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
                                 <TableCell>
-                                  <Input
-                                    type="date"
-                                    value={item.serviceDate || ""}
-                                    onChange={(e) => updateLineItem(idx, { serviceDate: e.target.value })}
-                                    className="h-8 text-xs"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
+                                  <Select
                                     value={item.productService}
-                                    onChange={(e) => updateLineItem(idx, { productService: e.target.value })}
-                                    placeholder="Product/Service"
-                                    className="h-8 text-sm"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    value={item.sku || ""}
-                                    onChange={(e) => updateLineItem(idx, { sku: e.target.value })}
-                                    placeholder="SKU"
-                                    className="h-8 text-xs"
-                                  />
+                                    onValueChange={(value) => {
+                                      const catalogItem = partsCatalog.find(p => p.name === value);
+                                      updateLineItem(idx, { 
+                                        productService: value,
+                                        description: value,
+                                        rate: catalogItem?.defaultRate || item.rate,
+                                        amount: (catalogItem?.defaultRate || item.rate) * item.quantity
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-sm">
+                                      <SelectValue placeholder="Select item..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[300px]">
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50">Parts</div>
+                                      {partsCatalog.filter(p => p.category === "parts").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-sm">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Labor</div>
+                                      {partsCatalog.filter(p => p.category === "labor").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-sm">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Services</div>
+                                      {partsCatalog.filter(p => p.category === "services").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-sm">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Custom</div>
+                                      <SelectItem value="__custom__" className="text-sm italic text-slate-500">
+                                        Enter custom item...
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  {item.productService === "__custom__" && (
+                                    <Input
+                                      value={item.description}
+                                      onChange={(e) => updateLineItem(idx, { 
+                                        productService: e.target.value,
+                                        description: e.target.value 
+                                      })}
+                                      placeholder="Enter custom item..."
+                                      className="h-8 text-sm mt-1"
+                                      autoFocus
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <Input
@@ -3452,32 +3526,29 @@ export default function Estimates() {
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <Input
-                                    type="number"
-                                    value={item.rate}
-                                    onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
-                                    className="h-8 text-sm text-right"
-                                    min={0}
-                                    step={0.01}
-                                  />
+                                  <div className="relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                                    <Input
+                                      type="number"
+                                      value={item.rate}
+                                      onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
+                                      className="h-8 text-sm text-right pl-6"
+                                      min={0}
+                                      step={0.01}
+                                    />
+                                  </div>
                                 </TableCell>
-                                <TableCell className="text-right font-medium">
+                                <TableCell className="text-right font-medium text-slate-700">
                                   {formatCurrency(item.amount)}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Checkbox
-                                    checked={item.taxable}
-                                    onCheckedChange={(checked) => updateLineItem(idx, { taxable: !!checked })}
-                                  />
                                 </TableCell>
                                 <TableCell>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7"
+                                    className="h-7 w-7 hover:bg-red-50"
                                     onClick={() => removeLineItem(idx)}
                                   >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                    <X className="w-4 h-4 text-red-500" />
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -3485,6 +3556,35 @@ export default function Estimates() {
                           )}
                         </TableBody>
                       </Table>
+                      
+                      {/* Totals Section */}
+                      <div className="border-t bg-slate-50 px-4 py-3">
+                        <div className="flex justify-end">
+                          <div className="w-64 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600">Subtotal:</span>
+                              <span className="font-medium">{formatCurrency(formData.items.reduce((sum, item) => sum + item.amount, 0))}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600">Tax ({formData.salesTaxRate}%):</span>
+                              <span className="font-medium">{formatCurrency(
+                                formData.items
+                                  .filter(item => item.taxable)
+                                  .reduce((sum, item) => sum + item.amount, 0) * (formData.salesTaxRate / 100)
+                              )}</span>
+                            </div>
+                            <div className="flex justify-between text-base font-semibold border-t pt-2">
+                              <span className="text-slate-900">TOTAL:</span>
+                              <span className="text-[#0078D4]">{formatCurrency(
+                                formData.items.reduce((sum, item) => sum + item.amount, 0) +
+                                formData.items
+                                  .filter(item => item.taxable)
+                                  .reduce((sum, item) => sum + item.amount, 0) * (formData.salesTaxRate / 100)
+                              )}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-4 p-4 bg-slate-50 rounded-lg border">
