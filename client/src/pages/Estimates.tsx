@@ -148,12 +148,6 @@ interface Estimate {
   convertedAt: string | null;
 }
 
-interface WoPhoto {
-  url: string;
-  type: 'before' | 'after';
-  caption: string;
-}
-
 interface EstimateFormData {
   propertyId: string;
   propertyName: string;
@@ -192,7 +186,6 @@ interface EstimateFormData {
   techNotes: string;
   attachments: Attachment[];
   photos: string[];
-  woPhotos: WoPhoto[];
   workType: string;
   woReceived: boolean;
   woNumber: string;
@@ -300,7 +293,6 @@ const emptyFormData: EstimateFormData = {
   techNotes: "",
   attachments: [],
   photos: [],
-  woPhotos: [],
   workType: "repairs",
   woReceived: false,
   woNumber: "",
@@ -841,7 +833,6 @@ export default function Estimates() {
       techNotes: estimate.techNotes || "",
       attachments: estimate.attachments || [],
       photos: estimate.photos || [],
-      woPhotos: [],
       workType: estimate.workType || "repairs",
       woReceived: estimate.woReceived || false,
       woNumber: estimate.woNumber || "",
@@ -2368,21 +2359,14 @@ export default function Estimates() {
                       taxable: false,
                     }];
                 
-                // Collect photos from work order (before and after) with structure
-                const structuredWoPhotos: WoPhoto[] = [];
-                const flatPhotoUrls: string[] = [];
+                // Collect photos from work order (before and after)
+                const woPhotos: string[] = [];
                 if (item.photos) {
                   if (item.photos.before) {
-                    item.photos.before.forEach((p: any) => {
-                      structuredWoPhotos.push({ url: p.url, type: 'before', caption: p.caption || 'Before' });
-                      flatPhotoUrls.push(p.url);
-                    });
+                    item.photos.before.forEach((p: any) => woPhotos.push(p.url));
                   }
                   if (item.photos.after) {
-                    item.photos.after.forEach((p: any) => {
-                      structuredWoPhotos.push({ url: p.url, type: 'after', caption: p.caption || 'After' });
-                      flatPhotoUrls.push(p.url);
-                    });
+                    item.photos.after.forEach((p: any) => woPhotos.push(p.url));
                   }
                 }
                 
@@ -2417,8 +2401,7 @@ export default function Estimates() {
                   // Line items from parts
                   items: lineItems,
                   // Photos from work order
-                  photos: flatPhotoUrls,
-                  woPhotos: structuredWoPhotos,
+                  photos: woPhotos,
                 });
                 setIsEditing(false);
                 setIsConvertingFromWo(true); // Mark as converting from Work Order
@@ -3540,84 +3523,39 @@ export default function Estimates() {
                     </div>
 
                     {/* Photos Section */}
-                    {/* Photos Section - Show structured WO photos or flat photos */}
-                    {(formData.woPhotos.length > 0 || formData.photos.length > 0) && (
+                    {formData.photos && formData.photos.length > 0 && (
                       <div className="border rounded-lg overflow-hidden">
-                        <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between">
+                        <div className="bg-slate-100 px-4 py-2 border-b">
                           <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
                             <Camera className="w-4 h-4" />
                             Photos
                           </h4>
-                          <Badge variant="outline" className="text-xs">
-                            {formData.woPhotos.length || formData.photos.length} attached
-                          </Badge>
                         </div>
                         <div className="p-4">
-                          {formData.woPhotos.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-4">
-                              {formData.woPhotos.map((photo, idx) => (
-                                <div key={idx} className="relative group">
-                                  <div className={`absolute top-2 left-2 z-10 px-2 py-0.5 rounded text-xs font-semibold ${
-                                    photo.type === 'before' 
-                                      ? 'bg-amber-500 text-white' 
-                                      : 'bg-green-500 text-white'
-                                  }`}>
-                                    {photo.type === 'before' ? 'BEFORE' : 'AFTER'}
-                                  </div>
-                                  <img
-                                    src={photo.url}
-                                    alt={photo.caption}
-                                    className="w-full h-32 object-cover rounded-lg border"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = `https://placehold.co/400x300/f1f5f9/64748b?text=${photo.type === 'before' ? 'Before' : 'After'}+Photo`;
-                                    }}
-                                  />
-                                  <p className="text-xs text-slate-600 mt-1 truncate" title={photo.caption}>
-                                    {photo.caption}
-                                  </p>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-5 w-5 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        woPhotos: prev.woPhotos.filter((_, i) => i !== idx),
-                                        photos: prev.photos.filter(p => p !== photo.url)
-                                      }));
-                                    }}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-4 gap-3">
-                              {formData.photos.map((photo, idx) => (
-                                <div key={idx} className="relative group">
-                                  <img
-                                    src={photo}
-                                    alt={`Photo ${idx + 1}`}
-                                    className="w-full h-24 object-cover rounded-lg border"
-                                  />
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-1 right-1 h-5 w-5 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        photos: prev.photos.filter((_, i) => i !== idx)
-                                      }));
-                                    }}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          <div className="grid grid-cols-4 gap-3">
+                            {formData.photos.map((photo, idx) => (
+                              <div key={idx} className="relative group">
+                                <img
+                                  src={photo}
+                                  alt={`Photo ${idx + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border"
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-5 w-5 bg-red-500 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      photos: prev.photos.filter((_, i) => i !== idx)
+                                    }));
+                                  }}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
