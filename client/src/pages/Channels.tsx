@@ -22,16 +22,45 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   MapPin,
   Megaphone,
   Lock,
   Paperclip,
   AtSign,
   X,
-  CalendarDays
+  CalendarDays,
+  Building,
+  Truck,
+  HeartHandshake,
+  FileText,
+  Package,
+  Calendar,
+  Map,
+  AlertTriangle,
+  Clock,
+  Heart,
+  GraduationCap,
+  Home,
+  Building2,
+  Users2,
+  Landmark,
+  type LucideIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
+interface DepartmentChannel {
+  id: string;
+  name: string;
+  department: string;
+  description: string | null;
+  icon: string | null;
+  isPrivate: boolean;
+  allowedRoles: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface PropertyChannel {
   id: string;
@@ -39,6 +68,7 @@ interface PropertyChannel {
   propertyName: string;
   customerName: string | null;
   address: string | null;
+  category: string | null;
   description: string | null;
   createdAt: string;
   updatedAt: string;
@@ -94,9 +124,51 @@ const ANNOUNCEMENTS_CHANNEL = {
   propertyName: "Announcements",
   customerName: null,
   address: null,
+  category: null,
   description: "Company-wide announcements",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString()
+};
+
+const DEPARTMENT_ICONS: Record<string, LucideIcon> = {
+  office: Building,
+  dispatch: Truck,
+  hr: HeartHandshake
+};
+
+const DEPARTMENT_LABELS: Record<string, string> = {
+  office: "Office",
+  dispatch: "Dispatch",
+  hr: "HR"
+};
+
+const CHANNEL_ICONS: Record<string, LucideIcon> = {
+  hash: Hash,
+  building: Building,
+  "file-text": FileText,
+  package: Package,
+  calendar: Calendar,
+  map: Map,
+  "alert-triangle": AlertTriangle,
+  clock: Clock,
+  heart: Heart,
+  "graduation-cap": GraduationCap
+};
+
+const PROPERTY_CATEGORY_ICONS: Record<string, LucideIcon> = {
+  residential: Home,
+  commercial: Building2,
+  hoa: Users2,
+  municipal: Landmark,
+  general: Hash
+};
+
+const PROPERTY_CATEGORY_LABELS: Record<string, string> = {
+  residential: "Residential",
+  commercial: "Commercial",
+  hoa: "HOA",
+  municipal: "Municipal",
+  general: "General"
 };
 
 interface ChannelUser {
@@ -135,6 +207,7 @@ export default function Channels() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedChannel, setSelectedChannel] = useState<PropertyChannel | null>(null);
+  const [selectedDeptChannel, setSelectedDeptChannel] = useState<DepartmentChannel | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showThread, setShowThread] = useState<string | null>(null);
@@ -145,9 +218,22 @@ export default function Channels() {
   const [showDateDropdown, setShowDateDropdown] = useState(false);
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
+  const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({ office: true, dispatch: true, hr: true });
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({ residential: true, commercial: true, hoa: true, municipal: true, general: true });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: deptChannelsData, isLoading: deptChannelsLoading } = useQuery({
+    queryKey: ["departmentChannels"],
+    queryFn: async () => {
+      const res = await fetch("/api/department-channels");
+      if (!res.ok) throw new Error("Failed to fetch department channels");
+      return res.json();
+    },
+  });
+
+  const departmentChannels: DepartmentChannel[] = deptChannelsData?.channels || [];
 
   const { data: channelsData, isLoading: channelsLoading } = useQuery({
     queryKey: ["propertyChannels"],
@@ -160,18 +246,33 @@ export default function Channels() {
 
   const channels: PropertyChannel[] = channelsData?.channels || [];
 
+  const channelsByDepartment = departmentChannels.reduce((acc, ch) => {
+    if (!acc[ch.department]) acc[ch.department] = [];
+    acc[ch.department].push(ch);
+    return acc;
+  }, {} as Record<string, DepartmentChannel[]>);
+
+  const channelsByCategory = channels.reduce((acc, ch) => {
+    const cat = ch.category || "general";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(ch);
+    return acc;
+  }, {} as Record<string, PropertyChannel[]>);
+
+  const activeChannelId = selectedChannel?.id || selectedDeptChannel?.id;
+  
   const { data: messagesData, isLoading: messagesLoading } = useQuery({
-    queryKey: ["channelMessages", selectedChannel?.id],
+    queryKey: ["channelMessages", activeChannelId],
     queryFn: async () => {
-      if (!selectedChannel) return { messages: [] };
-      if (selectedChannel.id === "announcements") {
+      if (!activeChannelId) return { messages: [] };
+      if (activeChannelId === "announcements") {
         return { messages: [] };
       }
-      const res = await fetch(`/api/channels/${selectedChannel.id}/messages`);
+      const res = await fetch(`/api/channels/${activeChannelId}/messages`);
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json();
     },
-    enabled: !!selectedChannel,
+    enabled: !!activeChannelId,
     refetchInterval: 5000,
   });
 
@@ -230,7 +331,7 @@ export default function Channels() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channelMessages", selectedChannel?.id] });
+      queryClient.invalidateQueries({ queryKey: ["channelMessages", activeChannelId] });
       if (showThread) {
         queryClient.invalidateQueries({ queryKey: ["threadReplies", showThread] });
       }
@@ -251,7 +352,7 @@ export default function Channels() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channelMessages", selectedChannel?.id] });
+      queryClient.invalidateQueries({ queryKey: ["channelMessages", activeChannelId] });
       queryClient.invalidateQueries({ queryKey: ["threadReplies", showThread] });
     },
   });
@@ -267,7 +368,7 @@ export default function Channels() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["channelMessages", selectedChannel?.id] });
+      queryClient.invalidateQueries({ queryKey: ["channelMessages", activeChannelId] });
     },
   });
 
@@ -295,7 +396,7 @@ export default function Channels() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const channelMembers = selectedChannel ? getChannelMembers(selectedChannel.id) : [];
+  const channelMembers = activeChannelId ? getChannelMembers(activeChannelId) : [];
   const onlineMembers = channelMembers.filter(m => m.isOnline);
 
   const getDateFilterLabel = () => {
@@ -354,9 +455,10 @@ export default function Channels() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim() || !selectedChannel) return;
-    if (selectedChannel.id === "announcements" && CURRENT_USER.role !== "office_admin") return;
-    sendMessageMutation.mutate({ channelId: selectedChannel.id, content: messageInput });
+    const channelId = selectedChannel?.id || selectedDeptChannel?.id;
+    if (!messageInput.trim() || !channelId) return;
+    if (selectedChannel?.id === "announcements" && CURRENT_USER.role !== "office_admin") return;
+    sendMessageMutation.mutate({ channelId, content: messageInput });
   };
 
   const handleSendReply = (e: React.FormEvent) => {
@@ -535,10 +637,10 @@ export default function Channels() {
     <AppLayout>
       <div className="flex h-[calc(100vh-80px)] bg-[#f9fafb]">
         {/* Left Sidebar - Channels */}
-        <div className="w-72 flex flex-col bg-[#1e3a5f] text-white">
+        <div className="w-80 flex flex-col bg-[#1e3a5f] text-white">
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold tracking-wide uppercase">Property Channels</h2>
+              <h2 className="text-sm font-bold tracking-wide uppercase">Communication Hub</h2>
               <Button
                 size="sm"
                 variant="ghost"
@@ -568,6 +670,7 @@ export default function Channels() {
               <button
                 onClick={() => {
                   setSelectedChannel(ANNOUNCEMENTS_CHANNEL);
+                  setSelectedDeptChannel(null);
                   setShowThread(null);
                 }}
                 className={cn(
@@ -585,52 +688,152 @@ export default function Channels() {
 
               <Separator className="my-2 bg-white/10" />
 
-              {channelsLoading ? (
-                <div className="text-center py-8 text-white/50 text-sm">Loading channels...</div>
-              ) : filteredChannels.length === 0 ? (
-                <div className="text-center py-8 text-white/50">
-                  <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No channels found</p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => syncMutation.mutate()}
-                    className="mt-2 text-white border-white/30 hover:bg-white/10"
-                    data-testid="button-sync-channels-empty"
-                  >
-                    Sync from Pool Brain
-                  </Button>
-                </div>
+              {/* Department Channels Section */}
+              {(deptChannelsLoading) ? (
+                <div className="text-center py-4 text-white/50 text-sm">Loading department channels...</div>
               ) : (
-                filteredChannels.map(channel => (
-                  <button
-                    key={channel.id}
-                    onClick={() => {
-                      setSelectedChannel(channel);
-                      setShowThread(null);
-                    }}
-                    className={cn(
-                      "w-full text-left p-2.5 rounded-lg transition-all",
-                      selectedChannel?.id === channel.id 
-                        ? "bg-white/20" 
-                        : "hover:bg-white/10"
-                    )}
-                    data-testid={`channel-${channel.id}`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <Hash className="w-4 h-4 mt-0.5 text-[#f97316] flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-white text-sm truncate">{channel.customerName || channel.propertyName}</p>
-                        {channel.address && (
-                          <p className="text-xs text-white/50 truncate flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3" />
-                            {channel.address}
-                          </p>
+                <>
+                  {(["office", "dispatch", "hr"] as const).map(dept => {
+                    const DeptIcon = DEPARTMENT_ICONS[dept];
+                    const deptChannels = channelsByDepartment[dept] || [];
+                    const isExpanded = expandedDepts[dept];
+                    
+                    return (
+                      <div key={dept} className="mb-2">
+                        <button
+                          onClick={() => setExpandedDepts(prev => ({ ...prev, [dept]: !prev[dept] }))}
+                          className="w-full flex items-center gap-2 px-2 py-2 text-white/90 hover:bg-white/5 rounded-lg transition-colors"
+                          data-testid={`dept-section-${dept}`}
+                        >
+                          <DeptIcon className="w-4 h-4 text-[#f97316]" />
+                          <span className="font-semibold text-sm uppercase tracking-wide flex-1 text-left">{DEPARTMENT_LABELS[dept]}</span>
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-white/50" /> : <ChevronDown className="w-4 h-4 text-white/50" />}
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="ml-2 space-y-0.5">
+                            {deptChannels.length === 0 ? (
+                              <p className="text-xs text-white/40 px-2 py-1">No channels</p>
+                            ) : (
+                              deptChannels.map(ch => {
+                                const ChannelIcon = CHANNEL_ICONS[ch.icon || "hash"] || Hash;
+                                return (
+                                  <button
+                                    key={ch.id}
+                                    onClick={() => {
+                                      setSelectedDeptChannel(ch);
+                                      setSelectedChannel(null);
+                                      setShowThread(null);
+                                    }}
+                                    className={cn(
+                                      "w-full text-left px-3 py-2 rounded-lg transition-all flex items-center gap-2",
+                                      selectedDeptChannel?.id === ch.id 
+                                        ? "bg-white/20 text-white" 
+                                        : "hover:bg-white/10 text-white/70"
+                                    )}
+                                    data-testid={`dept-channel-${ch.id}`}
+                                  >
+                                    <ChannelIcon className="w-4 h-4 text-[#f97316] flex-shrink-0" />
+                                    <span className="text-sm truncate">{ch.name}</span>
+                                    {ch.isPrivate && <Lock className="w-3 h-3 ml-auto text-white/50" />}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </button>
-                ))
+                    );
+                  })}
+                </>
+              )}
+
+              <Separator className="my-3 bg-white/10" />
+
+              {/* Property Channels Section */}
+              <div className="mb-2">
+                <div className="flex items-center justify-between px-2 py-2">
+                  <span className="font-semibold text-sm uppercase tracking-wide text-white/90">Properties</span>
+                </div>
+              </div>
+
+              {channelsLoading ? (
+                <div className="text-center py-4 text-white/50 text-sm">Loading properties...</div>
+              ) : channels.length === 0 ? (
+                <div className="text-center py-8 text-white/50">
+                  <Hash className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No property channels found</p>
+                </div>
+              ) : (
+                <>
+                  {(["residential", "commercial", "hoa", "municipal", "general"] as const).map(cat => {
+                    const catChannels = channelsByCategory[cat] || [];
+                    if (catChannels.length === 0) return null;
+                    
+                    const filteredCatChannels = catChannels.filter(ch =>
+                      ch.propertyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      ch.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      ch.address?.toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                    
+                    if (filteredCatChannels.length === 0 && searchQuery) return null;
+                    
+                    const CatIcon = PROPERTY_CATEGORY_ICONS[cat];
+                    const isExpanded = expandedCategories[cat];
+                    
+                    return (
+                      <div key={cat} className="mb-2">
+                        <button
+                          onClick={() => setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }))}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 text-white/80 hover:bg-white/5 rounded transition-colors"
+                          data-testid={`category-section-${cat}`}
+                        >
+                          <CatIcon className="w-3.5 h-3.5 text-white/60" />
+                          <span className="text-xs font-medium uppercase tracking-wide flex-1 text-left">{PROPERTY_CATEGORY_LABELS[cat]}</span>
+                          <Badge variant="secondary" className="bg-white/10 text-white/60 text-xs px-1.5 py-0">
+                            {filteredCatChannels.length}
+                          </Badge>
+                          {isExpanded ? <ChevronUp className="w-3 h-3 text-white/50" /> : <ChevronDown className="w-3 h-3 text-white/50" />}
+                        </button>
+                        
+                        {isExpanded && (
+                          <div className="ml-2 space-y-0.5">
+                            {(searchQuery ? filteredCatChannels : catChannels).map(channel => (
+                              <button
+                                key={channel.id}
+                                onClick={() => {
+                                  setSelectedChannel(channel);
+                                  setSelectedDeptChannel(null);
+                                  setShowThread(null);
+                                }}
+                                className={cn(
+                                  "w-full text-left p-2 rounded-lg transition-all",
+                                  selectedChannel?.id === channel.id 
+                                    ? "bg-white/20" 
+                                    : "hover:bg-white/10"
+                                )}
+                                data-testid={`channel-${channel.id}`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <Hash className="w-3.5 h-3.5 mt-0.5 text-[#f97316] flex-shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-white text-sm truncate">{channel.customerName || channel.propertyName}</p>
+                                    {channel.address && (
+                                      <p className="text-xs text-white/50 truncate flex items-center gap-1 mt-0.5">
+                                        <MapPin className="w-3 h-3" />
+                                        {channel.address}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
           </ScrollArea>
@@ -638,21 +841,32 @@ export default function Channels() {
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col bg-white">
-          {selectedChannel ? (
+          {(selectedChannel || selectedDeptChannel) ? (
             <>
               {/* Channel Header */}
               <div className="px-6 py-4 border-b border-[#e5e7eb] bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {selectedChannel.id === "announcements" ? (
+                    {selectedChannel?.id === "announcements" ? (
                       <Megaphone className="w-5 h-5 text-[#f97316]" />
+                    ) : selectedDeptChannel ? (
+                      (() => {
+                        const DeptIcon = DEPARTMENT_ICONS[selectedDeptChannel.department] || Hash;
+                        return <DeptIcon className="w-5 h-5 text-[#f97316]" />;
+                      })()
                     ) : (
                       <Hash className="w-5 h-5 text-[#f97316]" />
                     )}
                     <div>
-                      <h3 className="font-bold text-[#1f2937]">{selectedChannel.customerName || selectedChannel.propertyName}</h3>
+                      <h3 className="font-bold text-[#1f2937]">
+                        {selectedDeptChannel 
+                          ? `${DEPARTMENT_LABELS[selectedDeptChannel.department]} - ${selectedDeptChannel.name}`
+                          : (selectedChannel?.customerName || selectedChannel?.propertyName)}
+                      </h3>
                       <p className="text-xs text-[#6b7280]">
-                        {selectedChannel.address || selectedChannel.description || ''}
+                        {selectedDeptChannel 
+                          ? selectedDeptChannel.description 
+                          : (selectedChannel?.address || selectedChannel?.description || '')}
                       </p>
                     </div>
                   </div>
