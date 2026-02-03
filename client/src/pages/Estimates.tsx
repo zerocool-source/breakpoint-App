@@ -3000,6 +3000,36 @@ export default function Estimates() {
                       </div>
                     </div>
 
+                    {/* Quote Title & Description */}
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ClipboardList className="w-4 h-4 text-[#0078D4]" />
+                        <Label className="text-sm font-medium text-blue-800">Quote Details</Label>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs text-slate-500">Job Title</Label>
+                          <Input
+                            value={formData.title}
+                            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Enter job title (e.g., Pool pump motor replaced)"
+                            className="h-9"
+                            data-testid="input-job-title"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-slate-500">Quote Description</Label>
+                          <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Enter detailed description of the work..."
+                            className="w-full min-h-[80px] px-3 py-2 text-sm border border-slate-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-testid="input-quote-description"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="p-4 bg-[#FF8000]1A rounded-lg border border-[#FF8000]33">
                       <div className="flex items-center gap-2 mb-3">
                         <ClipboardList className="w-4 h-4 text-[#D35400]" />
