@@ -2088,14 +2088,126 @@ export default function Estimates() {
                 return `WO-${year}-${String(index + 1).padStart(5, '0')}`;
               };
               
-              // Sample data for completed jobs without approval
+              // Sample data for completed jobs without approval - with full details
               const sampleCompletedJobs = [
-                { id: 'cwa1', propertyName: 'Palm Court Apartments', description: 'Pool pump motor replaced', amount: 45000, techName: 'Rick Jacobs', completedDate: new Date('2026-02-02'), isUrgent: false },
-                { id: 'cwa2', propertyName: 'Sunset Hills HOA', description: 'Filter cartridge replacement', amount: 28500, techName: 'Matt Cummins', completedDate: new Date('2026-02-01'), isUrgent: true },
-                { id: 'cwa3', propertyName: 'Lakewood Country Club', description: 'Heater pilot assembly repair', amount: 37500, techName: 'Alan Bateman', completedDate: new Date('2026-01-31'), isUrgent: false },
-                { id: 'cwa4', propertyName: 'Shady Trails HOA', description: 'Skimmer basket and weir door replaced', amount: 12500, techName: 'Kevin Enriquez', completedDate: new Date('2026-01-30'), isUrgent: false },
-                { id: 'cwa5', propertyName: 'Canyon Ridge HOA', description: 'Chemical feeder repair', amount: 19500, techName: 'Vit Kruml', completedDate: new Date('2026-01-29'), isUrgent: true },
-                { id: 'cwa6', propertyName: 'Bella Vista HOA', description: 'Pool light fixture replaced', amount: 32000, techName: 'Jose Puente', completedDate: new Date('2026-01-28'), isUrgent: false },
+                { 
+                  id: 'cwa1', 
+                  propertyName: 'Palm Court Apartments', 
+                  description: 'Pool pump motor replaced', 
+                  fullDescription: 'Replaced 1.5HP pool pump motor. Old motor was overheating and making grinding noise. Tested and running smoothly.',
+                  amount: 45000, 
+                  techName: 'Rick Jacobs', 
+                  completedDate: new Date('2026-02-01'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=200', caption: 'Old pump motor with visible rust and wear' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200', caption: 'New pump motor installed and running' }]
+                  },
+                  parts: [
+                    { description: '1.5HP Pool Pump Motor', quantity: 1, rate: 28500, amount: 28500 },
+                    { description: 'Motor Seal Kit', quantity: 1, rate: 4500, amount: 4500 },
+                    { description: 'Labor', quantity: 1, rate: 12000, amount: 12000 },
+                  ]
+                },
+                { 
+                  id: 'cwa2', 
+                  propertyName: 'Sunset Hills HOA', 
+                  description: 'Filter cartridge replacement', 
+                  fullDescription: 'Replaced 4 filter cartridges. Old cartridges were clogged and causing high pressure readings.',
+                  amount: 28500, 
+                  techName: 'Matt Cummins', 
+                  completedDate: new Date('2026-01-31'), 
+                  isUrgent: true,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=200', caption: 'Dirty/clogged filter cartridges' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=200', caption: 'New cartridges installed in filter housing' }]
+                  },
+                  parts: [
+                    { description: 'Filter Cartridge (4-pack)', quantity: 1, rate: 18000, amount: 18000 },
+                    { description: 'O-Ring Set', quantity: 1, rate: 2500, amount: 2500 },
+                    { description: 'Labor', quantity: 1, rate: 8000, amount: 8000 },
+                  ]
+                },
+                { 
+                  id: 'cwa3', 
+                  propertyName: 'Lakewood Country Club', 
+                  description: 'Heater pilot assembly repair', 
+                  fullDescription: 'Repaired pilot assembly on pool heater. Replaced thermocouple and cleaned burner tray. Heater now igniting properly.',
+                  amount: 37500, 
+                  techName: 'Alan Bateman', 
+                  completedDate: new Date('2026-01-30'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=200', caption: 'Corroded pilot assembly' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200', caption: 'New thermocouple installed, clean burner' }]
+                  },
+                  parts: [
+                    { description: 'Thermocouple Assembly', quantity: 1, rate: 12500, amount: 12500 },
+                    { description: 'Pilot Tube', quantity: 1, rate: 4500, amount: 4500 },
+                    { description: 'Gas Valve Service', quantity: 1, rate: 8500, amount: 8500 },
+                    { description: 'Labor', quantity: 1, rate: 12000, amount: 12000 },
+                  ]
+                },
+                { 
+                  id: 'cwa4', 
+                  propertyName: 'Shady Trails HOA', 
+                  description: 'Skimmer basket and weir door replaced', 
+                  fullDescription: 'Replaced cracked skimmer basket and broken weir door. Skimmer now functioning properly.',
+                  amount: 12500, 
+                  techName: 'Kevin Enriquez', 
+                  completedDate: new Date('2026-01-29'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=200', caption: 'Cracked skimmer basket' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=200', caption: 'New basket and weir door installed' }]
+                  },
+                  parts: [
+                    { description: 'Skimmer Basket', quantity: 1, rate: 3500, amount: 3500 },
+                    { description: 'Weir Door', quantity: 1, rate: 2800, amount: 2800 },
+                    { description: 'Skimmer Lid', quantity: 1, rate: 2200, amount: 2200 },
+                    { description: 'Labor', quantity: 1, rate: 4000, amount: 4000 },
+                  ]
+                },
+                { 
+                  id: 'cwa5', 
+                  propertyName: 'Canyon Ridge HOA', 
+                  description: 'Chemical feeder repair', 
+                  fullDescription: 'Repaired chlorine feeder. Replaced check valve and tubing. Adjusted feed rate.',
+                  amount: 19500, 
+                  techName: 'Vit Kruml', 
+                  completedDate: new Date('2026-01-28'), 
+                  isUrgent: true,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1562016600-ece13b8c8a7c?w=200', caption: 'Leaking chemical feeder connection' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=200', caption: 'New tubing and check valve installed' }]
+                  },
+                  parts: [
+                    { description: 'Check Valve', quantity: 1, rate: 4500, amount: 4500 },
+                    { description: 'Chemical Tubing (10ft)', quantity: 1, rate: 3000, amount: 3000 },
+                    { description: 'Injection Fitting', quantity: 1, rate: 2500, amount: 2500 },
+                    { description: 'Labor', quantity: 1, rate: 9500, amount: 9500 },
+                  ]
+                },
+                { 
+                  id: 'cwa6', 
+                  propertyName: 'Bella Vista HOA', 
+                  description: 'Pool light fixture replaced', 
+                  fullDescription: 'Replaced underwater pool light fixture. Old fixture had water intrusion. New LED light installed and sealed.',
+                  amount: 32000, 
+                  techName: 'Jose Puente', 
+                  completedDate: new Date('2026-01-27'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200', caption: 'Old light fixture with condensation inside' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200', caption: 'New LED pool light glowing underwater' }]
+                  },
+                  parts: [
+                    { description: 'LED Pool Light Fixture', quantity: 1, rate: 18500, amount: 18500 },
+                    { description: 'Light Niche Gasket', quantity: 1, rate: 3500, amount: 3500 },
+                    { description: 'Cord Seal Kit', quantity: 1, rate: 2000, amount: 2000 },
+                    { description: 'Labor', quantity: 1, rate: 8000, amount: 8000 },
+                  ]
+                },
               ];
               
               // Pull completed jobs that never went through approval process
@@ -2105,11 +2217,14 @@ export default function Estimates() {
                 id: e.id,
                 propertyName: e.customerName || "Unknown",
                 description: e.title || e.description || "—",
+                fullDescription: e.description || e.title || "—",
                 amount: e.totalAmount || 0,
                 techName: e.repairTechName || e.createdByTechName || "—",
                 completedDate: e.completedAt ? new Date(e.completedAt) : new Date(),
                 isReal: true,
                 isUrgent: false,
+                photos: null as any,
+                parts: e.items || [],
               }));
               
               // Combine real data with sample data (sample data fills in if no real data)
@@ -2174,6 +2289,38 @@ export default function Estimates() {
                          itemTechName.includes(fullName);
                 });
                 
+                // Build line items from parts if available, otherwise use single item
+                const lineItems: EstimateLineItem[] = item.parts && item.parts.length > 0
+                  ? item.parts.map((part: any, idx: number) => ({
+                      lineNumber: idx + 1,
+                      productService: part.description,
+                      description: part.description,
+                      quantity: part.quantity || 1,
+                      rate: part.rate,
+                      amount: part.amount,
+                      taxable: false,
+                    }))
+                  : [{
+                      lineNumber: 1,
+                      productService: "Repair Service",
+                      description: item.description,
+                      quantity: 1,
+                      rate: item.amount,
+                      amount: item.amount,
+                      taxable: false,
+                    }];
+                
+                // Collect photos from work order (before and after)
+                const woPhotos: string[] = [];
+                if (item.photos) {
+                  if (item.photos.before) {
+                    item.photos.before.forEach((p: any) => woPhotos.push(p.url));
+                  }
+                  if (item.photos.after) {
+                    item.photos.after.forEach((p: any) => woPhotos.push(p.url));
+                  }
+                }
+                
                 // Pre-fill the estimate form with all data from the completed job
                 setFormData({
                   ...emptyFormData,
@@ -2187,9 +2334,9 @@ export default function Estimates() {
                   address: matchingCustomer?.address || "",
                   // Work Type
                   workType: "repairs",
-                  // Title and Description
+                  // Title and Description - use full description if available
                   title: item.description,
-                  description: item.description,
+                  description: item.fullDescription || item.description,
                   // Repair Tech - set ID and name
                   repairTechId: matchingTech?.id?.toString() || "",
                   repairTechName: matchingTech ? `${matchingTech.firstName} ${matchingTech.lastName}` : item.techName,
@@ -2202,16 +2349,10 @@ export default function Estimates() {
                   // WO Number
                   woNumber: item.woNumber,
                   woReceived: true,
-                  // Line items with the job description and amount
-                  items: [{
-                    lineNumber: 1,
-                    productService: "Repair Service",
-                    description: item.description,
-                    quantity: 1,
-                    rate: item.amount,
-                    amount: item.amount,
-                    taxable: false,
-                  }],
+                  // Line items from parts
+                  items: lineItems,
+                  // Photos from work order
+                  photos: woPhotos,
                 });
                 setIsEditing(false);
                 setIsConvertingFromWo(true); // Mark as converting from Work Order
