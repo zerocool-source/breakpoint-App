@@ -97,6 +97,7 @@ interface Technician {
   role: string;
   region: string | null;
   supervisorId: string | null;
+  routeLocked?: boolean;
 }
 
 interface RouteStop {

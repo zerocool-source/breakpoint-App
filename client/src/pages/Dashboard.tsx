@@ -98,11 +98,14 @@ interface DashboardData {
       unpaid: number;
       unpaidValue: number;
       paid: number;
+      paidValue?: number;
       total: number;
     };
     values: {
       total: number;
+      draft?: number;
       pendingApproval: number;
+      approved?: number;
       readyToInvoice: number;
       scheduled: number;
     };
@@ -127,6 +130,7 @@ interface DashboardData {
       urgent: number;
       active: number;
       total: number;
+      recentActive?: any[];
     };
     emergencies: {
       open: number;
@@ -134,6 +138,10 @@ interface DashboardData {
       inProgress: number;
       total: number;
       recentOpen: OpenEmergency[];
+    };
+    reportedIssues?: {
+      count?: number;
+      items?: any[];
     };
   };
   recentActivity: Array<{
@@ -159,6 +167,8 @@ interface DashboardData {
     pendingApprovals: number;
     activeRepairs: number;
   };
+  chemicalOrdersByProperty?: any[];
+  coverages?: any[];
 }
 
 // GPS Device interface for fleet map
