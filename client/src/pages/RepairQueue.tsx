@@ -1296,9 +1296,10 @@ Thank you.`;
     );
   };
 
-  const renderTechCard = (techData: { tech: string; techId: string | null; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number; initials: string }) => {
-    const totalActive = techData.pending + techData.inProgress;
-    const completionRate = techData.repairs.length > 0 ? Math.round((techData.completed / techData.repairs.length) * 100) : 0;
+  const renderTechCard = (techData: { tech: string; techId: string | null; repairs: ServiceRepairJob[]; workOrders: WorkOrder[]; pending: number; inProgress: number; completed: number; workOrderCount: number; totalValue: number; initials: string }) => {
+    const totalActive = techData.pending + techData.inProgress + techData.workOrderCount;
+    const totalJobs = techData.repairs.length + techData.workOrders.length;
+    const completionRate = totalJobs > 0 ? Math.round((techData.completed / totalJobs) * 100) : 0;
 
     return (
       <Card
@@ -1325,7 +1326,7 @@ Thank you.`;
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-4 gap-2 mb-4">
             <div className="text-center p-2 rounded-lg">
               <div className="text-lg font-bold text-[#f97316]">{techData.pending}</div>
               <div className="text-xs text-slate-500">Pending</div>
@@ -1337,6 +1338,10 @@ Thank you.`;
             <div className="text-center p-2 rounded-lg">
               <div className="text-lg font-bold text-[#22c55e]">{techData.completed}</div>
               <div className="text-xs text-slate-500">Completed</div>
+            </div>
+            <div className="text-center p-2 bg-[#f59e0b]/10 rounded-lg">
+              <div className="text-lg font-bold text-[#f59e0b]">{techData.workOrderCount}</div>
+              <div className="text-xs text-slate-500">Work Orders</div>
             </div>
           </div>
 
