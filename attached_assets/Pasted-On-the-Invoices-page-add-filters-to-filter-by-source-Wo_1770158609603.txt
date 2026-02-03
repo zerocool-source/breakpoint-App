@@ -1,0 +1,80 @@
+On the Invoices page, add filters to filter by source (Work Orders) and by technician:
+
+**ADD FILTERS NEXT TO "ALL STATUSES" DROPDOWN:**
+
+1. **ADD "SOURCE" FILTER:**
+- Position: Next to the "All Statuses" dropdown
+- Label: "All Sources"
+- Dropdown options:
+  - All Sources (default)
+  - Work Order
+  - Estimate
+  - SR Estimate
+  - Field Estimate
+  - Office Entry
+
+2. **ADD "TECHNICIAN" FILTER:**
+- Position: Next to the "Source" dropdown
+- Label: "All Technicians"
+- Dropdown options:
+  - All Technicians (default)
+  - Alan Bateman
+  - Matt Cummins
+  - Rick Jacobs
+  - Kevin Enriquez
+  - Vit Kruml
+  - Jose Puente
+  - (list all technicians)
+
+**FILTER BAR LAYOUT:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 🔍 Search by invoice #, customer, or property...                                                   │
+│                                                                                                     │
+│                                    🔽 All Statuses ▼  |  📋 All Sources ▼  |  👤 All Technicians ▼ │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**FILTER FUNCTIONALITY:**
+
+When "Work Order" is selected from Sources filter:
+- Show only invoices that have the "Work Order" tag
+- Update the invoice count (e.g., "8 Invoices" instead of "25 Invoices")
+
+When a technician is selected:
+- Show only invoices assigned to that technician
+- Works in combination with other filters
+
+**EXAMPLE:**
+- Source: "Work Order" + Technician: "Rick Jacobs" → Shows only Work Order invoices from Rick Jacobs
+
+**STYLING:**
+```css
+.filter-dropdown {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.filter-dropdown:hover {
+  border-color: #0077b6;
+}
+
+.filters-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+```
+
+**ADD QUICK FILTER TABS (Optional):**
+Below the search bar, add quick filter tabs:
+```
+[All] [Work Orders (8)] [Estimates (10)] [Draft (11)] [Sent (6)] [Paid (6)] [Overdue (0)]
+```
+
+This allows quick one-click filtering by common categories.
