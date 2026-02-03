@@ -20,9 +20,9 @@ import { format } from "date-fns";
 import { 
   FileText, Plus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
-  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
+  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, Inbox, Smartphone
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -303,6 +303,7 @@ export default function Estimates() {
   const [officeStaffName, setOfficeStaffName] = useState("");
   const [approvedByMethod, setApprovedByMethod] = useState<"email" | "phone" | "other">("phone");
   const [otherMethodDetails, setOtherMethodDetails] = useState("");
+  const [fieldInboxExpanded, setFieldInboxExpanded] = useState(true);
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -557,6 +558,30 @@ export default function Estimates() {
         totalValue: officeStaff.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
       },
     };
+  }, [estimates]);
+
+  // Field Estimates Inbox - estimates submitted from mobile app by repair techs/foremen awaiting review
+  const fieldInboxEstimates = useMemo(() => {
+    return estimates.filter((e: Estimate) => {
+      const sourceType = inferSourceType(e);
+      // Show estimates from repair techs or foremen (check multiple indicators)
+      const isFromField = 
+        sourceType === "repair_tech" || 
+        e.sourceType === "repair_tech" || 
+        e.sourceType === "field" ||
+        e.sourceType === "foreman" ||
+        e.sourceType === "repair_foreman" ||
+        e.repairForemanId ||
+        e.createdByTechId; // Any estimate created by a tech in the field
+      
+      // Include draft and other pre-approval statuses awaiting office review
+      const isPendingReview = e.status === "draft" || e.status === "submitted" || e.status === "needs_review";
+      
+      // Show recent field submissions (last 90 days) to ensure nothing is missed
+      const isRecent = e.createdAt && new Date(e.createdAt) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      
+      return isFromField && isPendingReview && isRecent;
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [estimates]);
 
   // Calculate revenue flow values based on selected time period
@@ -1765,6 +1790,134 @@ export default function Estimates() {
             </Button>
           </div>
         </div>
+
+        {/* Field Estimates Inbox - Estimates from repair techs in the field */}
+        {fieldInboxEstimates.length > 0 && (
+          <div className="bg-gradient-to-r from-[#0077C5]/5 to-[#14b8a6]/5 rounded-lg shadow-sm border border-[#0077C5]/20" data-testid="field-estimates-inbox">
+            <div 
+              className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-[#0077C5]/5 transition-colors rounded-t-lg"
+              onClick={() => setFieldInboxExpanded(!fieldInboxExpanded)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#0077C5] shadow-sm">
+                  <Smartphone className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-[#1E293B] flex items-center gap-2">
+                    Field Estimates Inbox
+                    <Badge className="bg-[#f97316] text-white border-0 text-xs px-2 py-0.5">
+                      {fieldInboxEstimates.length} new
+                    </Badge>
+                  </h2>
+                  <p className="text-sm text-[#6B7280]">Estimates submitted by repair technicians from mobile app</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="text-[#6B7280]">
+                {fieldInboxExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              </Button>
+            </div>
+            
+            {fieldInboxExpanded && (
+              <div className="px-6 pb-4">
+                <div className="space-y-3">
+                  {fieldInboxEstimates.slice(0, 5).map((estimate) => (
+                    <div 
+                      key={estimate.id}
+                      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:border-[#0077C5]/40"
+                      onClick={() => {
+                        setSelectedEstimate(estimate);
+                        setShowDetailDialog(true);
+                      }}
+                      data-testid={`field-inbox-estimate-${estimate.id}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="p-2 rounded-lg bg-[#14b8a6]/10 mt-0.5">
+                            <Wrench className="w-4 h-4 text-[#14b8a6]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-[#1E293B]">{estimate.propertyName}</h3>
+                              {estimate.estimateNumber && (
+                                <span className="text-xs text-[#6B7280] bg-slate-100 px-2 py-0.5 rounded">
+                                  #{estimate.estimateNumber}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-[#1E293B] mt-0.5">{estimate.title}</p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-[#6B7280]">
+                              {estimate.createdByTechName && (
+                                <span className="flex items-center gap-1">
+                                  <UserCircle2 className="w-3.5 h-3.5" />
+                                  {estimate.createdByTechName}
+                                </span>
+                              )}
+                              {estimate.repairForemanName && (
+                                <span className="flex items-center gap-1 text-[#0077C5]">
+                                  <Users className="w-3.5 h-3.5" />
+                                  Foreman: {estimate.repairForemanName}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" />
+                                {format(new Date(estimate.createdAt), "MMM d, h:mm a")}
+                              </span>
+                            </div>
+                            {estimate.techNotes && (
+                              <p className="text-xs text-[#6B7280] mt-2 bg-slate-50 px-3 py-2 rounded-lg border-l-2 border-[#14b8a6]">
+                                <span className="font-medium">Tech Notes:</span> {estimate.techNotes.substring(0, 100)}{estimate.techNotes.length > 100 ? "..." : ""}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end gap-2">
+                          <span className="text-lg font-bold text-[#1E293B]">
+                            ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </span>
+                          {estimate.photos && estimate.photos.length > 0 && (
+                            <span className="text-xs text-[#6B7280] flex items-center gap-1">
+                              <Camera className="w-3.5 h-3.5" />
+                              {estimate.photos.length} photo{estimate.photos.length > 1 ? "s" : ""}
+                            </span>
+                          )}
+                          <Button 
+                            size="sm" 
+                            className="bg-[#0077C5] hover:bg-[#005fa3] text-white text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedEstimate(estimate);
+                              setShowDetailDialog(true);
+                            }}
+                            data-testid={`review-field-estimate-${estimate.id}`}
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1" />
+                            Review
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {fieldInboxEstimates.length > 5 && (
+                    <div className="text-center pt-2">
+                      <Button 
+                        variant="link" 
+                        className="text-[#0077C5]"
+                        onClick={() => {
+                          setSourceFilter("repair_tech");
+                          setActiveTab("draft");
+                        }}
+                        data-testid="view-all-field-estimates"
+                      >
+                        View all {fieldInboxEstimates.length} field estimates
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Light Theme Workflow Metrics */}
         {metrics && (
