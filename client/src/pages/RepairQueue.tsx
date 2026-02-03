@@ -40,6 +40,26 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { RepairRequestForm } from "@/components/RepairRequestForm";
 import type { ServiceRepairJob, Technician, Emergency, RepairRequest } from "@shared/schema";
 
+interface WorkOrder {
+  id: string;
+  estimateNumber: string | null;
+  woNumber: string | null;
+  propertyId: string;
+  propertyName: string;
+  customerName: string | null;
+  title: string;
+  description: string | null;
+  totalAmount: number | null;
+  status: string;
+  repairTechId: string | null;
+  repairTechName: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  isUrgent?: boolean;
+  beforePhotos?: Array<{ url: string; caption: string }>;
+  afterPhotos?: Array<{ url: string; caption: string }>;
+}
+
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20", icon: Clock, label: "Pending" },
   assigned: { color: "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20", icon: User, label: "Assigned" },
@@ -48,6 +68,7 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
   estimated: { color: "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20", icon: DollarSign, label: "Estimated" },
   batched: { color: "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20", icon: Target, label: "Batched" },
+  work_order: { color: "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20", icon: FileText, label: "Work Order" },
 };
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
@@ -164,6 +185,41 @@ export default function RepairQueue() {
       return response.json();
     },
   });
+
+  // Fetch work orders (completed estimates without approval)
+  const { data: workOrdersData = [] } = useQuery<WorkOrder[]>({
+    queryKey: ["work-orders-queue"],
+    queryFn: async () => {
+      const response = await fetch("/api/estimates");
+      if (!response.ok) throw new Error("Failed to fetch estimates");
+      const data = await response.json();
+      const estimates = data.estimates || [];
+      // Work orders are completed estimates without approval
+      return estimates
+        .filter((e: any) => e.status === "completed" && !e.approvedAt)
+        .map((e: any) => ({
+          id: e.id,
+          estimateNumber: e.estimateNumber,
+          woNumber: e.woNumber,
+          propertyId: e.propertyId,
+          propertyName: e.propertyName,
+          customerName: e.customerName,
+          title: e.title,
+          description: e.description,
+          totalAmount: e.totalAmount,
+          status: "work_order",
+          repairTechId: e.repairTechId,
+          repairTechName: e.repairTechName,
+          createdAt: e.createdAt,
+          completedAt: e.completedAt,
+          isUrgent: e.isUrgent,
+          beforePhotos: e.beforePhotos,
+          afterPhotos: e.afterPhotos,
+        }));
+    },
+    refetchInterval: 30000,
+  });
+  const workOrders = workOrdersData || [];
 
   // Create repair request state
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
