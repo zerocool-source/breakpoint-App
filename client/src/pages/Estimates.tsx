@@ -300,6 +300,7 @@ export default function Estimates() {
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
   const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
   const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
+  const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
@@ -879,10 +880,14 @@ export default function Estimates() {
       // Preserve existing sourceType when editing
       updateMutation.mutate({ id: selectedEstimate.id, data: estimateData });
     } else {
-      // Only set office_staff for new estimates created via the UI
-      estimateData.sourceType = "office_staff";
+      // Preserve sourceType if set (e.g., work_order from conversion), otherwise default to office_staff
+      if (!estimateData.sourceType) {
+        estimateData.sourceType = "office_staff";
+      }
       createMutation.mutate(estimateData);
     }
+    // Reset the Work Order conversion flag
+    setIsConvertingFromWo(false);
   };
 
   const openSendApprovalDialog = async (estimate: Estimate) => {
@@ -2151,10 +2156,15 @@ export default function Estimates() {
               };
               
               const handleConvertToEstimate = (item: typeof completedWithWo[0]) => {
+                // Generate estimate number for Work Order conversion
+                const generatedEstimateNumber = generateEstimateNumber();
+                
                 // Pre-fill the estimate form with all data from the completed job
                 setFormData({
                   ...emptyFormData,
-                  // Customer / Property
+                  // Auto-generate estimate number
+                  estimateNumber: generatedEstimateNumber,
+                  // Customer / Property - use propertyName for both fields
                   customerName: item.propertyName,
                   propertyName: item.propertyName,
                   // Work Type
@@ -2185,6 +2195,7 @@ export default function Estimates() {
                   }],
                 });
                 setIsEditing(false);
+                setIsConvertingFromWo(true); // Mark as converting from Work Order
                 setShowFormDialog(true);
                 
                 // Show toast to confirm
@@ -3589,14 +3600,14 @@ export default function Estimates() {
             </ScrollArea>
 
             <DialogFooter className="border-t pt-4 flex-shrink-0">
-              <Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); }}>Cancel</Button>
               <Button
                 onClick={handleSaveEstimate}
                 disabled={!formData.propertyName}
                 className="bg-[#0078D4] hover:bg-[#0078D4]/90"
                 data-testid="button-save-estimate"
               >
-                {isEditing ? "Save Changes" : "Save Estimate"}
+                {isEditing ? "Save Changes" : isConvertingFromWo ? "Convert to Estimate" : "Save Estimate"}
               </Button>
             </DialogFooter>
           </DialogContent>
