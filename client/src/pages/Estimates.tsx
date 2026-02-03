@@ -2379,21 +2379,22 @@ export default function Estimates() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleNeedsScheduling(estimate);
+                                  setSelectedEstimate(estimate);
+                                  setShowSchedulingModal(true);
                                 }}
-                                className="bg-[#FF6A00] hover:bg-[#e55f00] text-white"
-                                data-testid={`button-needs-scheduling-${estimate.id}`}
+                                className="bg-[#0078D4] hover:bg-[#106EBE] text-white"
+                                data-testid={`button-schedule-${estimate.id}`}
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
-                                Needs Scheduling
+                                Schedule
                               </Button>
                             </>
                           )}
                           {estimate.status === "needs_scheduling" && (
                             <>
-                              <Badge className="bg-[#FEF3C7] text-[#D97706] border-[#FCD34D] rounded-full">
-                                <CalendarIcon className="w-3 h-3 mr-1" />
-                                Needs Scheduling
+                              <Badge className="bg-[#ECFDF5] text-[#2CA01C] border-[#A7F3D0] rounded-full">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Approved
                               </Badge>
                               {estimate.customerApproverName && (
                                 <div className="flex items-center gap-1 text-xs text-[#16A679] bg-[#22D69A]1A px-2 py-1 rounded-full">
@@ -2415,7 +2416,7 @@ export default function Estimates() {
                                   e.stopPropagation();
                                   openSchedulingModal(estimate);
                                 }}
-                                className="bg-[#0077C5] hover:bg-[#005fa3] text-white"
+                                className="bg-[#0078D4] hover:bg-[#106EBE] text-white"
                                 data-testid={`button-schedule-${estimate.id}`}
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
