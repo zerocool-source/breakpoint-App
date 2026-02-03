@@ -1800,6 +1800,8 @@ export const invoices = pgTable("invoices", {
   estimateId: varchar("estimate_id"), // Link to source estimate if applicable
   estimateNumber: text("estimate_number"),
   emergencyId: varchar("emergency_id"), // Link to source emergency if applicable
+  woNumber: text("wo_number"), // Work Order number if created from WO
+  sourceType: text("source_type"), // work_order, estimate, emergency, office_staff
   
   // People involved
   serviceTechId: text("service_tech_id"),

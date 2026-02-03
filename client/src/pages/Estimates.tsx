@@ -2609,24 +2609,77 @@ export default function Estimates() {
                       size="sm"
                       disabled={selectedCompletedIds.size === 0}
                       className="bg-[#0077b6] hover:bg-[#005f8f] text-white disabled:opacity-50"
-                      onClick={() => {
-                        // Get selected items for invoice description
-                        const selectedItems = completedWithoutApproval.filter(item => selectedCompletedIds.has(item.id));
-                        const totalAmount = selectedItems.reduce((sum, item) => sum + item.amount, 0);
-                        const descriptions = selectedItems.map(item => `${item.propertyName}: ${item.description}`).join(", ");
+                      onClick={async () => {
+                        // Get selected items for invoice
+                        const selectedItems = completedWithWo.filter(item => selectedCompletedIds.has(item.id));
                         
-                        toast({
-                          title: "Invoice Created",
-                          description: `Created invoice for ${selectedCompletedIds.size} item(s) totaling $${(totalAmount / 100).toFixed(2)}`,
-                        });
+                        // Create invoices for each selected work order
+                        const createdInvoices: string[] = [];
                         
-                        // Update real estimates to invoiced status
-                        selectedCompletedIds.forEach(id => {
-                          const realItem = realCompletedWithoutApproval.find(e => e.id === id);
-                          if (realItem) {
-                            updateStatusMutation.mutate({ id, status: "invoiced" });
+                        for (const item of selectedItems) {
+                          try {
+                            // Build line items from work order
+                            const lineItems = (item.parts || []).map((part: any) => ({
+                              description: part.name || part.description || "Service",
+                              quantity: part.quantity || 1,
+                              rate: part.price || 0,
+                              amount: (part.quantity || 1) * (part.price || 0)
+                            }));
+                            
+                            // Add labor if no line items
+                            if (lineItems.length === 0) {
+                              lineItems.push({
+                                description: item.description || "Pool Service Work",
+                                quantity: 1,
+                                rate: item.amount,
+                                amount: item.amount
+                              });
+                            }
+                            
+                            const invoiceData = {
+                              customerName: item.propertyName,
+                              propertyName: item.propertyName,
+                              woNumber: item.woNumber,
+                              sourceType: "work_order",
+                              repairTechName: item.techName,
+                              lineItems: lineItems,
+                              subtotal: item.amount,
+                              totalAmount: item.amount,
+                              amountDue: item.amount,
+                              status: "draft",
+                              notes: item.description,
+                              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                            };
+                            
+                            const response = await fetch("/api/invoices", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(invoiceData)
+                            });
+                            
+                            if (response.ok) {
+                              const result = await response.json();
+                              createdInvoices.push(result.invoice.invoiceNumber);
+                              
+                              // Mark WO as converted
+                              setConvertedWoIds(prev => new Set(Array.from(prev).concat(item.id)));
+                            }
+                          } catch (error) {
+                            console.error("Failed to create invoice for", item.woNumber, error);
                           }
-                        });
+                        }
+                        
+                        // Show success toast
+                        if (createdInvoices.length > 0) {
+                          toast({
+                            title: "Invoices Created",
+                            description: createdInvoices.length === 1 
+                              ? `Created ${createdInvoices[0]} for ${selectedItems[0].propertyName}`
+                              : `Created ${createdInvoices.length} invoices: ${createdInvoices.join(", ")}`,
+                          });
+                        }
+                        
+                        // Clear selection
                         setSelectedCompletedIds(new Set());
                       }}
                       data-testid="button-invoice-completed"
