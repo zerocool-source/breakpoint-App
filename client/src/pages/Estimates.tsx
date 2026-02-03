@@ -3365,8 +3365,8 @@ export default function Estimates() {
           <DialogContent className={`max-w-6xl max-h-[90vh] overflow-hidden flex flex-col ${isConvertingFromWo ? 'p-0' : ''}`}>
             {isConvertingFromWo ? (
               /* Work Order Conversion Layout - Matches Estimate Details View */
-              <DialogHeader className="border-b pb-4 flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-700 p-6 sticky top-0 z-10">
-                <div className="flex items-center justify-between">
+              <DialogHeader className="border-b pb-4 flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-700 p-6 sticky top-0 z-10 relative">
+                <div className="flex items-center justify-between pr-12">
                   <div>
                     <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
                       <Wrench className="w-5 h-5" />
@@ -3384,6 +3384,14 @@ export default function Estimates() {
                     <p className="text-3xl font-bold text-white">{formatCurrency(calculateTotals.totalAmount)}</p>
                   </div>
                 </div>
+                {/* X Close Button */}
+                <button
+                  onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); setConvertingWoId(null); setConvertingWoNumber(""); }}
+                  className="absolute top-4 right-4 p-2 rounded-md text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </DialogHeader>
             ) : (
               <DialogHeader className="border-b pb-4 flex-shrink-0">
