@@ -152,7 +152,8 @@ export default function RepairQueue() {
     },
   });
   const repairRequests = repairRequestsData?.requests || [];
-  const pendingRepairRequests = repairRequests.filter(r => r.status === "pending");
+  // Show pending and assigned repair requests in "Repairs Needed" tab (exclude cancelled, estimated, completed)
+  const pendingRepairRequests = repairRequests.filter(r => r.status === "pending" || r.status === "assigned");
 
   // Fetch customers for property dropdown
   const { data: customersData } = useQuery<{ customers: any[] }>({
@@ -944,6 +945,40 @@ export default function RepairQueue() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to convert to estimate", variant: "destructive" });
+    },
+  });
+
+  // Mutation for inline assignment of repair requests from table
+  const inlineAssignRepairRequestMutation = useMutation({
+    mutationFn: async ({ requestId, technicianId, technicianName }: { 
+      requestId: string; 
+      technicianId: string | null; 
+      technicianName: string | null;
+    }) => {
+      const res = await fetch(`/api/repair-requests/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignedTechId: technicianId,
+          assignedTechName: technicianName,
+          assignedDate: technicianId ? new Date().toISOString().split('T')[0] : null,
+          status: technicianId ? "assigned" : "pending",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to assign repair request");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
+      toast({
+        title: variables.technicianId ? "Assigned" : "Unassigned",
+        description: variables.technicianId 
+          ? `Assigned to ${variables.technicianName}` 
+          : "Repair request unassigned",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to assign repair request", variant: "destructive" });
     },
   });
 
@@ -1934,6 +1969,7 @@ Thank you.`;
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Issue Description</th>
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Reported By</th>
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Priority</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Assigned To</th>
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
                           <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
                         </tr>
@@ -1971,6 +2007,46 @@ Thank you.`;
                                     {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
                                   </Badge>
                                 )}
+                              </td>
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                  value={request.assignedTechId || "unassigned"}
+                                  onValueChange={(value) => {
+                                    if (value === "unassigned") {
+                                      inlineAssignRepairRequestMutation.mutate({
+                                        requestId: request.id,
+                                        technicianId: null,
+                                        technicianName: null,
+                                      });
+                                    } else {
+                                      const tech = repairTechnicians.find((t: Technician) => t.id.toString() === value);
+                                      if (tech) {
+                                        inlineAssignRepairRequestMutation.mutate({
+                                          requestId: request.id,
+                                          technicianId: value,
+                                          technicianName: `${tech.firstName} ${tech.lastName}`,
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger 
+                                    className={`h-8 text-xs w-[140px] ${request.assignedTechId ? 'border-[#0ea5e9] text-slate-700' : 'border-orange-300 text-orange-600'}`}
+                                    data-testid={`select-assigned-tech-${request.id}`}
+                                  >
+                                    <SelectValue placeholder="Assign">
+                                      {request.assignedTechName || "Assign"}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned" className="text-orange-600">Unassigned</SelectItem>
+                                    {repairTechnicians.map((tech: Technician) => (
+                                      <SelectItem key={tech.id} value={tech.id.toString()}>
+                                        {tech.firstName} {tech.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </td>
                               <td className="px-4 py-3">
                                 <span className="text-sm text-slate-500">
