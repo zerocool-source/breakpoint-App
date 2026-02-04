@@ -352,12 +352,17 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
           <h4 style="color: #e67e22; margin: 0 0 15px 0; font-size: 14px;">SUPPORTING PHOTOS</h4>
           <p style="margin: 0 0 15px 0; font-size: 12px; color: #666;">Click any photo to view full size</p>
           <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-            ${photoUrls.map((url, index) => `
-              <a href="${url}" target="_blank" style="display: inline-block; text-decoration: none;">
-                <img src="${url}" alt="Photo ${index + 1}" style="width: 300px; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />
+            ${photoUrls.map((url, index) => {
+              // Create full-size URL by replacing w= parameter or removing size constraints
+              const fullSizeUrl = url.replace(/[?&]w=\d+/g, '').replace(/[?&]h=\d+/g, '') + (url.includes('?') ? '&w=1600' : '?w=1600');
+              // Create thumbnail URL with smaller size for display
+              const thumbnailUrl = url.replace(/w=\d+/g, 'w=400');
+              return `
+              <a href="${fullSizeUrl}" target="_blank" style="display: inline-block; text-decoration: none;">
+                <img src="${thumbnailUrl}" alt="Photo ${index + 1}" style="width: 300px; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />
                 <p style="margin: 8px 0 0 0; font-size: 11px; color: #666; text-align: center;">Photo ${index + 1}</p>
               </a>
-            `).join('')}
+            `}).join('')}
           </div>
           <p style="margin: 15px 0 0 0; font-size: 11px; color: #999;">Photos are also attached to this email for download.</p>
         </div>
