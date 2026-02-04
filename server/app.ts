@@ -4,6 +4,7 @@ import path from "node:path";
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { seedDatabase } from "./seed";
+import { startDeadlineChecker } from "./services/deadlineChecker";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -105,6 +106,9 @@ export default async function runApp(
   
   // Seed database with data from JSON files if tables are empty
   await seedDatabase();
+
+  // Start the deadline checker to auto-return expired jobs (checks every 5 minutes)
+  startDeadlineChecker(5);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

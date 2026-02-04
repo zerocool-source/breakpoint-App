@@ -1026,6 +1026,10 @@ export const estimates = pgTable("estimates", {
   archivedByUserId: text("archived_by_user_id"),
   archivedByUserName: text("archived_by_user_name"),
   archivedReason: text("archived_reason"),
+  
+  // Auto-return tracking for deadline expiration
+  autoReturnedAt: timestamp("auto_returned_at"),
+  autoReturnedReason: text("auto_returned_reason"),
 });
 
 export const insertEstimateSchema = createInsertSchema(estimates).omit({

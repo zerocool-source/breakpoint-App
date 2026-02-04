@@ -114,8 +114,14 @@ interface Estimate {
   reportedDate: string | null;
   sentForApprovalAt: string | null;
   approvedAt: string | null;
-  rejectedAt: string | null;
   scheduledDate: string | null;
+  scheduledAt: string | null;
+  deadlineAt: string | null;
+  deadlineValue: number | null;
+  deadlineUnit: string | null;
+  autoReturnedAt: string | null;
+  autoReturnedReason: string | null;
+  rejectedAt: string | null;
   completedAt: string | null;
   invoicedAt: string | null;
   techNotes: string | null;
@@ -1787,6 +1793,46 @@ export default function Estimates() {
     return new Date(date).toLocaleDateString();
   };
 
+  // Format countdown timer for deadline
+  const formatDeadlineCountdown = (deadlineAt: string | null): { text: string; isExpired: boolean; urgency: "normal" | "warning" | "critical" | "expired" } => {
+    if (!deadlineAt) return { text: "", isExpired: false, urgency: "normal" };
+    
+    const now = new Date().getTime();
+    const deadline = new Date(deadlineAt).getTime();
+    const diff = deadline - now;
+    
+    if (diff <= 0) {
+      return { text: "EXPIRED", isExpired: true, urgency: "expired" };
+    }
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      const remainingHours = hours % 24;
+      return { 
+        text: `${days}d ${remainingHours}h left`, 
+        isExpired: false, 
+        urgency: days <= 1 ? "warning" : "normal" 
+      };
+    }
+    
+    if (hours >= 1) {
+      return { 
+        text: `${hours}h ${minutes}m left`, 
+        isExpired: false, 
+        urgency: hours <= 4 ? "critical" : hours <= 12 ? "warning" : "normal" 
+      };
+    }
+    
+    return { 
+      text: `${minutes}m left`, 
+      isExpired: false, 
+      urgency: "critical" 
+    };
+  };
+
   // Selection helpers - for all estimates under $500 when that filter is active
   const isUnder500Selectable = (estimate: Estimate) => {
     return (estimate.totalAmount || 0) < 50000; // $500 in cents
@@ -3401,6 +3447,21 @@ export default function Estimates() {
                                   {format(new Date(estimate.scheduledDate), "MMM d")}
                                 </span>
                               )}
+                              {estimate.deadlineAt && (() => {
+                                const { text, urgency } = formatDeadlineCountdown(estimate.deadlineAt);
+                                const urgencyStyles = {
+                                  normal: "bg-green-50 text-green-600 border-green-200",
+                                  warning: "bg-amber-50 text-amber-600 border-amber-200",
+                                  critical: "bg-red-50 text-red-600 border-red-200",
+                                  expired: "bg-red-100 text-red-700 border-red-300",
+                                };
+                                return (
+                                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 ${urgencyStyles[urgency]}`}>
+                                    <Clock className="w-2.5 h-2.5 mr-0.5" />
+                                    {text}
+                                  </Badge>
+                                );
+                              })()}
                             </>
                           )}
                           {estimate.status === "completed" && (
