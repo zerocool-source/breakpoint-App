@@ -353,18 +353,30 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
           <p style="margin: 0 0 15px 0; font-size: 12px; color: #666;">Click any photo to view full size</p>
           <div style="display: flex; flex-wrap: wrap; gap: 15px;">
             ${photoUrls.map((url, index) => {
-              // Only modify URLs that support width parameters (like Unsplash)
-              // For object storage and other URLs, use as-is
-              const isUnsplash = url.includes('unsplash.com');
-              const fullSizeUrl = isUnsplash 
-                ? url.replace(/[?&]w=\d+/g, (match) => match.replace(/\d+/, '1600')).replace(/[?&]h=\d+/g, '')
-                : url;
-              const thumbnailUrl = isUnsplash 
-                ? url.replace(/w=\d+/g, 'w=400')
-                : url;
+              // Handle size parameters for external image services
+              // For URLs with w= or width= params, create full-size version
+              const hasWidthParam = /[?&](w|width)=\d+/i.test(url);
+              
+              // Full-size URL: remove or maximize width restrictions
+              let fullSizeUrl = url;
+              if (hasWidthParam) {
+                // Replace small width values with large ones for full-size viewing
+                fullSizeUrl = url
+                  .replace(/([?&])w=\d+/gi, '$1w=1600')
+                  .replace(/([?&])width=\d+/gi, '$1width=1600')
+                  .replace(/([?&])h=\d+/gi, '')
+                  .replace(/([?&])height=\d+/gi, '');
+              }
+              
+              // Thumbnail URL: use moderate size for email display
+              let thumbnailUrl = url;
+              if (hasWidthParam) {
+                thumbnailUrl = url.replace(/([?&])w=\d+/gi, '$1w=400');
+              }
+              
               return `
               <a href="${fullSizeUrl}" target="_blank" style="display: inline-block; text-decoration: none;">
-                <img src="${thumbnailUrl}" alt="Photo ${index + 1}" style="width: 300px; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />
+                <img src="${thumbnailUrl}" alt="Photo ${index + 1}" style="width: 300px; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; cursor: pointer;" />
                 <p style="margin: 8px 0 0 0; font-size: 11px; color: #666; text-align: center;">Photo ${index + 1}</p>
               </a>
             `}).join('')}
