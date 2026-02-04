@@ -1,0 +1,63 @@
+Fix QuickBooks Integration - Send Invoices with Attachments
+Current Issue
+
+"QuickBooks Not Connected" error appears when sending invoices
+OAuth authorization expired or not configured
+Need to send invoices through QuickBooks with attached images
+
+Requirements
+1. Settings Page - QuickBooks Connection
+
+Add "Connect to QuickBooks" button that starts OAuth flow
+Show connection status: Connected ✅ or Disconnected ❌
+Display connected QuickBooks company name when connected
+Add "Disconnect" button to revoke connection
+Show last sync date/time
+
+2. OAuth 2.0 Flow
+
+Implement QuickBooks OAuth 2.0 authorization
+Store tokens securely in database:
+
+access_token
+refresh_token
+realm_id (QuickBooks company ID)
+token_expiry timestamp
+
+
+Auto-refresh access token when expired (tokens expire in 1 hour)
+If refresh fails, prompt user to reconnect
+
+3. Send Invoice Functionality
+When user clicks "Invoice" button on an estimate:
+
+Check if QuickBooks is connected (if not, show error with link to Settings)
+Create invoice in QuickBooks with:
+
+Customer name (match or create customer from property/HOA name)
+Line items from estimate (description, quantity, amount)
+Due date
+
+
+Upload attached photos/images to the QuickBooks invoice
+Send invoice via QuickBooks email
+Update estimate status to "Invoiced"
+Store QuickBooks invoice ID for reference
+
+4. API Endpoints
+GET  /api/quickbooks/connect     - Redirect to QuickBooks OAuth
+GET  /api/quickbooks/callback    - Handle OAuth callback, store tokens
+GET  /api/quickbooks/status      - Return connection status
+POST /api/quickbooks/disconnect  - Revoke tokens, clear connection
+POST /api/quickbooks/invoice     - Create and send invoice
+5. Environment Variables Needed
+QUICKBOOKS_CLIENT_ID
+QUICKBOOKS_CLIENT_SECRET
+QUICKBOOKS_REDIRECT_URI
+QUICKBOOKS_ENVIRONMENT=production
+6. Error Handling
+
+Show specific error messages (not generic "failed")
+If token expired mid-request, refresh and retry once
+If customer doesn't exist in QuickBooks, create them automatically
+Log all QuickBooks API errors for debugging

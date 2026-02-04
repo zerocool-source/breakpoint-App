@@ -914,8 +914,8 @@ export function registerQuickbooksRoutes(app: Express) {
         );
 
       // Also get list of invoices specifically missing DocNumber for logging
-      const missingDocNumber = invoicesToSync.filter(inv => !inv.quickbooksDocNumber);
-      const unpaidInvoices = invoicesToSync.filter(inv => inv.status !== "paid");
+      const missingDocNumber = invoicesToSync.filter((inv: typeof invoicesToSync[number]) => !inv.quickbooksDocNumber);
+      const unpaidInvoices = invoicesToSync.filter((inv: typeof invoicesToSync[number]) => inv.status !== "paid");
 
       console.log(`Found ${invoicesToSync.length} invoices to sync:`);
       console.log(`  - ${unpaidInvoices.length} unpaid (need payment check)`);
