@@ -1,16 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ObjectUploader } from "@/components/ObjectUploader";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
-  Wrench, X, Camera, Upload, ClipboardList, MapPin, Clock, UserCheck, Calendar
+  Wrench, X, Camera, Upload, ClipboardList, MapPin, UserCheck, Calendar, Loader2
 } from "lucide-react";
 
 interface RepairRequestFormProps {
@@ -22,6 +22,7 @@ interface RepairRequestFormProps {
 interface PhotoAttachment {
   url: string;
   caption: string;
+  fileName?: string;
 }
 
 interface FormData {
@@ -51,9 +52,13 @@ const JOB_TYPES = [
   "Other"
 ];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ACCEPTED_FILE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/heic"];
+
 export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairRequestFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<FormData>({
     propertyId: "",
@@ -70,6 +75,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
   });
 
   const [customJobType, setCustomJobType] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: customersData } = useQuery<{ customers: any[] }>({
     queryKey: ["/api/customers/stored"],
@@ -112,8 +118,8 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       onOpenChange(false);
       onSuccess?.();
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create repair request", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to create repair request", variant: "destructive" });
     },
   });
 
@@ -132,13 +138,118 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       photoAttachments: [],
     });
     setCustomJobType("");
+    setIsUploading(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onOpenChange(false);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newAttachments: PhotoAttachment[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file type
+      if (!ACCEPTED_FILE_TYPES.includes(file.type.toLowerCase())) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not a supported image format. Use JPG, PNG, or HEIC.`,
+          variant: "destructive"
+        });
+        continue;
+      }
+
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "File too large",
+          description: `${file.name} exceeds 10 MB limit.`,
+          variant: "destructive"
+        });
+        continue;
+      }
+
+      // Convert to base64
+      try {
+        const base64 = await fileToBase64(file);
+        newAttachments.push({
+          url: base64,
+          caption: "",
+          fileName: file.name,
+        });
+      } catch (error) {
+        console.error("Error reading file:", error);
+        toast({
+          title: "Upload error",
+          description: `Failed to read ${file.name}`,
+          variant: "destructive"
+        });
+      }
+    }
+
+    if (newAttachments.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        photoAttachments: [...prev.photoAttachments, ...newAttachments].slice(0, 10), // Max 10 photos
+      }));
+    }
+
+    setIsUploading(false);
+    // Reset file input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      photoAttachments: prev.photoAttachments.filter((_, i) => i !== index),
+    }));
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData.propertyId) {
+      toast({ title: "Error", description: "Please select a property", variant: "destructive" });
+      return false;
+    }
+
+    if (!formData.jobType) {
+      toast({ title: "Error", description: "Please select a job type", variant: "destructive" });
+      return false;
+    }
+
+    if (formData.jobType === "Other" && !customJobType.trim()) {
+      toast({ title: "Error", description: "Please enter a custom job type", variant: "destructive" });
+      return false;
+    }
+
+    if (!formData.scheduledDate) {
+      toast({ title: "Error", description: "Please select a scheduled date", variant: "destructive" });
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = (asDraft: boolean = false) => {
-    if (!formData.propertyId) {
-      toast({ title: "Error", description: "Please select a property", variant: "destructive" });
-      return;
-    }
+    if (!validateForm()) return;
 
     const finalJobType = formData.jobType === "Other" ? customJobType : formData.jobType;
 
@@ -153,8 +264,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       assignedTechName: formData.assignedTechName || undefined,
       officeNotes: formData.officeNotes || undefined,
       photos: formData.photoAttachments.map(p => p.url),
-      photoAttachments: formData.photoAttachments,
-      status: formData.assignedTechId ? "assigned" : "pending",
+      status: asDraft ? "draft" : (formData.assignedTechId ? "assigned" : "pending"),
       requestNumber: `RR-${Math.floor(100000 + Math.random() * 900000)}`,
       requestDate: new Date().toISOString(),
       priority: "medium",
@@ -171,8 +281,18 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleClose();
+      }
+    }}>
       <DialogContent className="max-w-2xl h-[85vh] overflow-hidden flex flex-col p-0">
+        <VisuallyHidden>
+          <DialogTitle>Repair Request Form</DialogTitle>
+          <DialogDescription>Create a new repair request for a property</DialogDescription>
+        </VisuallyHidden>
+        
+        {/* Header */}
         <div className="bg-[#1e3a5f] text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             <Wrench className="w-6 h-6" />
@@ -181,6 +301,14 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
               <p className="text-sm text-slate-300">New Request</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+            data-testid="button-close-rr-modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <ScrollArea className="flex-1 overflow-y-auto">
@@ -254,7 +382,9 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
             {/* Property Name and Address */}
             <div className="p-4 bg-slate-50 rounded-lg border space-y-3">
               <div>
-                <Label className="text-sm font-medium text-slate-700 mb-2 block">Property Name</Label>
+                <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                  Property Name <span className="text-red-500">*</span>
+                </Label>
                 <Select
                   value={formData.propertyId}
                   onValueChange={(id) => {
@@ -297,7 +427,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
             <div className="p-4 bg-slate-50 rounded-lg border">
               <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
                 <Wrench className="w-4 h-4 text-slate-500" />
-                Job Type / Repair Type
+                Job Type / Repair Type <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={formData.jobType}
@@ -329,7 +459,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
             <div className="p-4 bg-slate-50 rounded-lg border">
               <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
                 <Calendar className="w-4 h-4 text-slate-500" />
-                Scheduling
+                Scheduling <span className="text-red-500">*</span>
               </Label>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -364,60 +494,43 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                 <Camera className="w-4 h-4 text-slate-500" />
                 Attachments from Office
               </Label>
+              
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept=".jpg,.jpeg,.png,.heic"
+                multiple
+                className="hidden"
+                data-testid="input-file-photos"
+              />
+              
               <div className="flex items-center gap-2 mb-3">
-                <ObjectUploader
-                  maxNumberOfFiles={10}
-                  maxFileSize={10485760}
-                  onGetUploadParameters={async (file) => {
-                    const res = await fetch("/api/uploads/request-url", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        name: file.name,
-                        size: file.size,
-                        contentType: file.type,
-                      }),
-                    });
-                    const { uploadURL, objectPath } = await res.json();
-                    (file as any).meta.objectPath = objectPath;
-                    return {
-                      method: "PUT" as const,
-                      url: uploadURL,
-                      headers: { "Content-Type": file.type },
-                    };
-                  }}
-                  onComplete={async (result) => {
-                    const uploadedFiles = result.successful || [];
-                    const newAttachments: PhotoAttachment[] = [];
-                    for (const file of uploadedFiles) {
-                      const objectPath = (file as any).meta?.objectPath;
-                      if (objectPath) {
-                        try {
-                          await fetch("/api/uploads/confirm", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ objectPath }),
-                          });
-                          newAttachments.push({ url: objectPath, caption: "" });
-                        } catch (error) {
-                          console.error("Failed to confirm upload:", error);
-                        }
-                      }
-                    }
-                    if (newAttachments.length > 0) {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        photoAttachments: [...prev.photoAttachments, ...newAttachments],
-                      }));
-                    }
-                  }}
-                  buttonClassName="bg-[#0077b6] text-white hover:bg-[#005f8f]"
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading || formData.photoAttachments.length >= 10}
+                  className="bg-[#0077b6] text-white hover:bg-[#005f8f]"
+                  data-testid="button-add-photos"
                 >
-                  <Upload className="w-3 h-3 mr-1" />
-                  Add Photos
-                </ObjectUploader>
-                <span className="text-xs text-slate-400">Max 10 MB per photo</span>
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3 h-3 mr-1" />
+                      Add Photos
+                    </>
+                  )}
+                </Button>
+                <span className="text-xs text-slate-400">
+                  Max 10 MB per photo ({formData.photoAttachments.length}/10 photos)
+                </span>
               </div>
+              
               {formData.photoAttachments.length > 0 ? (
                 <div className="space-y-4">
                   {formData.photoAttachments.map((attachment, index) => (
@@ -431,12 +544,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                           />
                           <button
                             type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                photoAttachments: prev.photoAttachments.filter((_, i) => i !== index),
-                              }));
-                            }}
+                            onClick={() => removePhoto(index)}
                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             data-testid={`button-remove-photo-${index}`}
                           >
@@ -444,7 +552,14 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                           </button>
                         </div>
                         <div className="flex-1">
-                          <Label className="text-xs text-slate-500">Caption</Label>
+                          <div className="flex items-center justify-between mb-1">
+                            <Label className="text-xs text-slate-500">Caption</Label>
+                            {attachment.fileName && (
+                              <span className="text-xs text-slate-400 truncate max-w-[150px]">
+                                {attachment.fileName}
+                              </span>
+                            )}
+                          </div>
                           <Input
                             value={attachment.caption}
                             onChange={(e) => {
@@ -480,12 +595,20 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
             disabled={createMutation.isPending}
             data-testid="button-save-draft"
           >
-            Save Draft
+            {createMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Draft"
+            )}
           </Button>
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
+              disabled={createMutation.isPending}
               data-testid="button-cancel-rr"
             >
               Cancel
@@ -496,7 +619,14 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
               className="bg-[#f97316] hover:bg-[#ea580c] text-white"
               data-testid="button-submit-rr"
             >
-              Submit Request
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Request"
+              )}
             </Button>
           </div>
         </div>
