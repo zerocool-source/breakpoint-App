@@ -1,0 +1,148 @@
+On the "Completed Without Approval (Work Order)" container, make these updates:
+
+1. MAKE THE ENTIRE ROW CLICKABLE:
+
+
+
+
+
+Clicking anywhere on the row (except checkbox) opens the Convert to Estimate form
+
+
+
+Add hover state to show the row is clickable
+
+
+
+Cursor should change to pointer on hover
+
+CSS:
+
+.work-order-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.work-order-row:hover {
+  background-color: #f0fdf4; /* Light green tint on hover */
+}
+
+/* Keep checkbox separate */
+.work-order-row .checkbox-cell {
+  cursor: default;
+}
+
+
+2. WHEN CONVERTED TO ESTIMATE:
+
+
+
+
+
+After clicking "Convert to Estimate" and saving:
+
+
+
+
+
+Remove the work order from the "Completed Without Approval (Work Order)" container
+
+
+
+Add the new estimate to the Estimates list below
+
+
+
+Update the count badge (e.g., 6 → 5)
+
+
+
+Show success toast: "Work Order WO-26-00001 converted to Estimate EST-XXXXXX"
+
+
+
+The estimate should appear with:
+
+
+
+
+
+"Work Order" tag (teal/purple badge)
+
+
+
+Status: "Draft" or "Pending"
+
+
+
+All the pre-filled data from the work order
+
+3. WHEN CONVERTED TO INVOICE (via Invoice button):
+
+
+
+
+
+When selecting items with checkboxes and clicking "Invoice" button:
+
+
+
+
+
+Remove the selected work orders from this container
+
+
+
+Create invoice(s) for the selected items
+
+
+
+Add the invoice(s) to the Invoices list/page
+
+
+
+Update the count badge
+
+
+
+Show success toast: "Invoice created for X work orders"
+
+
+
+Navigate to or show link to the new invoice
+
+FLOW:
+
+Completed Without Approval (Work Order) [6]
+    ↓ Click row or "Convert to Estimate"
+Convert to Estimate form opens
+    ↓ Click "Convert to Estimate" button
+Work order removed from container [5]
+    ↓
+New estimate appears in Estimates list with "Work Order" tag
+
+OR
+
+Completed Without Approval (Work Order) [6]
+    ↓ Select checkboxes + Click "Invoice"
+Selected work orders removed from container [4]
+    ↓
+New invoice(s) appear in Invoices list
+
+
+UPDATE COUNTS:
+
+
+
+
+
+Sync the count badge with actual items in the container
+
+
+
+Sync with Overview dashboard "Completed Without Approval" count
+
+
+
+Keep data consistent across pages
+

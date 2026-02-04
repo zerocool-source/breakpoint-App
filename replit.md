@@ -84,6 +84,7 @@ Routes are organized into domain-specific modules in `server/routes/`:
     - Dedicated endpoints for each workflow transition: /approve, /reject, /schedule, /complete, /ready-to-invoice, /invoice
     - Metrics dashboard showing approval rate, values by status, average times
     - Scheduling modal for assigning jobs to repair technicians
+    - **Work Order Conversion Tracking**: When converting Work Orders to Estimates, tracks `convertedByUserName` and `convertedAt` fields. Uses `formData.officeMemberName` or defaults to "Office Staff"
 - `serviceRepairs.ts` - Service repair jobs management (sub-$500 jobs), batch-to-estimate workflow
 - `techOps.ts` - Technician operations: service repairs, windy day cleanups, report issues with conversion tracking
     - Service repairs can be converted to estimates via multi-select

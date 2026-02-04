@@ -34,6 +34,7 @@ export function registerInvoiceRoutes(app: Express) {
     try {
       const invoiceData = req.body;
       
+      // Generate invoice number if not provided
       if (!invoiceData.invoiceNumber) {
         const year = new Date().getFullYear().toString().slice(-2);
         const countResult = await db
@@ -42,6 +43,17 @@ export function registerInvoiceRoutes(app: Express) {
           .where(sql`invoice_number LIKE ${'INV-' + year + '-%'}`);
         const nextNum = (countResult[0]?.count || 1).toString().padStart(5, '0');
         invoiceData.invoiceNumber = `INV-${year}-${nextNum}`;
+      }
+      
+      // Convert date strings to Date objects
+      if (invoiceData.dueDate && typeof invoiceData.dueDate === 'string') {
+        invoiceData.dueDate = new Date(invoiceData.dueDate);
+      }
+      if (invoiceData.paidDate && typeof invoiceData.paidDate === 'string') {
+        invoiceData.paidDate = new Date(invoiceData.paidDate);
+      }
+      if (invoiceData.sentAt && typeof invoiceData.sentAt === 'string') {
+        invoiceData.sentAt = new Date(invoiceData.sentAt);
       }
       
       const [newInvoice] = await db.insert(invoices).values(invoiceData).returning();
@@ -116,6 +128,71 @@ export function registerInvoiceRoutes(app: Express) {
     } catch (error: any) {
       console.error("Error generating invoice number:", error);
       res.status(500).json({ error: "Failed to generate invoice number" });
+    }
+  });
+
+  // Send invoice to QuickBooks
+  app.post("/api/invoices/:id/send-to-quickbooks", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { customerEmail, sendEmail = true } = req.body;
+      
+      // 1. Get the invoice from our database
+      const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+      
+      if (invoice.quickbooksInvoiceId) {
+        return res.status(400).json({ error: "Invoice already sent to QuickBooks" });
+      }
+      
+      // 2. Forward the request to QuickBooks route (reuse existing logic)
+      const qbResponse = await fetch(`http://localhost:${process.env.PORT || 5000}/api/quickbooks/create-invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: invoice.customerName,
+          customerEmail: customerEmail || invoice.emailedTo,
+          lineItems: invoice.lineItems || [],
+          memo: invoice.notes,
+          sendEmail: sendEmail,
+          estimateId: invoice.estimateId,
+        })
+      });
+      
+      if (!qbResponse.ok) {
+        const errorData = await qbResponse.json();
+        return res.status(qbResponse.status).json(errorData);
+      }
+      
+      const qbResult = await qbResponse.json();
+      
+      // 3. Update our invoice with QuickBooks info
+      const [updated] = await db
+        .update(invoices)
+        .set({
+          quickbooksInvoiceId: qbResult.qbInvoiceId,
+          quickbooksDocNumber: qbResult.qbDocNumber,
+          quickbooksSyncedAt: new Date(),
+          quickbooksSyncStatus: 'synced',
+          status: 'sent',
+          sentAt: new Date(),
+          emailedTo: customerEmail || invoice.emailedTo,
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, id))
+        .returning();
+      
+      res.json({ 
+        success: true, 
+        invoice: updated,
+        qbNumber: qbResult.qbDocNumber,
+        qbInvoiceId: qbResult.qbInvoiceId,
+      });
+    } catch (error: any) {
+      console.error("Error sending invoice to QuickBooks:", error);
+      res.status(500).json({ error: "Failed to send invoice to QuickBooks", message: error.message });
     }
   });
 }

@@ -1,0 +1,80 @@
+On the Repair Queue page, make sure Work Orders appear under the technician who completed them:
+
+**ADD WORK ORDERS TO TECHNICIAN'S JOBS:**
+
+When a technician completes a job that becomes a Work Order (Completed Without Approval), it should show up under their card in the Repair Queue.
+
+**EXAMPLE:**
+If Rick Jacobs completed a Work Order for "Palm Court Apartments - Pool pump motor replaced", it should appear under Rick Jacobs's jobs section.
+
+**UPDATE TECHNICIAN CARDS TO INCLUDE WORK ORDERS:**
+
+For each technician card, fetch and display:
+1. Active Jobs (estimates in progress)
+2. **Work Orders** (completed without approval)
+
+**ADD "WORK ORDERS" STATUS/TAB:**
+
+In the technician's job breakdown, add Work Orders count:
+```
+┌─────────────────────────────────────────────────┐
+│ 👤 Matt Cummins                            [2] │
+│    2 active jobs                               │
+│                                                │
+│   [0]        [2]           [4]        [1]     │
+│  Pending   In Progress   Completed   Work Orders│
+│                                                │
+│ Total Value: $7,813.00                         │
+│ Completion: ████████████░░░ 67%                │
+└─────────────────────────────────────────────────┘
+```
+
+**SHOW WORK ORDERS IN TECHNICIAN'S JOBS LIST:**
+
+When clicking on a technician, their jobs table should include Work Orders:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Matt Cummins's Jobs                                                    [+ Repair Request]       │
+├──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ EST #       │ Status       │ Property        │ Technician │ Date     │ Description    │ Amount  │
+│ EST-26-00032│ In Progress  │ Sunset Hills HOA│ Matt C.    │ Feb 3    │ Heater not...  │ $1,500  │
+│ EST-26-00025│ In Progress  │ Lakewood Country│ Matt C.    │ Jan 28   │ Pool Heater... │ $4,850  │
+│ WO-26-00002 │ Work Order   │ Sunset Hills HOA│ Matt C.    │ Jan 30   │ Filter cart... │ $285    │  ← Work Order
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**WORK ORDER ROW STYLING:**
+- Status badge: "Work Order" in amber/yellow (#f59e0b) or teal color
+- Show WO # instead of EST #
+- Include "Convert to Estimate" action button
+- Different background tint to distinguish from regular estimates
+
+**FILTER TAB:**
+Add or update a tab to filter Work Orders:
+- Add "Work Orders (X)" tab next to existing tabs
+- Or include Work Orders in "Repairs Needed" tab
+
+**DATA QUERY:**
+```javascript
+// Fetch technician's jobs including work orders
+const fetchTechnicianJobs = async (technicianId) => {
+  // Get estimates
+  const estimates = await fetch(`/api/estimates?technician=${technicianId}&status=in_progress`);
+  
+  // Get work orders for this technician
+  const workOrders = await fetch(`/api/work-orders?technician=${technicianId}&status=pending`);
+  
+  return {
+    estimates: await estimates.json(),
+    workOrders: await workOrders.json()
+  };
+};
+```
+
+**MAKE SURE:**
+- Work Orders are associated with the technician who completed them
+- They appear under the correct technician's card
+- Count includes Work Orders in the badge
+- Can filter to see only Work Orders
+- "Convert to Estimate" action available from this view

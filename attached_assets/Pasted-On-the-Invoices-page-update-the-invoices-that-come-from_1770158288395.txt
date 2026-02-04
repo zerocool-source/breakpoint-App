@@ -1,0 +1,95 @@
+On the Invoices page, update the invoices that come from Work Orders to have proper tags and "Send Invoice" button:
+
+**UPDATE INVOICES FROM WORK ORDERS:**
+
+1. **ADD "WORK ORDER" TAG:**
+- For invoices created from Work Orders, display a "Work Order" tag
+- Tag color: Teal (#14b8a6) or orange (#f97316) to distinguish from other sources
+- Position: In the CUSTOMER/WORK column, below the description (similar to how EST# is shown)
+
+2. **ADD "SEND INVOICE" BUTTON:**
+- For invoices with status "Draft" that came from Work Orders
+- Show a "Send Invoice" button in the ACTIONS column
+- Button style: Blue outline or solid button
+- When clicked:
+  - Send the invoice to QuickBooks
+  - Get back the QB # (e.g., 1054, 1055)
+  - Update status from "Draft" to "Sent"
+  - Populate the SENT date
+  - Populate the DUE date
+  - Update the EMAILED column
+
+**INVOICE ROW LAYOUT FOR WORK ORDER INVOICES:**
+```
+| INVOICE #      | QB # | CUSTOMER / WORK                          | TECHNICIAN           | EMAILED | SENT | DUE        | AMOUNT   | STATUS  | PAID | PHOTOS | ACTIONS        |
+| INV-26-00022   | —    | Palm Court Apartments                    | Rick Jacobs (Repair) | —       | —    | Mar 5, 2026| $450.00  | Draft   | —    | —      | [Send Invoice] |
+|                |      | 🔧 1.5HP Pool Pump Motor                 |                      |         |      |            |          |         |      |        |                |
+|                |      | [Work Order]                             |                      |         |      |            |          |         |      |        |                |
+```
+
+**AFTER SENDING TO QUICKBOOKS:**
+```
+| INVOICE #      | QB # | CUSTOMER / WORK                          | TECHNICIAN           | EMAILED              | SENT        | DUE        | AMOUNT   | STATUS | PAID       | PHOTOS | ACTIONS      |
+| INV-26-00022   | 1055 | Palm Court Apartments                    | Rick Jacobs (Repair) | ✉ business.develop...| Feb 3, 2026 | Mar 5, 2026| $450.00  | Sent   | —          | —      | [View in QB] |
+|                |      | 🔧 1.5HP Pool Pump Motor                 |                      |                      |             |            |          |        |            |        |              |
+|                |      | [Work Order]                             |                      |                      |             |            |          |        |            |        |              |
+```
+
+**SEND INVOICE FUNCTIONALITY:**
+```javascript
+const sendInvoiceToQuickBooks = async (invoiceId) => {
+  try {
+    // 1. Send to QuickBooks API
+    const response = await fetch('/api/invoices/send-to-quickbooks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ invoiceId })
+    });
+    
+    const result = await response.json();
+    
+    // 2. Update the invoice with QB data
+    // - QB number (e.g., 1055)
+    // - Status: "Sent"
+    // - Sent date: today
+    // - Emailed: customer email
+    
+    // 3. Show success toast
+    toast.success(`Invoice sent to QuickBooks - QB #${result.qbNumber}`);
+    
+    // 4. Refresh the invoices list
+    refreshInvoices();
+    
+  } catch (error) {
+    toast.error('Failed to send invoice to QuickBooks');
+  }
+};
+```
+
+**TAG STYLING:**
+```css
+.work-order-tag {
+  background-color: #14b8a6; /* Teal */
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+```
+
+**BUTTON STYLING:**
+```css
+.send-invoice-btn {
+  background-color: #0077b6;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.send-invoice-btn:hover {
+  background-color: #005f8a;
+}
+```

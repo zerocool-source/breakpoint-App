@@ -1,0 +1,51 @@
+On the "Convert to Estimate" form for Work Orders, make these updates:
+
+**1. MAKE THE FORM SCROLLABLE:**
+- Ensure the entire form/modal is scrollable when content exceeds the viewport height
+- Add vertical scroll to the form container
+- User should be able to scroll down to see all content including Photos section and buttons
+
+**2. MAKE IMAGES CLICKABLE TO VIEW LARGER:**
+- When clicking on a Before or After photo, open a lightbox/modal showing the full-size image
+- Lightbox should:
+  - Show the image at full size or fit to screen
+  - Have a dark overlay background
+  - Include an X button to close
+  - Show the caption below the image (e.g., "Before: Old corroded motor")
+  - Allow clicking outside the image to close
+  - Support keyboard ESC to close
+  - Allow navigation between Before/After with arrow keys or buttons (optional)
+
+**LIGHTBOX EXAMPLE:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                            [X] │
+│                                                                                 │
+│                     ┌─────────────────────────────────┐                        │
+│                     │                                 │                        │
+│                     │                                 │                        │
+│                     │      [FULL SIZE IMAGE]          │                        │
+│                     │                                 │                        │
+│                     │                                 │                        │
+│                     └─────────────────────────────────┘                        │
+│                                                                                 │
+│                     "Before: Old corroded motor"                               │
+│                                                                                 │
+│           [← Previous]                              [Next →]                   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**CSS FOR SCROLLABLE FORM:**
+```css
+.work-order-form-modal {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+```
+
+**MAKE SURE:**
+- Form scrolls smoothly
+- Scroll bar is visible or appears on hover
+- Photos section is fully visible when scrolled down
+- "Cancel" and "Convert to Estimate" buttons are always reachable
+- Image lightbox works on click

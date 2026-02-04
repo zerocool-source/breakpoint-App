@@ -1,0 +1,111 @@
+On the Estimates page, in the "Completed Without Approval (Work Order)" container, add sample data with descriptions, photos, and parts used for each work order:
+
+**UPDATE SAMPLE DATA WITH FULL DETAILS:**
+
+**1. WO-26-00001 | Palm Court Apartments | Pool pump motor replaced | $450.00 | Rick Jacobs | Feb 1**
+- Description: "Replaced 1.5HP pool pump motor. Old motor was overheating and making grinding noise. Tested and running smoothly."
+- Photos:
+  - Before: Old pump motor with visible rust and wear
+  - After: New pump motor installed and running
+- Parts Used:
+  - 1.5HP Pool Pump Motor - $285.00
+  - Motor Seal Kit - $45.00
+  - Labor - $120.00
+
+**2. WO-26-00002 | Sunset Hills HOA | Filter cartridge replacement | $285.00 | Matt Cummins | Jan 31**
+- Description: "Replaced 4 filter cartridges. Old cartridges were clogged and causing high pressure readings."
+- Photos:
+  - Before: Dirty/clogged filter cartridges
+  - After: New cartridges installed in filter housing
+- Parts Used:
+  - Filter Cartridge (4-pack) - $180.00
+  - O-Ring Set - $25.00
+  - Labor - $80.00
+
+**3. WO-26-00003 | Lakewood Country Club | Heater pilot assembly repair | $375.00 | Alan Bateman | Jan 30**
+- Description: "Repaired pilot assembly on pool heater. Replaced thermocouple and cleaned burner tray. Heater now igniting properly."
+- Photos:
+  - Before: Corroded pilot assembly
+  - After: New thermocouple installed, clean burner
+- Parts Used:
+  - Thermocouple Assembly - $125.00
+  - Pilot Tube - $45.00
+  - Gas Valve Service - $85.00
+  - Labor - $120.00
+
+**4. WO-26-00004 | Shady Trails HOA | Skimmer basket and weir door replaced | $125.00 | Kevin Enriquez | Jan 29**
+- Description: "Replaced cracked skimmer basket and broken weir door. Skimmer now functioning properly."
+- Photos:
+  - Before: Cracked skimmer basket
+  - After: New basket and weir door installed
+- Parts Used:
+  - Skimmer Basket - $35.00
+  - Weir Door - $28.00
+  - Skimmer Lid - $22.00
+  - Labor - $40.00
+
+**5. WO-26-00005 | Canyon Ridge HOA | Chemical feeder repair | $195.00 | Vit Kruml | Jan 28**
+- Description: "Repaired chlorine feeder. Replaced check valve and tubing. Adjusted feed rate."
+- Photos:
+  - Before: Leaking chemical feeder connection
+  - After: New tubing and check valve installed
+- Parts Used:
+  - Check Valve - $45.00
+  - Chemical Tubing (10ft) - $30.00
+  - Injection Fitting - $25.00
+  - Labor - $95.00
+
+**6. WO-26-00006 | Bella Vista HOA | Pool light fixture replaced | $320.00 | Jose Puente | Jan 27**
+- Description: "Replaced underwater pool light fixture. Old fixture had water intrusion. New LED light installed and sealed."
+- Photos:
+  - Before: Old light fixture with condensation inside
+  - After: New LED pool light glowing underwater
+- Parts Used:
+  - LED Pool Light Fixture - $185.00
+  - Light Niche Gasket - $35.00
+  - Cord Seal Kit - $20.00
+  - Labor - $80.00
+
+---
+
+**WHEN CLICKING "CONVERT TO ESTIMATE":**
+
+Pre-fill the Estimate form with:
+
+1. **Customer/Property:** Auto-select the property
+2. **Quote Details:**
+   - Job Title: Work order description title
+   - Quote Description: Full description text
+3. **Line Items:** Pre-populate with parts used
+   - Each part as a line item with description and amount
+4. **Photos Section:**
+   - Show "Before" photos with label
+   - Show "After" photos with label
+   - Photos should display as thumbnails
+5. **Work Order Tracking:**
+   - WO Number: Pre-filled
+   - Work Order Received: Checked
+6. **Repair Tech:** Pre-select the technician
+7. **Estimate Total:** Sum of all line items
+
+**EXAMPLE - Convert WO-26-00001:**
+```
+ESTIMATE FORM:
+- Customer/Property: Palm Court Apartments
+- Job Title: Pool pump motor replaced
+- Quote Description: "Replaced 1.5HP pool pump motor. Old motor was overheating..."
+
+LINE ITEMS:
+| Description              | Qty | Amount  |
+| 1.5HP Pool Pump Motor    | 1   | $285.00 |
+| Motor Seal Kit           | 1   | $45.00  |
+| Labor                    | 1   | $120.00 |
+|                    Subtotal:   | $450.00 |
+
+PHOTOS:
+[Before Photo 1] [After Photo 1]
+"Old pump motor"  "New motor installed"
+
+Repair Tech: Rick Jacobs
+WO Number: WO-26-00001
+```

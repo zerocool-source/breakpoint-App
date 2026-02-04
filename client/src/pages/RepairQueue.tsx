@@ -40,6 +40,26 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { RepairRequestForm } from "@/components/RepairRequestForm";
 import type { ServiceRepairJob, Technician, Emergency, RepairRequest } from "@shared/schema";
 
+interface WorkOrder {
+  id: string;
+  estimateNumber: string | null;
+  woNumber: string | null;
+  propertyId: string;
+  propertyName: string;
+  customerName: string | null;
+  title: string;
+  description: string | null;
+  totalAmount: number | null;
+  status: string;
+  repairTechId: string | null;
+  repairTechName: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  isUrgent?: boolean;
+  beforePhotos?: Array<{ url: string; caption: string }>;
+  afterPhotos?: Array<{ url: string; caption: string }>;
+}
+
 const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
   pending: { color: "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20", icon: Clock, label: "Pending" },
   assigned: { color: "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20", icon: User, label: "Assigned" },
@@ -48,6 +68,7 @@ const statusConfig: Record<string, { color: string; icon: any; label: string }> 
   cancelled: { color: "bg-slate-100 text-slate-600 border-slate-200", icon: AlertTriangle, label: "Cancelled" },
   estimated: { color: "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20", icon: DollarSign, label: "Estimated" },
   batched: { color: "bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20", icon: Target, label: "Batched" },
+  work_order: { color: "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20", icon: FileText, label: "Work Order" },
 };
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
@@ -152,7 +173,8 @@ export default function RepairQueue() {
     },
   });
   const repairRequests = repairRequestsData?.requests || [];
-  const pendingRepairRequests = repairRequests.filter(r => r.status === "pending");
+  // Show pending and assigned repair requests in "Repairs Needed" tab (exclude cancelled, estimated, completed)
+  const pendingRepairRequests = repairRequests.filter(r => r.status === "pending" || r.status === "assigned");
 
   // Fetch customers for property dropdown
   const { data: customersData } = useQuery<{ customers: any[] }>({
@@ -163,6 +185,41 @@ export default function RepairQueue() {
       return response.json();
     },
   });
+
+  // Fetch work orders (completed estimates without approval)
+  const { data: workOrdersData = [] } = useQuery<WorkOrder[]>({
+    queryKey: ["work-orders-queue"],
+    queryFn: async () => {
+      const response = await fetch("/api/estimates");
+      if (!response.ok) throw new Error("Failed to fetch estimates");
+      const data = await response.json();
+      const estimates = data.estimates || [];
+      // Work orders are completed estimates without approval
+      return estimates
+        .filter((e: any) => e.status === "completed" && !e.approvedAt)
+        .map((e: any) => ({
+          id: e.id,
+          estimateNumber: e.estimateNumber,
+          woNumber: e.woNumber,
+          propertyId: e.propertyId,
+          propertyName: e.propertyName,
+          customerName: e.customerName,
+          title: e.title,
+          description: e.description,
+          totalAmount: e.totalAmount,
+          status: "work_order",
+          repairTechId: e.repairTechId,
+          repairTechName: e.repairTechName,
+          createdAt: e.createdAt,
+          completedAt: e.completedAt,
+          isUrgent: e.isUrgent,
+          beforePhotos: e.beforePhotos,
+          afterPhotos: e.afterPhotos,
+        }));
+    },
+    refetchInterval: 30000,
+  });
+  const workOrders = workOrdersData || [];
 
   // Create repair request state
   const [showCreateRepairRequestModal, setShowCreateRepairRequestModal] = useState(false);
@@ -356,9 +413,11 @@ export default function RepairQueue() {
       tech: string; 
       techId: string | null;
       repairs: ServiceRepairJob[]; 
+      workOrders: WorkOrder[];
       pending: number; 
       inProgress: number; 
       completed: number; 
+      workOrderCount: number;
       totalValue: number;
       initials: string;
     }> = {};
@@ -371,9 +430,11 @@ export default function RepairQueue() {
         tech: fullName, 
         techId: tech.id,
         repairs: [], 
+        workOrders: [],
         pending: 0, 
         inProgress: 0, 
         completed: 0, 
+        workOrderCount: 0,
         totalValue: 0,
         initials,
       };
@@ -384,9 +445,11 @@ export default function RepairQueue() {
       tech: "Unassigned", 
       techId: null,
       repairs: [], 
+      workOrders: [],
       pending: 0, 
       inProgress: 0, 
       completed: 0, 
+      workOrderCount: 0,
       totalValue: 0,
       initials: "UA",
     };
@@ -403,16 +466,25 @@ export default function RepairQueue() {
       else if (repair.status === "completed") targetGroup.completed++;
     });
 
+    // Add work orders to technicians
+    workOrders.forEach(wo => {
+      const techName = wo.repairTechName || "Unassigned";
+      const targetGroup = grouped[techName] || grouped["Unassigned"];
+      targetGroup.workOrders.push(wo);
+      targetGroup.workOrderCount++;
+      targetGroup.totalValue += wo.totalAmount || 0;
+    });
+
     return Object.values(grouped).sort((a, b) => {
       if (a.tech === "Unassigned") return 1;
       if (b.tech === "Unassigned") return -1;
       // Sort by active jobs first, then alphabetically
-      const aActive = a.pending + a.inProgress;
-      const bActive = b.pending + b.inProgress;
+      const aActive = a.pending + a.inProgress + a.workOrderCount;
+      const bActive = b.pending + b.inProgress + b.workOrderCount;
       if (aActive !== bActive) return bActive - aActive;
       return a.tech.localeCompare(b.tech);
     });
-  }, [filteredRepairs, repairTechnicians]);
+  }, [filteredRepairs, repairTechnicians, workOrders]);
 
   const dashboardMetrics = useMemo(() => {
     // Compute filtered status arrays inline to avoid dependency issues
@@ -947,6 +1019,40 @@ export default function RepairQueue() {
     },
   });
 
+  // Mutation for inline assignment of repair requests from table
+  const inlineAssignRepairRequestMutation = useMutation({
+    mutationFn: async ({ requestId, technicianId, technicianName }: { 
+      requestId: string; 
+      technicianId: string | null; 
+      technicianName: string | null;
+    }) => {
+      const res = await fetch(`/api/repair-requests/${requestId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignedTechId: technicianId,
+          assignedTechName: technicianName,
+          assignedDate: technicianId ? new Date().toISOString().split('T')[0] : null,
+          status: technicianId ? "assigned" : "pending",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to assign repair request");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repair-requests"] });
+      toast({
+        title: variables.technicianId ? "Assigned" : "Unassigned",
+        description: variables.technicianId 
+          ? `Assigned to ${variables.technicianName}` 
+          : "Repair request unassigned",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to assign repair request", variant: "destructive" });
+    },
+  });
+
   // Helper functions for repair request actions
   const handleRowClick = (request: RepairRequest) => {
     setSelectedRepairRequest(request);
@@ -1190,9 +1296,10 @@ Thank you.`;
     );
   };
 
-  const renderTechCard = (techData: { tech: string; techId: string | null; repairs: ServiceRepairJob[]; pending: number; inProgress: number; completed: number; totalValue: number; initials: string }) => {
-    const totalActive = techData.pending + techData.inProgress;
-    const completionRate = techData.repairs.length > 0 ? Math.round((techData.completed / techData.repairs.length) * 100) : 0;
+  const renderTechCard = (techData: { tech: string; techId: string | null; repairs: ServiceRepairJob[]; workOrders: WorkOrder[]; pending: number; inProgress: number; completed: number; workOrderCount: number; totalValue: number; initials: string }) => {
+    const totalActive = techData.pending + techData.inProgress + techData.workOrderCount;
+    const totalJobs = techData.repairs.length + techData.workOrders.length;
+    const completionRate = totalJobs > 0 ? Math.round((techData.completed / totalJobs) * 100) : 0;
 
     return (
       <Card
@@ -1219,7 +1326,7 @@ Thank you.`;
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-4 gap-2 mb-4">
             <div className="text-center p-2 rounded-lg">
               <div className="text-lg font-bold text-[#f97316]">{techData.pending}</div>
               <div className="text-xs text-slate-500">Pending</div>
@@ -1231,6 +1338,10 @@ Thank you.`;
             <div className="text-center p-2 rounded-lg">
               <div className="text-lg font-bold text-[#22c55e]">{techData.completed}</div>
               <div className="text-xs text-slate-500">Completed</div>
+            </div>
+            <div className="text-center p-2 bg-[#f59e0b]/10 rounded-lg">
+              <div className="text-lg font-bold text-[#f59e0b]">{techData.workOrderCount}</div>
+              <div className="text-xs text-slate-500">Work Orders</div>
             </div>
           </div>
 
@@ -1742,128 +1853,196 @@ Thank you.`;
                     </CardHeader>
                     <CardContent className="p-0">
                       <ScrollArea className="h-[550px]">
-                        {(selectedTech 
-                          ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
-                          : [...pendingRepairs, ...inProgressRepairs]
-                        ).length === 0 ? (
-                          <div className="py-12 text-center text-slate-500">
-                            <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p>No active jobs</p>
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
-                              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
-                                <tr>
-                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">EST #</th>
-                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Status</th>
-                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Property</th>
-                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Technician</th>
-                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
-                                  <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Description</th>
-                                  <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Amount</th>
-                                  <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(selectedTech 
-                                  ? repairsByTech.find(t => t.tech === selectedTech)?.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled") || []
-                                  : [...pendingRepairs, ...inProgressRepairs]
-                                ).map((repair, index) => {
-                                  const statusCfg = statusConfig[repair.status || "pending"] || defaultStatus;
-                                  const getRowStatusStyle = (status: string | null) => {
-                                    switch (status) {
-                                      case "pending":
-                                      case "assigned":
-                                        return "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20";
-                                      case "in_progress":
-                                        return "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20";
-                                      case "completed":
-                                        return "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20";
-                                      default:
-                                        return "bg-slate-100 text-slate-600 border-slate-200";
+                        {(() => {
+                          const techData = selectedTech ? repairsByTech.find(t => t.tech === selectedTech) : null;
+                          const activeRepairs = techData 
+                            ? techData.repairs.filter(r => r.status !== "completed" && r.status !== "cancelled")
+                            : [...pendingRepairs, ...inProgressRepairs];
+                          const techWorkOrders = techData ? techData.workOrders : workOrders;
+                          
+                          // Combine repairs and work orders into unified rows
+                          type JobRow = { type: 'repair' | 'work_order'; data: ServiceRepairJob | WorkOrder };
+                          const allRows: JobRow[] = [
+                            ...activeRepairs.map(r => ({ type: 'repair' as const, data: r })),
+                            ...techWorkOrders.map(wo => ({ type: 'work_order' as const, data: wo }))
+                          ];
+
+                          if (allRows.length === 0) {
+                            return (
+                              <div className="py-12 text-center text-slate-500">
+                                <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                                <p>No active jobs</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
+                                  <tr>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Job #</th>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Status</th>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Property</th>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Technician</th>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Description</th>
+                                    <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Amount</th>
+                                    <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {allRows.map((row, index) => {
+                                    const isWorkOrder = row.type === 'work_order';
+                                    const item = row.data;
+                                    
+                                    if (isWorkOrder) {
+                                      const wo = item as WorkOrder;
+                                      return (
+                                        <tr 
+                                          key={`wo-${wo.id}`} 
+                                          className={`border-b border-slate-100 hover:bg-[#f59e0b]/5 transition-colors bg-[#f59e0b]/5`}
+                                          data-testid={`row-work-order-${wo.id}`}
+                                        >
+                                          <td className="px-4 py-3">
+                                            <span className="font-semibold text-[#f59e0b] text-sm">{wo.woNumber || wo.estimateNumber || "—"}</span>
+                                          </td>
+                                          <td className="px-4 py-3">
+                                            <Badge className="bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20 border text-xs">
+                                              Work Order
+                                            </Badge>
+                                          </td>
+                                          <td className="px-4 py-3">
+                                            <span className="text-sm text-slate-700 font-medium">{wo.propertyName || "—"}</span>
+                                          </td>
+                                          <td className="px-4 py-3">
+                                            <span className="text-sm text-slate-600">{wo.repairTechName || "Unassigned"}</span>
+                                          </td>
+                                          <td className="px-4 py-3">
+                                            <span className="text-sm text-slate-500">{formatDate(wo.completedAt || wo.createdAt)}</span>
+                                          </td>
+                                          <td className="px-4 py-3 max-w-[200px]">
+                                            <span className="text-sm text-slate-600 truncate block" title={wo.title || wo.description || ""}>
+                                              {wo.title || wo.description || "—"}
+                                            </span>
+                                          </td>
+                                          <td className="px-4 py-3 text-right">
+                                            <span className="font-semibold text-slate-900">{formatCurrency(wo.totalAmount)}</span>
+                                          </td>
+                                          <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-[#0077b6] border-[#0077b6] hover:bg-[#0077b6]/10 h-7 px-2 text-xs"
+                                                onClick={() => window.location.href = `/estimates?highlight=${wo.id}`}
+                                                data-testid={`button-convert-wo-${wo.id}`}
+                                              >
+                                                <FileText className="w-3 h-3 mr-1" /> View/Convert
+                                              </Button>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
                                     }
-                                  };
-                                  return (
-                                    <tr 
-                                      key={repair.id} 
-                                      className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
-                                      data-testid={`row-repair-${repair.id}`}
-                                    >
-                                      <td className="px-4 py-3">
-                                        <span className="font-semibold text-slate-900 text-sm">{repair.jobNumber || "—"}</span>
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <Badge className={`${getRowStatusStyle(repair.status)} border text-xs`}>
-                                          {statusCfg.label}
-                                        </Badge>
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <span className="text-sm text-slate-700 font-medium">{repair.propertyName || "—"}</span>
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <span className="text-sm text-slate-600">{repair.technicianName || "Unassigned"}</span>
-                                      </td>
-                                      <td className="px-4 py-3">
-                                        <span className="text-sm text-slate-500">{formatDate(repair.jobDate)}</span>
-                                      </td>
-                                      <td className="px-4 py-3 max-w-[200px]">
-                                        <span className="text-sm text-slate-600 truncate block" title={repair.description || ""}>
-                                          {repair.description || "—"}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-3 text-right">
-                                        <span className="font-semibold text-slate-900">{formatCurrency(repair.totalAmount)}</span>
-                                      </td>
-                                      <td className="px-4 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                          {repair.status === "in_progress" && (
+
+                                    // Regular repair row
+                                    const repair = item as ServiceRepairJob;
+                                    const statusCfg = statusConfig[repair.status || "pending"] || defaultStatus;
+                                    const getRowStatusStyle = (status: string | null) => {
+                                      switch (status) {
+                                        case "pending":
+                                        case "assigned":
+                                          return "bg-[#f97316]/10 text-[#f97316] border-[#f97316]/20";
+                                        case "in_progress":
+                                          return "bg-[#14b8a6]/10 text-[#14b8a6] border-[#14b8a6]/20";
+                                        case "completed":
+                                          return "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20";
+                                        default:
+                                          return "bg-slate-100 text-slate-600 border-slate-200";
+                                      }
+                                    };
+                                    return (
+                                      <tr 
+                                        key={repair.id} 
+                                        className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
+                                        data-testid={`row-repair-${repair.id}`}
+                                      >
+                                        <td className="px-4 py-3">
+                                          <span className="font-semibold text-slate-900 text-sm">{repair.jobNumber || "—"}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <Badge className={`${getRowStatusStyle(repair.status)} border text-xs`}>
+                                            {statusCfg.label}
+                                          </Badge>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <span className="text-sm text-slate-700 font-medium">{repair.propertyName || "—"}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <span className="text-sm text-slate-600">{repair.technicianName || "Unassigned"}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          <span className="text-sm text-slate-500">{formatDate(repair.jobDate)}</span>
+                                        </td>
+                                        <td className="px-4 py-3 max-w-[200px]">
+                                          <span className="text-sm text-slate-600 truncate block" title={repair.description || ""}>
+                                            {repair.description || "—"}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                          <span className="font-semibold text-slate-900">{formatCurrency(repair.totalAmount)}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                          <div className="flex items-center justify-end gap-1">
+                                            {repair.status === "in_progress" && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-[#22c55e] border-[#22c55e] hover:bg-[#22c55e]/10 h-7 px-2 text-xs"
+                                                onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "completed" })}
+                                                data-testid={`button-complete-row-${repair.id}`}
+                                              >
+                                                <CheckCircle className="w-3 h-3 mr-1" /> Complete
+                                              </Button>
+                                            )}
+                                            {repair.status === "pending" && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-[#14b8a6] border-[#14b8a6] hover:bg-[#14b8a6]/10 h-7 px-2 text-xs"
+                                                onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
+                                                data-testid={`button-start-row-${repair.id}`}
+                                              >
+                                                <Wrench className="w-3 h-3 mr-1" /> Start
+                                              </Button>
+                                            )}
                                             <Button
                                               size="sm"
                                               variant="outline"
-                                              className="text-[#22c55e] border-[#22c55e] hover:bg-[#22c55e]/10 h-7 px-2 text-xs"
-                                              onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "completed" })}
-                                              data-testid={`button-complete-row-${repair.id}`}
+                                              className="text-slate-600 border-slate-300 hover:bg-slate-50 h-7 px-2 text-xs"
+                                              data-testid={`button-view-row-${repair.id}`}
                                             >
-                                              <CheckCircle className="w-3 h-3 mr-1" /> Complete
+                                              <Eye className="w-3 h-3 mr-1" /> View
                                             </Button>
-                                          )}
-                                          {repair.status === "pending" && (
                                             <Button
                                               size="sm"
-                                              variant="outline"
-                                              className="text-[#14b8a6] border-[#14b8a6] hover:bg-[#14b8a6]/10 h-7 px-2 text-xs"
-                                              onClick={() => updateStatusMutation.mutate({ id: repair.id, status: "in_progress" })}
-                                              data-testid={`button-start-row-${repair.id}`}
+                                              variant="ghost"
+                                              className="text-slate-400 hover:text-slate-600 h-7 w-7 p-0"
+                                              data-testid={`button-more-row-${repair.id}`}
                                             >
-                                              <Wrench className="w-3 h-3 mr-1" /> Start
+                                              <MoreVertical className="w-4 h-4" />
                                             </Button>
-                                          )}
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="text-slate-600 border-slate-300 hover:bg-slate-50 h-7 px-2 text-xs"
-                                            data-testid={`button-view-row-${repair.id}`}
-                                          >
-                                            <Eye className="w-3 h-3 mr-1" /> View
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="text-slate-400 hover:text-slate-600 h-7 w-7 p-0"
-                                            data-testid={`button-more-row-${repair.id}`}
-                                          >
-                                            <MoreVertical className="w-4 h-4" />
-                                          </Button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })()}
                       </ScrollArea>
                     </CardContent>
                   </Card>
@@ -1934,6 +2113,7 @@ Thank you.`;
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Issue Description</th>
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Reported By</th>
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Priority</th>
+                          <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Assigned To</th>
                           <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
                           <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
                         </tr>
@@ -1971,6 +2151,46 @@ Thank you.`;
                                     {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
                                   </Badge>
                                 )}
+                              </td>
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <Select
+                                  value={request.assignedTechId || "unassigned"}
+                                  onValueChange={(value) => {
+                                    if (value === "unassigned") {
+                                      inlineAssignRepairRequestMutation.mutate({
+                                        requestId: request.id,
+                                        technicianId: null,
+                                        technicianName: null,
+                                      });
+                                    } else {
+                                      const tech = repairTechnicians.find((t: Technician) => t.id.toString() === value);
+                                      if (tech) {
+                                        inlineAssignRepairRequestMutation.mutate({
+                                          requestId: request.id,
+                                          technicianId: value,
+                                          technicianName: `${tech.firstName} ${tech.lastName}`,
+                                        });
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger 
+                                    className={`h-8 text-xs w-[140px] ${request.assignedTechId ? 'border-[#0ea5e9] text-slate-700' : 'border-orange-300 text-orange-600'}`}
+                                    data-testid={`select-assigned-tech-${request.id}`}
+                                  >
+                                    <SelectValue placeholder="Assign">
+                                      {request.assignedTechName || "Assign"}
+                                    </SelectValue>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="unassigned" className="text-orange-600">Unassigned</SelectItem>
+                                    {repairTechnicians.map((tech: Technician) => (
+                                      <SelectItem key={tech.id} value={tech.id.toString()}>
+                                        {tech.firstName} {tech.lastName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </td>
                               <td className="px-4 py-3">
                                 <span className="text-sm text-slate-500">

@@ -1,0 +1,45 @@
+On the "Convert to Estimate" form, make the photos clickable to open a full-size lightbox/popup:
+
+**WHEN CLICKING ON A PHOTO:**
+- Open a lightbox/modal popup showing the full-size image
+- Dark overlay background (semi-transparent black)
+- Image displayed large, centered on screen
+- X button in the top right corner to close
+- Caption displayed below the image
+
+**LIGHTBOX FEATURES:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                                                            [X] │
+│                                                                                 │
+│                                                                                 │
+│                     ┌─────────────────────────────────┐                        │
+│                     │                                 │                        │
+│                     │                                 │                        │
+│                     │      [FULL SIZE IMAGE]          │                        │
+│                     │                                 │                        │
+│                     │                                 │                        │
+│                     │                                 │                        │
+│                     └─────────────────────────────────┘                        │
+│                                                                                 │
+│                     📷 Before                                                   │
+│                     "Old corroded motor with visible rust and wear"            │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**FUNCTIONALITY:**
+- Click on Before image → Opens lightbox with Before image full size
+- Click on After image → Opens lightbox with After image full size
+- X button closes the lightbox
+- Clicking outside the image (on dark overlay) also closes the lightbox
+- Press ESC key to close
+- Optional: Add left/right arrows to navigate between Before and After images
+
+**STYLING:**
+- Dark overlay: background-color: rgba(0, 0, 0, 0.85)
+- X button: White color, top right corner, large enough to tap (32x32px)
+- Image: max-width: 90vw, max-height: 80vh, object-fit: contain
+- Caption: White text below the image
+- Smooth fade-in animation when opening
+- Cursor pointer on images to indicate they're clickable

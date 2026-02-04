@@ -1,0 +1,95 @@
+On the "Completed Without Approval (Work Order)" container, fix the data flow so items are properly removed after conversion:
+
+**FIX THE REMOVAL LOGIC:**
+
+**1. WHEN CONVERTING TO ESTIMATE:**
+- After successfully creating the estimate:
+  - Remove the work order from the "Completed Without Approval" container
+  - Update the count badge (6 → 5)
+  - The work order should NOT reappear in this container
+  - The new estimate should appear in the Estimates list with "Draft" status
+
+**2. WHEN CONVERTING TO INVOICE:**
+- After successfully creating the invoice:
+  - Remove the selected work order(s) from the container
+  - Update the count badge
+  - The work order should NOT reappear in this container
+  - The new invoice should appear in the Invoices page
+
+**3. MARK AS CONVERTED IN DATABASE:**
+When a work order is converted, update its status in the database:
+
+```javascript
+// When converting to Estimate
+const convertToEstimate = async (workOrder) => {
+  // 1. Create the estimate
+  const estimate = await createEstimate(workOrder);
+  
+  // 2. Mark the work order as converted (so it doesn't show again)
+  await updateWorkOrder(workOrder.id, {
+    status: 'converted_to_estimate',
+    converted_at: new Date(),
+    estimate_id: estimate.id
+  });
+  
+  // 3. Remove from UI list
+  setWorkOrders(prev => prev.filter(wo => wo.id !== workOrder.id));
+  
+  // 4. Update count badge
+  setWorkOrderCount(prev => prev - 1);
+};
+
+// When converting to Invoice
+const convertToInvoice = async (selectedWorkOrders) => {
+  for (const workOrder of selectedWorkOrders) {
+    // 1. Create the invoice
+    const invoice = await createInvoice(workOrder);
+    
+    // 2. Mark the work order as invoiced
+    await updateWorkOrder(workOrder.id, {
+      status: 'invoiced',
+      converted_at: new Date(),
+      invoice_id: invoice.id
+    });
+  }
+  
+  // 3. Remove from UI list
+  setWorkOrders(prev => 
+    prev.filter(wo => !selectedWorkOrders.find(s => s.id === wo.id))
+  );
+  
+  // 4. Update count badge
+  setWorkOrderCount(prev => prev - selectedWorkOrders.length);
+  
+  // 5. Clear selection
+  setSelectedWorkOrders([]);
+};
+```
+
+**4. FILTER OUT CONVERTED WORK ORDERS WHEN FETCHING:**
+```javascript
+// When fetching work orders for the container
+const fetchWorkOrders = async () => {
+  const response = await fetch('/api/work-orders?status=pending');
+  // Only show work orders that haven't been converted
+  // Filter where status is NOT 'converted_to_estimate' AND NOT 'invoiced'
+  const workOrders = await response.json();
+  return workOrders.filter(wo => 
+    wo.status !== 'converted_to_estimate' && 
+    wo.status !== 'invoiced'
+  );
+};
+```
+
+**5. DATABASE SCHEMA UPDATE:**
+Add these fields to work_orders table if not present:
+- `status`: 'pending' | 'converted_to_estimate' | 'invoiced'
+- `converted_at`: timestamp
+- `estimate_id`: reference to estimate (nullable)
+- `invoice_id`: reference to invoice (nullable)
+
+**MAKE SURE:**
+- Once converted, the work order NEVER shows back in the container
+- The count badge always reflects the actual number of pending work orders
+- Data persists after page refresh
+- The converted estimate/invoice has a reference back to the original WO number

@@ -1,0 +1,79 @@
+On the Estimate form, add a "Line Items / Parts" section below the "Quote Details" section to allow adding parts and labor:
+
+**ADD "LINE ITEMS / PARTS" SECTION:**
+- Position: Below "Quote Details" section, above "Work Order Tracking"
+- Layout: Similar to QuickBooks estimate line items
+
+**SECTION LAYOUT:**
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 🏷️ Line Items / Parts                                        [+ Add Item]     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ Item/Part          │ Description              │ Qty │ Unit Price │ Amount │ 🗑️ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ [Dropdown ▼]       │ 1.5HP Pool Pump Motor    │ 1   │ $285.00    │ $285.00│ X  │
+│ [Dropdown ▼]       │ Motor Seal Kit           │ 1   │ $45.00     │ $45.00 │ X  │
+│ [Dropdown ▼]       │ Labor                    │ 1   │ $120.00    │ $120.00│ X  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                              Subtotal:          │ $450.00      │
+│                                              Tax:               │ $0.00        │
+│                                              TOTAL:             │ $450.00      │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**ITEM/PART DROPDOWN OPTIONS:**
+Pre-populate dropdown with common pool parts and services:
+
+**Parts:**
+- Pool Pump Motor (various HP)
+- Filter Cartridge
+- Skimmer Basket
+- Weir Door
+- Thermocouple Assembly
+- O-Ring Set
+- Check Valve
+- Chemical Tubing
+- LED Pool Light Fixture
+- Salt Cell
+- Pressure Gauge
+- Multiport Valve
+- Impeller
+- Motor Seal Kit
+- Gasket Set
+
+**Labor:**
+- Labor - Standard Rate
+- Labor - Emergency Rate
+- Diagnostic Fee
+- Service Call Fee
+
+**Services:**
+- Equipment Installation
+- Equipment Repair
+- Inspection
+- Winterization
+- Opening Service
+
+**FUNCTIONALITY:**
+- "+ Add Item" button adds a new row
+- Dropdown auto-completes as you type
+- Allow custom item entry if not in list
+- Quantity field (default 1)
+- Unit Price field (can be pre-filled based on item selection or manually entered)
+- Amount auto-calculates (Qty × Unit Price)
+- Delete button (🗑️ or X) to remove row
+- Subtotal, Tax, and Total auto-calculate at bottom
+
+**WHEN CONVERTING FROM WORK ORDER:**
+- Pre-populate line items with parts from the Work Order data
+- Example for WO-26-00001:
+  - Line 1: 1.5HP Pool Pump Motor | 1 | $285.00
+  - Line 2: Motor Seal Kit | 1 | $45.00
+  - Line 3: Labor | 1 | $120.00
+
+**STYLING:**
+- Match QuickBooks line items style
+- Clean table layout with subtle borders
+- Blue "+ Add Item" button
+- Alternating row colors (optional)
+- Editable fields with clean input styling

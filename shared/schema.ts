@@ -1826,6 +1826,8 @@ export const invoices = pgTable("invoices", {
   estimateId: varchar("estimate_id"), // Link to source estimate if applicable
   estimateNumber: text("estimate_number"),
   emergencyId: varchar("emergency_id"), // Link to source emergency if applicable
+  woNumber: text("wo_number"), // Work Order number if created from WO
+  sourceType: text("source_type"), // work_order, estimate, emergency, office_staff
   
   // People involved
   serviceTechId: text("service_tech_id"),
@@ -1867,6 +1869,7 @@ export const invoices = pgTable("invoices", {
   qbPaymentId: text("qb_payment_id"), // QuickBooks Payment ID
   paymentMethod: text("payment_method"), // Credit Card, ACH, Check, etc.
   createdByUserId: varchar("created_by_user_id"),
+  createdByName: text("created_by_name"), // Name of user who created the invoice
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

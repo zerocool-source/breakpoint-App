@@ -1,5 +1,4 @@
 import { createServer } from "node:http";
-import { setupCustomAuth, registerCustomAuthRoutes } from "./replit_integrations/auth";
 import { registerAlertRoutes } from "./routes/alerts";
 import { registerJobRoutes } from "./routes/jobs";
 import { registerCustomerRoutes } from "./routes/customers";
@@ -34,17 +33,10 @@ import { registerSearchRoutes } from "./routes/search";
 import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
-import { registerSmsRoutes } from "./routes/sms";
-import { registerPoolBrainRoutes } from "./routes/poolbrain";
-import { registerAiInsightsRoutes } from "./routes/aiInsights";
-import { registerApiV2Routes } from "./routes/apiv2";
-import { registerAiLearningRoutes } from "./routes/aiLearning";
-import adminUsersRouter from "./routes/adminUsers";
+import emailBlastRouter from "./routes/emailBlast";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
-  await setupCustomAuth(app);
-  registerCustomAuthRoutes(app);
   setupRoutes(app);
   return server;
 }
@@ -84,10 +76,5 @@ function setupRoutes(app: any) {
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
-  registerSmsRoutes(app);
-  registerPoolBrainRoutes(app);
-  registerAiInsightsRoutes(app);
-  registerApiV2Routes(app);
-  registerAiLearningRoutes(app);
-  app.use(adminUsersRouter);
+  app.use("/api/email-blast", emailBlastRouter);
 }

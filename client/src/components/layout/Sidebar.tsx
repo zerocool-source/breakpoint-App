@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import BLogo from "@/assets/b-logo.png";
+import BLogo from "@/assets/i-icon.png";
 
 interface NavSubItem {
   label: string;
@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
     children: [
       { label: "All Customers", href: "/customers" },
       { label: "Visits", href: "/visits" },
+      { label: "Proposals & Communications", href: "/proposals" },
     ]
   },
   { 

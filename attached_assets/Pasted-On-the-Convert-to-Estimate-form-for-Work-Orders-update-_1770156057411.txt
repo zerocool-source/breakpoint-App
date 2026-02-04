@@ -1,0 +1,121 @@
+On the "Convert to Estimate" form for Work Orders, update the Photos section to support multiple Before and After pictures:
+
+**UPDATE PHOTOS SECTION LAYOUT:**
+
+Instead of just 2 photos (1 Before, 1 After), allow multiple photos in each category:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ 📷 Photos                                                      [+ Add Photos]  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│ BEFORE                                                                          │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                                │
+│ │         │ │         │ │         │ │         │                                │
+│ │ [IMG 1] │ │ [IMG 2] │ │ [IMG 3] │ │   [+]   │  ← Add more Before photos     │
+│ │         │ │         │ │         │ │         │                                │
+│ └─────────┘ └─────────┘ └─────────┘ └─────────┘                                │
+│  Old motor   Rust detail  Serial #                                             │
+│                                                                                 │
+│ AFTER                                                                           │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐                                │
+│ │         │ │         │ │         │ │         │                                │
+│ │ [IMG 1] │ │ [IMG 2] │ │ [IMG 3] │ │   [+]   │  ← Add more After photos      │
+│ │         │ │         │ │         │ │         │                                │
+│ └─────────┘ └─────────┘ └─────────┘ └─────────┘                                │
+│  New motor   Installed   Running                                               │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**FEATURES:**
+
+1. **Separate Before and After sections:**
+   - "BEFORE" header with row of thumbnail images
+   - "AFTER" header with row of thumbnail images
+   - Each section can have multiple photos (up to 10 per section)
+
+2. **Horizontal scrolling row:**
+   - Photos displayed in a horizontal scrollable row
+   - Each thumbnail ~120px × 90px
+   - Caption below each photo
+   - [+] button at the end to add more photos
+
+3. **Add Photos functionality:**
+   - Click [+] to upload more photos to that section
+   - Accept PNG, JPEG, HEIC formats
+   - Max 10MB per photo
+
+4. **Photo interactions:**
+   - Click any photo to open large lightbox view
+   - Lightbox shows all photos with navigation arrows
+   - Zoom controls in lightbox
+   - Delete button on hover to remove photo
+
+5. **Sample data for Work Orders:**
+   - WO-26-00001 (Palm Court): 3 Before photos, 2 After photos
+   - WO-26-00002 (Sunset Hills): 2 Before photos, 2 After photos
+   - etc.
+
+**CSS FOR HORIZONTAL PHOTO ROW:**
+```css
+.photos-section {
+  margin-bottom: 20px;
+}
+
+.photos-section-title {
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #374151;
+}
+
+.photos-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.photo-thumbnail {
+  flex-shrink: 0;
+  width: 150px;
+  cursor: pointer;
+}
+
+.photo-thumbnail img {
+  width: 150px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+}
+
+.photo-thumbnail img:hover {
+  border-color: #0077b6;
+}
+
+.photo-caption {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.add-photo-button {
+  flex-shrink: 0;
+  width: 150px;
+  height: 110px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #f9fafb;
+}
+
+.add-photo-button:hover {
+  border-color: #0077b6;
+  background: #f0f9ff;
+}
+```

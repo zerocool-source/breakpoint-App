@@ -1,0 +1,56 @@
+Let me check the transcript to understand the current implementation and fix the Invoice button functionality.On the "Completed Without Approval (Work Order)" container, fix the Invoice button functionality:
+
+**WHEN CLICKING THE "INVOICE" BUTTON:**
+
+1. **Get selected work orders:**
+   - Check which rows have checkboxes selected (e.g., WO-26-00001 Palm Court Apartments is selected)
+
+2. **Create invoice(s) for selected work orders:**
+   - Generate new invoice number (e.g., INV-26-00018)
+   - Copy work order data to invoice:
+     - Customer/Property: Palm Court Apartments
+     - Description: Pool pump motor replaced
+     - Amount: $450.00
+     - Technician: Rick Jacobs
+     - WO Number reference: WO-26-00001
+     - Line items from work order
+
+3. **Remove from Work Order container:**
+   - Remove the selected work order(s) from the "Completed Without Approval" list
+   - Update the count badge (6 → 5)
+
+4. **Add to Invoices page:**
+   - Create new invoice record in the database
+   - Invoice should appear in the Invoices list with:
+     - INVOICE #: INV-26-00018
+     - QB #: (auto-generate or pending)
+     - CUSTOMER/WORK: Palm Court Apartments - Pool pump motor replaced
+     - TECHNICIAN: Rick Jacobs (Repair)
+     - STATUS: Pending or Draft
+     - AMOUNT: $450.00
+     - "Work Order" tag to indicate source
+
+5. **Show success feedback:**
+   - Display success toast: "Invoice INV-26-00018 created for Palm Court Apartments"
+   - Optionally navigate to Invoices page or show link
+
+**FLOW:**
+```
+[✓] WO-26-00001 | Palm Court Apartments | $450.00
+                                            [Invoice (1)] clicked
+                                                    ↓
+Remove WO-26-00001 from Work Order container
+                                                    ↓
+Create INV-26-00018 in Invoices table
+                                                    ↓
+Toast: "Invoice created successfully"
+                                                    ↓
+Navigate to Invoices page (optional)
+```
+
+**MAKE SURE:**
+- Selected work orders are removed from the container after invoicing
+- New invoice appears in the Invoices list immediately
+- Count badge updates correctly
+- Invoice contains all the work order data (description, amount, technician, line items, photos)
+- WO number is referenced on the invoice for tracking

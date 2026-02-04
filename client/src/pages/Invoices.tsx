@@ -25,8 +25,11 @@ import {
   Camera,
   Mail,
   Wrench,
-  User
+  User,
+  Send,
+  ClipboardList
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import type { Invoice } from "@shared/schema";
 
@@ -58,12 +61,26 @@ function formatDate(dateStr: string | Date | null | undefined): string {
   });
 }
 
+type SourceFilter = "all" | "work_order" | "estimate" | "sr_estimate" | "field_estimate" | "office_staff";
+
+const sourceLabels: Record<string, string> = {
+  work_order: "Work Order",
+  estimate: "Estimate",
+  sr_estimate: "SR Estimate", 
+  field_estimate: "Field Estimate",
+  office_staff: "Office Entry",
+};
+
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [technicianFilter, setTechnicianFilter] = useState<string>("all");
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: invoicesData, isLoading, refetch, isRefetching } = useQuery<{ invoices: Invoice[] }>({
     queryKey: ["/api/invoices"],
@@ -84,6 +101,13 @@ export default function Invoices() {
 
   const invoices = invoicesData?.invoices || [];
 
+  // Extract unique technicians from invoices
+  const technicians = Array.from(new Set(
+    invoices
+      .map(inv => inv.repairTechName || inv.serviceTechName)
+      .filter((name): name is string => Boolean(name))
+  )).sort();
+
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch = 
       invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,8 +116,22 @@ export default function Invoices() {
     
     const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesSource = sourceFilter === "all" || invoice.sourceType === sourceFilter;
+    
+    const techName = invoice.repairTechName || invoice.serviceTechName;
+    const matchesTechnician = technicianFilter === "all" || techName === technicianFilter;
+    
+    return matchesSearch && matchesStatus && matchesSource && matchesTechnician;
   });
+  
+  // Count by source for quick filters
+  const sourceCounts = {
+    work_order: invoices.filter(inv => inv.sourceType === "work_order").length,
+    estimate: invoices.filter(inv => inv.sourceType === "estimate").length,
+    sr_estimate: invoices.filter(inv => inv.sourceType === "sr_estimate").length,
+    field_estimate: invoices.filter(inv => inv.sourceType === "field_estimate").length,
+    office_staff: invoices.filter(inv => inv.sourceType === "office_staff").length,
+  };
 
   const stats = {
     total: invoices.length,
@@ -122,6 +160,45 @@ export default function Invoices() {
       alert("Failed to sync payments from QuickBooks");
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleSendToQuickBooks = async (invoice: Invoice) => {
+    setSendingInvoiceId(invoice.id);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/send-to-quickbooks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerEmail: invoice.emailedTo || "",
+          sendEmail: true,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        toast({
+          title: "Invoice Sent to QuickBooks",
+          description: `${invoice.invoiceNumber} → QB #${data.qbNumber}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      } else {
+        toast({
+          title: "Failed to Send Invoice",
+          description: data.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error sending invoice to QuickBooks:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send invoice to QuickBooks",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingInvoiceId(null);
     }
   };
 
@@ -250,8 +327,8 @@ export default function Invoices() {
       {/* Filters */}
       <Card className="bg-white border border-slate-200 shadow-sm mb-6">
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search by invoice #, customer, or property..."
@@ -262,9 +339,9 @@ export default function Invoices() {
               />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus)}>
-              <SelectTrigger className="w-48 bg-slate-50 border-slate-200 text-slate-900" data-testid="select-status">
+              <SelectTrigger className="w-40 bg-slate-50 border-slate-200 text-slate-900" data-testid="select-status">
                 <Filter className="w-4 h-4 mr-2 text-slate-500" />
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
@@ -274,6 +351,32 @@ export default function Invoices() {
                 <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="partial">Partial Payment</SelectItem>
                 <SelectItem value="voided">Voided</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
+              <SelectTrigger className="w-40 bg-slate-50 border-slate-200 text-slate-900" data-testid="select-source">
+                <ClipboardList className="w-4 h-4 mr-2 text-slate-500" />
+                <SelectValue placeholder="All Sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                <SelectItem value="work_order">Work Order {sourceCounts.work_order > 0 && `(${sourceCounts.work_order})`}</SelectItem>
+                <SelectItem value="estimate">Estimate {sourceCounts.estimate > 0 && `(${sourceCounts.estimate})`}</SelectItem>
+                <SelectItem value="sr_estimate">SR Estimate {sourceCounts.sr_estimate > 0 && `(${sourceCounts.sr_estimate})`}</SelectItem>
+                <SelectItem value="field_estimate">Field Estimate {sourceCounts.field_estimate > 0 && `(${sourceCounts.field_estimate})`}</SelectItem>
+                <SelectItem value="office_staff">Office Entry {sourceCounts.office_staff > 0 && `(${sourceCounts.office_staff})`}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={technicianFilter} onValueChange={setTechnicianFilter}>
+              <SelectTrigger className="w-44 bg-slate-50 border-slate-200 text-slate-900" data-testid="select-technician">
+                <User className="w-4 h-4 mr-2 text-slate-500" />
+                <SelectValue placeholder="All Technicians" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Technicians</SelectItem>
+                {technicians.map((tech) => (
+                  <SelectItem key={tech} value={tech}>{tech}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -374,6 +477,17 @@ export default function Invoices() {
                                 </span>
                               </div>
                             )}
+                            {invoice.sourceType === "work_order" && (
+                              <div className="mt-1">
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-teal-50 text-teal-700 border-teal-200 text-[10px] px-1.5 py-0 gap-0.5"
+                                >
+                                  <ClipboardList className="w-2.5 h-2.5" />
+                                  Work Order
+                                </Badge>
+                              </div>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -449,21 +563,45 @@ export default function Invoices() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          {invoice.quickbooksInvoiceId && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`https://app.qbo.intuit.com/app/invoice?txnId=${invoice.quickbooksInvoiceId}`, '_blank');
-                              }}
-                              data-testid={`btn-view-qb-${invoice.id}`}
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              View in QB
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {/* Send Invoice button for draft work order invoices */}
+                            {invoice.status === "draft" && invoice.sourceType === "work_order" && !invoice.quickbooksInvoiceId && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="gap-1 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                                disabled={sendingInvoiceId === invoice.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSendToQuickBooks(invoice);
+                                }}
+                                data-testid={`btn-send-invoice-${invoice.id}`}
+                              >
+                                {sendingInvoiceId === invoice.id ? (
+                                  <RefreshCw className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Send className="w-3 h-3" />
+                                )}
+                                Send Invoice
+                              </Button>
+                            )}
+                            {/* View in QB button for synced invoices */}
+                            {invoice.quickbooksInvoiceId && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(`https://app.qbo.intuit.com/app/invoice?txnId=${invoice.quickbooksInvoiceId}`, '_blank');
+                                }}
+                                data-testid={`btn-view-qb-${invoice.id}`}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                View in QB
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

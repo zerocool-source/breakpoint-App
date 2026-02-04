@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import {
-  Wrench, X, Camera, Upload, ClipboardList, MapPin, Clock
+  Wrench, X, Camera, Upload, ClipboardList, MapPin, Clock, UserCheck, Calendar
 } from "lucide-react";
 
 interface RepairRequestFormProps {
@@ -29,7 +29,10 @@ interface FormData {
   propertyName: string;
   address: string;
   jobType: string;
+  scheduledDate: string;
   scheduledTime: string;
+  assignedTechId: string;
+  assignedTechName: string;
   title: string;
   officeNotes: string;
   photoAttachments: PhotoAttachment[];
@@ -57,7 +60,10 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
     propertyName: "",
     address: "",
     jobType: "",
+    scheduledDate: new Date().toISOString().split('T')[0],
     scheduledTime: "08:00",
+    assignedTechId: "",
+    assignedTechName: "",
     title: "",
     officeNotes: "",
     photoAttachments: [],
@@ -75,6 +81,19 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
   });
 
   const customers = customersData?.customers || [];
+
+  const { data: techniciansData } = useQuery<{ technicians: any[] }>({
+    queryKey: ["/api/technicians/stored"],
+    queryFn: async () => {
+      const response = await fetch("/api/technicians/stored");
+      if (!response.ok) throw new Error("Failed to fetch technicians");
+      return response.json();
+    },
+  });
+
+  const repairTechnicians = (techniciansData?.technicians || []).filter(
+    (tech: any) => tech.role === "repair" && tech.active
+  );
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -104,7 +123,10 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       propertyName: "",
       address: "",
       jobType: "",
+      scheduledDate: new Date().toISOString().split('T')[0],
       scheduledTime: "08:00",
+      assignedTechId: "",
+      assignedTechName: "",
       title: "",
       officeNotes: "",
       photoAttachments: [],
@@ -125,11 +147,14 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       propertyName: formData.propertyName,
       address: formData.address || undefined,
       issueDescription: finalJobType,
+      assignedDate: formData.assignedTechId ? formData.scheduledDate : undefined,
       scheduledTime: formData.scheduledTime,
+      assignedTechId: formData.assignedTechId || undefined,
+      assignedTechName: formData.assignedTechName || undefined,
       officeNotes: formData.officeNotes || undefined,
       photos: formData.photoAttachments.map(p => p.url),
       photoAttachments: formData.photoAttachments,
-      status: asDraft ? "draft" : "pending",
+      status: formData.assignedTechId ? "assigned" : "pending",
       requestNumber: `RR-${Math.floor(100000 + Math.random() * 900000)}`,
       requestDate: new Date().toISOString(),
       priority: "medium",
@@ -160,7 +185,44 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
 
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
-            {/* Office Notes Section - Top of form */}
+            {/* Assign to Repair Technician - First field */}
+            <div className="p-4 bg-slate-50 rounded-lg border">
+              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                <UserCheck className="w-4 h-4 text-slate-500" />
+                Assign to Repair Technician
+                <span className="text-xs font-normal text-slate-400">(Optional)</span>
+              </Label>
+              <Select
+                value={formData.assignedTechId}
+                onValueChange={(value) => {
+                  const tech = repairTechnicians.find((t: any) => t.id.toString() === value);
+                  setFormData(prev => ({
+                    ...prev,
+                    assignedTechId: value,
+                    assignedTechName: tech ? `${tech.firstName} ${tech.lastName}` : "",
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full" data-testid="select-assigned-tech">
+                  <SelectValue placeholder="Select technician..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {repairTechnicians.map((tech: any) => (
+                    <SelectItem key={tech.id} value={tech.id.toString()}>
+                      {tech.firstName} {tech.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formData.assignedTechName && (
+                <p className="text-xs text-[#0ea5e9] mt-2 flex items-center gap-1">
+                  <UserCheck className="w-3 h-3" />
+                  Will be assigned to {formData.assignedTechName}
+                </p>
+              )}
+            </div>
+
+            {/* Office Notes Section */}
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
               <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
                 <ClipboardList className="w-4 h-4 text-amber-600" />
@@ -263,37 +325,37 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
               )}
             </div>
 
-            {/* Work Description */}
+            {/* Scheduling */}
             <div className="p-4 bg-slate-50 rounded-lg border">
-              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
-                <ClipboardList className="w-4 h-4 text-slate-500" />
-                Description of Work Needed
+              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-3">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                Scheduling
               </Label>
-              <Textarea
-                value={formData.officeNotes}
-                onChange={(e) => setFormData(prev => ({ ...prev, officeNotes: e.target.value }))}
-                placeholder="Describe the repair work needed, any special instructions, or details for the technician..."
-                className="min-h-[100px] resize-none"
-                data-testid="textarea-work-description"
-              />
-            </div>
-
-            {/* Scheduled Time */}
-            <div className="p-4 bg-slate-50 rounded-lg border">
-              <Label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-slate-500" />
-                Scheduled Time
-              </Label>
-              <Input
-                type="time"
-                value={formData.scheduledTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, scheduledTime: e.target.value }))}
-                className="w-48"
-                data-testid="input-scheduled-time"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                {formatTime(formData.scheduledTime)}
-              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Scheduled Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.scheduledDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                    className="w-full"
+                    data-testid="input-scheduled-date"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-slate-500 mb-1 block">Scheduled Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.scheduledTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                    className="w-full"
+                    data-testid="input-scheduled-time"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    {formatTime(formData.scheduledTime)}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Attachments from Office */}

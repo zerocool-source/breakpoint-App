@@ -18,11 +18,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { 
-  FileText, Plus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
+  FileText, Plus, Minus, Clock, CheckCircle2, XCircle, Calendar as CalendarIcon, DollarSign, 
   Building2, User, Send, AlertCircle, Loader2, Trash2, Edit, Eye,
-  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
+  ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
-  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, Inbox, Smartphone
+  Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle, Flag,
+  ZoomIn, ZoomOut, RotateCcw
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -186,9 +187,12 @@ interface EstimateFormData {
   techNotes: string;
   attachments: Attachment[];
   photos: string[];
+  beforePhotos: Array<{ url: string; caption: string }>;
+  afterPhotos: Array<{ url: string; caption: string }>;
   workType: string;
   woReceived: boolean;
   woNumber: string;
+  sourceType: string;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -204,6 +208,55 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
   paid: { label: "Paid", color: "bg-green-100 text-green-700 border-green-300", icon: DollarSign },
   archived: { label: "Archived", color: "bg-gray-100 text-gray-500 border-gray-200", icon: Archive },
 };
+
+// Pre-defined parts, labor, and services for line item dropdown
+interface CatalogItem {
+  name: string;
+  category: "parts" | "labor" | "services";
+  defaultRate: number;
+}
+
+const partsCatalog: CatalogItem[] = [
+  // Parts
+  { name: "Pool Pump Motor (0.5HP)", category: "parts", defaultRate: 185.00 },
+  { name: "Pool Pump Motor (1.0HP)", category: "parts", defaultRate: 245.00 },
+  { name: "Pool Pump Motor (1.5HP)", category: "parts", defaultRate: 285.00 },
+  { name: "Pool Pump Motor (2.0HP)", category: "parts", defaultRate: 325.00 },
+  { name: "Filter Cartridge - Small", category: "parts", defaultRate: 45.00 },
+  { name: "Filter Cartridge - Large", category: "parts", defaultRate: 85.00 },
+  { name: "Skimmer Basket", category: "parts", defaultRate: 18.00 },
+  { name: "Weir Door", category: "parts", defaultRate: 22.00 },
+  { name: "Thermocouple Assembly", category: "parts", defaultRate: 65.00 },
+  { name: "O-Ring Set", category: "parts", defaultRate: 12.00 },
+  { name: "Check Valve", category: "parts", defaultRate: 38.00 },
+  { name: "Chemical Tubing (10ft)", category: "parts", defaultRate: 15.00 },
+  { name: "LED Pool Light Fixture", category: "parts", defaultRate: 175.00 },
+  { name: "Salt Cell", category: "parts", defaultRate: 450.00 },
+  { name: "Pressure Gauge", category: "parts", defaultRate: 28.00 },
+  { name: "Multiport Valve", category: "parts", defaultRate: 195.00 },
+  { name: "Impeller", category: "parts", defaultRate: 55.00 },
+  { name: "Motor Seal Kit", category: "parts", defaultRate: 45.00 },
+  { name: "Gasket Set", category: "parts", defaultRate: 32.00 },
+  { name: "Timer/Control Board", category: "parts", defaultRate: 125.00 },
+  { name: "Pump Lid", category: "parts", defaultRate: 48.00 },
+  { name: "Filter Grid Assembly", category: "parts", defaultRate: 220.00 },
+  // Labor
+  { name: "Labor - Standard Rate", category: "labor", defaultRate: 85.00 },
+  { name: "Labor - Emergency Rate", category: "labor", defaultRate: 125.00 },
+  { name: "Labor - After Hours", category: "labor", defaultRate: 150.00 },
+  { name: "Diagnostic Fee", category: "labor", defaultRate: 75.00 },
+  { name: "Service Call Fee", category: "labor", defaultRate: 65.00 },
+  { name: "Pool Draining/Refill", category: "labor", defaultRate: 250.00 },
+  // Services
+  { name: "Equipment Installation", category: "services", defaultRate: 150.00 },
+  { name: "Equipment Repair", category: "services", defaultRate: 120.00 },
+  { name: "Full Inspection", category: "services", defaultRate: 95.00 },
+  { name: "Winterization", category: "services", defaultRate: 175.00 },
+  { name: "Opening Service", category: "services", defaultRate: 185.00 },
+  { name: "Acid Wash", category: "services", defaultRate: 350.00 },
+  { name: "Tile Cleaning", category: "services", defaultRate: 125.00 },
+  { name: "Filter Cleaning", category: "services", defaultRate: 85.00 },
+];
 
 const emptyFormData: EstimateFormData = {
   propertyId: "",
@@ -243,9 +296,12 @@ const emptyFormData: EstimateFormData = {
   techNotes: "",
   attachments: [],
   photos: [],
+  beforePhotos: [],
+  afterPhotos: [],
   workType: "repairs",
   woReceived: false,
   woNumber: "",
+  sourceType: "",
 };
 
 function generateEstimateNumber(): string {
@@ -271,6 +327,8 @@ export default function Estimates() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSendApprovalDialog, setShowSendApprovalDialog] = useState(false);
   const [selectedApprovalEmail, setSelectedApprovalEmail] = useState("");
+  const [customApprovalEmail, setCustomApprovalEmail] = useState("");
+  const [useCustomEmail, setUseCustomEmail] = useState(false);
   const [approvalSubject, setApprovalSubject] = useState("");
   const [approvalMessage, setApprovalMessage] = useState("");
   const [propertyContacts, setPropertyContacts] = useState<{id: string; name: string; email: string; type: string}[]>([]);
@@ -296,6 +354,36 @@ export default function Estimates() {
   const [revenueFlowPeriod, setRevenueFlowPeriod] = useState<"today" | "week" | "month" | "30days">("30days");
   const [selectedSRIds, setSelectedSRIds] = useState<Set<string>>(new Set());
   const [showBatchInvoiceDialog, setShowBatchInvoiceDialog] = useState(false);
+  const [selectedCompletedIds, setSelectedCompletedIds] = useState<Set<string>>(new Set());
+  const [urgentWoItems, setUrgentWoItems] = useState<Set<string>>(new Set(['cwa2', 'cwa5'])); // Track urgent work orders
+  const [isWoContainerCollapsed, setIsWoContainerCollapsed] = useState(false); // Collapse state for WO container
+  // Track work orders that have been converted - persist to localStorage
+  const [convertedWoIds, setConvertedWoIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('convertedWoIds');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  
+  // Persist convertedWoIds to localStorage whenever it changes
+  useEffect(() => {
+    if (convertedWoIds.size > 0) {
+      localStorage.setItem('convertedWoIds', JSON.stringify(Array.from(convertedWoIds)));
+    }
+  }, [convertedWoIds]);
+  
+  const [isConvertingFromWo, setIsConvertingFromWo] = useState(false); // Track if converting from Work Order
+  const [convertingWoId, setConvertingWoId] = useState<string | null>(null); // Track which WO is being converted
+  const [convertingWoNumber, setConvertingWoNumber] = useState<string>(""); // Store WO number for toast message
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; label: string; caption: string } | null>(null); // Photo lightbox state
+  const [lightboxImages, setLightboxImages] = useState<Array<{ url: string; label: string; caption: string }>>([]); // All images for navigation
+  const [lightboxIndex, setLightboxIndex] = useState(0); // Current image index
+  const [lightboxZoom, setLightboxZoom] = useState(100); // Zoom level percentage
+  const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 }); // Pan position
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [invoiceType, setInvoiceType] = useState<"combined" | "separate">("separate");
   const [showVerbalApprovalDialog, setShowVerbalApprovalDialog] = useState(false);
   const [verbalApproverName, setVerbalApproverName] = useState("");
@@ -303,7 +391,6 @@ export default function Estimates() {
   const [officeStaffName, setOfficeStaffName] = useState("");
   const [approvedByMethod, setApprovedByMethod] = useState<"email" | "phone" | "other">("phone");
   const [otherMethodDetails, setOtherMethodDetails] = useState("");
-  const [fieldInboxExpanded, setFieldInboxExpanded] = useState(true);
 
   const [formData, setFormData] = useState<EstimateFormData>(emptyFormData);
 
@@ -375,10 +462,12 @@ export default function Estimates() {
   const inferSourceType = (estimate: Estimate): string => {
     if (estimate.sourceType) {
       const st = estimate.sourceType.toLowerCase();
+      if (st === "repair_foreman" || st === "foreman") return "repair_foreman";
       if (st === "repair_tech" || st === "field") return "repair_tech";
       if (st === "service_tech" || st === "service_repair") return "service_tech";
       if (st === "emergency" || st === "sos") return "emergency";
       if (st === "office_staff" || st === "manual" || st === "office") return "office_staff";
+      if (st === "work_order" || st === "wo") return "work_order";
     }
     if (estimate.sourceEmergencyId) return "emergency";
     if (estimate.sourceRepairJobId || (estimate.serviceRepairCount && estimate.serviceRepairCount > 0)) return "service_tech";
@@ -389,10 +478,12 @@ export default function Estimates() {
   const getSourceLabel = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
+      case "repair_foreman": return "Foreman Estimate";
       case "repair_tech": return "Field Estimate";
       case "service_tech": return "SR Estimate";
       case "office_staff": return "Office Estimate";
       case "emergency": return "SOS Estimate";
+      case "work_order": return "Work Order";
       default: return "Office Estimate";
     }
   };
@@ -400,10 +491,12 @@ export default function Estimates() {
   const getSourceBadgeColor = (estimate: Estimate): string => {
     const sourceType = inferSourceType(estimate);
     switch (sourceType) {
+      case "repair_foreman": return "bg-[#8B5CF6]/20 text-[#7C3AED]";
       case "repair_tech": return "bg-[#17BEBB33] text-[#0D9488]";
       case "service_tech": return "bg-[#17BEBB33] text-[#0D9488]";
       case "office_staff": return "bg-[#17BEBB33] text-[#0D9488]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
+      case "work_order": return "bg-[#FEF3C7] text-[#D97706] border border-[#FCD34D]"; // Yellow color for Work Order
       default: return "bg-[#17BEBB33] text-[#0D9488]";
     }
   };
@@ -540,11 +633,16 @@ export default function Estimates() {
   const estimates: Estimate[] = estimatesData?.estimates || [];
 
   const sourceMetrics = useMemo(() => {
+    const repairForeman = estimates.filter((e: Estimate) => inferSourceType(e) === "repair_foreman");
     const repairTech = estimates.filter((e: Estimate) => inferSourceType(e) === "repair_tech");
     const serviceTech = estimates.filter((e: Estimate) => inferSourceType(e) === "service_tech");
     const officeStaff = estimates.filter((e: Estimate) => inferSourceType(e) === "office_staff");
     
     return {
+      repairForeman: {
+        count: repairForeman.length,
+        totalValue: repairForeman.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
+      },
       repairTech: {
         count: repairTech.length,
         totalValue: repairTech.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
@@ -558,30 +656,6 @@ export default function Estimates() {
         totalValue: officeStaff.reduce((sum: number, e: Estimate) => sum + (e.totalAmount || 0), 0),
       },
     };
-  }, [estimates]);
-
-  // Field Estimates Inbox - estimates submitted from mobile app by repair techs/foremen awaiting review
-  const fieldInboxEstimates = useMemo(() => {
-    return estimates.filter((e: Estimate) => {
-      const sourceType = inferSourceType(e);
-      // Show estimates from repair techs or foremen (check multiple indicators)
-      const isFromField = 
-        sourceType === "repair_tech" || 
-        e.sourceType === "repair_tech" || 
-        e.sourceType === "field" ||
-        e.sourceType === "foreman" ||
-        e.sourceType === "repair_foreman" ||
-        e.repairForemanId ||
-        e.createdByTechId; // Any estimate created by a tech in the field
-      
-      // Include draft and other pre-approval statuses awaiting office review
-      const isPendingReview = e.status === "draft" || e.status === "submitted" || e.status === "needs_review";
-      
-      // Show recent field submissions (last 90 days) to ensure nothing is missed
-      const isRecent = e.createdAt && new Date(e.createdAt) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-      
-      return isFromField && isPendingReview && isRecent;
-    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [estimates]);
 
   // Calculate revenue flow values based on selected time period
@@ -674,7 +748,20 @@ export default function Estimates() {
 
     // Apply source filter (use inferSourceType for intelligent detection)
     if (sourceFilter !== "all") {
-      result = result.filter((e: Estimate) => inferSourceType(e) === sourceFilter);
+      if (sourceFilter === "field") {
+        // Field Estimates = repair_tech + repair_foreman
+        result = result.filter((e: Estimate) => {
+          const source = inferSourceType(e);
+          return source === "repair_tech" || source === "repair_foreman";
+        });
+      } else if (sourceFilter === "work_order") {
+        // Work Order = estimates converted from work orders (have sourceType work_order or woReceived flag)
+        result = result.filter((e: Estimate) => 
+          e.sourceType === "work_order" || e.woReceived === true
+        );
+      } else {
+        result = result.filter((e: Estimate) => inferSourceType(e) === sourceFilter);
+      }
     }
 
     // Apply date range filter
@@ -785,9 +872,12 @@ export default function Estimates() {
       techNotes: estimate.techNotes || "",
       attachments: estimate.attachments || [],
       photos: estimate.photos || [],
+      beforePhotos: [],
+      afterPhotos: [],
       workType: estimate.workType || "repairs",
       woReceived: estimate.woReceived || false,
       woNumber: estimate.woNumber || "",
+      sourceType: estimate.sourceType || "",
     });
     setSelectedEstimate(estimate);
     setShowFormDialog(true);
@@ -880,15 +970,61 @@ export default function Estimates() {
       // Preserve existing sourceType when editing
       updateMutation.mutate({ id: selectedEstimate.id, data: estimateData });
     } else {
-      // Only set office_staff for new estimates created via the UI
-      estimateData.sourceType = "office_staff";
+      // Preserve sourceType if set (e.g., work_order from conversion), otherwise default to office_staff
+      if (!estimateData.sourceType) {
+        estimateData.sourceType = "office_staff";
+      }
+      
+      // If converting from Work Order, mark the WO as converted and track who did it
+      if (isConvertingFromWo && convertingWoId) {
+        // Track who converted this work order to estimate
+        estimateData.convertedByUserName = formData.officeMemberName || "Office Staff";
+        estimateData.convertedAt = new Date().toISOString();
+        
+        setConvertedWoIds(prev => new Set(Array.from(prev).concat(convertingWoId)));
+        // Also remove from selected if it was selected
+        setSelectedCompletedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(convertingWoId);
+          return newSet;
+        });
+        
+        // Only update database for real estimates (not sample data with IDs like cwa1, cwa2)
+        // Sample IDs start with 'cwa' and don't exist in the database
+        const isSampleData = convertingWoId.startsWith('cwa');
+        if (!isSampleData) {
+          // Update the original estimate's status in the database to mark it as archived/converted
+          // This ensures it doesn't reappear after page refresh
+          fetch(`/api/estimates/${convertingWoId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'archived' })
+          }).catch(err => console.error('Failed to archive original work order:', err));
+        }
+        // Sample data conversions are persisted via localStorage (convertedWoIds)
+        
+        // Show success toast with WO and Estimate numbers
+        setTimeout(() => {
+          toast({
+            title: "Work Order Converted",
+            description: `${convertingWoNumber} converted to Estimate ${formData.estimateNumber}`,
+          });
+        }, 500);
+      }
+      
       createMutation.mutate(estimateData);
     }
+    // Reset the Work Order conversion flags
+    setIsConvertingFromWo(false);
+    setConvertingWoId(null);
+    setConvertingWoNumber("");
   };
 
   const openSendApprovalDialog = async (estimate: Estimate) => {
     setSelectedEstimate(estimate);
     setSelectedApprovalEmail("");
+    setCustomApprovalEmail("");
+    setUseCustomEmail(false);
     setApprovalSubject(`Estimate Approval Request: ${estimate.title || 'Pool Service Estimate'} - ${estimate.propertyName}`);
     setApprovalMessage("");
     setLoadingContacts(true);
@@ -937,7 +1073,8 @@ export default function Estimates() {
   };
 
   const handleSendApprovalEmail = async () => {
-    if (!selectedEstimate || !selectedApprovalEmail) return;
+    const emailToSend = useCustomEmail ? customApprovalEmail : selectedApprovalEmail;
+    if (!selectedEstimate || !emailToSend) return;
     
     try {
       // Call the API to send the approval email via Microsoft Graph
@@ -945,7 +1082,7 @@ export default function Estimates() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          email: selectedApprovalEmail,
+          email: emailToSend,
           subject: approvalSubject,
           customMessage: approvalMessage,
         }),
@@ -965,7 +1102,7 @@ export default function Estimates() {
       setShowSendApprovalDialog(false);
       toast({ 
         title: "Email Sent", 
-        description: message || `Approval email sent successfully to ${selectedApprovalEmail}` 
+        description: message || `Approval email sent successfully to ${emailToSend}` 
       });
     } catch (error: any) {
       toast({ 
@@ -1646,6 +1783,149 @@ export default function Estimates() {
   // Check if Under $500 filter is active
   const isUnder500FilterActive = valueFilter === "under500";
 
+  // Handle keyboard shortcuts for lightbox
+  useEffect(() => {
+    if (!lightboxImage) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'Escape':
+          closeLightbox();
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          zoomIn();
+          break;
+        case '-':
+          e.preventDefault();
+          zoomOut();
+          break;
+        case '0':
+          e.preventDefault();
+          resetZoom();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (lightboxZoom > 100) {
+            setLightboxPan(p => ({ ...p, x: p.x + 50 }));
+          } else {
+            prevImage();
+          }
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (lightboxZoom > 100) {
+            setLightboxPan(p => ({ ...p, x: p.x - 50 }));
+          } else {
+            nextImage();
+          }
+          break;
+        case 'ArrowUp':
+          if (lightboxZoom > 100) {
+            e.preventDefault();
+            setLightboxPan(p => ({ ...p, y: p.y + 50 }));
+          }
+          break;
+        case 'ArrowDown':
+          if (lightboxZoom > 100) {
+            e.preventDefault();
+            setLightboxPan(p => ({ ...p, y: p.y - 50 }));
+          }
+          break;
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxImage, lightboxZoom, lightboxImages, lightboxIndex]);
+
+  // Zoom helper functions
+  const zoomIn = () => setLightboxZoom(z => Math.min(z + 25, 300));
+  const zoomOut = () => setLightboxZoom(z => Math.max(z - 25, 50));
+  const resetZoom = () => {
+    setLightboxZoom(100);
+    setLightboxPan({ x: 0, y: 0 });
+  };
+  const closeLightbox = () => {
+    setLightboxImage(null);
+    setLightboxImages([]);
+    setLightboxIndex(0);
+    setLightboxZoom(100);
+    setLightboxPan({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  // Navigate to previous image
+  const prevImage = () => {
+    if (lightboxImages.length > 1 && lightboxIndex > 0) {
+      const newIndex = lightboxIndex - 1;
+      setLightboxIndex(newIndex);
+      setLightboxImage(lightboxImages[newIndex]);
+      setLightboxZoom(100);
+      setLightboxPan({ x: 0, y: 0 });
+    }
+  };
+
+  // Navigate to next image
+  const nextImage = () => {
+    if (lightboxImages.length > 1 && lightboxIndex < lightboxImages.length - 1) {
+      const newIndex = lightboxIndex + 1;
+      setLightboxIndex(newIndex);
+      setLightboxImage(lightboxImages[newIndex]);
+      setLightboxZoom(100);
+      setLightboxPan({ x: 0, y: 0 });
+    }
+  };
+
+  // Open lightbox with multiple images
+  const openLightbox = (images: Array<{ url: string; label: string; caption: string }>, startIndex: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(startIndex);
+    setLightboxImage(images[startIndex]);
+    setLightboxZoom(100);
+    setLightboxPan({ x: 0, y: 0 });
+  };
+
+  // Mouse wheel zoom handler
+  const handleWheelZoom = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      zoomIn();
+    } else {
+      zoomOut();
+    }
+  };
+
+  // Double click to toggle zoom
+  const handleDoubleClick = () => {
+    if (lightboxZoom === 100) {
+      setLightboxZoom(200);
+    } else {
+      resetZoom();
+    }
+  };
+
+  // Drag handlers for panning
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (lightboxZoom > 100) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && lightboxZoom > 100) {
+      setLightboxPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
   // Clear selection when filter changes
   useEffect(() => {
     setSelectedSRIds(new Set());
@@ -1743,7 +2023,8 @@ export default function Estimates() {
             onChange("", "");
             return;
           }
-          const tech = technicians.find((t: any) => t.id === id);
+          // Handle both string and numeric IDs
+          const tech = technicians.find((t: any) => String(t.id) === String(id));
           onChange(id, tech ? `${tech.firstName} ${tech.lastName}` : "");
         }}
       >
@@ -1753,7 +2034,7 @@ export default function Estimates() {
         <SelectContent>
           <SelectItem value="__none__">None</SelectItem>
           {technicians.map((tech: any) => (
-            <SelectItem key={tech.id} value={tech.id}>
+            <SelectItem key={tech.id} value={String(tech.id)}>
               {tech.firstName} {tech.lastName}
             </SelectItem>
           ))}
@@ -1922,7 +2203,7 @@ export default function Estimates() {
             </div>
 
             {/* Bottom Row - By Source and Field Estimates Inbox side by side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {/* By Source - Donut Chart */}
               <div className="bg-white rounded-2xl shadow-sm p-5">
                 <h4 className="text-sm font-medium text-slate-700 mb-4">By Source</h4>
@@ -1931,7 +2212,8 @@ export default function Estimates() {
                   <div className="relative w-28 h-28 flex-shrink-0">
                     <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
                       {(() => {
-                        const total = sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count;
+                        const total = sourceMetrics.repairForeman.count + sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count;
+                        const foremanPct = total > 0 ? (sourceMetrics.repairForeman.count / total) * 100 : 0;
                         const repairPct = total > 0 ? (sourceMetrics.repairTech.count / total) * 100 : 0;
                         const servicePct = total > 0 ? (sourceMetrics.serviceTech.count / total) * 100 : 0;
                         const officePct = total > 0 ? (sourceMetrics.officeStaff.count / total) * 100 : 0;
@@ -1939,16 +2221,17 @@ export default function Estimates() {
                         return (
                           <>
                             <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#0077b6" strokeWidth="12" strokeDasharray={`${(repairPct / 100) * circumference} ${circumference}`} strokeDashoffset="0" />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#14b8a6" strokeWidth="12" strokeDasharray={`${(servicePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-(repairPct / 100) * circumference}`} />
-                            <circle cx="50" cy="50" r="40" fill="none" stroke="#6b7280" strokeWidth="12" strokeDasharray={`${(officePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((repairPct + servicePct) / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#8B5CF6" strokeWidth="12" strokeDasharray={`${(foremanPct / 100) * circumference} ${circumference}`} strokeDashoffset="0" />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#0077b6" strokeWidth="12" strokeDasharray={`${(repairPct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-(foremanPct / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#14b8a6" strokeWidth="12" strokeDasharray={`${(servicePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((foremanPct + repairPct) / 100) * circumference}`} />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#6b7280" strokeWidth="12" strokeDasharray={`${(officePct / 100) * circumference} ${circumference}`} strokeDashoffset={`${-((foremanPct + repairPct + servicePct) / 100) * circumference}`} />
                           </>
                         );
                       })()}
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="text-center">
-                        <span className="text-xl font-bold text-slate-700">{sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count}</span>
+                        <span className="text-xl font-bold text-slate-700">{sourceMetrics.repairForeman.count + sourceMetrics.repairTech.count + sourceMetrics.serviceTech.count + sourceMetrics.officeStaff.count}</span>
                         <p className="text-xs text-slate-400">total</p>
                       </div>
                     </div>
@@ -1956,6 +2239,19 @@ export default function Estimates() {
                   
                   {/* Legend */}
                   <div className="flex-1 space-y-3">
+                    <div 
+                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                      onClick={() => setSourceFilter("repair_foreman")}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+                        <span className="text-sm text-slate-700">Repair Foreman</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-slate-700">{sourceMetrics.repairForeman.count}</span>
+                        <span className="text-xs text-slate-400 ml-2">${(sourceMetrics.repairForeman.totalValue / 100 / 1000).toFixed(1)}k</span>
+                      </div>
+                    </div>
                     <div 
                       className="flex items-center justify-between cursor-pointer hover:bg-slate-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                       onClick={() => setSourceFilter("repair_tech")}
@@ -1999,92 +2295,598 @@ export default function Estimates() {
                 </div>
               </div>
 
-              {/* Field Estimates Inbox - Compact version for side panel */}
-              <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col" data-testid="field-estimates-inbox">
+              {/* Field Estimates Inbox */}
+              <div className="bg-white rounded-2xl shadow-sm p-5 flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-[#0077C5]">
-                      <Smartphone className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                        Field Estimates Inbox
-                        {fieldInboxEstimates.length > 0 ? (
-                          <Badge className="bg-[#f97316] text-white border-0 text-[10px] px-1.5 py-0">
-                            {fieldInboxEstimates.length} new
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-slate-400 text-white border-0 text-[10px] px-1.5 py-0">
-                            0 pending
-                          </Badge>
-                        )}
-                      </h4>
-                    </div>
-                  </div>
+                  <h4 className="text-sm font-medium text-slate-700">Field Estimates Inbox</h4>
+                  {(() => {
+                    const fieldEstimates = estimates.filter(e => 
+                      e.status === "draft" && 
+                      (e.sourceType === "repair_tech" || e.sourceType === "service_tech" || e.sourceType === "repair_foreman")
+                    );
+                    return fieldEstimates.length > 0 ? (
+                      <span className="px-2 py-0.5 bg-[#f97316] text-white text-xs font-medium rounded-full">
+                        {fieldEstimates.length} new
+                      </span>
+                    ) : null;
+                  })()}
                 </div>
-                
-                <div className="flex-1 overflow-y-auto max-h-[200px]">
-                  {fieldInboxEstimates.length === 0 ? (
-                    <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-gray-200">
-                      <Inbox className="w-6 h-6 text-slate-400 mx-auto mb-2" />
-                      <p className="text-xs text-[#6B7280]">No field estimates pending</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {fieldInboxEstimates.slice(0, 4).map((estimate) => (
-                        <div 
-                          key={estimate.id}
-                          className="bg-slate-50 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-pointer border border-transparent hover:border-[#0077C5]/30"
-                          onClick={() => {
-                            setSelectedEstimate(estimate);
-                            setShowDetailDialog(true);
-                          }}
-                          data-testid={`field-inbox-estimate-${estimate.id}`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-700 truncate">{estimate.propertyName}</p>
-                              <p className="text-xs text-slate-500 truncate mt-0.5">{estimate.title}</p>
-                              <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                                {estimate.createdByTechName && (
-                                  <span className="flex items-center gap-0.5">
-                                    <UserCircle2 className="w-3 h-3" />
-                                    {estimate.createdByTechName}
-                                  </span>
-                                )}
-                                <span className="flex items-center gap-0.5">
-                                  <Clock className="w-3 h-3" />
-                                  {format(new Date(estimate.createdAt), "MMM d")}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-slate-700">
-                                ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}
-                              </span>
-                            </div>
-                          </div>
+                <div className="flex-1 overflow-y-auto max-h-[200px] space-y-2">
+                  {(() => {
+                    const fieldEstimates = estimates.filter(e => 
+                      e.status === "draft" && 
+                      (e.sourceType === "repair_tech" || e.sourceType === "service_tech" || e.sourceType === "repair_foreman")
+                    ).sort((a, b) => {
+                      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      return dateB - dateA;
+                    });
+                    
+                    if (fieldEstimates.length === 0) {
+                      return (
+                        <div className="text-center py-6 text-slate-400">
+                          <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No new field estimates</p>
                         </div>
-                      ))}
-                      {fieldInboxEstimates.length > 4 && (
-                        <Button 
-                          variant="link" 
-                          className="text-[#0077C5] text-xs p-0 h-auto w-full justify-center"
-                          onClick={() => {
-                            setSourceFilter("repair_tech");
-                            setActiveTab("draft");
-                          }}
-                          data-testid="view-all-field-estimates"
-                        >
-                          View all {fieldInboxEstimates.length} estimates
-                          <ArrowRight className="w-3 h-3 ml-1" />
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                      );
+                    }
+                    
+                    return fieldEstimates.map((estimate) => (
+                      <div 
+                        key={estimate.id}
+                        className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors border-l-4 border-l-[#0077b6]"
+                        onClick={() => openEditDialog(estimate)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-slate-800 truncate">{estimate.customerName || "Unknown Property"}</p>
+                            <span className="text-sm font-semibold text-[#10b981]">
+                              ${((estimate.totalAmount || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 truncate">{estimate.title || estimate.description || "Field Estimate"}</p>
+                          <p className="text-xs text-slate-400">
+                            {estimate.createdByTechName || "Field Tech"} · {estimate.createdAt ? format(new Date(estimate.createdAt), "MMM d") : ""}
+                          </p>
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
+
+            {/* Completed Without Approval (Work Order) Container */}
+            {(() => {
+              // Generate WO number based on year and index
+              const generateWoNumber = (index: number) => {
+                const year = new Date().getFullYear().toString().slice(-2);
+                return `WO-${year}-${String(index + 1).padStart(5, '0')}`;
+              };
+              
+              // Sample data for completed jobs without approval - with full details
+              const sampleCompletedJobs = [
+                { 
+                  id: 'cwa1', 
+                  propertyName: 'Palm Court Apartments', 
+                  description: 'Pool pump motor replaced', 
+                  fullDescription: 'Replaced 1.5HP pool pump motor. Old motor was overheating and making grinding noise. Tested and running smoothly.',
+                  amount: 45000, 
+                  techName: 'Rick Jacobs', 
+                  completedDate: new Date('2026-02-01'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=200', caption: 'Old pump motor with visible rust and wear' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200', caption: 'New pump motor installed and running' }]
+                  },
+                  parts: [
+                    { description: '1.5HP Pool Pump Motor', quantity: 1, rate: 28500, amount: 28500 },
+                    { description: 'Motor Seal Kit', quantity: 1, rate: 4500, amount: 4500 },
+                    { description: 'Labor', quantity: 1, rate: 12000, amount: 12000 },
+                  ]
+                },
+                { 
+                  id: 'cwa2', 
+                  propertyName: 'Sunset Hills HOA', 
+                  description: 'Filter cartridge replacement', 
+                  fullDescription: 'Replaced 4 filter cartridges. Old cartridges were clogged and causing high pressure readings.',
+                  amount: 28500, 
+                  techName: 'Matt Cummins', 
+                  completedDate: new Date('2026-01-31'), 
+                  isUrgent: true,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=200', caption: 'Dirty/clogged filter cartridges' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=200', caption: 'New cartridges installed in filter housing' }]
+                  },
+                  parts: [
+                    { description: 'Filter Cartridge (4-pack)', quantity: 1, rate: 18000, amount: 18000 },
+                    { description: 'O-Ring Set', quantity: 1, rate: 2500, amount: 2500 },
+                    { description: 'Labor', quantity: 1, rate: 8000, amount: 8000 },
+                  ]
+                },
+                { 
+                  id: 'cwa3', 
+                  propertyName: 'Lakewood Country Club', 
+                  description: 'Heater pilot assembly repair', 
+                  fullDescription: 'Repaired pilot assembly on pool heater. Replaced thermocouple and cleaned burner tray. Heater now igniting properly.',
+                  amount: 37500, 
+                  techName: 'Alan Bateman', 
+                  completedDate: new Date('2026-01-30'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=200', caption: 'Corroded pilot assembly' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=200', caption: 'New thermocouple installed, clean burner' }]
+                  },
+                  parts: [
+                    { description: 'Thermocouple Assembly', quantity: 1, rate: 12500, amount: 12500 },
+                    { description: 'Pilot Tube', quantity: 1, rate: 4500, amount: 4500 },
+                    { description: 'Gas Valve Service', quantity: 1, rate: 8500, amount: 8500 },
+                    { description: 'Labor', quantity: 1, rate: 12000, amount: 12000 },
+                  ]
+                },
+                { 
+                  id: 'cwa4', 
+                  propertyName: 'Shady Trails HOA', 
+                  description: 'Skimmer basket and weir door replaced', 
+                  fullDescription: 'Replaced cracked skimmer basket and broken weir door. Skimmer now functioning properly.',
+                  amount: 12500, 
+                  techName: 'Kevin Enriquez', 
+                  completedDate: new Date('2026-01-29'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=200', caption: 'Cracked skimmer basket' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=200', caption: 'New basket and weir door installed' }]
+                  },
+                  parts: [
+                    { description: 'Skimmer Basket', quantity: 1, rate: 3500, amount: 3500 },
+                    { description: 'Weir Door', quantity: 1, rate: 2800, amount: 2800 },
+                    { description: 'Skimmer Lid', quantity: 1, rate: 2200, amount: 2200 },
+                    { description: 'Labor', quantity: 1, rate: 4000, amount: 4000 },
+                  ]
+                },
+                { 
+                  id: 'cwa5', 
+                  propertyName: 'Canyon Ridge HOA', 
+                  description: 'Chemical feeder repair', 
+                  fullDescription: 'Repaired chlorine feeder. Replaced check valve and tubing. Adjusted feed rate.',
+                  amount: 19500, 
+                  techName: 'Vit Kruml', 
+                  completedDate: new Date('2026-01-28'), 
+                  isUrgent: true,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1562016600-ece13b8c8a7c?w=200', caption: 'Leaking chemical feeder connection' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=200', caption: 'New tubing and check valve installed' }]
+                  },
+                  parts: [
+                    { description: 'Check Valve', quantity: 1, rate: 4500, amount: 4500 },
+                    { description: 'Chemical Tubing (10ft)', quantity: 1, rate: 3000, amount: 3000 },
+                    { description: 'Injection Fitting', quantity: 1, rate: 2500, amount: 2500 },
+                    { description: 'Labor', quantity: 1, rate: 9500, amount: 9500 },
+                  ]
+                },
+                { 
+                  id: 'cwa6', 
+                  propertyName: 'Bella Vista HOA', 
+                  description: 'Pool light fixture replaced', 
+                  fullDescription: 'Replaced underwater pool light fixture. Old fixture had water intrusion. New LED light installed and sealed.',
+                  amount: 32000, 
+                  techName: 'Jose Puente', 
+                  completedDate: new Date('2026-01-27'), 
+                  isUrgent: false,
+                  photos: {
+                    before: [{ url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200', caption: 'Old light fixture with condensation inside' }],
+                    after: [{ url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200', caption: 'New LED pool light glowing underwater' }]
+                  },
+                  parts: [
+                    { description: 'LED Pool Light Fixture', quantity: 1, rate: 18500, amount: 18500 },
+                    { description: 'Light Niche Gasket', quantity: 1, rate: 3500, amount: 3500 },
+                    { description: 'Cord Seal Kit', quantity: 1, rate: 2000, amount: 2000 },
+                    { description: 'Labor', quantity: 1, rate: 8000, amount: 8000 },
+                  ]
+                },
+              ];
+              
+              // Pull completed jobs that never went through approval process
+              // These are estimates that were completed but never got customer approval (work orders)
+              // We exclude archived ones (which have been converted to new estimates)
+              const realCompletedWithoutApproval = estimates.filter(e => 
+                (e.status === "completed" && !e.approvedAt) || 
+                (e.woReceived && e.status === "completed")
+              ).map(e => ({
+                id: e.id,
+                propertyName: e.customerName || "Unknown",
+                description: e.title || e.description || "—",
+                fullDescription: e.description || e.title || "—",
+                amount: e.totalAmount || 0,
+                techName: e.repairTechName || e.createdByTechName || "—",
+                completedDate: e.completedAt ? new Date(e.completedAt) : new Date(),
+                isReal: true,
+                isUrgent: false,
+                photos: null as any,
+                parts: e.items || [],
+              }));
+              
+              // Combine real data with sample data (sample data fills in if no real data)
+              const completedWithoutApproval = realCompletedWithoutApproval.length > 0 
+                ? realCompletedWithoutApproval 
+                : sampleCompletedJobs;
+              
+              // Add WO numbers to items and filter out already converted ones
+              const completedWithWo = completedWithoutApproval
+                .filter((item) => !convertedWoIds.has(item.id))
+                .map((item, idx) => ({
+                  ...item,
+                  woNumber: generateWoNumber(idx),
+                }));
+              
+              const toggleSelect = (id: string) => {
+                setSelectedCompletedIds(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(id)) {
+                    newSet.delete(id);
+                  } else {
+                    newSet.add(id);
+                  }
+                  return newSet;
+                });
+              };
+              
+              const toggleSelectAll = () => {
+                if (selectedCompletedIds.size === completedWithWo.length) {
+                  setSelectedCompletedIds(new Set());
+                } else {
+                  setSelectedCompletedIds(new Set(completedWithWo.map(e => e.id)));
+                }
+              };
+              
+              // Use top-level urgent state
+              const toggleUrgent = (id: string) => {
+                setUrgentWoItems(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(id)) {
+                    newSet.delete(id);
+                  } else {
+                    newSet.add(id);
+                  }
+                  return newSet;
+                });
+              };
+              
+              const handleConvertToEstimate = (item: typeof completedWithWo[0]) => {
+                // Generate estimate number for Work Order conversion
+                const generatedEstimateNumber = generateEstimateNumber();
+                
+                // Find matching customer by name
+                const matchingCustomer = customers.find((c: any) => 
+                  c.name?.toLowerCase() === item.propertyName?.toLowerCase()
+                );
+                
+                // Find matching technician by name (check both full name and partial matches)
+                const matchingTech = technicians.find((t: any) => {
+                  const fullName = `${t.firstName} ${t.lastName}`.toLowerCase();
+                  const itemTechName = item.techName?.toLowerCase() || "";
+                  return fullName === itemTechName || 
+                         fullName.includes(itemTechName) || 
+                         itemTechName.includes(fullName);
+                });
+                
+                // Build line items from parts if available, otherwise use single item
+                const lineItems: EstimateLineItem[] = item.parts && item.parts.length > 0
+                  ? item.parts.map((part: any, idx: number) => ({
+                      lineNumber: idx + 1,
+                      productService: part.description,
+                      description: part.description,
+                      quantity: part.quantity || 1,
+                      rate: part.rate,
+                      amount: part.amount,
+                      taxable: false,
+                    }))
+                  : [{
+                      lineNumber: 1,
+                      productService: "Repair Service",
+                      description: item.description,
+                      quantity: 1,
+                      rate: item.amount,
+                      amount: item.amount,
+                      taxable: false,
+                    }];
+                
+                // Collect photos from work order (before and after) separately
+                const woPhotos: string[] = [];
+                const beforePhotos: Array<{ url: string; caption: string }> = [];
+                const afterPhotos: Array<{ url: string; caption: string }> = [];
+                
+                if (item.photos) {
+                  if (item.photos.before) {
+                    item.photos.before.forEach((p: any, idx: number) => {
+                      woPhotos.push(p.url);
+                      beforePhotos.push({ 
+                        url: p.url, 
+                        caption: p.caption || `Before photo ${idx + 1}` 
+                      });
+                    });
+                  }
+                  if (item.photos.after) {
+                    item.photos.after.forEach((p: any, idx: number) => {
+                      woPhotos.push(p.url);
+                      afterPhotos.push({ 
+                        url: p.url, 
+                        caption: p.caption || `After photo ${idx + 1}` 
+                      });
+                    });
+                  }
+                }
+                
+                // Pre-fill the estimate form with all data from the completed job
+                setFormData({
+                  ...emptyFormData,
+                  // Auto-generate estimate number
+                  estimateNumber: generatedEstimateNumber,
+                  // Customer / Property - set ID and names
+                  propertyId: matchingCustomer?.id || "",
+                  customerName: matchingCustomer?.name || item.propertyName,
+                  propertyName: matchingCustomer?.name || item.propertyName,
+                  customerEmail: matchingCustomer?.email || "",
+                  address: matchingCustomer?.address || "",
+                  // Work Type
+                  workType: "repairs",
+                  // Title and Description - use full description if available
+                  title: item.description,
+                  description: item.fullDescription || item.description,
+                  // Repair Tech - set ID and name
+                  repairTechId: matchingTech?.id?.toString() || "",
+                  repairTechName: matchingTech ? `${matchingTech.firstName} ${matchingTech.lastName}` : item.techName,
+                  // Estimate date - today's date
+                  estimateDate: new Date(),
+                  // Reported date - use the completed date from original job
+                  reportedDate: item.completedDate,
+                  // Source - mark as Work Order
+                  sourceType: "work_order",
+                  // WO Number
+                  woNumber: item.woNumber,
+                  woReceived: true,
+                  // Line items from parts
+                  items: lineItems,
+                  // Photos from work order
+                  photos: woPhotos,
+                  beforePhotos: beforePhotos,
+                  afterPhotos: afterPhotos,
+                });
+                setIsEditing(false);
+                setIsConvertingFromWo(true); // Mark as converting from Work Order
+                setConvertingWoId(item.id); // Store which WO is being converted
+                setConvertingWoNumber(item.woNumber); // Store WO number for success toast
+                setShowFormDialog(true);
+              };
+              
+              // Hide container if no work orders left
+              if (completedWithWo.length === 0) {
+                return null;
+              }
+              
+              return (
+                <div className="mt-4 bg-white rounded-2xl shadow-sm border border-slate-200 border-l-4 border-l-[#EAB308] overflow-hidden">
+                  <div 
+                    className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#FEFCE8] to-white cursor-pointer hover:from-[#FEF9C3] transition-colors duration-200"
+                    onClick={() => setIsWoContainerCollapsed(!isWoContainerCollapsed)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ChevronDown 
+                        className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${isWoContainerCollapsed ? '-rotate-90' : ''}`} 
+                      />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-[#EAB308]" />
+                          Completed Without Approval (Work Order)
+                          <span className="px-2 py-0.5 bg-[#EAB308] text-white text-xs font-medium rounded-full">
+                            {completedWithWo.length}
+                          </span>
+                        </h4>
+                        {!isWoContainerCollapsed && (
+                          <p className="text-xs text-slate-500 mt-0.5">Work orders completed but pending approval - {completedWithWo.length} items</p>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={selectedCompletedIds.size === 0}
+                      className="bg-[#0077b6] hover:bg-[#005f8f] text-white disabled:opacity-50"
+                      onClick={async (e) => {
+                        e.stopPropagation(); // Prevent header click from toggling collapse
+                        // Get selected items for invoice
+                        const selectedItems = completedWithWo.filter(item => selectedCompletedIds.has(item.id));
+                        
+                        // Create invoices for each selected work order
+                        const createdInvoices: string[] = [];
+                        
+                        for (const item of selectedItems) {
+                          try {
+                            // Build line items from work order
+                            const lineItems = (item.parts || []).map((part: any) => ({
+                              description: part.name || part.description || "Service",
+                              quantity: part.quantity || 1,
+                              rate: part.price || 0,
+                              amount: (part.quantity || 1) * (part.price || 0)
+                            }));
+                            
+                            // Add labor if no line items
+                            if (lineItems.length === 0) {
+                              lineItems.push({
+                                description: item.description || "Pool Service Work",
+                                quantity: 1,
+                                rate: item.amount,
+                                amount: item.amount
+                              });
+                            }
+                            
+                            const invoiceData = {
+                              customerName: item.propertyName,
+                              propertyName: item.propertyName,
+                              woNumber: item.woNumber,
+                              sourceType: "work_order",
+                              repairTechName: item.techName,
+                              createdByName: "Office Staff", // Track who created the invoice
+                              lineItems: lineItems,
+                              subtotal: item.amount,
+                              totalAmount: item.amount,
+                              amountDue: item.amount,
+                              status: "draft",
+                              notes: item.description,
+                              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+                            };
+                            
+                            const response = await fetch("/api/invoices", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(invoiceData)
+                            });
+                            
+                            if (response.ok) {
+                              const result = await response.json();
+                              createdInvoices.push(result.invoice.invoiceNumber);
+                              
+                              // Mark WO as converted
+                              setConvertedWoIds(prev => new Set(Array.from(prev).concat(item.id)));
+                            }
+                          } catch (error) {
+                            console.error("Failed to create invoice for", item.woNumber, error);
+                          }
+                        }
+                        
+                        // Show success toast
+                        if (createdInvoices.length > 0) {
+                          toast({
+                            title: "Invoices Created",
+                            description: createdInvoices.length === 1 
+                              ? `Created ${createdInvoices[0]} for ${selectedItems[0].propertyName}`
+                              : `Created ${createdInvoices.length} invoices: ${createdInvoices.join(", ")}`,
+                          });
+                        }
+                        
+                        // Clear selection
+                        setSelectedCompletedIds(new Set());
+                      }}
+                      data-testid="button-invoice-completed"
+                    >
+                      <Receipt className="w-4 h-4 mr-1" />
+                      Invoice {selectedCompletedIds.size > 0 ? `(${selectedCompletedIds.size})` : ""}
+                    </Button>
+                  </div>
+                  {/* Collapsible content */}
+                  <div 
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                      isWoContainerCollapsed ? 'max-h-0' : 'max-h-[280px]'
+                    }`}
+                  >
+                    <div className="overflow-y-auto max-h-[280px]">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 sticky top-0">
+                        <tr>
+                          <th className="py-2 px-3 text-left w-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedCompletedIds.size === completedWithWo.length && completedWithWo.length > 0}
+                              onChange={toggleSelectAll}
+                              className="rounded border-slate-300"
+                            />
+                          </th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">WO #</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Property</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Description</th>
+                          <th className="py-2 px-3 text-right text-xs font-medium text-slate-500">Amount</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Technician</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Completed</th>
+                          <th className="py-2 px-3 text-center text-xs font-medium text-slate-500">Photos</th>
+                          <th className="py-2 px-3 text-center text-xs font-medium text-slate-500">Urgent</th>
+                          <th className="py-2 px-3 text-left text-xs font-medium text-slate-500">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {completedWithWo.map((item) => (
+                          <tr 
+                            key={item.id} 
+                            className={`border-t border-slate-100 cursor-pointer transition-colors duration-200 ${
+                              urgentWoItems.has(item.id) 
+                                ? 'bg-red-50 hover:bg-red-100' 
+                                : 'hover:bg-[#f0fdf4]'
+                            }`}
+                            onClick={() => handleConvertToEstimate(item)}
+                            data-testid={`row-wo-${item.id}`}
+                          >
+                            <td className="py-2.5 px-3" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedCompletedIds.has(item.id)}
+                                onChange={() => toggleSelect(item.id)}
+                                className="rounded border-slate-300 cursor-pointer"
+                              />
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-xs text-slate-600">{item.woNumber}</td>
+                            <td className="py-2.5 px-3 font-medium text-slate-800">{item.propertyName}</td>
+                            <td className="py-2.5 px-3 text-slate-600 max-w-[150px] truncate" title={item.description}>{item.description}</td>
+                            <td className="py-2.5 px-3 text-right font-semibold text-[#10b981]">
+                              ${(item.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600">{item.techName}</td>
+                            <td className="py-2.5 px-3 text-slate-400">
+                              {format(item.completedDate, "MMM d")}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {item.photos && (
+                                <span className="inline-flex items-center gap-1 text-xs text-slate-500" title="Photos attached">
+                                  <Camera className="w-3 h-3" />
+                                  {(item.photos.before?.length || 0) + (item.photos.after?.length || 0)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleUrgent(item.id);
+                                }}
+                                className={`p-1 rounded transition-colors ${
+                                  urgentWoItems.has(item.id) 
+                                    ? 'text-red-600 bg-red-100 hover:bg-red-200' 
+                                    : 'text-slate-400 hover:text-red-500 hover:bg-slate-100'
+                                }`}
+                                title={urgentWoItems.has(item.id) ? "Remove urgent flag" : "Mark as urgent"}
+                                data-testid={`button-urgent-${item.id}`}
+                              >
+                                {urgentWoItems.has(item.id) ? (
+                                  <span className="flex items-center gap-1 text-xs font-medium">
+                                    <Flag className="w-3 h-3" />
+                                    Urgent
+                                  </span>
+                                ) : (
+                                  <Flag className="w-3 h-3" />
+                                )}
+                              </button>
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-[#0077b6] hover:text-[#005f8f] hover:bg-[#0077b6]/10 text-xs px-2 py-1 h-auto"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConvertToEstimate(item);
+                                }}
+                                data-testid={`button-convert-${item.id}`}
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Convert to Estimate
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -2121,9 +2923,10 @@ export default function Estimates() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Sources</SelectItem>
-                  <SelectItem value="repair_tech">Repair Technician</SelectItem>
-                  <SelectItem value="service_tech">Service Technician</SelectItem>
-                  <SelectItem value="office_staff">Office Entry</SelectItem>
+                  <SelectItem value="work_order">Work Order</SelectItem>
+                  <SelectItem value="field">Field Estimates</SelectItem>
+                  <SelectItem value="office_staff">Office Estimates</SelectItem>
+                  <SelectItem value="service_tech">SR Estimates</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -2466,21 +3269,22 @@ export default function Estimates() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleNeedsScheduling(estimate);
+                                  setSelectedEstimate(estimate);
+                                  setShowSchedulingModal(true);
                                 }}
-                                className="bg-[#FF6A00] hover:bg-[#e55f00] text-white"
-                                data-testid={`button-needs-scheduling-${estimate.id}`}
+                                className="bg-[#0078D4] hover:bg-[#106EBE] text-white"
+                                data-testid={`button-schedule-${estimate.id}`}
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
-                                Needs Scheduling
+                                Schedule
                               </Button>
                             </>
                           )}
                           {estimate.status === "needs_scheduling" && (
                             <>
-                              <Badge className="bg-[#FEF3C7] text-[#D97706] border-[#FCD34D] rounded-full">
-                                <CalendarIcon className="w-3 h-3 mr-1" />
-                                Needs Scheduling
+                              <Badge className="bg-[#ECFDF5] text-[#2CA01C] border-[#A7F3D0] rounded-full">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Approved
                               </Badge>
                               {estimate.customerApproverName && (
                                 <div className="flex items-center gap-1 text-xs text-[#16A679] bg-[#22D69A]1A px-2 py-1 rounded-full">
@@ -2502,7 +3306,7 @@ export default function Estimates() {
                                   e.stopPropagation();
                                   openSchedulingModal(estimate);
                                 }}
-                                className="bg-[#0077C5] hover:bg-[#005fa3] text-white"
+                                className="bg-[#0078D4] hover:bg-[#106EBE] text-white"
                                 data-testid={`button-schedule-${estimate.id}`}
                               >
                                 <CalendarIcon className="w-3 h-3 mr-1" />
@@ -2703,23 +3507,491 @@ export default function Estimates() {
         </div>
 
         <Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-            <DialogHeader className="border-b pb-4 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <DialogTitle className="text-2xl font-bold text-slate-900">ESTIMATE</DialogTitle>
-                  <p className="text-sm text-slate-500">{isEditing ? "Edit Estimate" : "Create New Estimate"}</p>
+          <DialogContent className={`max-w-6xl max-h-[90vh] overflow-hidden flex flex-col ${isConvertingFromWo ? 'p-0' : ''}`}>
+            {isConvertingFromWo ? (
+              /* Work Order Conversion Layout - Matches Estimate Details View */
+              <DialogHeader className="border-b pb-4 flex-shrink-0 bg-gradient-to-r from-slate-800 to-slate-700 p-6 sticky top-0 z-10 relative">
+                <div className="flex items-center justify-between pr-12">
+                  <div>
+                    <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                      <Wrench className="w-5 h-5" />
+                      Repair: {formData.title || "Untitled"}
+                    </DialogTitle>
+                    <p className="text-sm text-slate-300 mt-1 flex items-center gap-2">
+                      <Badge className="bg-teal-500/20 text-teal-300 border-teal-400/30">
+                        {formData.woNumber || "WO-XX-XXXXX"}
+                      </Badge>
+                      <span>• Converting to Estimate</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400 uppercase tracking-wide">Total Amount</p>
+                    <p className="text-3xl font-bold text-white">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">Amount</p>
-                  <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                {/* X Close Button */}
+                <button
+                  onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); setConvertingWoId(null); setConvertingWoNumber(""); }}
+                  className="absolute top-4 right-4 p-2 rounded-md text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </DialogHeader>
+            ) : (
+              <DialogHeader className="border-b pb-4 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="text-2xl font-bold text-slate-900">ESTIMATE</DialogTitle>
+                    <p className="text-sm text-slate-500">{isEditing ? "Edit Estimate" : "Create New Estimate"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Amount</p>
+                    <p className="text-3xl font-bold text-[#0078D4]">{formatCurrency(calculateTotals.totalAmount)}</p>
+                  </div>
                 </div>
-              </div>
-            </DialogHeader>
+              </DialogHeader>
+            )}
 
-            <ScrollArea className="flex-1 -mx-6">
+            <div className={`flex-1 overflow-y-auto overflow-x-hidden ${isConvertingFromWo ? '' : '-mx-6'}`} style={{ scrollBehavior: 'smooth' }}>
               <div className="px-6 py-4">
-                <div className="flex gap-6">
+                {isConvertingFromWo ? (
+                  /* Work Order Conversion Layout */
+                  <div className="space-y-4">
+                    {/* Quote Description Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                          <ClipboardList className="w-4 h-4" />
+                          Quote Description
+                        </h4>
+                      </div>
+                      <div className="p-4">
+                        <Textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Enter quote description..."
+                          rows={3}
+                          className="resize-none"
+                          data-testid="input-wo-description"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Info Grid Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="grid grid-cols-4 divide-x divide-y">
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            Property/Location
+                          </Label>
+                          <Select
+                            value={formData.propertyId}
+                            onValueChange={(id) => {
+                              const customer = customers.find((c: any) => c.id === id);
+                              setFormData(prev => ({
+                                ...prev,
+                                propertyId: id,
+                                propertyName: customer?.name || "",
+                                customerName: customer?.name || "",
+                                customerEmail: customer?.email || "",
+                                address: customer?.address || "",
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 mt-1 text-sm">
+                              <SelectValue placeholder="Select..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map((customer: any) => (
+                                <SelectItem key={customer.id} value={customer.id}>
+                                  {customer.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            Customer/HOA
+                          </Label>
+                          <p className="text-sm font-medium mt-1">{formData.customerName || "N/A"}</p>
+                        </div>
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            Estimate Date
+                          </Label>
+                          <p className="text-sm font-medium mt-1">
+                            {formData.estimateDate ? format(formData.estimateDate, "M/d/yyyy") : "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-slate-50">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <FileText className="w-3 h-3" />
+                            Estimate No.
+                          </Label>
+                          <p className="text-sm font-medium mt-1">{formData.estimateNumber || "Auto-generated"}</p>
+                        </div>
+                        <div className="p-3">
+                          <TechnicianSelect
+                            label="Repair Tech"
+                            value={formData.repairTechId}
+                            onChange={(id: string, name: string) => setFormData(prev => ({ 
+                              ...prev, 
+                              repairTechId: id,
+                              repairTechName: name
+                            }))}
+                          />
+                        </div>
+                        <div className="p-3">
+                          <TechnicianSelect
+                            label="Service Tech"
+                            value={formData.serviceTechId}
+                            onChange={(id: string, name: string) => setFormData(prev => ({ 
+                              ...prev, 
+                              serviceTechId: id,
+                              serviceTechName: name
+                            }))}
+                          />
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            Reported Date
+                          </Label>
+                          <p className="text-sm font-medium mt-1">
+                            {formData.reportedDate ? format(formData.reportedDate, "MMM d, yyyy") : "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Status
+                          </Label>
+                          <Badge className={`mt-1 ${statusConfig[formData.status]?.color || "bg-slate-100"}`}>
+                            {statusConfig[formData.status]?.label || "Draft"}
+                          </Badge>
+                        </div>
+                        <div className="p-3 col-span-2 border-t">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <ClipboardList className="w-3 h-3" />
+                            WO Number
+                          </Label>
+                          <Badge className="mt-1 bg-teal-100 text-teal-700 border-teal-200">
+                            {formData.woNumber || "WO-XX-XXXXX"}
+                          </Badge>
+                        </div>
+                        <div className="p-3 col-span-2 border-t">
+                          <Label className="text-xs text-slate-500 flex items-center gap-1">
+                            <Tag className="w-3 h-3" />
+                            Work Type
+                          </Label>
+                          <p className="text-sm font-medium mt-1 capitalize">{formData.workType || "Repairs"}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Line Items Section */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                          <Tag className="w-4 h-4" />
+                          Line Items
+                        </h4>
+                        <Button
+                          size="sm"
+                          onClick={addLineItem}
+                          className="bg-[#0078D4] hover:bg-[#0078D4]/90 h-7 text-xs"
+                          data-testid="button-add-wo-line"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          + Add Item
+                        </Button>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50">
+                            <TableHead className="w-[200px] font-semibold text-xs">Item/Part</TableHead>
+                            <TableHead className="font-semibold text-xs">Description</TableHead>
+                            <TableHead className="w-14 font-semibold text-xs text-center">Qty</TableHead>
+                            <TableHead className="w-24 font-semibold text-xs text-right">Unit Price</TableHead>
+                            <TableHead className="w-24 font-semibold text-xs text-right">Amount</TableHead>
+                            <TableHead className="w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {formData.items.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-6 text-slate-400 text-sm">
+                                No line items. Click "+ Add Item" to add parts and services.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            formData.items.map((item, idx) => (
+                              <TableRow key={idx} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                                <TableCell className="py-2">
+                                  <Select
+                                    value={item.productService}
+                                    onValueChange={(value) => {
+                                      const catalogItem = partsCatalog.find(p => p.name === value);
+                                      updateLineItem(idx, { 
+                                        productService: value,
+                                        description: value,
+                                        rate: catalogItem?.defaultRate || item.rate,
+                                        amount: (catalogItem?.defaultRate || item.rate) * item.quantity
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs">
+                                      <SelectValue placeholder="Select..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[200px]">
+                                      <div className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-50">Parts</div>
+                                      {partsCatalog.filter(p => p.category === "parts").slice(0, 10).map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-xs">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Labor</div>
+                                      {partsCatalog.filter(p => p.category === "labor").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-xs">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Services</div>
+                                      {partsCatalog.filter(p => p.category === "services").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-xs">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Input
+                                    value={item.description}
+                                    onChange={(e) => updateLineItem(idx, { description: e.target.value })}
+                                    placeholder="Description"
+                                    className="h-7 text-xs"
+                                  />
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateLineItem(idx, { quantity: parseFloat(e.target.value) || 0 })}
+                                    className="h-7 text-xs text-center"
+                                    min={0}
+                                  />
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Input
+                                    type="number"
+                                    value={item.rate}
+                                    onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
+                                    className="h-7 text-xs text-right"
+                                    min={0}
+                                    step={0.01}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-right font-medium text-xs py-2">
+                                  {formatCurrency(item.amount)}
+                                </TableCell>
+                                <TableCell className="py-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 hover:bg-red-50"
+                                    onClick={() => removeLineItem(idx)}
+                                  >
+                                    <X className="w-3 h-3 text-red-500" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                      <div className="border-t bg-slate-50 px-4 py-2">
+                        <div className="flex justify-end">
+                          <div className="w-48 space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-slate-600">Subtotal:</span>
+                              <span className="font-medium">{formatCurrency(formData.items.reduce((sum, item) => sum + item.amount, 0))}</span>
+                            </div>
+                            <div className="flex justify-between text-sm font-semibold border-t pt-1">
+                              <span className="text-slate-900">Total Amount:</span>
+                              <span className="text-[#0078D4]">{formatCurrency(formData.items.reduce((sum, item) => sum + item.amount, 0))}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Photos Section - Multiple Before/After with horizontal scroll */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between">
+                        <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                          <Camera className="w-4 h-4" />
+                          Photos
+                          <span className="text-xs text-slate-500 font-normal">
+                            ({formData.beforePhotos.length + formData.afterPhotos.length} photos)
+                          </span>
+                        </h4>
+                      </div>
+                      <div className="p-4 space-y-6">
+                        {/* BEFORE Photos Row */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-1 bg-orange-500 text-white text-xs font-semibold rounded">BEFORE</span>
+                            <span className="text-xs text-slate-500">{formData.beforePhotos.length} photos</span>
+                          </div>
+                          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
+                            {(() => {
+                              // Generate sample before photos if none exist
+                              const beforePhotos = formData.beforePhotos.length > 0 
+                                ? formData.beforePhotos 
+                                : [
+                                    { url: "https://placehold.co/800x600/f97316/white?text=Before+1", caption: formData.title?.includes("pump") ? "Old motor showing corrosion" : "Equipment before repair" },
+                                    { url: "https://placehold.co/800x600/ea580c/white?text=Before+2", caption: formData.title?.includes("pump") ? "Serial number plate" : "Damage detail" },
+                                    { url: "https://placehold.co/800x600/c2410c/white?text=Before+3", caption: formData.title?.includes("pump") ? "Rust on housing" : "Additional view" },
+                                  ];
+                              
+                              // Combine all photos for lightbox navigation
+                              const allPhotosForLightbox = [
+                                ...beforePhotos.map(p => ({ url: p.url, label: "Before", caption: p.caption })),
+                                ...((formData.afterPhotos.length > 0 ? formData.afterPhotos : [
+                                  { url: "https://placehold.co/800x600/22c55e/white?text=After+1", caption: "New equipment installed" },
+                                  { url: "https://placehold.co/800x600/16a34a/white?text=After+2", caption: "System running" },
+                                ]) as Array<{url: string; caption: string}>).map(p => ({ url: p.url, label: "After", caption: p.caption }))
+                              ];
+                              
+                              return (
+                                <>
+                                  {beforePhotos.map((photo, idx) => (
+                                    <div key={`before-${idx}`} className="flex-shrink-0 w-[150px]">
+                                      <div 
+                                        className="relative group cursor-pointer"
+                                        onClick={() => openLightbox(allPhotosForLightbox, idx)}
+                                      >
+                                        <img
+                                          src={photo.url}
+                                          alt={`Before ${idx + 1}`}
+                                          className="w-[150px] h-[110px] object-cover rounded-lg border-2 border-orange-200 hover:border-orange-400 transition-colors"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                                          <span className="opacity-0 group-hover:opacity-100 text-white bg-black/60 px-2 py-1 rounded text-xs transition-opacity">
+                                            Click to enlarge
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 text-center truncate" title={photo.caption}>
+                                        {photo.caption}
+                                      </p>
+                                    </div>
+                                  ))}
+                                  {/* Add Photo Button */}
+                                  <div 
+                                    className="flex-shrink-0 w-[150px] h-[110px] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#0077b6] hover:bg-slate-50 transition-colors"
+                                    onClick={() => {
+                                      toast({
+                                        title: "Add Before Photos",
+                                        description: "Photo upload feature coming soon",
+                                      });
+                                    }}
+                                  >
+                                    <Plus className="w-6 h-6 text-slate-400" />
+                                    <span className="text-xs text-slate-400 mt-1">Add Photo</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* AFTER Photos Row */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded">AFTER</span>
+                            <span className="text-xs text-slate-500">{formData.afterPhotos.length} photos</span>
+                          </div>
+                          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin' }}>
+                            {(() => {
+                              // Generate sample after photos if none exist
+                              const afterPhotos = formData.afterPhotos.length > 0 
+                                ? formData.afterPhotos 
+                                : [
+                                    { url: "https://placehold.co/800x600/22c55e/white?text=After+1", caption: formData.title?.includes("pump") ? "New motor installed" : "Equipment after repair" },
+                                    { url: "https://placehold.co/800x600/16a34a/white?text=After+2", caption: formData.title?.includes("pump") ? "System running" : "Completed work" },
+                                  ];
+                              
+                              const beforePhotos = formData.beforePhotos.length > 0 
+                                ? formData.beforePhotos 
+                                : [
+                                    { url: "https://placehold.co/800x600/f97316/white?text=Before+1", caption: "Before 1" },
+                                    { url: "https://placehold.co/800x600/ea580c/white?text=Before+2", caption: "Before 2" },
+                                    { url: "https://placehold.co/800x600/c2410c/white?text=Before+3", caption: "Before 3" },
+                                  ];
+                              
+                              // Combine all photos for lightbox navigation
+                              const allPhotosForLightbox = [
+                                ...beforePhotos.map(p => ({ url: p.url, label: "Before", caption: p.caption })),
+                                ...afterPhotos.map(p => ({ url: p.url, label: "After", caption: p.caption }))
+                              ];
+                              
+                              const beforeCount = beforePhotos.length;
+                              
+                              return (
+                                <>
+                                  {afterPhotos.map((photo, idx) => (
+                                    <div key={`after-${idx}`} className="flex-shrink-0 w-[150px]">
+                                      <div 
+                                        className="relative group cursor-pointer"
+                                        onClick={() => openLightbox(allPhotosForLightbox, beforeCount + idx)}
+                                      >
+                                        <img
+                                          src={photo.url}
+                                          alt={`After ${idx + 1}`}
+                                          className="w-[150px] h-[110px] object-cover rounded-lg border-2 border-green-200 hover:border-green-400 transition-colors"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg flex items-center justify-center">
+                                          <span className="opacity-0 group-hover:opacity-100 text-white bg-black/60 px-2 py-1 rounded text-xs transition-opacity">
+                                            Click to enlarge
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-slate-500 mt-1 text-center truncate" title={photo.caption}>
+                                        {photo.caption}
+                                      </p>
+                                    </div>
+                                  ))}
+                                  {/* Add Photo Button */}
+                                  <div 
+                                    className="flex-shrink-0 w-[150px] h-[110px] border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#0077b6] hover:bg-slate-50 transition-colors"
+                                    onClick={() => {
+                                      toast({
+                                        title: "Add After Photos",
+                                        description: "Photo upload feature coming soon",
+                                      });
+                                    }}
+                                  >
+                                    <Plus className="w-6 h-6 text-slate-400" />
+                                    <span className="text-xs text-slate-400 mt-1">Add Photo</span>
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Standard Estimate Form Layout */
+                  <div className="flex gap-6">
                   <div className="flex-1 space-y-6">
                     <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-lg border">
                       <div className="col-span-2">
@@ -2812,10 +4084,44 @@ export default function Estimates() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="repairs">Repairs</SelectItem>
+                            <SelectItem value="service">Service</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
                             <SelectItem value="chemicals">Chemicals</SelectItem>
+                            <SelectItem value="installation">Installation</SelectItem>
+                            <SelectItem value="inspection">Inspection</SelectItem>
                             <SelectItem value="other">Other</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    </div>
+
+                    {/* Quote Title & Description */}
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ClipboardList className="w-4 h-4 text-[#0078D4]" />
+                        <Label className="text-sm font-medium text-blue-800">Quote Details</Label>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs text-slate-500">Job Title</Label>
+                          <Input
+                            value={formData.title}
+                            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Enter job title (e.g., Pool pump motor replaced)"
+                            className="h-9"
+                            data-testid="input-job-title"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-slate-500">Quote Description</Label>
+                          <textarea
+                            value={formData.description}
+                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Enter detailed description of the work..."
+                            className="w-full min-h-[80px] px-3 py-2 text-sm border border-slate-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-testid="input-quote-description"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -2909,8 +4215,8 @@ export default function Estimates() {
                     <div className="border rounded-lg overflow-hidden">
                       <div className="bg-slate-100 px-4 py-3 border-b flex items-center justify-between">
                         <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <ClipboardList className="w-4 h-4" />
-                          Line Items
+                          <Tag className="w-4 h-4" />
+                          Line Items / Parts
                         </h4>
                         <div className="flex gap-2">
                           <Button
@@ -2929,59 +4235,84 @@ export default function Estimates() {
                             data-testid="button-add-line"
                           >
                             <Plus className="w-3 h-3 mr-1" />
-                            Add product or service
+                            + Add Item
                           </Button>
                         </div>
                       </div>
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-slate-50">
-                            <TableHead className="w-10 font-semibold">#</TableHead>
-                            <TableHead className="w-28 font-semibold">Service Date</TableHead>
-                            <TableHead className="font-semibold">Product/Service</TableHead>
-                            <TableHead className="w-24 font-semibold">SKU</TableHead>
+                            <TableHead className="w-[200px] font-semibold">Item/Part</TableHead>
                             <TableHead className="font-semibold">Description</TableHead>
                             <TableHead className="w-16 font-semibold text-center">Qty</TableHead>
-                            <TableHead className="w-24 font-semibold text-right">Rate</TableHead>
-                            <TableHead className="w-24 font-semibold text-right">Amount</TableHead>
-                            <TableHead className="w-12 font-semibold text-center">Tax</TableHead>
+                            <TableHead className="w-28 font-semibold text-right">Unit Price</TableHead>
+                            <TableHead className="w-28 font-semibold text-right">Amount</TableHead>
                             <TableHead className="w-10"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {formData.items.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={10} className="text-center py-8 text-slate-400">
-                                No line items yet. Click "Add product or service" to add items.
+                              <TableCell colSpan={6} className="text-center py-8 text-slate-400">
+                                No line items yet. Click "+ Add Item" to add parts and services.
                               </TableCell>
                             </TableRow>
                           ) : (
                             formData.items.map((item, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell className="text-center font-medium text-slate-500">{item.lineNumber}</TableCell>
+                              <TableRow key={idx} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
                                 <TableCell>
-                                  <Input
-                                    type="date"
-                                    value={item.serviceDate || ""}
-                                    onChange={(e) => updateLineItem(idx, { serviceDate: e.target.value })}
-                                    className="h-8 text-xs"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
+                                  <Select
                                     value={item.productService}
-                                    onChange={(e) => updateLineItem(idx, { productService: e.target.value })}
-                                    placeholder="Product/Service"
-                                    className="h-8 text-sm"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    value={item.sku || ""}
-                                    onChange={(e) => updateLineItem(idx, { sku: e.target.value })}
-                                    placeholder="SKU"
-                                    className="h-8 text-xs"
-                                  />
+                                    onValueChange={(value) => {
+                                      const catalogItem = partsCatalog.find(p => p.name === value);
+                                      updateLineItem(idx, { 
+                                        productService: value,
+                                        description: value,
+                                        rate: catalogItem?.defaultRate || item.rate,
+                                        amount: (catalogItem?.defaultRate || item.rate) * item.quantity
+                                      });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-8 text-sm">
+                                      <SelectValue placeholder="Select item..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-[300px]">
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50">Parts</div>
+                                      {partsCatalog.filter(p => p.category === "parts").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-sm">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Labor</div>
+                                      {partsCatalog.filter(p => p.category === "labor").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-sm">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Services</div>
+                                      {partsCatalog.filter(p => p.category === "services").map(p => (
+                                        <SelectItem key={p.name} value={p.name} className="text-sm">
+                                          {p.name}
+                                        </SelectItem>
+                                      ))}
+                                      <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border-t">Custom</div>
+                                      <SelectItem value="__custom__" className="text-sm italic text-slate-500">
+                                        Enter custom item...
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  {item.productService === "__custom__" && (
+                                    <Input
+                                      value={item.description}
+                                      onChange={(e) => updateLineItem(idx, { 
+                                        productService: e.target.value,
+                                        description: e.target.value 
+                                      })}
+                                      placeholder="Enter custom item..."
+                                      className="h-8 text-sm mt-1"
+                                      autoFocus
+                                    />
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <Input
@@ -3001,32 +4332,29 @@ export default function Estimates() {
                                   />
                                 </TableCell>
                                 <TableCell>
-                                  <Input
-                                    type="number"
-                                    value={item.rate}
-                                    onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
-                                    className="h-8 text-sm text-right"
-                                    min={0}
-                                    step={0.01}
-                                  />
+                                  <div className="relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                                    <Input
+                                      type="number"
+                                      value={item.rate}
+                                      onChange={(e) => updateLineItem(idx, { rate: parseFloat(e.target.value) || 0 })}
+                                      className="h-8 text-sm text-right pl-6"
+                                      min={0}
+                                      step={0.01}
+                                    />
+                                  </div>
                                 </TableCell>
-                                <TableCell className="text-right font-medium">
+                                <TableCell className="text-right font-medium text-slate-700">
                                   {formatCurrency(item.amount)}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Checkbox
-                                    checked={item.taxable}
-                                    onCheckedChange={(checked) => updateLineItem(idx, { taxable: !!checked })}
-                                  />
                                 </TableCell>
                                 <TableCell>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7"
+                                    className="h-7 w-7 hover:bg-red-50"
                                     onClick={() => removeLineItem(idx)}
                                   >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                    <X className="w-4 h-4 text-red-500" />
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -3034,6 +4362,35 @@ export default function Estimates() {
                           )}
                         </TableBody>
                       </Table>
+                      
+                      {/* Totals Section */}
+                      <div className="border-t bg-slate-50 px-4 py-3">
+                        <div className="flex justify-end">
+                          <div className="w-64 space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600">Subtotal:</span>
+                              <span className="font-medium">{formatCurrency(formData.items.reduce((sum, item) => sum + item.amount, 0))}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-slate-600">Tax ({formData.salesTaxRate}%):</span>
+                              <span className="font-medium">{formatCurrency(
+                                formData.items
+                                  .filter(item => item.taxable)
+                                  .reduce((sum, item) => sum + item.amount, 0) * (formData.salesTaxRate / 100)
+                              )}</span>
+                            </div>
+                            <div className="flex justify-between text-base font-semibold border-t pt-2">
+                              <span className="text-slate-900">TOTAL:</span>
+                              <span className="text-[#0078D4]">{formatCurrency(
+                                formData.items.reduce((sum, item) => sum + item.amount, 0) +
+                                formData.items
+                                  .filter(item => item.taxable)
+                                  .reduce((sum, item) => sum + item.amount, 0) * (formData.salesTaxRate / 100)
+                              )}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-4 p-4 bg-slate-50 rounded-lg border">
@@ -3083,6 +4440,7 @@ export default function Estimates() {
                           <ObjectUploader
                             maxNumberOfFiles={10}
                             maxFileSize={10485760}
+                            allowedFileTypes={['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp', 'image/gif', 'image/bmp', 'image/tiff', 'image/tif']}
                             onGetUploadParameters={async (file) => {
                               const res = await fetch("/api/uploads/request-url", {
                                 method: "POST",
@@ -3308,19 +4666,20 @@ export default function Estimates() {
                       </div>
                     </div>
                   </div>
-                </div>
+                  </div>
+                )}
               </div>
-            </ScrollArea>
+            </div>
 
-            <DialogFooter className="border-t pt-4 flex-shrink-0">
-              <Button variant="outline" onClick={() => setShowFormDialog(false)}>Cancel</Button>
+            <DialogFooter className={`border-t pt-4 flex-shrink-0 ${isConvertingFromWo ? 'px-6 pb-6 bg-white' : ''}`}>
+              <Button variant="outline" onClick={() => { setShowFormDialog(false); setIsConvertingFromWo(false); setConvertingWoId(null); setConvertingWoNumber(""); }}>Cancel</Button>
               <Button
                 onClick={handleSaveEstimate}
                 disabled={!formData.propertyName}
                 className="bg-[#0078D4] hover:bg-[#0078D4]/90"
                 data-testid="button-save-estimate"
               >
-                {isEditing ? "Save Changes" : "Save Estimate"}
+                {isEditing ? "Save Changes" : isConvertingFromWo ? "Convert to Estimate" : "Save Estimate"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -3559,32 +4918,46 @@ export default function Estimates() {
                       <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
                       <span className="ml-2 text-sm text-[#64748B]">Loading contacts...</span>
                     </div>
-                  ) : propertyContacts.length > 0 ? (
-                    <Select value={selectedApprovalEmail} onValueChange={setSelectedApprovalEmail}>
-                      <SelectTrigger className="mt-1" data-testid="select-approval-email">
-                        <SelectValue placeholder="Select email..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {propertyContacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.email}>
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-3 h-3 text-[#64748B]" />
-                              <span>{contact.name}</span>
-                              <span className="text-[#94A3B8]">({contact.email})</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   ) : (
-                    <div className="mt-1">
-                      <Input
-                        type="email"
-                        placeholder="Enter email address..."
-                        value={selectedApprovalEmail}
-                        onChange={(e) => setSelectedApprovalEmail(e.target.value)}
-                        data-testid="input-manual-email"
-                      />
+                    <div className="space-y-2 mt-1">
+                      {!useCustomEmail && propertyContacts.length > 0 ? (
+                        <Select value={selectedApprovalEmail} onValueChange={setSelectedApprovalEmail}>
+                          <SelectTrigger data-testid="select-approval-email">
+                            <SelectValue placeholder="Select email..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {propertyContacts.map((contact) => (
+                              <SelectItem key={contact.id} value={contact.email}>
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-3 h-3 text-[#64748B]" />
+                                  <span>{contact.name}</span>
+                                  <span className="text-[#94A3B8]">({contact.email})</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type="email"
+                          placeholder="Enter email address..."
+                          value={useCustomEmail ? customApprovalEmail : selectedApprovalEmail}
+                          onChange={(e) => useCustomEmail ? setCustomApprovalEmail(e.target.value) : setSelectedApprovalEmail(e.target.value)}
+                          data-testid="input-manual-email"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setUseCustomEmail(!useCustomEmail)}
+                        className="text-xs text-[#0078D4] hover:underline flex items-center gap-1"
+                        data-testid="toggle-custom-email"
+                      >
+                        {useCustomEmail ? (
+                          <>← Use contact from list</>
+                        ) : (
+                          <>Enter different email</>
+                        )}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -3623,7 +4996,7 @@ export default function Estimates() {
               </Button>
               <Button
                 onClick={handleSendApprovalEmail}
-                disabled={!selectedApprovalEmail || !approvalSubject.trim()}
+                disabled={!(useCustomEmail ? customApprovalEmail : selectedApprovalEmail) || !approvalSubject.trim()}
                 className="bg-[#FF8000] hover:bg-[#FF8000]/90"
                 data-testid="button-send-approval-email"
               >
@@ -4433,6 +5806,221 @@ export default function Estimates() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Photo Lightbox Modal - Full Screen */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center animate-in fade-in duration-200"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            zIndex: 99999,
+            width: '100vw',
+            height: '100vh'
+          }}
+          onClick={closeLightbox}
+          onMouseUp={() => setIsDragging(false)}
+          onMouseLeave={() => setIsDragging(false)}
+          tabIndex={0}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo lightbox"
+        >
+          {/* Large Image Container - 95vw x 90vh */}
+          <div 
+            className="relative flex items-center justify-center"
+            style={{ width: '95vw', height: '90vh' }}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => {
+              e.preventDefault();
+              if (e.deltaY < 0) {
+                setLightboxZoom(z => Math.min(z + 50, 400));
+              } else {
+                setLightboxZoom(z => Math.max(z - 50, 50));
+              }
+            }}
+          >
+            {/* Zoom Controls - Positioned on top right of image */}
+            <div 
+              className="absolute top-5 right-5 flex items-center gap-3 px-4 py-2 rounded-lg"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)', zIndex: 100 }}
+            >
+              {/* Zoom Out */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setLightboxZoom(z => Math.max(z - 50, 50));
+                }}
+                disabled={lightboxZoom <= 50}
+                className="w-9 h-9 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom out"
+                data-testid="button-zoom-out"
+              >
+                <Minus className="w-6 h-6" />
+              </button>
+              
+              {/* Zoom Level */}
+              <span className="text-white text-base font-semibold min-w-[60px] text-center">
+                {lightboxZoom}%
+              </span>
+              
+              {/* Zoom In */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setLightboxZoom(z => Math.min(z + 50, 400));
+                }}
+                disabled={lightboxZoom >= 400}
+                className="w-9 h-9 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Zoom in"
+                data-testid="button-zoom-in"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+              
+              <div className="w-px h-6 bg-white/30" />
+              
+              {/* Reset */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setLightboxZoom(100);
+                  setLightboxPan({ x: 0, y: 0 });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-white text-sm hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Reset zoom"
+                data-testid="button-reset-zoom"
+              >
+                <RotateCcw className="w-5 h-5" />
+                <span>Reset</span>
+              </button>
+              
+              <div className="w-px h-6 bg-white/30" />
+              
+              {/* Close */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  closeLightbox();
+                }}
+                className="w-9 h-9 flex items-center justify-center text-white hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Close lightbox"
+                data-testid="button-close-lightbox"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Zoomable/Pannable Image - Fills Container */}
+            <img
+              src={lightboxImage.url}
+              alt={lightboxImage.label}
+              className={`rounded-lg shadow-2xl select-none ${lightboxZoom > 100 ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-zoom-in'}`}
+              onMouseDown={(e) => {
+                if (lightboxZoom > 100) {
+                  e.preventDefault();
+                  setIsDragging(true);
+                  setDragStart({ x: e.clientX - lightboxPan.x, y: e.clientY - lightboxPan.y });
+                }
+              }}
+              onMouseMove={(e) => {
+                if (isDragging && lightboxZoom > 100) {
+                  setLightboxPan({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y
+                  });
+                }
+              }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (lightboxZoom === 100) {
+                    setLightboxZoom(200);
+                  } else {
+                    setLightboxZoom(100);
+                    setLightboxPan({ x: 0, y: 0 });
+                  }
+                }}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  transformOrigin: 'center center',
+                  transform: `scale(${lightboxZoom / 100}) translate(${lightboxPan.x / (lightboxZoom / 100)}px, ${lightboxPan.y / (lightboxZoom / 100)}px)`,
+                  transition: isDragging ? 'none' : 'transform 0.2s ease'
+                }}
+                draggable={false}
+                data-testid="img-lightbox-photo"
+              />
+
+            {/* Navigation Arrows */}
+            {lightboxImages.length > 1 && (
+              <>
+                {/* Left Arrow */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    prevImage();
+                  }}
+                  disabled={lightboxIndex === 0}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                  aria-label="Previous image"
+                  data-testid="button-prev-image"
+                >
+                  <ChevronLeft className="w-8 h-8 text-white" />
+                </button>
+
+                {/* Right Arrow */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    nextImage();
+                  }}
+                  disabled={lightboxIndex === lightboxImages.length - 1}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                  aria-label="Next image"
+                  data-testid="button-next-image"
+                >
+                  <ChevronRight className="w-8 h-8 text-white" />
+                </button>
+
+                {/* Image Counter */}
+                <div 
+                  className="absolute bottom-20 right-5 px-3 py-1.5 rounded-lg text-white text-sm font-medium"
+                  style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+                >
+                  {lightboxIndex + 1} / {lightboxImages.length}
+                </div>
+              </>
+            )}
+
+            {/* Caption - Positioned at bottom */}
+            <div 
+              className="absolute bottom-5 left-1/2 text-center px-5 py-3 rounded-lg"
+              style={{ 
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(0, 0, 0, 0.6)'
+              }}
+            >
+              <div className="flex items-center justify-center gap-2 text-white mb-1">
+                <Camera className="w-4 h-4" />
+                <span className={`font-bold text-lg ${lightboxImage.label === 'Before' ? 'text-orange-400' : 'text-green-400'}`}>
+                  {lightboxImage.label}
+                </span>
+              </div>
+              <p className="text-gray-200 text-sm max-w-md italic">
+                "{lightboxImage.caption}"
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
