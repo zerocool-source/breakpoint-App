@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { db } from "../db";
 import { technicians } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { poolBrainClient } from "../poolbrain";
 
 export function registerTechnicianRoutes(app: any) {
   // Get all technicians from internal database
@@ -219,6 +220,102 @@ export function registerTechnicianRoutes(app: any) {
     } catch (error: any) {
       console.error('Error deleting technician note:', error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Sync technicians from Pool Brain API
+  app.post('/api/technicians/sync-poolbrain', async (req: Request, res: Response) => {
+    try {
+      console.log('[Technicians] Starting Pool Brain sync...');
+      
+      // Fetch all technicians from Pool Brain API
+      const response = await poolBrainClient.getTechnicians(0, 500);
+      const pbTechnicians = response?.data || response || [];
+      
+      if (!Array.isArray(pbTechnicians)) {
+        console.log('[Technicians] Unexpected response format:', JSON.stringify(response).substring(0, 200));
+        return res.status(500).json({ error: 'Unexpected response format from Pool Brain API' });
+      }
+      
+      console.log(`[Technicians] Found ${pbTechnicians.length} technicians from Pool Brain`);
+      
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      
+      for (const pbTech of pbTechnicians) {
+        try {
+          // Pool Brain technician fields: RecordID, Name (full name), Email, Phone, etc.
+          const externalId = String(pbTech.RecordID || pbTech.id || pbTech.technicianId || '');
+          
+          // Parse the Name field into firstName and lastName
+          const fullName = pbTech.Name || pbTech.name || '';
+          const nameParts = fullName.trim().split(' ');
+          const firstName = nameParts[0] || pbTech.firstName || pbTech.first_name || '';
+          const lastName = nameParts.slice(1).join(' ') || pbTech.lastName || pbTech.last_name || '';
+          
+          const phone = pbTech.Phone || pbTech.phone || pbTech.phoneNumber || null;
+          const email = pbTech.Email || pbTech.email || null;
+          const active = pbTech.Active !== false && pbTech.active !== false && pbTech.isActive !== false;
+          
+          if (!firstName && !lastName) {
+            console.log(`[Technicians] Skipping technician with no name: ${JSON.stringify(pbTech).substring(0, 100)}`);
+            skipped++;
+            continue;
+          }
+          
+          // Check if technician already exists by externalId or email
+          const existingTechs = await storage.getTechnicians();
+          let existingTech = existingTechs.find(t => t.externalId === externalId);
+          
+          // Also try to match by email if no externalId match
+          if (!existingTech && email) {
+            existingTech = existingTechs.find(t => t.email?.toLowerCase() === email.toLowerCase());
+          }
+          
+          if (existingTech) {
+            // Update existing technician with Pool Brain data (preserve local fields like role, region, etc.)
+            await storage.updateTechnician(existingTech.id, {
+              externalId: externalId || existingTech.externalId,
+              firstName: firstName || existingTech.firstName,
+              lastName: lastName || existingTech.lastName,
+              phone: phone || existingTech.phone,
+              email: email || existingTech.email,
+              active: active,
+            });
+            updated++;
+          } else {
+            // Create new technician
+            await storage.createTechnician({
+              externalId,
+              firstName: firstName || 'Unknown',
+              lastName: lastName || '',
+              phone,
+              email,
+              role: 'service', // Default to service, can be changed manually
+              active,
+            });
+            created++;
+          }
+        } catch (techError: any) {
+          console.error(`[Technicians] Error processing technician:`, techError.message);
+          skipped++;
+        }
+      }
+      
+      console.log(`[Technicians] Sync complete: ${created} created, ${updated} updated, ${skipped} skipped`);
+      
+      res.json({
+        success: true,
+        message: `Synced ${pbTechnicians.length} technicians from Pool Brain`,
+        created,
+        updated,
+        skipped,
+        total: pbTechnicians.length,
+      });
+    } catch (error: any) {
+      console.error('[Technicians] Pool Brain sync error:', error);
+      res.status(500).json({ error: 'Failed to sync technicians from Pool Brain', message: error.message });
     }
   });
 }
