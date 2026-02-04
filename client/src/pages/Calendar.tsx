@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RepairRequestForm } from "@/components/RepairRequestForm";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import {
   Tooltip,
   TooltipContent,
@@ -30,6 +33,7 @@ import {
   Plus,
   MoreHorizontal,
   Users,
+  User,
   MapPin,
   RefreshCw,
   ChevronDown,
@@ -43,11 +47,13 @@ import {
   Lock,
   Unlock,
   CalendarDays,
+  Calendar as CalendarIcon,
   GitBranch,
   UserPlus,
   X,
   ClipboardList,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -366,6 +372,15 @@ export default function Calendar() {
   const [showQcInspectionsSidebar, setShowQcInspectionsSidebar] = useState(false);
   const [showCreateQcForm, setShowCreateQcForm] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<ServiceAssignment | null>(null);
+  
+  // Reschedule Job Sidebar state
+  const [showRescheduleSidebar, setShowRescheduleSidebar] = useState(false);
+  const [selectedJobForReschedule, setSelectedJobForReschedule] = useState<ScheduledRepair | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    repairTechId: "",
+    repairTechName: "",
+    scheduledDate: null as Date | null,
+  });
   
   // Repairs Needed state
   const [showRepairsNeededSidebar, setShowRepairsNeededSidebar] = useState(false);
@@ -801,6 +816,60 @@ export default function Calendar() {
     },
   });
 
+  // Mutation to reschedule an estimate (change tech, date, or unschedule)
+  const rescheduleEstimateMutation = useMutation({
+    mutationFn: async ({ estimateId, repairTechId, repairTechName, scheduledDate, unschedule }: { 
+      estimateId: string; 
+      repairTechId?: string | null; 
+      repairTechName?: string | null; 
+      scheduledDate?: string | null;
+      unschedule?: boolean;
+    }) => {
+      if (unschedule) {
+        // Unschedule: set status back to needs_scheduling and clear tech/date
+        const res = await fetch(`/api/estimates/${estimateId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            status: "needs_scheduling",
+            repairTechId: null,
+            repairTechName: null,
+            scheduledDate: null,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to unschedule estimate");
+        return res.json();
+      } else {
+        // Reschedule: update tech and/or date
+        const res = await fetch(`/api/estimates/${estimateId}/schedule`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repairTechId, repairTechName, scheduledDate }),
+        });
+        if (!res.ok) throw new Error("Failed to reschedule estimate");
+        return res.json();
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/scheduled"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates/for-calendar"] });
+      refetchScheduledEstimates();
+      setShowRescheduleSidebar(false);
+      setSelectedJobForReschedule(null);
+      setRescheduleForm({ repairTechId: "", repairTechName: "", scheduledDate: null });
+      toast({
+        title: variables.unschedule ? "Job Unscheduled" : "Job Rescheduled",
+        description: variables.unschedule 
+          ? "The job has been returned to the Ready to Assign queue." 
+          : "The job has been rescheduled successfully.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update job schedule", variant: "destructive" });
+    },
+  });
+
   // Mutation to assign repair request to tech for assessment
   const assignRepairRequestMutation = useMutation({
     mutationFn: async ({ 
@@ -1204,7 +1273,7 @@ export default function Calendar() {
         {/* Main Calendar Content */}
         <div className={cn(
           "flex-1 transition-all duration-300",
-          (showReadyToAssignSidebar || showAssignmentsSidebar || showQcInspectionsSidebar || showRepairsNeededSidebar) ? "mr-[380px]" : ""
+          (showReadyToAssignSidebar || showAssignmentsSidebar || showQcInspectionsSidebar || showRepairsNeededSidebar || showRescheduleSidebar) ? "mr-[380px]" : ""
         )}>
         <div className="sticky top-0 z-40 bg-white border-b border-[#e5e7eb] shadow-sm px-6 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -2275,13 +2344,22 @@ export default function Calendar() {
                                     key={repair.id}
                                     data-testid={`card-repair-job-${repair.id}`}
                                     className={cn(
-                                      "rounded-lg p-2 border-l-[3px]",
+                                      "rounded-lg p-2 border-l-[3px] cursor-pointer hover:shadow-md transition-shadow",
                                       repair.status === "completed"
                                         ? "bg-[#22c55e15] border-l-[#22c55e]"
                                         : repair.status === "in_progress"
                                         ? "bg-[#14b8a615] border-l-[#14b8a6]"
                                         : "bg-[#f9731615] border-l-[#f97316]"
                                     )}
+                                    onClick={() => {
+                                      setSelectedJobForReschedule(repair);
+                                      setRescheduleForm({
+                                        repairTechId: repair.repairTechId || "",
+                                        repairTechName: repair.repairTechName || "",
+                                        scheduledDate: repair.scheduledDate ? new Date(repair.scheduledDate) : null,
+                                      });
+                                      setShowRescheduleSidebar(true);
+                                    }}
                                   >
                                     <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
                                       <Wrench className="w-3 h-3" />
@@ -4777,6 +4855,232 @@ export default function Calendar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reschedule Job Sidebar */}
+      {showRescheduleSidebar && selectedJobForReschedule && (
+        <div 
+          className="fixed top-0 right-0 h-full w-[380px] bg-white shadow-[-4px_0_20px_rgba(0,0,0,0.1)] z-40 flex flex-col animate-in slide-in-from-right duration-300 border-l border-slate-200"
+          data-testid="sidebar-reschedule-job"
+        >
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-[#f0f9ff] to-white">
+            <div>
+              <h2 className="text-lg font-bold text-[#0F172A] flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-[#0077b6]" />
+                Reschedule Job
+              </h2>
+              <p className="text-sm text-slate-500">Update assignment or date</p>
+            </div>
+            <button
+              onClick={() => {
+                setShowRescheduleSidebar(false);
+                setSelectedJobForReschedule(null);
+              }}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              data-testid="button-close-reschedule-sidebar"
+            >
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+          
+          {/* Job Details Section */}
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden mb-5">
+              <div className="p-4 border-l-4 border-l-[#0077b6]">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-sm font-bold text-[#0077b6]" data-testid="text-reschedule-estimate-number">
+                    EST#{selectedJobForReschedule.estimateNumber || selectedJobForReschedule.id.slice(0, 8)}
+                  </span>
+                  <span className={cn(
+                    "px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap",
+                    selectedJobForReschedule.status === "completed"
+                      ? "bg-[#22c55e] text-white"
+                      : selectedJobForReschedule.status === "in_progress"
+                      ? "bg-[#14b8a6] text-white"
+                      : "bg-[#f97316] text-white"
+                  )}>
+                    {selectedJobForReschedule.status === "completed"
+                      ? "Completed"
+                      : selectedJobForReschedule.status === "in_progress"
+                      ? "In Progress"
+                      : "Scheduled"}
+                  </span>
+                </div>
+                <p className="text-base font-semibold text-[#0F172A] mb-1" data-testid="text-reschedule-property">
+                  {selectedJobForReschedule.propertyName}
+                </p>
+                <p className="text-sm text-slate-500 mb-3" data-testid="text-reschedule-title">
+                  {selectedJobForReschedule.title}
+                </p>
+                <div className="flex items-center justify-between">
+                  {selectedJobForReschedule.totalAmount !== undefined && (
+                    <p className="text-lg font-bold text-[#10b981]" data-testid="text-reschedule-amount">
+                      ${(selectedJobForReschedule.totalAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
+                  {(() => {
+                    const deadlineInfo = selectedJobForReschedule.deadlineAt 
+                      ? getDeadlineInfo(selectedJobForReschedule.deadlineAt, selectedJobForReschedule.deadlineValue, selectedJobForReschedule.deadlineUnit)
+                      : null;
+                    if (!deadlineInfo) return null;
+                    const urgencyColors = {
+                      normal: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+                      warning: { bg: 'bg-amber-100', text: 'text-amber-700' },
+                      critical: { bg: 'bg-red-100', text: 'text-red-700' },
+                      expired: { bg: 'bg-red-200', text: 'text-red-800' },
+                    };
+                    return (
+                      <span className={cn(
+                        "inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded",
+                        urgencyColors[deadlineInfo.urgency].bg,
+                        urgencyColors[deadlineInfo.urgency].text
+                      )} data-testid="text-reschedule-deadline">
+                        <Clock className="w-3 h-3" />
+                        {deadlineInfo.text}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment Section */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                  <User className="w-4 h-4 text-[#0077b6]" />
+                  Assigned Technician
+                </label>
+                <Select 
+                  value={rescheduleForm.repairTechId || "unassigned"} 
+                  onValueChange={(value) => {
+                    if (value === "unassigned") {
+                      setRescheduleForm(prev => ({ ...prev, repairTechId: "", repairTechName: "" }));
+                    } else {
+                      const tech = repairTechnicians.find((t: Technician) => String(t.id) === value);
+                      setRescheduleForm(prev => ({ 
+                        ...prev, 
+                        repairTechId: value, 
+                        repairTechName: tech ? `${tech.firstName} ${tech.lastName}` : "" 
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger data-testid="select-reschedule-tech">
+                    <SelectValue placeholder="Select technician" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">
+                      <span className="text-slate-500">Unassigned (Return to Queue)</span>
+                    </SelectItem>
+                    {repairTechnicians.map((tech: Technician) => (
+                      <SelectItem key={tech.id} value={String(tech.id)}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-2 mb-2">
+                  <CalendarIcon className="w-4 h-4 text-[#0077b6]" />
+                  Scheduled Date
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !rescheduleForm.scheduledDate && "text-muted-foreground"
+                      )}
+                      data-testid="button-reschedule-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {rescheduleForm.scheduledDate 
+                        ? format(rescheduleForm.scheduledDate, "PPP") 
+                        : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={rescheduleForm.scheduledDate || undefined}
+                      onSelect={(date: Date | undefined) => setRescheduleForm(prev => ({ ...prev, scheduledDate: date || null }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-5 border-t border-slate-200 space-y-3">
+            <Button
+              className="w-full bg-[#0077b6] hover:bg-[#005f8f] text-white"
+              onClick={() => {
+                if (!selectedJobForReschedule) return;
+                
+                // If unassigned or no date, unschedule the job
+                if (!rescheduleForm.repairTechId || !rescheduleForm.scheduledDate) {
+                  rescheduleEstimateMutation.mutate({
+                    estimateId: selectedJobForReschedule.id,
+                    unschedule: true,
+                  });
+                } else {
+                  // Reschedule with new tech/date
+                  rescheduleEstimateMutation.mutate({
+                    estimateId: selectedJobForReschedule.id,
+                    repairTechId: rescheduleForm.repairTechId,
+                    repairTechName: rescheduleForm.repairTechName,
+                    scheduledDate: rescheduleForm.scheduledDate.toISOString(),
+                  });
+                }
+              }}
+              disabled={rescheduleEstimateMutation.isPending}
+              data-testid="button-save-reschedule"
+            >
+              {rescheduleEstimateMutation.isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </span>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => {
+                if (!selectedJobForReschedule) return;
+                rescheduleEstimateMutation.mutate({
+                  estimateId: selectedJobForReschedule.id,
+                  unschedule: true,
+                });
+              }}
+              disabled={rescheduleEstimateMutation.isPending}
+              data-testid="button-unschedule"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Unschedule (Return to Queue)
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full text-slate-500"
+              onClick={() => {
+                setShowRescheduleSidebar(false);
+                setSelectedJobForReschedule(null);
+              }}
+              data-testid="button-cancel-reschedule"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
