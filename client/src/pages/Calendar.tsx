@@ -113,6 +113,7 @@ interface ScheduledRepair {
   repairTechName: string | null;
   totalAmount?: number;
   createdAt?: string;
+  deadlineAt?: string | null;
 }
 
 interface TechPropertyAssignment {
@@ -227,6 +228,39 @@ function isSameDay(date1: Date, date2: Date): boolean {
 
 function getInitials(firstName: string, lastName: string): string {
   return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
+}
+
+// Helper to get deadline countdown info for job cards
+function getDeadlineInfo(deadlineAt: string | null | undefined): { text: string; urgency: 'normal' | 'warning' | 'critical' | 'expired' } | null {
+  if (!deadlineAt) return null;
+  const now = new Date();
+  const deadline = new Date(deadlineAt);
+  const diff = deadline.getTime() - now.getTime();
+  
+  if (diff <= 0) {
+    return { text: 'Expired', urgency: 'expired' };
+  }
+  
+  const hours = diff / (1000 * 60 * 60);
+  const minutes = Math.floor(diff / (1000 * 60));
+  
+  // Format the time remaining
+  let text = '';
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    text = `${days}d`;
+  } else if (hours >= 1) {
+    text = `${Math.floor(hours)}h`;
+  } else {
+    text = `${minutes}m`;
+  }
+  
+  // Determine urgency
+  let urgency: 'normal' | 'warning' | 'critical' | 'expired' = 'normal';
+  if (hours <= 4) urgency = 'critical';
+  else if (hours <= 12) urgency = 'warning';
+  
+  return { text, urgency };
 }
 
 function getTechColor(techId: string | number, index: number): string {
@@ -539,6 +573,7 @@ export default function Calendar() {
         repairTechName: e.repairTechName,
         totalAmount: e.totalAmount,
         createdAt: e.createdAt,
+        deadlineAt: e.deadlineAt,
       });
       
       // Unassigned = approved + needs_scheduling status (ready to be assigned to a tech)
@@ -2205,46 +2240,71 @@ export default function Calendar() {
                               ))}
 
                               {/* Scheduled Repairs (Estimates) */}
-                              {scheduledRepairsForDay.map((repair) => (
-                                <div
-                                  key={repair.id}
-                                  data-testid={`card-repair-job-${repair.id}`}
-                                  className={cn(
-                                    "rounded-lg p-2 border-l-[3px]",
-                                    repair.status === "completed"
-                                      ? "bg-[#22c55e15] border-l-[#22c55e]"
-                                      : repair.status === "in_progress"
-                                      ? "bg-[#14b8a615] border-l-[#14b8a6]"
-                                      : "bg-[#f9731615] border-l-[#f97316]"
-                                  )}
-                                >
-                                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
-                                    <Wrench className="w-3 h-3" />
-                                    <span className="truncate" data-testid={`text-repair-title-${repair.id}`}>{repair.title}</span>
-                                  </div>
-                                  <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-repair-property-${repair.id}`}>
-                                    <MapPin className="w-3 h-3 shrink-0" />
-                                    {repair.propertyName}
-                                  </p>
-                                  <span
-                                    data-testid={`status-repair-${repair.id}`}
+                              {scheduledRepairsForDay.map((repair) => {
+                                const deadlineInfo = repair.status !== "completed" ? getDeadlineInfo(repair.deadlineAt) : null;
+                                const urgencyColors = {
+                                  normal: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'text-emerald-600' },
+                                  warning: { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'text-amber-600' },
+                                  critical: { bg: 'bg-red-100', text: 'text-red-700', icon: 'text-red-600' },
+                                  expired: { bg: 'bg-red-200', text: 'text-red-800', icon: 'text-red-700' },
+                                };
+                                
+                                return (
+                                  <div
+                                    key={repair.id}
+                                    data-testid={`card-repair-job-${repair.id}`}
                                     className={cn(
-                                      "inline-block mt-1.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                      "rounded-lg p-2 border-l-[3px]",
                                       repair.status === "completed"
-                                        ? "bg-[#22c55e] text-white"
+                                        ? "bg-[#22c55e15] border-l-[#22c55e]"
                                         : repair.status === "in_progress"
-                                        ? "bg-[#14b8a6] text-white"
-                                        : "bg-[#f97316] text-white"
+                                        ? "bg-[#14b8a615] border-l-[#14b8a6]"
+                                        : "bg-[#f9731615] border-l-[#f97316]"
                                     )}
                                   >
-                                    {repair.status === "completed"
-                                      ? "Completed"
-                                      : repair.status === "in_progress"
-                                      ? "In Progress"
-                                      : "Scheduled"}
-                                  </span>
-                                </div>
-                              ))}
+                                    <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
+                                      <Wrench className="w-3 h-3" />
+                                      <span className="truncate" data-testid={`text-repair-title-${repair.id}`}>{repair.title}</span>
+                                    </div>
+                                    <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-repair-property-${repair.id}`}>
+                                      <MapPin className="w-3 h-3 shrink-0" />
+                                      {repair.propertyName}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                      <span
+                                        data-testid={`status-repair-${repair.id}`}
+                                        className={cn(
+                                          "inline-block px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                          repair.status === "completed"
+                                            ? "bg-[#22c55e] text-white"
+                                            : repair.status === "in_progress"
+                                            ? "bg-[#14b8a6] text-white"
+                                            : "bg-[#f97316] text-white"
+                                        )}
+                                      >
+                                        {repair.status === "completed"
+                                          ? "Completed"
+                                          : repair.status === "in_progress"
+                                          ? "In Progress"
+                                          : "Scheduled"}
+                                      </span>
+                                      {deadlineInfo && (
+                                        <span
+                                          data-testid={`deadline-repair-${repair.id}`}
+                                          className={cn(
+                                            "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                            urgencyColors[deadlineInfo.urgency].bg,
+                                            urgencyColors[deadlineInfo.urgency].text
+                                          )}
+                                        >
+                                          <Clock className={cn("w-2.5 h-2.5", urgencyColors[deadlineInfo.urgency].icon)} />
+                                          {deadlineInfo.text}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         );
