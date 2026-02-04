@@ -5626,10 +5626,10 @@ export default function Estimates() {
                       <SelectValue placeholder="Select deadline" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0.05">3 minutes (TEST)</SelectItem>
+                      <SelectItem value="8">8 hours</SelectItem>
+                      <SelectItem value="10">10 hours</SelectItem>
                       <SelectItem value="24">24 hours</SelectItem>
                       <SelectItem value="48">48 hours</SelectItem>
-                      <SelectItem value="72">72 hours</SelectItem>
                       <SelectItem value="168">1 week</SelectItem>
                       <SelectItem value="336">2 weeks</SelectItem>
                       <SelectItem value="none">No deadline</SelectItem>
