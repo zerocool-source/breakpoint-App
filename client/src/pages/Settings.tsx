@@ -191,6 +191,10 @@ export default function Settings() {
     try {
       const res = await fetch("/api/quickbooks/auth");
       const data = await res.json();
+      console.log("=== QuickBooks Auth Response ===");
+      console.log("Auth URL:", data.authUrl);
+      console.log("Redirect URI being used:", data.redirectUri);
+      console.log("IMPORTANT: Make sure this redirect URI is configured in your Intuit Developer Portal");
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {

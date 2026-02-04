@@ -47,19 +47,61 @@ const SCOPES = [
   "email"
 ].join(" ");
 
-function getConfig() {
+function getConfig(req?: Request) {
+  // Dynamically determine redirect URI based on the current request host
+  let redirectUri = process.env.QUICKBOOKS_REDIRECT_URI;
+  
+  if (req) {
+    // Use the request host to build the redirect URI dynamically
+    const host = req.get('host');
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+    if (host) {
+      redirectUri = `${protocol}://${host}/api/quickbooks/callback`;
+    }
+  }
+  
+  // Fallback to environment variable or default
+  if (!redirectUri) {
+    const devDomain = process.env.REPLIT_DEV_DOMAIN;
+    if (devDomain) {
+      redirectUri = `https://${devDomain}/api/quickbooks/callback`;
+    } else {
+      redirectUri = "https://pool-brain-genius-1--generalmanager3.replit.app/api/quickbooks/callback";
+    }
+  }
+  
   return {
     clientId: process.env.QUICKBOOKS_CLIENT_ID,
     clientSecret: process.env.QUICKBOOKS_CLIENT_SECRET,
-    redirectUri: process.env.QUICKBOOKS_REDIRECT_URI || "https://pool-brain-genius-1--generalmanager3.replit.app/api/quickbooks/callback",
+    redirectUri,
   };
 }
 
 export function registerQuickbooksRoutes(app: Express) {
-  app.get("/api/quickbooks/auth", (_req: Request, res: Response) => {
-    const config = getConfig();
+  // Debug endpoint to check current redirect URI configuration
+  app.get("/api/quickbooks/debug", (req: Request, res: Response) => {
+    const config = getConfig(req);
+    res.json({
+      redirectUri: config.redirectUri,
+      hasClientId: !!config.clientId,
+      hasClientSecret: !!config.clientSecret,
+      host: req.get('host'),
+      protocol: req.get('x-forwarded-proto') || req.protocol,
+      envRedirectUri: process.env.QUICKBOOKS_REDIRECT_URI,
+      devDomain: process.env.REPLIT_DEV_DOMAIN,
+    });
+  });
+
+  app.get("/api/quickbooks/auth", (req: Request, res: Response) => {
+    const config = getConfig(req);
+    
+    console.log("=== QuickBooks OAuth Auth Request ===");
+    console.log("Redirect URI being used:", config.redirectUri);
+    console.log("Client ID configured:", !!config.clientId);
+    console.log("Host header:", req.get('host'));
     
     if (!config.clientId) {
+      console.error("QuickBooks Client ID not configured");
       return res.status(500).json({ error: "QuickBooks Client ID not configured" });
     }
 
@@ -73,27 +115,42 @@ export function registerQuickbooksRoutes(app: Express) {
     params.set("state", state);
     
     const authUrl = `${QUICKBOOKS_AUTH_URL}?${params.toString().replace(/\+/g, '%20')}`;
+    
+    console.log("Auth URL generated (first 100 chars):", authUrl.substring(0, 100) + "...");
 
-    res.json({ authUrl });
+    res.json({ authUrl, redirectUri: config.redirectUri });
   });
 
   app.get("/api/quickbooks/callback", async (req: Request, res: Response) => {
+    console.log("=== QuickBooks OAuth Callback Hit ===");
+    console.log("Full URL:", req.originalUrl);
+    console.log("Query params:", JSON.stringify(req.query));
+    
     const { code, realmId, error } = req.query;
-    const config = getConfig();
+    const config = getConfig(req);
+    
+    console.log("Redirect URI for token exchange:", config.redirectUri);
+    console.log("Authorization code received:", code ? "YES (length: " + (code as string).length + ")" : "NO");
+    console.log("Realm ID received:", realmId || "NO");
+    console.log("Error received:", error || "NO");
 
     if (error) {
+      console.error("OAuth error from Intuit:", error);
       return res.redirect(`/settings?qb_error=${encodeURIComponent(error as string)}`);
     }
 
     if (!code || !realmId) {
+      console.error("Missing code or realmId in callback");
       return res.redirect("/settings?qb_error=missing_params");
     }
 
     if (!config.clientId || !config.clientSecret) {
+      console.error("Missing QuickBooks credentials");
       return res.redirect("/settings?qb_error=missing_credentials");
     }
 
     try {
+      console.log("Exchanging authorization code for tokens...");
       const credentials = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString("base64");
       
       const tokenResponse = await fetch(QUICKBOOKS_TOKEN_URL, {
@@ -110,21 +167,34 @@ export function registerQuickbooksRoutes(app: Express) {
         }),
       });
 
+      console.log("Token response status:", tokenResponse.status, tokenResponse.statusText);
+      
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
-        console.error("QuickBooks token exchange failed:", errorText);
+        console.error("QuickBooks token exchange FAILED");
+        console.error("Status:", tokenResponse.status);
+        console.error("Error response:", errorText);
         return res.redirect("/settings?qb_error=token_exchange_failed");
       }
 
       const tokens = await tokenResponse.json();
+      console.log("Token exchange SUCCESSFUL!");
+      console.log("Access token received:", tokens.access_token ? "YES (length: " + tokens.access_token.length + ")" : "NO");
+      console.log("Refresh token received:", tokens.refresh_token ? "YES" : "NO");
+      console.log("Expires in:", tokens.expires_in, "seconds");
       
       const now = new Date();
       const accessTokenExpiresAt = new Date(now.getTime() + (tokens.expires_in * 1000));
       const refreshTokenExpiresAt = new Date(now.getTime() + (tokens.x_refresh_token_expires_in * 1000));
+      
+      console.log("Access token expires at:", accessTokenExpiresAt.toISOString());
+      console.log("Refresh token expires at:", refreshTokenExpiresAt.toISOString());
 
       const existing = await db.select().from(quickbooksTokens).where(eq(quickbooksTokens.realmId, realmId as string));
+      console.log("Existing token record found:", existing.length > 0 ? "YES" : "NO");
       
       if (existing.length > 0) {
+        console.log("Updating existing token record...");
         await db.update(quickbooksTokens)
           .set({
             accessToken: tokens.access_token,
@@ -134,7 +204,9 @@ export function registerQuickbooksRoutes(app: Express) {
             updatedAt: new Date(),
           })
           .where(eq(quickbooksTokens.realmId, realmId as string));
+        console.log("Token record UPDATED successfully");
       } else {
+        console.log("Inserting new token record...");
         await db.insert(quickbooksTokens).values({
           realmId: realmId as string,
           accessToken: tokens.access_token,
@@ -142,11 +214,14 @@ export function registerQuickbooksRoutes(app: Express) {
           accessTokenExpiresAt,
           refreshTokenExpiresAt,
         });
+        console.log("Token record INSERTED successfully");
       }
 
+      console.log("=== QuickBooks OAuth Complete - Redirecting to /settings?qb_success=true ===");
       res.redirect("/settings?qb_success=true");
     } catch (error) {
-      console.error("QuickBooks OAuth error:", error);
+      console.error("=== QuickBooks OAuth ERROR ===");
+      console.error("Error details:", error);
       res.redirect("/settings?qb_error=unknown");
     }
   });

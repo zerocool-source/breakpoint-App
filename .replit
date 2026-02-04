@@ -48,4 +48,4 @@ integrations = ["javascript_object_storage:2.0.0", "javascript_log_in_with_repli
 [userenv.shared]
 OLLAMA_ENDPOINT = "http://localhost:11434"
 ACE_APP_URL = "https://suppliable-elsa-ruffianly.ngrok-free.dev"
-QUICKBOOKS_REDIRECT_URI = "https://pool-brain-genius-1--generalmanager3.replit.app/api/quickbooks/callback"
+QUICKBOOKS_REDIRECT_URI = "https://beta-linkpoint-repair-only.replit.dev/api/quickbooks/callback"
