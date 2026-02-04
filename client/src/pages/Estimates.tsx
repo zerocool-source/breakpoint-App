@@ -1835,7 +1835,7 @@ export default function Estimates() {
 
   // Print estimate function
   const handlePrintEstimate = (estimate: Estimate) => {
-    const lineItems = estimate.lineItems || [];
+    const lineItems = estimate.items || estimate.lineItems || [];
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast({ title: "Error", description: "Unable to open print window. Please allow popups.", variant: "destructive" });
@@ -1844,6 +1844,11 @@ export default function Estimates() {
 
     const formatPrintCurrency = (amount: number | null) => {
       return `$${((amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const formatPrintDate = (date: string | null) => {
+      if (!date) return 'N/A';
+      return new Date(date).toLocaleDateString();
     };
 
     // Helper to escape HTML to prevent XSS
@@ -1860,14 +1865,84 @@ export default function Estimates() {
     // Rate is stored in dollars, amount is stored in cents
     const lineItemRows = lineItems.map((item: any, index: number) => `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${index + 1}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.productService)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.description)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.lineNumber || index + 1}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+          <div style="font-weight: 500;">${escapeHtml(item.productService)}</div>
+          ${item.description ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${escapeHtml(item.description)}</div>` : ''}
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">${escapeHtml(item.sku) || '-'}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 0}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatPrintCurrency((item.rate || 0) * 100)}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatPrintCurrency(item.amount || 0)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.taxable ? '✓' : ''}</td>
       </tr>
     `).join('');
+
+    // Filter valid photos
+    const validPhotos = (estimate.photos || []).filter((p: string) => p && !p.includes('[object Object]'));
+
+    // Build photos section
+    const photosSection = validPhotos.length > 0 ? `
+      <div class="section">
+        <h3>Photos (${validPhotos.length})</h3>
+        <div class="photos-grid">
+          ${validPhotos.map((photo: string, idx: number) => `
+            <img src="${photo}" alt="Photo ${idx + 1}" style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;" />
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    // Build notes section
+    const notesSection = (estimate.techNotes || estimate.managerNotes) ? `
+      <div class="section notes-section">
+        <h3>Notes</h3>
+        ${estimate.techNotes ? `
+          <div class="note-box">
+            <h4>Tech Notes</h4>
+            <p>${escapeHtml(estimate.techNotes)}</p>
+          </div>
+        ` : ''}
+        ${estimate.managerNotes ? `
+          <div class="note-box">
+            <h4>Manager Notes</h4>
+            <p>${escapeHtml(estimate.managerNotes)}</p>
+          </div>
+        ` : ''}
+      </div>
+    ` : '';
+
+    // Build customer response section (for approved/rejected)
+    const isApprovedOrRejected = ['approved', 'needs_scheduling', 'scheduled', 'completed', 'rejected'].includes(estimate.status);
+    const customerResponseSection = isApprovedOrRejected ? `
+      <div class="section customer-response ${estimate.status === 'rejected' ? 'rejected' : 'approved'}">
+        <h3>${estimate.status === 'rejected' ? '✗' : '✓'} Customer Response</h3>
+        <div class="response-grid">
+          <div>
+            <span class="label">Response</span>
+            <span class="value ${estimate.status === 'rejected' ? 'text-red' : 'text-green'}">${estimate.status === 'rejected' ? 'Declined' : 'Approved'}</span>
+          </div>
+          <div>
+            <span class="label">Responded By</span>
+            <span class="value">${escapeHtml(estimate.customerApproverName) || 'Unknown'}${estimate.customerApproverTitle ? ` (${escapeHtml(estimate.customerApproverTitle)})` : ''}</span>
+          </div>
+          <div>
+            <span class="label">Response Date</span>
+            <span class="value">${formatPrintDate(estimate.status === 'rejected' ? estimate.rejectedAt : (estimate.approvedAt || estimate.acceptedDate))}</span>
+          </div>
+          <div>
+            <span class="label">Sent To</span>
+            <span class="value">${escapeHtml(estimate.approvalSentTo) || 'N/A'}</span>
+          </div>
+        </div>
+        ${estimate.status === 'rejected' && estimate.rejectionReason ? `
+          <div class="rejection-reason">
+            <span class="label">Reason for Declining</span>
+            <p>${escapeHtml(estimate.rejectionReason)}</p>
+          </div>
+        ` : ''}
+      </div>
+    ` : '';
 
     const printContent = `
       <!DOCTYPE html>
@@ -1876,36 +1951,60 @@ export default function Estimates() {
         <title>Estimate ${estimate.estimateNumber || ''} - ${estimate.propertyName}</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; }
-          .header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #0078D4; }
-          .company-info h1 { color: #0078D4; font-size: 24px; margin-bottom: 5px; }
-          .company-info p { color: #6b7280; font-size: 12px; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; font-size: 13px; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #0078D4; }
+          .company-info h1 { color: #0078D4; font-size: 22px; margin-bottom: 5px; }
+          .company-info p { color: #6b7280; font-size: 11px; }
           .estimate-info { text-align: right; }
-          .estimate-info h2 { font-size: 28px; color: #1f2937; margin-bottom: 10px; }
-          .estimate-info .number { font-size: 14px; color: #6b7280; }
-          .estimate-info .status { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-top: 10px; }
-          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
-          .info-box { background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 3px solid #0078D4; }
-          .info-box h4 { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-          .info-box p { font-size: 14px; font-weight: 500; color: #1f2937; }
-          .info-box .secondary { font-size: 12px; color: #6b7280; margin-top: 3px; }
-          .description-box { background: #f0f9ff; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-          .description-box h4 { font-size: 12px; color: #0078D4; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-          .description-box p { font-size: 14px; line-height: 1.6; color: #374151; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th { background: #1e3a5f; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-          th:nth-child(4), th:nth-child(5), th:nth-child(6) { text-align: right; }
-          td { font-size: 13px; }
-          .totals { display: flex; justify-content: flex-end; margin-top: 20px; }
-          .totals-box { background: #f9fafb; padding: 20px; border-radius: 8px; min-width: 300px; }
-          .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-          .totals-row:last-child { border-bottom: none; padding-top: 12px; }
-          .totals-row.total { border-top: 2px solid #0078D4; margin-top: 10px; padding-top: 15px; }
-          .totals-row.total .value { font-size: 24px; color: #0078D4; font-weight: 700; }
-          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+          .estimate-info h2 { font-size: 24px; color: #1f2937; margin-bottom: 8px; }
+          .estimate-info .number { font-size: 13px; color: #6b7280; }
+          .estimate-info .status { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-top: 8px; }
+          .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+          .info-box { background: #f9fafb; padding: 12px; border-radius: 6px; border-left: 3px solid #0078D4; }
+          .info-box.orange { border-left-color: #f97316; }
+          .info-box.teal { border-left-color: #14b8a6; }
+          .info-box.blue { border-left-color: #60a5fa; }
+          .info-box.red { border-left-color: #ef4444; }
+          .info-box.green { border-left-color: #22c55e; }
+          .info-box h4 { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+          .info-box p { font-size: 13px; font-weight: 500; color: #1f2937; }
+          .info-box .secondary { font-size: 11px; color: #6b7280; margin-top: 2px; }
+          .section { margin-bottom: 20px; }
+          .section h3 { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 10px; padding: 8px 12px; background: #f1f5f9; border-radius: 6px; }
+          .description-box { background: #f0f9ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+          .description-box h4 { font-size: 11px; color: #0078D4; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+          .description-box p { font-size: 13px; line-height: 1.5; color: #374151; white-space: pre-wrap; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+          th { background: #1e3a5f; color: white; padding: 10px 8px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+          th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) { text-align: center; }
+          td { font-size: 12px; vertical-align: top; }
+          .totals { display: flex; justify-content: flex-end; margin-top: 15px; }
+          .totals-box { background: #f9fafb; padding: 15px; border-radius: 6px; min-width: 280px; }
+          .totals-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+          .totals-row:last-child { border-bottom: none; }
+          .totals-row.total { border-top: 2px solid #0078D4; margin-top: 8px; padding-top: 12px; }
+          .totals-row.total .value { font-size: 20px; color: #0078D4; font-weight: 700; }
+          .photos-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+          .notes-section .note-box { background: #fffbeb; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 3px solid #f59e0b; }
+          .notes-section .note-box h4 { font-size: 11px; color: #92400e; text-transform: uppercase; margin-bottom: 6px; }
+          .notes-section .note-box p { font-size: 12px; color: #78350f; white-space: pre-wrap; }
+          .customer-response { padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+          .customer-response.approved { background: #f0fdf4; border: 1px solid #bbf7d0; }
+          .customer-response.rejected { background: #fef2f2; border: 1px solid #fecaca; }
+          .customer-response h3 { background: transparent; padding: 0; margin-bottom: 12px; }
+          .response-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+          .response-grid .label { display: block; font-size: 10px; color: #6b7280; text-transform: uppercase; margin-bottom: 3px; }
+          .response-grid .value { font-size: 13px; font-weight: 500; }
+          .text-green { color: #16a34a; }
+          .text-red { color: #dc2626; }
+          .rejection-reason { margin-top: 12px; padding: 10px; background: #fee2e2; border-radius: 6px; }
+          .rejection-reason .label { font-size: 10px; color: #991b1b; text-transform: uppercase; margin-bottom: 4px; }
+          .rejection-reason p { font-size: 12px; color: #7f1d1d; }
+          .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 10px; color: #9ca3af; }
           @media print {
-            body { padding: 20px; }
+            body { padding: 15px; }
             .no-print { display: none; }
+            .photos-grid img { max-width: 120px; max-height: 120px; }
           }
         </style>
       </head>
@@ -1918,32 +2017,53 @@ export default function Estimates() {
           <div class="estimate-info">
             <h2>ESTIMATE</h2>
             ${estimate.estimateNumber ? `<p class="number">EST#${estimate.estimateNumber}</p>` : ''}
-            <span class="status" style="background: ${estimate.status === 'approved' ? '#dcfce7' : estimate.status === 'pending_approval' ? '#fef3c7' : '#f3f4f6'}; color: ${estimate.status === 'approved' ? '#166534' : estimate.status === 'pending_approval' ? '#92400e' : '#374151'};">
+            <span class="status" style="background: ${estimate.status === 'approved' || estimate.status === 'completed' ? '#dcfce7' : estimate.status === 'pending_approval' ? '#fef3c7' : estimate.status === 'rejected' ? '#fee2e2' : '#f3f4f6'}; color: ${estimate.status === 'approved' || estimate.status === 'completed' ? '#166534' : estimate.status === 'pending_approval' ? '#92400e' : estimate.status === 'rejected' ? '#991b1b' : '#374151'};">
               ${statusConfig[estimate.status]?.label || estimate.status}
             </span>
           </div>
         </div>
 
+        <!-- Property & Customer Info -->
         <div class="info-grid">
           <div class="info-box">
             <h4>Property / Location</h4>
             <p>${escapeHtml(estimate.propertyName) || 'N/A'}</p>
             ${estimate.address ? `<p class="secondary">${escapeHtml(estimate.address)}</p>` : ''}
           </div>
-          <div class="info-box">
-            <h4>Customer</h4>
+          <div class="info-box teal">
+            <h4>Customer / HOA</h4>
             <p>${escapeHtml(estimate.customerName) || 'N/A'}</p>
             ${estimate.customerEmail ? `<p class="secondary">${escapeHtml(estimate.customerEmail)}</p>` : ''}
           </div>
-          <div class="info-box">
+          <div class="info-box orange">
             <h4>Estimate Date</h4>
-            <p>${estimate.estimateDate ? new Date(estimate.estimateDate).toLocaleDateString() : 'N/A'}</p>
-            ${estimate.expirationDate ? `<p class="secondary">Expires: ${new Date(estimate.expirationDate).toLocaleDateString()}</p>` : ''}
+            <p>${formatPrintDate(estimate.estimateDate)}</p>
+            ${estimate.expirationDate ? `<p class="secondary">Expires: ${formatPrintDate(estimate.expirationDate)}</p>` : ''}
           </div>
           <div class="info-box">
             <h4>Created</h4>
-            <p>${new Date(estimate.createdAt).toLocaleDateString()}</p>
+            <p>${formatPrintDate(estimate.createdAt)}</p>
             ${estimate.createdByTechName ? `<p class="secondary">by ${escapeHtml(estimate.createdByTechName)}</p>` : ''}
+          </div>
+        </div>
+
+        <!-- Tech Assignments -->
+        <div class="info-grid">
+          <div class="info-box orange">
+            <h4>Repair Tech</h4>
+            <p>${escapeHtml(estimate.repairTechName) || 'Not Assigned'}</p>
+          </div>
+          <div class="info-box blue">
+            <h4>Service Tech</h4>
+            <p>${escapeHtml(estimate.serviceTechName) || 'Not Assigned'}</p>
+          </div>
+          <div class="info-box red">
+            <h4>Reported Date</h4>
+            <p>${formatPrintDate(estimate.reportedDate)}</p>
+          </div>
+          <div class="info-box green">
+            <h4>Scheduled Date</h4>
+            <p>${formatPrintDate(estimate.scheduledDate)}</p>
           </div>
         </div>
 
@@ -1954,21 +2074,25 @@ export default function Estimates() {
         </div>
         ` : ''}
 
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40px;">#</th>
-              <th>Product/Service</th>
-              <th>Description</th>
-              <th style="width: 60px; text-align: center;">Qty</th>
-              <th style="width: 100px; text-align: right;">Rate</th>
-              <th style="width: 100px; text-align: right;">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${lineItemRows || '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #9ca3af;">No line items</td></tr>'}
-          </tbody>
-        </table>
+        <div class="section">
+          <h3>Line Items</h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 35px; text-align: center;">#</th>
+                <th>Product / Description</th>
+                <th style="width: 80px;">SKU</th>
+                <th style="width: 50px; text-align: center;">Qty</th>
+                <th style="width: 80px; text-align: right;">Rate</th>
+                <th style="width: 90px; text-align: right;">Amount</th>
+                <th style="width: 40px; text-align: center;">Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lineItemRows || '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #9ca3af;">No line items</td></tr>'}
+            </tbody>
+          </table>
+        </div>
 
         <div class="totals">
           <div class="totals-box">
@@ -2000,6 +2124,12 @@ export default function Estimates() {
             ` : ''}
           </div>
         </div>
+
+        ${customerResponseSection}
+
+        ${photosSection}
+
+        ${notesSection}
 
         <div class="footer">
           <p>Thank you for your business!</p>
