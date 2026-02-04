@@ -411,15 +411,17 @@ export function registerQuickbooksRoutes(app: Express) {
       const defaultItemRef = await getOrCreateDefaultServiceItem(baseUrl, accessToken);
       console.log("QuickBooks Default Item Ref:", JSON.stringify(defaultItemRef));
       
+      // Line items come in with rate/amount already in dollars (not cents)
+      // QuickBooks expects amounts in dollars, so no conversion needed
       const invoiceLines = lineItems.map((item: any, index: number) => ({
         LineNum: index + 1,
-        Amount: item.amount / 100,
+        Amount: item.amount,  // Already in dollars
         DetailType: "SalesItemLineDetail",
         Description: item.description || item.productService,
         SalesItemLineDetail: {
           ItemRef: defaultItemRef,
           Qty: item.quantity,
-          UnitPrice: item.rate / 100,
+          UnitPrice: item.rate,  // Already in dollars
         },
       }));
 
