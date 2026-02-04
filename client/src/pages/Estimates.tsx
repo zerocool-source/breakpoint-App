@@ -494,7 +494,7 @@ export default function Estimates() {
       case "service_tech": return "bg-[#17BEBB33] text-[#0D9488]";
       case "office_staff": return "bg-[#17BEBB33] text-[#0D9488]";
       case "emergency": return "bg-[#EF4444]/20 text-[#EF4444]";
-      case "work_order": return "bg-[#14b8a6]/20 text-[#0D9488]"; // Teal color for Work Order
+      case "work_order": return "bg-[#F59E0B]/20 text-[#B45309]"; // Amber/yellow color for Work Order
       default: return "bg-[#17BEBB33] text-[#0D9488]";
     }
   };
