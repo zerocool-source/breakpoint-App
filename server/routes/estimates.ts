@@ -350,18 +350,15 @@ function generateApprovalEmailHtml(estimate: any, approveUrl: string, declineUrl
       <td style="padding: 0 30px 20px 30px;">
         <div style="border: 1px solid #e0e0e0; padding: 15px; background-color: #fafafa;">
           <h4 style="color: #e67e22; margin: 0 0 15px 0; font-size: 14px;">SUPPORTING PHOTOS</h4>
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              ${photoUrls.map((url, index) => `
-                <td style="padding: 5px; text-align: center; vertical-align: top; width: ${100 / Math.min(photoUrls.length, 3)}%;">
-                  <a href="${url}" target="_blank" style="display: block;">
-                    <img src="${url}" alt="Photo ${index + 1}" style="max-width: 100%; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;" />
-                  </a>
-                  <p style="margin: 5px 0 0 0; font-size: 11px; color: #666;">Photo ${index + 1}</p>
-                </td>
-              `).join('')}
-            </tr>
-          </table>
+          <p style="margin: 0 0 15px 0; font-size: 12px; color: #666;">Click any photo to view full size</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+            ${photoUrls.map((url, index) => `
+              <a href="${url}" target="_blank" style="display: inline-block; text-decoration: none;">
+                <img src="${url}" alt="Photo ${index + 1}" style="width: 300px; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />
+                <p style="margin: 8px 0 0 0; font-size: 11px; color: #666; text-align: center;">Photo ${index + 1}</p>
+              </a>
+            `).join('')}
+          </div>
           <p style="margin: 15px 0 0 0; font-size: 11px; color: #999;">Photos are also attached to this email for download.</p>
         </div>
       </td>
