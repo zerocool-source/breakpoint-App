@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   FileText, 
   Search, 
@@ -397,18 +398,21 @@ export default function ProposalsCommunications() {
 
   if (estimatesLoading || customersLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+      <AppLayout>
+        <div className="p-6 space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <div className="grid grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+          </div>
+          <Skeleton className="h-96" />
+          <Skeleton className="h-64" />
         </div>
-        <Skeleton className="h-96" />
-        <Skeleton className="h-64" />
-      </div>
+      </AppLayout>
     );
   }
 
   return (
+    <AppLayout>
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div>
         <h1 className="text-2xl font-bold text-[#1e3a5f] flex items-center gap-2">
@@ -995,5 +999,6 @@ Use {{customer_name}} to personalize with the customer's name."
         </DialogContent>
       </Dialog>
     </div>
+    </AppLayout>
   );
 }
