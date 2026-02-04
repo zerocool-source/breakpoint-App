@@ -23,7 +23,7 @@ import {
   ArrowRight, Mail, Receipt, Camera, X, ChevronLeft, ChevronRight, ChevronDown,
   Wrench, UserCircle2, MapPin, Package, Tag, Paperclip, Percent, Hash,
   Users, ClipboardList, MoreVertical, Archive, Wind, Phone, Search, AlertTriangle, Flag,
-  ZoomIn, ZoomOut, RotateCcw
+  ZoomIn, ZoomOut, RotateCcw, Printer
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1833,6 +1833,192 @@ export default function Estimates() {
     };
   };
 
+  // Print estimate function
+  const handlePrintEstimate = (estimate: Estimate) => {
+    const lineItems = estimate.lineItems || [];
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({ title: "Error", description: "Unable to open print window. Please allow popups.", variant: "destructive" });
+      return;
+    }
+
+    const formatPrintCurrency = (amount: number | null) => {
+      return `$${((amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    // Helper to escape HTML to prevent XSS
+    const escapeHtml = (text: string | null | undefined): string => {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    // Rate is stored in dollars, amount is stored in cents
+    const lineItemRows = lineItems.map((item: any, index: number) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${index + 1}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.productService)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(item.description)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity || 0}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatPrintCurrency((item.rate || 0) * 100)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${formatPrintCurrency(item.amount || 0)}</td>
+      </tr>
+    `).join('');
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Estimate ${estimate.estimateNumber || ''} - ${estimate.propertyName}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #1f2937; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #0078D4; }
+          .company-info h1 { color: #0078D4; font-size: 24px; margin-bottom: 5px; }
+          .company-info p { color: #6b7280; font-size: 12px; }
+          .estimate-info { text-align: right; }
+          .estimate-info h2 { font-size: 28px; color: #1f2937; margin-bottom: 10px; }
+          .estimate-info .number { font-size: 14px; color: #6b7280; }
+          .estimate-info .status { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-top: 10px; }
+          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+          .info-box { background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 3px solid #0078D4; }
+          .info-box h4 { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+          .info-box p { font-size: 14px; font-weight: 500; color: #1f2937; }
+          .info-box .secondary { font-size: 12px; color: #6b7280; margin-top: 3px; }
+          .description-box { background: #f0f9ff; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+          .description-box h4 { font-size: 12px; color: #0078D4; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+          .description-box p { font-size: 14px; line-height: 1.6; color: #374151; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th { background: #1e3a5f; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+          th:nth-child(4), th:nth-child(5), th:nth-child(6) { text-align: right; }
+          td { font-size: 13px; }
+          .totals { display: flex; justify-content: flex-end; margin-top: 20px; }
+          .totals-box { background: #f9fafb; padding: 20px; border-radius: 8px; min-width: 300px; }
+          .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+          .totals-row:last-child { border-bottom: none; padding-top: 12px; }
+          .totals-row.total { border-top: 2px solid #0078D4; margin-top: 10px; padding-top: 15px; }
+          .totals-row.total .value { font-size: 24px; color: #0078D4; font-weight: 700; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+          @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-info">
+            <h1>Breakpoint Pool Service</h1>
+            <p>Professional Pool Management</p>
+          </div>
+          <div class="estimate-info">
+            <h2>ESTIMATE</h2>
+            ${estimate.estimateNumber ? `<p class="number">EST#${estimate.estimateNumber}</p>` : ''}
+            <span class="status" style="background: ${estimate.status === 'approved' ? '#dcfce7' : estimate.status === 'pending_approval' ? '#fef3c7' : '#f3f4f6'}; color: ${estimate.status === 'approved' ? '#166534' : estimate.status === 'pending_approval' ? '#92400e' : '#374151'};">
+              ${statusConfig[estimate.status]?.label || estimate.status}
+            </span>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-box">
+            <h4>Property / Location</h4>
+            <p>${escapeHtml(estimate.propertyName) || 'N/A'}</p>
+            ${estimate.address ? `<p class="secondary">${escapeHtml(estimate.address)}</p>` : ''}
+          </div>
+          <div class="info-box">
+            <h4>Customer</h4>
+            <p>${escapeHtml(estimate.customerName) || 'N/A'}</p>
+            ${estimate.customerEmail ? `<p class="secondary">${escapeHtml(estimate.customerEmail)}</p>` : ''}
+          </div>
+          <div class="info-box">
+            <h4>Estimate Date</h4>
+            <p>${estimate.estimateDate ? new Date(estimate.estimateDate).toLocaleDateString() : 'N/A'}</p>
+            ${estimate.expirationDate ? `<p class="secondary">Expires: ${new Date(estimate.expirationDate).toLocaleDateString()}</p>` : ''}
+          </div>
+          <div class="info-box">
+            <h4>Created</h4>
+            <p>${new Date(estimate.createdAt).toLocaleDateString()}</p>
+            ${estimate.createdByTechName ? `<p class="secondary">by ${escapeHtml(estimate.createdByTechName)}</p>` : ''}
+          </div>
+        </div>
+
+        ${estimate.description ? `
+        <div class="description-box">
+          <h4>Quote Description</h4>
+          <p>${escapeHtml(estimate.description)}</p>
+        </div>
+        ` : ''}
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>Product/Service</th>
+              <th>Description</th>
+              <th style="width: 60px; text-align: center;">Qty</th>
+              <th style="width: 100px; text-align: right;">Rate</th>
+              <th style="width: 100px; text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lineItemRows || '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #9ca3af;">No line items</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-box">
+            <div class="totals-row">
+              <span>Subtotal</span>
+              <span>${formatPrintCurrency(estimate.subtotal)}</span>
+            </div>
+            ${(estimate.discountAmount || 0) > 0 ? `
+            <div class="totals-row">
+              <span>Discount</span>
+              <span style="color: #dc2626;">-${formatPrintCurrency(estimate.discountAmount)}</span>
+            </div>
+            ` : ''}
+            ${(estimate.salesTaxAmount || 0) > 0 ? `
+            <div class="totals-row">
+              <span>Sales Tax (${estimate.salesTaxRate}%)</span>
+              <span>${formatPrintCurrency(estimate.salesTaxAmount)}</span>
+            </div>
+            ` : ''}
+            <div class="totals-row total">
+              <span style="font-weight: 600;">Total</span>
+              <span class="value">${formatPrintCurrency(estimate.totalAmount)}</span>
+            </div>
+            ${(estimate.depositAmount || 0) > 0 ? `
+            <div class="totals-row">
+              <span>Deposit Requested</span>
+              <span style="color: #059669;">${formatPrintCurrency(estimate.depositAmount)}</span>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for your business!</p>
+          <p style="margin-top: 5px;">Printed on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   // Selection helpers - for all estimates under $500 when that filter is active
   const isUnder500Selectable = (estimate: Estimate) => {
     return (estimate.totalAmount || 0) < 50000; // $500 in cents
@@ -3231,6 +3417,19 @@ export default function Estimates() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 ml-4">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-[#6B7280] hover:text-[#1E293B] hover:bg-gray-100 h-8 w-8 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePrintEstimate(estimate);
+                            }}
+                            title="Print Estimate"
+                            data-testid={`button-print-${estimate.id}`}
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -5377,11 +5576,25 @@ export default function Estimates() {
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
                 <span>Estimate Details</span>
-                {selectedEstimate && (
-                  <Badge className={`${statusConfig[selectedEstimate.status]?.color} border ml-4`}>
-                    {statusConfig[selectedEstimate.status]?.label}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedEstimate && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePrintEstimate(selectedEstimate)}
+                      className="h-8"
+                      data-testid="button-print-estimate"
+                    >
+                      <Printer className="w-4 h-4 mr-1" />
+                      Print
+                    </Button>
+                  )}
+                  {selectedEstimate && (
+                    <Badge className={`${statusConfig[selectedEstimate.status]?.color} border`}>
+                      {statusConfig[selectedEstimate.status]?.label}
+                    </Badge>
+                  )}
+                </div>
               </DialogTitle>
             </DialogHeader>
             {selectedEstimate && (
