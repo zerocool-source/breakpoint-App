@@ -1,7 +1,49 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
+import fs from "fs";
+import path from "path";
 
 export function registerSyncRoutes(app: any) {
+  // Photo upload endpoint for mobile app
+  app.post('/api/sync/upload-photo', async (req: Request, res: Response) => {
+    try {
+      const { imageData, filename, mimeType } = req.body;
+      
+      if (!imageData) {
+        return res.status(400).json({ error: 'Missing imageData' });
+      }
+      
+      // Extract base64 data (remove data URL prefix if present)
+      let base64Data = imageData;
+      if (imageData.includes(',')) {
+        base64Data = imageData.split(',')[1];
+      }
+      
+      // Generate unique filename
+      const ext = mimeType?.includes('png') ? 'png' : 'jpg';
+      const generatedFilename = filename || `photo-${Date.now()}-${Math.floor(Math.random() * 1000000000)}.${ext}`;
+      
+      // Ensure uploads/photos directory exists
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'photos');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      // Save the file
+      const filePath = path.join(uploadsDir, generatedFilename);
+      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+      
+      // Return the relative URL
+      const photoUrl = `/uploads/photos/${generatedFilename}`;
+      
+      console.log(`Photo uploaded: ${photoUrl}`);
+      res.json({ success: true, url: photoUrl });
+    } catch (error: any) {
+      console.error('Error uploading photo:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/sync/properties', async (req: Request, res: Response) => {
     try {
       const properties = await storage.getProperties();

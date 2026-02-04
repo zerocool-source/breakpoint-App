@@ -1,4 +1,5 @@
 import { type Server } from "node:http";
+import path from "node:path";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
@@ -28,6 +29,9 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // CORS middleware for sync endpoints (field tech app)
 app.use((req, res, next) => {
