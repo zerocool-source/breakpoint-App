@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Wrench, X, Camera, Upload, ClipboardList, MapPin, UserCheck, Calendar, Loader2
+  Wrench, X, Camera, Upload, ClipboardList, MapPin, UserCheck, Calendar, Loader2, AlertTriangle
 } from "lucide-react";
 
 interface RepairRequestFormProps {
@@ -37,6 +38,7 @@ interface FormData {
   title: string;
   officeNotes: string;
   photoAttachments: PhotoAttachment[];
+  isUrgent: boolean;
 }
 
 const JOB_TYPES = [
@@ -72,6 +74,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
     title: "",
     officeNotes: "",
     photoAttachments: [],
+    isUrgent: false,
   });
 
   const [customJobType, setCustomJobType] = useState("");
@@ -136,6 +139,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       title: "",
       officeNotes: "",
       photoAttachments: [],
+      isUrgent: false,
     });
     setCustomJobType("");
     setIsUploading(false);
@@ -267,7 +271,7 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
       status: asDraft ? "draft" : (formData.assignedTechId ? "assigned" : "pending"),
       requestNumber: `RR-${Math.floor(100000 + Math.random() * 900000)}`,
       requestDate: new Date().toISOString(),
-      priority: "medium",
+      isUrgent: formData.isUrgent,
       reportedBy: "office_staff",
     });
   };
@@ -486,6 +490,35 @@ export function RepairRequestForm({ open, onOpenChange, onSuccess }: RepairReque
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Urgent Toggle */}
+            <div className="p-4 bg-slate-50 rounded-lg border">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="is-urgent"
+                  checked={formData.isUrgent}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, isUrgent: checked === true }))
+                  }
+                  className="data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600"
+                  data-testid="checkbox-urgent"
+                />
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className={`w-4 h-4 ${formData.isUrgent ? 'text-red-600' : 'text-slate-400'}`} />
+                  <Label 
+                    htmlFor="is-urgent" 
+                    className={`text-sm font-medium cursor-pointer ${formData.isUrgent ? 'text-red-600' : 'text-slate-700'}`}
+                  >
+                    Mark as Urgent
+                  </Label>
+                </div>
+              </div>
+              {formData.isUrgent && (
+                <p className="text-xs text-red-600 mt-2 ml-7">
+                  This repair request will be prioritized and marked with an urgent badge.
+                </p>
+              )}
             </div>
 
             {/* Attachments from Office */}

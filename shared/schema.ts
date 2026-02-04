@@ -1183,7 +1183,8 @@ export const repairRequests = pgTable("repair_requests", {
   reportedBy: text("reported_by").notNull(), // service_tech, repair_tech, supervisor, office_staff, customer
   reportedByName: text("reported_by_name"),
   reportedByTechId: text("reported_by_tech_id"),
-  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  priority: text("priority").default("medium"), // legacy field, kept for compatibility
+  isUrgent: boolean("is_urgent").default(false), // true = urgent, false = normal
   
   // Line items (parts/items needed) - stored as JSON
   lineItems: jsonb("line_items").$type<RepairRequestLineItem[]>().default([]),
