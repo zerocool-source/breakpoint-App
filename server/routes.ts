@@ -33,6 +33,7 @@ import { registerSearchRoutes } from "./routes/search";
 import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
+import emailBlastRouter from "./routes/emailBlast";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -75,4 +76,5 @@ function setupRoutes(app: any) {
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
+  app.use("/api/email-blast", emailBlastRouter);
 }
