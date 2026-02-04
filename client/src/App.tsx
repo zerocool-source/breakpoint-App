@@ -47,8 +47,7 @@ import Calendar from "@/pages/Calendar";
 import ApiSmokeTest from "@/pages/ApiSmokeTest";
 import Reports from "@/pages/Reports";
 import Invoices from "@/pages/Invoices";
-import Proposals from "@/pages/Proposals";
-import EmailBlast from "@/pages/EmailBlast";
+import ProposalsCommunications from "@/pages/ProposalsCommunications";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -96,8 +95,7 @@ function Router() {
       <Route path="/api-test" component={ApiSmokeTest} />
       <Route path="/reports" component={Reports} />
       <Route path="/invoices" component={Invoices} />
-      <Route path="/proposals" component={Proposals} />
-      <Route path="/email-blast" component={EmailBlast} />
+      <Route path="/proposals" component={ProposalsCommunications} />
       <Route component={NotFound} />
     </Switch>
   );

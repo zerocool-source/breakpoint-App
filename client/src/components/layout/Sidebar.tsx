@@ -42,8 +42,7 @@ const navItems: NavItem[] = [
     children: [
       { label: "All Customers", href: "/customers" },
       { label: "Visits", href: "/visits" },
-      { label: "Proposals", href: "/proposals" },
-      { label: "Email Blast", href: "/email-blast" },
+      { label: "Proposals & Communications", href: "/proposals" },
     ]
   },
   { 
