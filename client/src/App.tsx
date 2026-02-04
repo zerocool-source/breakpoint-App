@@ -49,10 +49,12 @@ import Reports from "@/pages/Reports";
 import Invoices from "@/pages/Invoices";
 import ProposalsCommunications from "@/pages/ProposalsCommunications";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/Login";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/login" component={Login} />
       <Route path="/" component={Dashboard} />
       <Route path="/repairs" component={RepairsUnified} />
       <Route path="/chemicals" component={Chemicals} />
