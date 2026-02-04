@@ -112,9 +112,11 @@ export default function Proposals() {
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
-  const { data: estimates = [], isLoading } = useQuery<Estimate[]>({
+  const { data: estimatesData, isLoading } = useQuery<{ estimates: Estimate[] }>({
     queryKey: ["/api/estimates"],
   });
+  
+  const estimates = estimatesData?.estimates || [];
 
   const groupedByProperty = useMemo(() => {
     let filtered = estimates.filter((est) => {
