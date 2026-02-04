@@ -327,6 +327,8 @@ export default function Estimates() {
   const [isEditing, setIsEditing] = useState(false);
   const [showSendApprovalDialog, setShowSendApprovalDialog] = useState(false);
   const [selectedApprovalEmail, setSelectedApprovalEmail] = useState("");
+  const [customApprovalEmail, setCustomApprovalEmail] = useState("");
+  const [useCustomEmail, setUseCustomEmail] = useState(false);
   const [approvalSubject, setApprovalSubject] = useState("");
   const [approvalMessage, setApprovalMessage] = useState("");
   const [propertyContacts, setPropertyContacts] = useState<{id: string; name: string; email: string; type: string}[]>([]);
@@ -1017,6 +1019,8 @@ export default function Estimates() {
   const openSendApprovalDialog = async (estimate: Estimate) => {
     setSelectedEstimate(estimate);
     setSelectedApprovalEmail("");
+    setCustomApprovalEmail("");
+    setUseCustomEmail(false);
     setApprovalSubject(`Estimate Approval Request: ${estimate.title || 'Pool Service Estimate'} - ${estimate.propertyName}`);
     setApprovalMessage("");
     setLoadingContacts(true);
@@ -1065,7 +1069,8 @@ export default function Estimates() {
   };
 
   const handleSendApprovalEmail = async () => {
-    if (!selectedEstimate || !selectedApprovalEmail) return;
+    const emailToSend = useCustomEmail ? customApprovalEmail : selectedApprovalEmail;
+    if (!selectedEstimate || !emailToSend) return;
     
     try {
       // Call the API to send the approval email via Microsoft Graph
@@ -1073,7 +1078,7 @@ export default function Estimates() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          email: selectedApprovalEmail,
+          email: emailToSend,
           subject: approvalSubject,
           customMessage: approvalMessage,
         }),
@@ -1093,7 +1098,7 @@ export default function Estimates() {
       setShowSendApprovalDialog(false);
       toast({ 
         title: "Email Sent", 
-        description: message || `Approval email sent successfully to ${selectedApprovalEmail}` 
+        description: message || `Approval email sent successfully to ${emailToSend}` 
       });
     } catch (error: any) {
       toast({ 
@@ -4908,32 +4913,46 @@ export default function Estimates() {
                       <Loader2 className="w-5 h-5 animate-spin text-[#64748B]" />
                       <span className="ml-2 text-sm text-[#64748B]">Loading contacts...</span>
                     </div>
-                  ) : propertyContacts.length > 0 ? (
-                    <Select value={selectedApprovalEmail} onValueChange={setSelectedApprovalEmail}>
-                      <SelectTrigger className="mt-1" data-testid="select-approval-email">
-                        <SelectValue placeholder="Select email..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {propertyContacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.email}>
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-3 h-3 text-[#64748B]" />
-                              <span>{contact.name}</span>
-                              <span className="text-[#94A3B8]">({contact.email})</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   ) : (
-                    <div className="mt-1">
-                      <Input
-                        type="email"
-                        placeholder="Enter email address..."
-                        value={selectedApprovalEmail}
-                        onChange={(e) => setSelectedApprovalEmail(e.target.value)}
-                        data-testid="input-manual-email"
-                      />
+                    <div className="space-y-2 mt-1">
+                      {!useCustomEmail && propertyContacts.length > 0 ? (
+                        <Select value={selectedApprovalEmail} onValueChange={setSelectedApprovalEmail}>
+                          <SelectTrigger data-testid="select-approval-email">
+                            <SelectValue placeholder="Select email..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {propertyContacts.map((contact) => (
+                              <SelectItem key={contact.id} value={contact.email}>
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-3 h-3 text-[#64748B]" />
+                                  <span>{contact.name}</span>
+                                  <span className="text-[#94A3B8]">({contact.email})</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          type="email"
+                          placeholder="Enter email address..."
+                          value={useCustomEmail ? customApprovalEmail : selectedApprovalEmail}
+                          onChange={(e) => useCustomEmail ? setCustomApprovalEmail(e.target.value) : setSelectedApprovalEmail(e.target.value)}
+                          data-testid="input-manual-email"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setUseCustomEmail(!useCustomEmail)}
+                        className="text-xs text-[#0078D4] hover:underline flex items-center gap-1"
+                        data-testid="toggle-custom-email"
+                      >
+                        {useCustomEmail ? (
+                          <>← Use contact from list</>
+                        ) : (
+                          <>Enter different email</>
+                        )}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -4972,7 +4991,7 @@ export default function Estimates() {
               </Button>
               <Button
                 onClick={handleSendApprovalEmail}
-                disabled={!selectedApprovalEmail || !approvalSubject.trim()}
+                disabled={!(useCustomEmail ? customApprovalEmail : selectedApprovalEmail) || !approvalSubject.trim()}
                 className="bg-[#FF8000] hover:bg-[#FF8000]/90"
                 data-testid="button-send-approval-email"
               >
