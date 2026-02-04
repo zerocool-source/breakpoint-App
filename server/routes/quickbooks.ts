@@ -501,41 +501,55 @@ export function registerQuickbooksRoutes(app: Express) {
       const subtotal = lineItems.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
       const totalAmount = subtotal; // Can add tax calculations if needed
 
-      // Save invoice to our database
-      const [savedInvoice] = await db.insert(invoices).values({
-        invoiceNumber: ourInvoiceNumber,
-        customerId: customerIdFromRequest || null,
-        customerName: customerName,
-        propertyId: propertyId || null,
-        propertyName: propertyName || customerName,
-        propertyAddress: propertyAddress || null,
-        estimateId: estimateId || null,
-        estimateNumber: estimateNumber || null,
-        serviceTechId: serviceTechId || null,
-        serviceTechName: serviceTechName || null,
-        repairTechId: repairTechId || null,
-        repairTechName: repairTechName || null,
-        sentByUserId: sentByUserId || null,
-        sentByUserName: sentByUserName || null,
-        lineItems: lineItems.map((item: any) => ({
-          description: item.description || item.productService || '',
-          quantity: item.quantity || 1,
-          rate: item.rate || 0,
-          amount: item.amount || 0,
-        })),
-        subtotal: subtotal,
-        totalAmount: totalAmount,
-        amountDue: totalAmount,
-        status: "sent",
-        dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
-        quickbooksInvoiceId: qbInvoice.Id,
-        quickbooksDocNumber: qbInvoice.DocNumber,
-        quickbooksSyncedAt: new Date(),
-        quickbooksSyncStatus: "synced",
-        notes: customerNote || null,
-        internalNotes: internalNotes || null,
-        sentAt: new Date(),
-      }).returning();
+      // Save invoice to our database - wrapped in try/catch to not fail if QB was successful
+      let savedInvoice: any = null;
+      let localSaveError: string | null = null;
+      
+      try {
+        const [result] = await db.insert(invoices).values({
+          invoiceNumber: ourInvoiceNumber,
+          customerId: customerIdFromRequest || null,
+          customerName: customerName,
+          propertyId: propertyId || null,
+          propertyName: propertyName || customerName,
+          propertyAddress: propertyAddress || null,
+          estimateId: estimateId || null,
+          estimateNumber: estimateNumber || null,
+          serviceTechId: serviceTechId || null,
+          serviceTechName: serviceTechName || null,
+          repairTechId: repairTechId || null,
+          repairTechName: repairTechName || null,
+          sentByUserId: sentByUserId || null,
+          sentByUserName: sentByUserName || null,
+          lineItems: lineItems.map((item: any) => ({
+            description: item.description || item.productService || '',
+            quantity: item.quantity || 1,
+            rate: item.rate || 0,
+            amount: item.amount || 0,
+          })),
+          subtotal: subtotal,
+          totalAmount: totalAmount,
+          amountDue: totalAmount,
+          status: "sent",
+          dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days
+          quickbooksInvoiceId: qbInvoice.Id,
+          quickbooksDocNumber: qbInvoice.DocNumber,
+          quickbooksSyncedAt: new Date(),
+          quickbooksSyncStatus: "synced",
+          notes: customerNote || null,
+          internalNotes: internalNotes || null,
+          sentAt: new Date(),
+        }).returning();
+        savedInvoice = result;
+        console.log("=== Local Invoice Saved Successfully ===");
+        console.log("Local Invoice ID:", savedInvoice?.id);
+      } catch (dbError: any) {
+        localSaveError = dbError?.message || String(dbError);
+        console.error("=== LOCAL DATABASE SAVE FAILED ===");
+        console.error("Error Message:", localSaveError);
+        console.error("Full Error:", dbError);
+        console.error("NOTE: QuickBooks invoice WAS created successfully (ID: " + qbInvoice.Id + ")");
+      }
 
       // Upload selected attachments to QuickBooks using official Attachments API format
       console.log("\n" + "=".repeat(60));
@@ -611,14 +625,18 @@ export function registerQuickbooksRoutes(app: Express) {
       }
       console.log("=".repeat(60) + "\n");
       
-      // If this is from an estimate, update it with the invoice ID
-      if (estimateId) {
-        await db.update(estimates)
-          .set({ 
-            invoiceId: savedInvoice.id,
-            invoicedAt: new Date(),
-          })
-          .where(eq(estimates.id, estimateId));
+      // If this is from an estimate, update it with the invoice ID (only if local save succeeded)
+      if (estimateId && savedInvoice) {
+        try {
+          await db.update(estimates)
+            .set({ 
+              invoiceId: savedInvoice.id,
+              invoicedAt: new Date(),
+            })
+            .where(eq(estimates.id, estimateId));
+        } catch (estUpdateError) {
+          console.error("Failed to update estimate with invoice ID:", estUpdateError);
+        }
       }
 
       // Send invoice via email if email is provided and sendEmail is true
@@ -664,13 +682,19 @@ export function registerQuickbooksRoutes(app: Express) {
               console.log("Could not parse send response");
             }
             
-            // Update invoice record with email sent status
-            await db.update(invoices)
-              .set({
-                emailedTo: customerEmail,
-                emailedAt: new Date(),
-              })
-              .where(eq(invoices.id, savedInvoice.id));
+            // Update invoice record with email sent status (only if local save succeeded)
+            if (savedInvoice) {
+              try {
+                await db.update(invoices)
+                  .set({
+                    emailedTo: customerEmail,
+                    emailedAt: new Date(),
+                  })
+                  .where(eq(invoices.id, savedInvoice.id));
+              } catch (emailUpdateError) {
+                console.error("Failed to update invoice with email status:", emailUpdateError);
+              }
+            }
           } else {
             console.error("Failed to send invoice email:", sendResponseText);
             emailError = "Email send failed";
@@ -713,14 +737,20 @@ export function registerQuickbooksRoutes(app: Express) {
       if (failedAttachments.length > 0) {
         message += ` (${failedAttachments.length} attachment${failedAttachments.length !== 1 ? 's' : ''} failed)`;
       }
+      
+      // Add warning if local save failed but QB invoice was created
+      if (localSaveError) {
+        message += ` | Warning: Local database save failed but QuickBooks invoice was created successfully.`;
+      }
 
       res.json({
         success: true,
         invoiceId: qbInvoice.Id,
         invoiceNumber: qbInvoice.DocNumber,
         totalAmount: qbInvoice.TotalAmt,
-        localInvoiceId: savedInvoice.id,
-        localInvoiceNumber: ourInvoiceNumber,
+        localInvoiceId: savedInvoice?.id || null,
+        localInvoiceNumber: savedInvoice ? ourInvoiceNumber : null,
+        localSaveError: localSaveError || undefined,
         attachmentsUploaded: uploadedAttachments,
         totalAttachments: totalAttachments,
         failedAttachments: failedAttachments,
