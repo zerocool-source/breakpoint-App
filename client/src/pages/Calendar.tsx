@@ -1474,19 +1474,6 @@ export default function Calendar() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Synced with Service Tech App
               </span>
-              {roleFilter === "service" && (
-                <>
-                  <span className="w-px h-4 bg-slate-300 ml-2"></span>
-                  <span className="flex items-center gap-1.5 ml-2">
-                    <span className="w-4 h-4 rounded bg-white border border-slate-300 flex items-center justify-center text-[10px]">📦</span>
-                    Routes
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded bg-[#fff7ed] border border-[#f97316] flex items-center justify-center text-[10px]">📋</span>
-                    Assignments
-                  </span>
-                </>
-              )}
             </div>
             
             {/* Date Navigation */}
