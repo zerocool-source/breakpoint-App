@@ -1793,43 +1793,66 @@ export default function Estimates() {
     return new Date(date).toLocaleDateString();
   };
 
-  // Format countdown timer for deadline
-  const formatDeadlineCountdown = (deadlineAt: string | null): { text: string; isExpired: boolean; urgency: "normal" | "warning" | "critical" | "expired" } => {
-    if (!deadlineAt) return { text: "", isExpired: false, urgency: "normal" };
+  // Format countdown timer for deadline with percentage-based colors
+  // Green: >50% time remaining, Yellow: <50%, Red: <10% or overdue
+  const formatDeadlineCountdown = (deadlineAt: string | null, deadlineValue?: number | null, deadlineUnit?: string | null): { text: string; isExpired: boolean; urgency: "normal" | "warning" | "critical" | "expired"; percentRemaining: number } => {
+    if (!deadlineAt) return { text: "", isExpired: false, urgency: "normal", percentRemaining: 100 };
     
     const now = new Date().getTime();
     const deadline = new Date(deadlineAt).getTime();
     const diff = deadline - now;
     
     if (diff <= 0) {
-      return { text: "EXPIRED", isExpired: true, urgency: "expired" };
+      return { text: "Overdue", isExpired: true, urgency: "expired", percentRemaining: 0 };
     }
+    
+    // Calculate percentage remaining if we know the original duration
+    // Normalize deadlineValue to hours based on unit
+    let percentRemaining = 100;
+    if (deadlineValue && deadlineValue > 0) {
+      let totalDurationHours = deadlineValue;
+      if (deadlineUnit === "days") {
+        totalDurationHours = deadlineValue * 24;
+      }
+      const totalDuration = totalDurationHours * 60 * 60 * 1000; // Convert hours to ms
+      percentRemaining = Math.round((diff / totalDuration) * 100);
+      // Clamp between 0 and 100
+      percentRemaining = Math.max(0, Math.min(100, percentRemaining));
+    }
+    
+    // Determine urgency based on percentage
+    let urgency: "normal" | "warning" | "critical" | "expired" = "normal";
+    if (percentRemaining <= 10) urgency = "critical";
+    else if (percentRemaining <= 50) urgency = "warning";
     
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (hours > 24) {
+    if (hours >= 24) {
       const days = Math.floor(hours / 24);
       const remainingHours = hours % 24;
       return { 
-        text: `${days}d ${remainingHours}h left`, 
+        text: `${days}d ${remainingHours}h remaining`, 
         isExpired: false, 
-        urgency: days <= 1 ? "warning" : "normal" 
+        urgency,
+        percentRemaining
       };
     }
     
     if (hours >= 1) {
       return { 
-        text: `${hours}h ${minutes}m left`, 
+        text: `${hours}h ${minutes}m remaining`, 
         isExpired: false, 
-        urgency: hours <= 4 ? "critical" : hours <= 12 ? "warning" : "normal" 
+        urgency,
+        percentRemaining
       };
     }
     
     return { 
-      text: `${minutes}m left`, 
+      text: `${minutes}m remaining`, 
       isExpired: false, 
-      urgency: "critical" 
+      urgency,
+      percentRemaining
     };
   };
 
@@ -3777,7 +3800,7 @@ export default function Estimates() {
                                 </span>
                               )}
                               {estimate.deadlineAt && (() => {
-                                const { text, urgency } = formatDeadlineCountdown(estimate.deadlineAt);
+                                const { text, urgency } = formatDeadlineCountdown(estimate.deadlineAt, estimate.deadlineValue, estimate.deadlineUnit);
                                 const urgencyStyles = {
                                   normal: "bg-green-50 text-green-600 border-green-200",
                                   warning: "bg-amber-50 text-amber-600 border-amber-200",

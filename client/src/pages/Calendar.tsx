@@ -114,6 +114,8 @@ interface ScheduledRepair {
   totalAmount?: number;
   createdAt?: string;
   deadlineAt?: string | null;
+  deadlineValue?: number | null;
+  deadlineUnit?: string | null;
 }
 
 interface TechPropertyAssignment {
@@ -230,16 +232,36 @@ function getInitials(firstName: string, lastName: string): string {
   return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
 }
 
-// Helper to get deadline countdown info for job cards
-function getDeadlineInfo(deadlineAt: string | null | undefined): { text: string; urgency: 'normal' | 'warning' | 'critical' | 'expired' } | null {
+// Helper to get deadline countdown info for job cards with percentage-based colors
+// Green: >50% time remaining, Yellow: <50%, Red: <10% or overdue
+function getDeadlineInfo(deadlineAt: string | null | undefined, deadlineValue?: number | null, deadlineUnit?: string | null): { text: string; urgency: 'normal' | 'warning' | 'critical' | 'expired' } | null {
   if (!deadlineAt) return null;
   const now = new Date();
   const deadline = new Date(deadlineAt);
   const diff = deadline.getTime() - now.getTime();
   
   if (diff <= 0) {
-    return { text: 'Expired', urgency: 'expired' };
+    return { text: 'Overdue', urgency: 'expired' };
   }
+  
+  // Calculate percentage remaining if we know the original duration
+  // Normalize deadlineValue to hours based on unit
+  let percentRemaining = 100;
+  if (deadlineValue && deadlineValue > 0) {
+    let totalDurationHours = deadlineValue;
+    if (deadlineUnit === "days") {
+      totalDurationHours = deadlineValue * 24;
+    }
+    const totalDuration = totalDurationHours * 60 * 60 * 1000; // Convert hours to ms
+    percentRemaining = Math.round((diff / totalDuration) * 100);
+    // Clamp between 0 and 100
+    percentRemaining = Math.max(0, Math.min(100, percentRemaining));
+  }
+  
+  // Determine urgency based on percentage
+  let urgency: 'normal' | 'warning' | 'critical' | 'expired' = 'normal';
+  if (percentRemaining <= 10) urgency = 'critical';
+  else if (percentRemaining <= 50) urgency = 'warning';
   
   const hours = diff / (1000 * 60 * 60);
   const minutes = Math.floor(diff / (1000 * 60));
@@ -248,17 +270,14 @@ function getDeadlineInfo(deadlineAt: string | null | undefined): { text: string;
   let text = '';
   if (hours >= 24) {
     const days = Math.floor(hours / 24);
-    text = `${days}d`;
+    const remainingHours = Math.floor(hours % 24);
+    text = `${days}d ${remainingHours}h`;
   } else if (hours >= 1) {
-    text = `${Math.floor(hours)}h`;
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    text = `${Math.floor(hours)}h ${mins}m`;
   } else {
     text = `${minutes}m`;
   }
-  
-  // Determine urgency
-  let urgency: 'normal' | 'warning' | 'critical' | 'expired' = 'normal';
-  if (hours <= 4) urgency = 'critical';
-  else if (hours <= 12) urgency = 'warning';
   
   return { text, urgency };
 }
@@ -574,6 +593,8 @@ export default function Calendar() {
         totalAmount: e.totalAmount,
         createdAt: e.createdAt,
         deadlineAt: e.deadlineAt,
+        deadlineValue: e.deadlineValue,
+        deadlineUnit: e.deadlineUnit,
       });
       
       // Unassigned = approved + needs_scheduling status (ready to be assigned to a tech)
@@ -2241,7 +2262,7 @@ export default function Calendar() {
 
                               {/* Scheduled Repairs (Estimates) */}
                               {scheduledRepairsForDay.map((repair) => {
-                                const deadlineInfo = repair.status !== "completed" ? getDeadlineInfo(repair.deadlineAt) : null;
+                                const deadlineInfo = repair.status !== "completed" ? getDeadlineInfo(repair.deadlineAt, repair.deadlineValue, repair.deadlineUnit) : null;
                                 const urgencyColors = {
                                   normal: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'text-emerald-600' },
                                   warning: { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'text-amber-600' },
