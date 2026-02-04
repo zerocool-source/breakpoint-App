@@ -3758,7 +3758,7 @@ export default function Estimates() {
                             <>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="outline" size="sm" className="bg-[#f0f9ff] text-[#0077C5] border-[#e0f2fe] hover:bg-[#e0f2fe]">
+                                  <Button variant="outline" size="sm" className="bg-[#f0f9ff] text-[#0077C5] border-[#e0f2fe] hover:bg-[#e0f2fe]" data-testid={`button-in-progress-${estimate.id}`}>
                                     <Wrench className="w-3 h-3 mr-1" />
                                     In Progress
                                     <ChevronDown className="w-3 h-3 ml-1" />
@@ -3770,6 +3770,7 @@ export default function Estimates() {
                                       e.stopPropagation();
                                       openSchedulingModal(estimate);
                                     }}
+                                    data-testid={`menu-reassign-${estimate.id}`}
                                   >
                                     <Users className="w-4 h-4 mr-2" />
                                     Reassign to Another Tech
@@ -3783,22 +3784,13 @@ export default function Estimates() {
                                         extras: { repairTechId: null, repairTechName: null, scheduledDate: null }
                                       });
                                     }}
+                                    data-testid={`menu-needs-scheduling-${estimate.id}`}
                                   >
                                     <CalendarIcon className="w-4 h-4 mr-2" />
                                     Move to Needs Scheduling
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                              {estimate.repairTechName && (
-                                <span className="text-xs text-slate-500">
-                                  Tech: {estimate.repairTechName}
-                                </span>
-                              )}
-                              {estimate.scheduledDate && (
-                                <span className="text-xs text-slate-400">
-                                  {format(new Date(estimate.scheduledDate), "MMM d")}
-                                </span>
-                              )}
                               {estimate.deadlineAt && (() => {
                                 const { text, urgency } = formatDeadlineCountdown(estimate.deadlineAt, estimate.deadlineValue, estimate.deadlineUnit);
                                 const urgencyStyles = {
@@ -3808,12 +3800,22 @@ export default function Estimates() {
                                   expired: "bg-red-100 text-red-700 border-red-300",
                                 };
                                 return (
-                                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 ${urgencyStyles[urgency]}`}>
-                                    <Clock className="w-2.5 h-2.5 mr-0.5" />
+                                  <Badge variant="outline" className={`text-xs px-2 py-0.5 ${urgencyStyles[urgency]}`} data-testid={`badge-timer-${estimate.id}`}>
+                                    <Clock className="w-3 h-3 mr-1" />
                                     {text}
                                   </Badge>
                                 );
                               })()}
+                              {estimate.repairTechName && (
+                                <span className="text-xs text-slate-500" data-testid={`text-tech-${estimate.id}`}>
+                                  Tech: {estimate.repairTechName}
+                                </span>
+                              )}
+                              {estimate.scheduledDate && (
+                                <span className="text-xs text-slate-400" data-testid={`text-date-${estimate.id}`}>
+                                  {format(new Date(estimate.scheduledDate), "MMM d")}
+                                </span>
+                              )}
                             </>
                           )}
                           {estimate.status === "completed" && (
