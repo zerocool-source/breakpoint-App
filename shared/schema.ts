@@ -1843,6 +1843,7 @@ export const invoices = pgTable("invoices", {
   qbPaymentId: text("qb_payment_id"), // QuickBooks Payment ID
   paymentMethod: text("payment_method"), // Credit Card, ACH, Check, etc.
   createdByUserId: varchar("created_by_user_id"),
+  createdByName: text("created_by_name"), // Name of user who created the invoice
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

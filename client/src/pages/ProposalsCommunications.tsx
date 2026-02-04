@@ -213,9 +213,10 @@ export default function ProposalsCommunications() {
   });
   const estimates = estimatesData?.estimates || [];
 
-  const { data: customers = [], isLoading: customersLoading } = useQuery<Customer[]>({
+  const { data: customersData, isLoading: customersLoading } = useQuery<{ customers: Customer[] }>({
     queryKey: ["/api/customers"],
   });
+  const customers = customersData?.customers || [];
 
   const groupedByProperty = useMemo(() => {
     let filtered = estimates.filter((est) => {

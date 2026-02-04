@@ -975,8 +975,12 @@ export default function Estimates() {
         estimateData.sourceType = "office_staff";
       }
       
-      // If converting from Work Order, mark the WO as converted
+      // If converting from Work Order, mark the WO as converted and track who did it
       if (isConvertingFromWo && convertingWoId) {
+        // Track who converted this work order to estimate
+        estimateData.convertedByUserName = formData.officeMemberName || "Office Staff";
+        estimateData.convertedAt = new Date().toISOString();
+        
         setConvertedWoIds(prev => new Set(Array.from(prev).concat(convertingWoId)));
         // Also remove from selected if it was selected
         setSelectedCompletedIds(prev => {
@@ -2721,6 +2725,7 @@ export default function Estimates() {
                               woNumber: item.woNumber,
                               sourceType: "work_order",
                               repairTechName: item.techName,
+                              createdByName: "Office Staff", // Track who created the invoice
                               lineItems: lineItems,
                               subtotal: item.amount,
                               totalAmount: item.amount,
