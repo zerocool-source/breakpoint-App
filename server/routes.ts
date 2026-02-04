@@ -34,6 +34,7 @@ import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
 import emailBlastRouter from "./routes/emailBlast";
+import { registerCustomAuthRoutes } from "./replit_integrations/auth";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -42,6 +43,7 @@ export async function registerRoutes(app: any) {
 }
 
 function setupRoutes(app: any) {
+  registerCustomAuthRoutes(app);
   registerAlertRoutes(app);
   registerJobRoutes(app);
   registerCustomerRoutes(app);
