@@ -1835,7 +1835,7 @@ export default function Estimates() {
 
   // Print estimate function
   const handlePrintEstimate = (estimate: Estimate) => {
-    const lineItems = estimate.items || estimate.lineItems || [];
+    const lineItems = estimate.items || [];
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast({ title: "Error", description: "Unable to open print window. Please allow popups.", variant: "destructive" });
@@ -5626,6 +5626,7 @@ export default function Estimates() {
                       <SelectValue placeholder="Select deadline" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="0.05">3 minutes (TEST)</SelectItem>
                       <SelectItem value="24">24 hours</SelectItem>
                       <SelectItem value="48">48 hours</SelectItem>
                       <SelectItem value="72">72 hours</SelectItem>
@@ -5636,7 +5637,7 @@ export default function Estimates() {
                   </Select>
                   {selectedDeadlineHours && (
                     <p className="text-xs text-[#64748B] mt-1">
-                      Job will auto-return if not completed within {selectedDeadlineHours} hours
+                      Job will auto-return if not completed within {selectedDeadlineHours < 1 ? `${Math.round(selectedDeadlineHours * 60)} minutes` : `${selectedDeadlineHours} hours`}
                     </p>
                   )}
                 </div>

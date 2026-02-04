@@ -107,8 +107,8 @@ export default async function runApp(
   // Seed database with data from JSON files if tables are empty
   await seedDatabase();
 
-  // Start the deadline checker to auto-return expired jobs (checks every 5 minutes)
-  startDeadlineChecker(5);
+  // Start the deadline checker to auto-return expired jobs (checks every 1 minute for testing)
+  startDeadlineChecker(1);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
