@@ -316,19 +316,15 @@ export default function TechForeman() {
                         "p-3 rounded-lg border",
                         request.priority === "urgent" 
                           ? "bg-red-50 border-red-200" 
-                          : request.priority === "high" 
-                            ? "bg-[#FF8000]1A border-[#FF8000]33"
-                            : "bg-slate-50 border-slate-200"
+                          : "bg-slate-50 border-slate-200"
                       )}
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge className={
-                          request.priority === "urgent" ? "bg-red-100 text-red-700" :
-                          request.priority === "high" ? "bg-[#FF8000]1A text-[#D35400]" :
-                          "bg-[#0078D4]1A text-[#0078D4]"
-                        }>
-                          {request.priority}
-                        </Badge>
+                        {request.priority === "urgent" && (
+                          <Badge className="bg-red-600 text-white">
+                            Urgent
+                          </Badge>
+                        )}
                         <Badge className={statusConfig[request.status || "pending"]?.color}>
                           {statusConfig[request.status || "pending"]?.label}
                         </Badge>

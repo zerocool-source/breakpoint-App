@@ -2141,14 +2141,9 @@ Thank you.`;
                                 <span className="text-sm text-slate-600">{getReportedByLabel(request.reportedBy, request.reportedByName)}</span>
                               </td>
                               <td className="px-4 py-3">
-                                {request.priority && (
-                                  <Badge variant="outline" className={
-                                    request.priority === "urgent" ? "bg-red-100 text-red-700 border-red-200" :
-                                    request.priority === "high" ? "bg-orange-100 text-orange-700 border-orange-200" :
-                                    request.priority === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                                    "bg-slate-100 text-slate-600 border-slate-200"
-                                  }>
-                                    {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                                {request.isUrgent && (
+                                  <Badge variant="outline" className="bg-red-600 text-white border-red-600">
+                                    Urgent
                                   </Badge>
                                 )}
                               </td>
@@ -3153,17 +3148,14 @@ Thank you.`;
                     <p className="text-xs font-medium text-slate-500">RR #</p>
                     <p className="text-sm font-semibold text-slate-900">{selectedRepairRequest.requestNumber || "—"}</p>
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-slate-500">Priority</p>
-                    <Badge variant="outline" className={
-                      selectedRepairRequest.priority === "urgent" ? "bg-red-100 text-red-700 border-red-200" :
-                      selectedRepairRequest.priority === "high" ? "bg-orange-100 text-orange-700 border-orange-200" :
-                      selectedRepairRequest.priority === "medium" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                      "bg-slate-100 text-slate-600 border-slate-200"
-                    }>
-                      {selectedRepairRequest.priority?.charAt(0).toUpperCase() + selectedRepairRequest.priority?.slice(1)}
-                    </Badge>
-                  </div>
+                  {selectedRepairRequest.isUrgent && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500">Priority</p>
+                      <Badge variant="outline" className="bg-red-600 text-white border-red-600">
+                        Urgent
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs font-medium text-slate-500">Property</p>

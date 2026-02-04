@@ -2314,15 +2314,9 @@ export default function Calendar() {
                                     <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-[#0ea5e9] text-white">
                                       Pending Assessment
                                     </span>
-                                    {request.priority && (
-                                      <span className={cn(
-                                        "px-1.5 py-0.5 text-[9px] font-medium rounded",
-                                        request.priority === "urgent" && "bg-red-500 text-white",
-                                        request.priority === "high" && "bg-orange-500 text-white",
-                                        request.priority === "medium" && "bg-yellow-500 text-white",
-                                        request.priority === "low" && "bg-slate-400 text-white"
-                                      )}>
-                                        {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                                    {request.isUrgent && (
+                                      <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-red-600 text-white">
+                                        Urgent
                                       </span>
                                     )}
                                   </div>
@@ -4482,15 +4476,9 @@ export default function Calendar() {
                       {request.propertyName}
                     </p>
                     <div className="flex items-center gap-1.5">
-                      {request.priority && (
-                        <span className={cn(
-                          "px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap",
-                          request.priority === "urgent" && "bg-red-100 text-red-700",
-                          request.priority === "high" && "bg-orange-100 text-orange-700",
-                          request.priority === "medium" && "bg-yellow-100 text-yellow-700",
-                          request.priority === "low" && "bg-slate-100 text-slate-600"
-                        )}>
-                          {request.priority.charAt(0).toUpperCase() + request.priority.slice(1)}
+                      {request.isUrgent && (
+                        <span className="px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap bg-red-600 text-white">
+                          Urgent
                         </span>
                       )}
                       <DropdownMenu>
