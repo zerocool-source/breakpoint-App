@@ -339,6 +339,7 @@ export default function Estimates() {
   const [loadingBillingContacts, setLoadingBillingContacts] = useState(false);
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [selectedScheduleDate, setSelectedScheduleDate] = useState<Date | undefined>(new Date());
+  const [selectedDeadlineHours, setSelectedDeadlineHours] = useState<number | null>(48); // Default 48 hours
   const [autoSelectedByWorkType, setAutoSelectedByWorkType] = useState(false);
   const [approvalStep, setApprovalStep] = useState<"confirm" | "schedule">("confirm");
   const [deadlineValue, setDeadlineValue] = useState<number>(24);
@@ -599,11 +600,24 @@ export default function Estimates() {
   });
 
   const scheduleMutation = useMutation({
-    mutationFn: async ({ id, repairTechId, repairTechName, scheduledDate }: { id: string; repairTechId: string; repairTechName: string; scheduledDate: Date }) => {
+    mutationFn: async ({ id, repairTechId, repairTechName, scheduledDate, deadlineHours }: { id: string; repairTechId: string; repairTechName: string; scheduledDate: Date; deadlineHours: number | null }) => {
+      // Calculate deadline timestamp if hours specified
+      let deadlineAt = null;
+      if (deadlineHours) {
+        deadlineAt = new Date(scheduledDate.getTime() + deadlineHours * 60 * 60 * 1000).toISOString();
+      }
+      
       const response = await fetch(`/api/estimates/${id}/schedule`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repairTechId, repairTechName, scheduledDate: scheduledDate.toISOString() }),
+        body: JSON.stringify({ 
+          repairTechId, 
+          repairTechName, 
+          scheduledDate: scheduledDate.toISOString(),
+          deadlineAt,
+          deadlineValue: deadlineHours,
+          deadlineUnit: "hours",
+        }),
       });
       if (!response.ok) throw new Error("Failed to schedule estimate");
       return response.json();
@@ -614,6 +628,7 @@ export default function Estimates() {
       toast({ title: "Scheduled", description: "Job has been assigned to the repair technician." });
       setShowSchedulingModal(false);
       setSelectedEstimate(null);
+      setSelectedDeadlineHours(48); // Reset to default
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to schedule estimate.", variant: "destructive" });
@@ -627,6 +642,7 @@ export default function Estimates() {
       repairTechId: tech.id,
       repairTechName: tech.name,
       scheduledDate: selectedScheduleDate,
+      deadlineHours: selectedDeadlineHours,
     });
   };
 
@@ -5205,6 +5221,34 @@ export default function Estimates() {
                       />
                     </PopoverContent>
                   </Popover>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-[#1E293B] flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#F97316]" />
+                    Complete By (Deadline)
+                  </Label>
+                  <Select
+                    value={selectedDeadlineHours?.toString() || "none"}
+                    onValueChange={(val) => setSelectedDeadlineHours(val === "none" ? null : parseInt(val))}
+                  >
+                    <SelectTrigger className="w-full mt-2" data-testid="select-deadline">
+                      <SelectValue placeholder="Select deadline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="24">24 hours</SelectItem>
+                      <SelectItem value="48">48 hours</SelectItem>
+                      <SelectItem value="72">72 hours</SelectItem>
+                      <SelectItem value="168">1 week</SelectItem>
+                      <SelectItem value="336">2 weeks</SelectItem>
+                      <SelectItem value="none">No deadline</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {selectedDeadlineHours && (
+                    <p className="text-xs text-[#64748B] mt-1">
+                      Job will auto-return if not completed within {selectedDeadlineHours} hours
+                    </p>
+                  )}
                 </div>
 
                 <div>
