@@ -2431,11 +2431,11 @@ export default function Calendar() {
                                   {/* Expand bar */}
                                   <div
                                     onClick={toggleExpand}
-                                    className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors text-xs text-slate-600 font-medium"
+                                    className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 cursor-pointer transition-colors text-sm text-slate-800 font-bold shadow-sm"
                                     data-testid={`btn-expand-jobs-${cellKey}`}
                                   >
                                     <span>+{totalCards - 1} more job{totalCards - 1 > 1 ? 's' : ''}</span>
-                                    <ChevronDown className="w-3.5 h-3.5" />
+                                    <ChevronDown className="w-4 h-4" />
                                   </div>
                                 </>
                               ) : (
