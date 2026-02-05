@@ -1326,11 +1326,7 @@ Thank you.`;
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            <div className="text-center p-2 rounded-lg">
-              <div className="text-lg font-bold text-[#f97316]">{techData.pending}</div>
-              <div className="text-xs text-slate-500">Pending</div>
-            </div>
+          <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="text-center p-2 bg-[#14b8a6]/10 rounded-lg">
               <div className="text-lg font-bold text-[#14b8a6]">{techData.inProgress}</div>
               <div className="text-xs text-slate-500">In Progress</div>
