@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { storage } from "../storage";
-import { insertRepairRequestSchema } from "@shared/schema";
+import { insertRepairRequestSchema, urgentNotifications } from "@shared/schema";
+import { db } from "../db";
 
 export function registerRepairRequestRoutes(app: any) {
   app.get("/api/repair-requests", async (req: Request, res: Response) => {
@@ -79,7 +80,7 @@ export function registerRepairRequestRoutes(app: any) {
       if (!technicianId || !technicianName) {
         return res.status(400).json({ error: "technicianId and technicianName are required" });
       }
-      
+
       const request = await storage.updateRepairRequest(req.params.id, {
         assignedTechId: technicianId,
         assignedTechName: technicianName,
@@ -88,10 +89,34 @@ export function registerRepairRequestRoutes(app: any) {
         assignmentNotes: notes || null,
         status: "assigned",
       });
-      
+
       if (!request) {
         return res.status(404).json({ error: "Repair request not found" });
       }
+
+      // Create notification for the assigned technician
+      try {
+        const formattedDate = scheduledDate
+          ? new Date(scheduledDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+          : 'Today';
+        const formattedTime = scheduledTime || '';
+
+        await db.insert(urgentNotifications).values({
+          title: "New Repair Assignment",
+          message: `You have been assigned a repair at ${request.propertyName || request.poolName || 'a property'}. Scheduled: ${formattedDate}${formattedTime ? ' at ' + formattedTime : ''}.`,
+          severity: "info",
+          targetRole: "repair",
+          targetUserId: technicianId,
+          relatedEntityType: "repair_request",
+          relatedEntityId: req.params.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        });
+        console.log(`[NOTIFICATION] Repair ${req.params.id} assigned to ${technicianName} (${technicianId})`);
+      } catch (notifError) {
+        // Don't fail the assignment if notification fails
+        console.error("Failed to create notification:", notifError);
+      }
+
       res.json(request);
     } catch (error) {
       console.error("Error assigning repair request:", error);

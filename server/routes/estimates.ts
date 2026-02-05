@@ -1021,6 +1021,69 @@ export function registerEstimateRoutes(app: any) {
     }
   });
 
+  // Get estimates for calendar - Ready to Assign and Scheduled for the week
+  app.get("/api/estimates/for-calendar", async (req: Request, res: Response) => {
+    try {
+      const { weekStart } = req.query;
+
+      // Parse week dates
+      const startDate = weekStart ? new Date(weekStart as string) : new Date();
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 7);
+
+      // Get all estimates
+      const allEstimates = await storage.getEstimates();
+      const now = new Date();
+
+      // Ready to assign: approved or needs_scheduling, not yet assigned to a repair job
+      const readyToAssign = allEstimates.filter((e: any) => {
+        const isReadyStatus = e.status === "approved" || e.status === "needs_scheduling";
+        const notAssigned = !e.repairTechId;
+        return isReadyStatus && notAssigned;
+      });
+
+      // Scheduled estimates for the week
+      const scheduled = allEstimates.filter((e: any) => {
+        if (e.status !== "scheduled" || !e.scheduledDate) return false;
+        const schedDate = new Date(e.scheduledDate);
+        return schedDate >= startDate && schedDate <= endDate;
+      });
+
+      // Check for expired deadlines and auto-revert
+      for (const est of scheduled) {
+        if (est.deadlineAt) {
+          const deadline = new Date(est.deadlineAt);
+          if (deadline < now && !est.serviceRepairJobId) {
+            // Deadline expired without being assigned - revert to needs_scheduling
+            await storage.updateEstimate(est.id, {
+              status: "needs_scheduling",
+              scheduledDate: null,
+              deadlineAt: null,
+              repairTechId: null,
+              repairTechName: null,
+            });
+            // Move to ready to assign
+            est.status = "needs_scheduling";
+            readyToAssign.push(est);
+          }
+        }
+      }
+
+      // Filter out reverted ones from scheduled
+      const activeScheduled = scheduled.filter((e: any) => e.status === "scheduled");
+
+      res.json({
+        readyToAssign,
+        scheduled: activeScheduled,
+        weekStart: startDate.toISOString(),
+        weekEnd: endDate.toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error fetching calendar estimates:", error);
+      res.status(500).json({ error: "Failed to fetch calendar estimates" });
+    }
+  });
+
   app.get("/api/estimates/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;

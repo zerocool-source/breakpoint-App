@@ -33,6 +33,7 @@ import { registerSearchRoutes } from "./routes/search";
 import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
+import { registerNotificationRoutes } from "./routes/notifications";
 import emailBlastRouter from "./routes/emailBlast";
 
 export async function registerRoutes(app: any) {
@@ -76,5 +77,6 @@ function setupRoutes(app: any) {
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
+  registerNotificationRoutes(app);
   app.use("/api/email-blast", emailBlastRouter);
 }
