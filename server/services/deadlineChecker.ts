@@ -80,10 +80,14 @@ export async function checkExpiredDeadlines(): Promise<void> {
 
         // Create a job_reassignments record for the "Reassigned" tab
         if (techId) {
+          // Avoid double "EST-" prefix - only add if not already present
+          const jobNumber = estimate.estimateNumber 
+            ? (estimate.estimateNumber.startsWith("EST-") ? estimate.estimateNumber : `EST-${estimate.estimateNumber}`)
+            : null;
           await db.insert(jobReassignments).values({
             jobId: estimate.id,
             jobType: "estimate",
-            jobNumber: estimate.estimateNumber ? `EST-${estimate.estimateNumber}` : null,
+            jobNumber,
             propertyId: estimate.propertyId,
             propertyName: estimate.propertyName,
             originalTechId: techId,
