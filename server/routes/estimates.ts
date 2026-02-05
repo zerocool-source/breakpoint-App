@@ -1084,6 +1084,74 @@ export function registerEstimateRoutes(app: any) {
     }
   });
 
+  // Get scheduled estimates for a specific technician (for mobile app)
+  app.get("/api/estimates/for-tech", async (req: Request, res: Response) => {
+    try {
+      const technicianEmail = req.query.technicianEmail as string | undefined;
+      const technicianName = req.query.technicianName as string | undefined;
+      const technicianId = req.query.technicianId as string | undefined;
+
+      if (!technicianEmail && !technicianName && !technicianId) {
+        return res.status(400).json({ error: "technicianEmail, technicianName, or technicianId is required" });
+      }
+
+      // Get all scheduled estimates
+      const allEstimates = await storage.getEstimates("scheduled");
+
+      let filteredEstimates = allEstimates;
+
+      // Filter by technicianId if provided directly
+      if (technicianId) {
+        filteredEstimates = filteredEstimates.filter((e: any) => e.repairTechId === technicianId);
+      }
+
+      // Filter by technicianEmail - find matching technician first
+      if (technicianEmail) {
+        const technicians = await storage.getTechnicians();
+        const tech = technicians.find((t: any) =>
+          t.email?.toLowerCase() === technicianEmail.toLowerCase()
+        );
+        if (tech) {
+          filteredEstimates = filteredEstimates.filter((e: any) => e.repairTechId === tech.id);
+        } else {
+          filteredEstimates = [];
+        }
+      }
+
+      // Filter by technicianName
+      if (technicianName) {
+        filteredEstimates = filteredEstimates.filter((e: any) =>
+          e.repairTechName?.toLowerCase().includes(technicianName.toLowerCase())
+        );
+      }
+
+      // Map to job format expected by mobile
+      const jobs = filteredEstimates.map((e: any) => ({
+        id: e.id,
+        jobNumber: `EST-${e.estimateNumber || e.id.substring(0, 8)}`,
+        estimateId: e.id,
+        estimateNumber: e.estimateNumber,
+        propertyId: e.propertyId,
+        propertyName: e.propertyName || 'Unknown Property',
+        propertyAddress: e.address || '',
+        customerName: e.customerName,
+        description: e.title || e.description || 'Scheduled Repair',
+        notes: e.description || '',
+        totalAmount: e.totalAmount,
+        priority: 'medium',
+        scheduledDate: e.scheduledDate,
+        status: e.status === 'scheduled' ? 'pending' : e.status,
+        technicianId: e.repairTechId,
+        technicianName: e.repairTechName,
+      }));
+
+      res.json({ jobs, total: jobs.length });
+    } catch (error: any) {
+      console.error("Error fetching tech estimates:", error);
+      res.status(500).json({ error: "Failed to fetch tech estimates" });
+    }
+  });
+
   app.get("/api/estimates/:id", async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
@@ -1280,7 +1348,57 @@ export function registerEstimateRoutes(app: any) {
       await storage.updateEstimate(id, {
         assignedRepairJobId: repairJob.id,
       });
-      
+
+      // Forward job assignment to mobile app so technicians can see it
+      const mobileAppUrl = process.env.MOBILE_APP_URL || "https://breakpoint-moibile.replit.app";
+      const webhookKey = process.env.MOBILE_API_KEY || process.env.ADMIN_WEBHOOK_KEY;
+
+      if (webhookKey) {
+        try {
+          console.log("[Schedule] Forwarding job to mobile app:", mobileAppUrl);
+          const webhookPayload = {
+            jobId: repairJob.id,
+            jobNumber: repairJob.jobNumber,
+            estimateId: id,
+            estimateNumber: currentEstimate.estimateNumber,
+            propertyId: currentEstimate.propertyId,
+            propertyName: currentEstimate.propertyName,
+            propertyAddress: currentEstimate.address,
+            customerId: currentEstimate.customerId,
+            customerName: currentEstimate.customerName,
+            technicianId: repairTechId,
+            technicianName: repairTechName,
+            scheduledDate: scheduledDate,
+            description: currentEstimate.title,
+            notes: currentEstimate.description,
+            totalAmount: currentEstimate.totalAmount,
+            priority: 'medium',
+            status: 'pending',
+          };
+
+          const webhookRes = await fetch(`${mobileAppUrl}/api/webhook/job-assignment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Api-Key': webhookKey,
+            },
+            body: JSON.stringify(webhookPayload),
+          });
+
+          if (webhookRes.ok) {
+            console.log("[Schedule] Successfully forwarded job to mobile app");
+          } else {
+            const errorText = await webhookRes.text();
+            console.error("[Schedule] Mobile webhook error:", webhookRes.status, errorText);
+          }
+        } catch (webhookError) {
+          console.error("[Schedule] Failed to forward to mobile app:", webhookError);
+          // Don't fail the main request - admin job was created successfully
+        }
+      } else {
+        console.warn("[Schedule] MOBILE_API_KEY not set - job not forwarded to mobile app");
+      }
+
       res.json({ estimate: { ...estimate, assignedRepairJobId: repairJob.id }, repairJob });
     } catch (error: any) {
       console.error("Error scheduling estimate:", error);

@@ -7,8 +7,39 @@ export function registerServiceRepairRoutes(app: any) {
     try {
       const status = req.query.status as string | undefined;
       const maxAmount = req.query.maxAmount ? parseFloat(req.query.maxAmount as string) : undefined;
-      const jobs = await storage.getServiceRepairJobs(status, maxAmount);
-      res.json(jobs);
+      const technicianId = req.query.technicianId as string | undefined;
+      const technicianEmail = req.query.technicianEmail as string | undefined;
+      const technicianName = req.query.technicianName as string | undefined;
+
+      let jobs = await storage.getServiceRepairJobs(status, maxAmount);
+
+      // Filter by technicianId if provided
+      if (technicianId) {
+        jobs = jobs.filter(job => job.technicianId === technicianId);
+      }
+
+      // Filter by technicianEmail if provided (for cross-system lookups)
+      if (technicianEmail) {
+        // First find the technician by email to get their ID
+        const technicians = await storage.getTechnicians();
+        const tech = technicians.find((t: any) =>
+          t.email?.toLowerCase() === technicianEmail.toLowerCase()
+        );
+        if (tech) {
+          jobs = jobs.filter(job => job.technicianId === tech.id);
+        } else {
+          jobs = []; // No matching technician found
+        }
+      }
+
+      // Filter by technicianName if provided
+      if (technicianName) {
+        jobs = jobs.filter(job =>
+          job.technicianName?.toLowerCase().includes(technicianName.toLowerCase())
+        );
+      }
+
+      res.json({ jobs });
     } catch (error) {
       console.error("Error fetching service repair jobs:", error);
       res.status(500).json({ error: "Failed to fetch service repair jobs" });
