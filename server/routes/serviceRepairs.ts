@@ -153,4 +153,46 @@ export function registerServiceRepairRoutes(app: any) {
       res.status(500).json({ error: "Failed to batch service repairs to estimate" });
     }
   });
+
+  // Job Reassignments
+  app.get("/api/job-reassignments", async (req: Request, res: Response) => {
+    try {
+      const reassignments = await storage.getJobReassignments();
+      res.json(reassignments);
+    } catch (error) {
+      console.error("Error fetching job reassignments:", error);
+      res.status(500).json({ error: "Failed to fetch job reassignments" });
+    }
+  });
+
+  app.post("/api/job-reassignments", async (req: Request, res: Response) => {
+    try {
+      const { jobId, jobType, jobNumber, propertyId, propertyName, originalTechId, originalTechName, newTechId, newTechName, reason, reassignedByUserId, reassignedByUserName } = req.body;
+      
+      if (!jobId || !newTechId) {
+        return res.status(400).json({ error: "jobId and newTechId are required" });
+      }
+      
+      const reassignment = await storage.createJobReassignment({
+        jobId,
+        jobType: jobType || "repair",
+        jobNumber,
+        propertyId,
+        propertyName,
+        originalTechId,
+        originalTechName,
+        newTechId,
+        newTechName,
+        reason,
+        reassignedByUserId,
+        reassignedByUserName,
+        reassignedAt: new Date(),
+      });
+      
+      res.status(201).json(reassignment);
+    } catch (error) {
+      console.error("Error creating job reassignment:", error);
+      res.status(500).json({ error: "Failed to create job reassignment" });
+    }
+  });
 }

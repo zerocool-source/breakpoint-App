@@ -25,6 +25,7 @@ import {
   type ChannelRead, type InsertChannelRead,
   type Estimate, type InsertEstimate,
   type ServiceRepairJob, type InsertServiceRepairJob,
+  type JobReassignment, type InsertJobReassignment,
   type RepairRequest, type InsertRepairRequest,
   type ApprovalRequest, type InsertApprovalRequest,
   type Route, type InsertRoute,
@@ -60,7 +61,7 @@ import {
   payPeriods, payrollEntries, archivedAlerts, threads, threadMessages,
   propertyChannels, channelMembers, channelMessages, channelReactions, channelReads, departmentChannels,
   type DepartmentChannel, type InsertDepartmentChannel,
-  estimates, serviceRepairJobs, repairRequests, approvalRequests, routes, routeStops, routeMoves, unscheduledStops,
+  estimates, serviceRepairJobs, jobReassignments, repairRequests, approvalRequests, routes, routeStops, routeMoves, unscheduledStops,
   pmServiceTypes, pmIntervalSettings, equipmentPmSchedules, pmServiceRecords,
   fleetTrucks, fleetMaintenanceRecords, truckInventory,
   properties, fieldEntries, propertyBillingContacts, propertyContacts, propertyAccessNotes, techOpsEntries,
@@ -355,6 +356,10 @@ export interface IStorage {
   updateServiceRepairJob(id: string, updates: Partial<InsertServiceRepairJob>): Promise<ServiceRepairJob | undefined>;
   updateServiceRepairJobsStatus(ids: string[], status: string, estimateId?: string, invoiceId?: string): Promise<void>;
   deleteServiceRepairJob(id: string): Promise<void>;
+
+  // Job Reassignments
+  getJobReassignments(): Promise<JobReassignment[]>;
+  createJobReassignment(reassignment: InsertJobReassignment): Promise<JobReassignment>;
 
   // Repair Requests
   getRepairRequests(status?: string): Promise<RepairRequest[]>;
@@ -2204,6 +2209,16 @@ export class DbStorage implements IStorage {
 
   async deleteServiceRepairJob(id: string): Promise<void> {
     await db.delete(serviceRepairJobs).where(eq(serviceRepairJobs.id, id));
+  }
+
+  // Job Reassignments
+  async getJobReassignments(): Promise<JobReassignment[]> {
+    return db.select().from(jobReassignments).orderBy(desc(jobReassignments.reassignedAt));
+  }
+
+  async createJobReassignment(reassignment: InsertJobReassignment): Promise<JobReassignment> {
+    const result = await db.insert(jobReassignments).values(reassignment as any).returning();
+    return result[0];
   }
 
   // Repair Requests
