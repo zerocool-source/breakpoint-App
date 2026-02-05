@@ -2,8 +2,288 @@ import { Request, Response } from "express";
 import { storage } from "../storage";
 import fs from "fs";
 import path from "path";
+import { db } from "../db";
+import {
+  customers, properties, technicians, customerAddresses, customerContacts,
+  pools, equipment, routes, routeStops, estimates, emergencies, repairRequests,
+  customerTags, customerTagAssignments, customerZones
+} from "@shared/schema";
 
 export function registerSyncRoutes(app: any) {
+  // ==================== DATA BACKUP/RESTORE ====================
+
+  // Export all data for backup/migration
+  app.get('/api/data/export', async (req: Request, res: Response) => {
+    try {
+      console.log('[Data Export] Starting full data export...');
+
+      const exportData: Record<string, any[]> = {
+        customers: await storage.getCustomers(),
+        properties: await storage.getProperties(),
+        technicians: await storage.getTechnicians(),
+        routes: await storage.getRoutes(),
+        routeStops: await storage.getAllRouteStops(),
+        estimates: await storage.getEstimates(),
+        emergencies: await storage.getEmergencies(),
+        repairRequests: await storage.getRepairRequests(),
+        customerTags: await storage.getCustomerTags(),
+      };
+
+      // Get addresses, contacts, pools for each customer
+      const customerDetails: Record<string, any> = {};
+      for (const customer of exportData.customers) {
+        customerDetails[customer.id] = {
+          addresses: await storage.getCustomerAddresses(customer.id),
+          contacts: await storage.getCustomerContacts(customer.id),
+          pools: await storage.getPoolsByCustomer(customer.id),
+          equipment: await storage.getEquipmentByCustomer(customer.id),
+          tags: await storage.getCustomerTagsWithAssignments(customer.id),
+        };
+      }
+      exportData.customerDetails = [customerDetails];
+
+      // Get property contacts
+      const propertyDetails: Record<string, any> = {};
+      for (const property of exportData.properties) {
+        try {
+          const contacts = await storage.getPropertyContacts(property.id);
+          const accessNotes = await storage.getPropertyAccessNotes(property.id);
+          propertyDetails[property.id] = { contacts, accessNotes };
+        } catch {
+          propertyDetails[property.id] = { contacts: [], accessNotes: [] };
+        }
+      }
+      exportData.propertyDetails = [propertyDetails];
+
+      const counts = Object.entries(exportData).map(([key, val]) =>
+        `${key}: ${Array.isArray(val) ? val.length : Object.keys(val).length}`
+      ).join(', ');
+
+      console.log(`[Data Export] Complete. ${counts}`);
+
+      res.json({
+        success: true,
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        data: exportData,
+      });
+    } catch (error: any) {
+      console.error('[Data Export] Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Import data from backup
+  app.post('/api/data/import', async (req: Request, res: Response) => {
+    try {
+      const { data, mode = 'merge' } = req.body; // mode: 'merge' or 'replace'
+
+      if (!data) {
+        return res.status(400).json({ error: 'No data provided' });
+      }
+
+      console.log(`[Data Import] Starting import in ${mode} mode...`);
+
+      const results: Record<string, { created: number; updated: number; errors: number }> = {};
+
+      // Import customer tags first (dependencies)
+      if (data.customerTags?.length) {
+        results.customerTags = { created: 0, updated: 0, errors: 0 };
+        for (const tag of data.customerTags) {
+          try {
+            const existing = await storage.getCustomerTags();
+            const found = existing.find((t: any) => t.id === tag.id || t.name === tag.name);
+            if (!found) {
+              await storage.createCustomerTag(tag);
+              results.customerTags.created++;
+            }
+          } catch (e) {
+            results.customerTags.errors++;
+          }
+        }
+      }
+
+      // Import customers
+      if (data.customers?.length) {
+        results.customers = { created: 0, updated: 0, errors: 0 };
+        for (const customer of data.customers) {
+          try {
+            const existing = await storage.getCustomer(customer.id);
+            if (existing) {
+              if (mode === 'replace') {
+                await storage.updateCustomer(customer.id, customer);
+                results.customers.updated++;
+              }
+            } else {
+              await storage.createCustomer(customer);
+              results.customers.created++;
+            }
+          } catch (e) {
+            console.error(`[Import] Customer error:`, e);
+            results.customers.errors++;
+          }
+        }
+      }
+
+      // Import customer details (addresses, contacts, pools, equipment)
+      if (data.customerDetails?.[0]) {
+        const details = data.customerDetails[0];
+        results.customerAddresses = { created: 0, updated: 0, errors: 0 };
+        results.customerContacts = { created: 0, updated: 0, errors: 0 };
+        results.pools = { created: 0, updated: 0, errors: 0 };
+        results.equipment = { created: 0, updated: 0, errors: 0 };
+
+        for (const [customerId, customerData] of Object.entries(details) as [string, any][]) {
+          // Addresses
+          for (const address of customerData.addresses || []) {
+            try {
+              await storage.createCustomerAddress({ ...address, customerId });
+              results.customerAddresses.created++;
+            } catch { results.customerAddresses.errors++; }
+          }
+          // Contacts
+          for (const contact of customerData.contacts || []) {
+            try {
+              await storage.createCustomerContact({ ...contact, customerId });
+              results.customerContacts.created++;
+            } catch { results.customerContacts.errors++; }
+          }
+          // Pools
+          for (const pool of customerData.pools || []) {
+            try {
+              await storage.createPool({ ...pool, customerId });
+              results.pools.created++;
+            } catch { results.pools.errors++; }
+          }
+          // Equipment
+          for (const equip of customerData.equipment || []) {
+            try {
+              await storage.createEquipment({ ...equip, customerId });
+              results.equipment.created++;
+            } catch { results.equipment.errors++; }
+          }
+        }
+      }
+
+      // Import properties
+      if (data.properties?.length) {
+        results.properties = { created: 0, updated: 0, errors: 0 };
+        for (const property of data.properties) {
+          try {
+            const existing = await storage.getProperty(property.id);
+            if (existing) {
+              if (mode === 'replace') {
+                await storage.updateProperty(property.id, property);
+                results.properties.updated++;
+              }
+            } else {
+              await storage.createProperty(property);
+              results.properties.created++;
+            }
+          } catch (e) {
+            results.properties.errors++;
+          }
+        }
+      }
+
+      // Import technicians
+      if (data.technicians?.length) {
+        results.technicians = { created: 0, updated: 0, errors: 0 };
+        for (const tech of data.technicians) {
+          try {
+            const existing = await storage.getTechnician(tech.id);
+            if (existing) {
+              if (mode === 'replace') {
+                await storage.updateTechnician(tech.id, tech);
+                results.technicians.updated++;
+              }
+            } else {
+              await storage.createTechnician(tech);
+              results.technicians.created++;
+            }
+          } catch (e) {
+            results.technicians.errors++;
+          }
+        }
+      }
+
+      // Import routes
+      if (data.routes?.length) {
+        results.routes = { created: 0, updated: 0, errors: 0 };
+        for (const route of data.routes) {
+          try {
+            const existing = await storage.getRoute(route.id);
+            if (!existing) {
+              await storage.createRoute(route);
+              results.routes.created++;
+            }
+          } catch (e) {
+            results.routes.errors++;
+          }
+        }
+      }
+
+      // Import route stops
+      if (data.routeStops?.length) {
+        results.routeStops = { created: 0, updated: 0, errors: 0 };
+        for (const stop of data.routeStops) {
+          try {
+            const existing = await storage.getRouteStop(stop.id);
+            if (!existing) {
+              await storage.createRouteStop(stop);
+              results.routeStops.created++;
+            }
+          } catch (e) {
+            results.routeStops.errors++;
+          }
+        }
+      }
+
+      // Import estimates
+      if (data.estimates?.length) {
+        results.estimates = { created: 0, updated: 0, errors: 0 };
+        for (const estimate of data.estimates) {
+          try {
+            const existing = await storage.getEstimate(estimate.id);
+            if (!existing) {
+              await storage.createEstimate(estimate);
+              results.estimates.created++;
+            }
+          } catch (e) {
+            results.estimates.errors++;
+          }
+        }
+      }
+
+      // Import emergencies
+      if (data.emergencies?.length) {
+        results.emergencies = { created: 0, updated: 0, errors: 0 };
+        for (const emergency of data.emergencies) {
+          try {
+            const existing = await storage.getEmergency(emergency.id);
+            if (!existing) {
+              await storage.createEmergency(emergency);
+              results.emergencies.created++;
+            }
+          } catch (e) {
+            results.emergencies.errors++;
+          }
+        }
+      }
+
+      console.log('[Data Import] Complete:', JSON.stringify(results, null, 2));
+
+      res.json({
+        success: true,
+        importedAt: new Date().toISOString(),
+        mode,
+        results,
+      });
+    } catch (error: any) {
+      console.error('[Data Import] Error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   // Photo upload endpoint for mobile app
   app.post('/api/sync/upload-photo', async (req: Request, res: Response) => {
     try {
