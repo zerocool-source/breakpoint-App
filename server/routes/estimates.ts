@@ -1177,6 +1177,59 @@ export function registerEstimateRoutes(app: any) {
     }
   });
 
+  // Debug endpoint to check technician-estimate matching
+  app.get("/api/estimates/debug-tech-sync", async (req: Request, res: Response) => {
+    try {
+      const technicians = await storage.getTechnicians();
+      const allEstimates = await storage.getEstimates("scheduled");
+
+      // Find Rick or any repair technician
+      const repairTechs = technicians.filter((t: any) =>
+        t.role === 'repair' ||
+        t.firstName?.toLowerCase().includes('rick') ||
+        t.email?.toLowerCase().includes('repair')
+      );
+
+      // Get unique repairTechIds from estimates
+      const estimateTechIds = [...new Set(allEstimates.map((e: any) => e.repairTechId).filter(Boolean))];
+
+      // Match them up
+      const techsWithJobs = technicians.filter((t: any) => estimateTechIds.includes(t.id));
+
+      res.json({
+        summary: {
+          totalTechnicians: technicians.length,
+          totalScheduledEstimates: allEstimates.length,
+          uniqueTechIdsOnEstimates: estimateTechIds.length,
+        },
+        repairTechnicians: repairTechs.map((t: any) => ({
+          id: t.id,
+          name: `${t.firstName} ${t.lastName}`,
+          email: t.email,
+          role: t.role,
+          jobCount: allEstimates.filter((e: any) => e.repairTechId === t.id).length
+        })),
+        techsWithScheduledJobs: techsWithJobs.map((t: any) => ({
+          id: t.id,
+          name: `${t.firstName} ${t.lastName}`,
+          email: t.email,
+          jobCount: allEstimates.filter((e: any) => e.repairTechId === t.id).length
+        })),
+        sampleEstimates: allEstimates.slice(0, 5).map((e: any) => ({
+          id: e.id,
+          propertyName: e.propertyName,
+          repairTechId: e.repairTechId,
+          repairTechName: e.repairTechName,
+          status: e.status,
+          scheduledDate: e.scheduledDate
+        }))
+      });
+    } catch (error: any) {
+      console.error("Debug endpoint error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get scheduled estimates for a specific technician (for mobile app)
   app.get("/api/estimates/for-tech", async (req: Request, res: Response) => {
     try {
