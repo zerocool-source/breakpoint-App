@@ -1290,7 +1290,7 @@ export function registerEstimateRoutes(app: any) {
       
       // Create a linked service repair job in the Repair Queue
       const repairJob = await storage.createServiceRepairJob({
-        jobNumber: `EST-${currentEstimate.estimateNumber || id.slice(0, 8)}`,
+        jobNumber: currentEstimate.estimateNumber || `EST-${id.slice(0, 8)}`,
         propertyId: currentEstimate.propertyId,
         propertyName: currentEstimate.propertyName,
         customerId: null,
