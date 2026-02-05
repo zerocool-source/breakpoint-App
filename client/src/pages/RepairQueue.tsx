@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -304,6 +304,15 @@ export default function RepairQueue() {
   
   // Convert to estimate state
   const [showConvertModal, setShowConvertModal] = useState(false);
+  
+  // Edit estimate modal state (for reassign and date change)
+  const [showEditEstimateModal, setShowEditEstimateModal] = useState(false);
+  const [selectedEstimateForEdit, setSelectedEstimateForEdit] = useState<any>(null);
+  const [editEstimateForm, setEditEstimateForm] = useState({
+    repairTechId: "",
+    repairTechName: "",
+    scheduledDate: "",
+  });
 
   // Get unique properties for filter dropdown
   const uniqueProperties = useMemo(() => {
@@ -1125,6 +1134,39 @@ export default function RepairQueue() {
     },
   });
 
+  // Mutation for editing estimate (reassign and date change)
+  const editEstimateMutation = useMutation({
+    mutationFn: async ({ estimateId, repairTechId, repairTechName, scheduledDate }: { 
+      estimateId: string; 
+      repairTechId: string;
+      repairTechName: string;
+      scheduledDate: string;
+    }) => {
+      const res = await fetch(`/api/estimates/${estimateId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repairTechId,
+          repairTechName,
+          scheduledDate: new Date(scheduledDate).toISOString(),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update estimate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estimates"] });
+      queryClient.invalidateQueries({ queryKey: ["estimates-for-repair-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["service-repairs"] });
+      setShowEditEstimateModal(false);
+      setSelectedEstimateForEdit(null);
+      toast({ title: "Success", description: "Estimate updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update estimate", variant: "destructive" });
+    },
+  });
+
   // Helper functions for repair request actions
   const handleRowClick = (request: RepairRequest) => {
     setSelectedRepairRequest(request);
@@ -1232,6 +1274,30 @@ Thank you.`;
       estimateId: selectedRepairForReassign.estimateId,
       techId: newTechId,
       techName: tech.name,
+    });
+  };
+
+  const handleOpenEditEstimateModal = (estimate: any) => {
+    setSelectedEstimateForEdit(estimate);
+    setEditEstimateForm({
+      repairTechId: estimate.repairTechId || "",
+      repairTechName: estimate.repairTechName || "",
+      scheduledDate: estimate.scheduledDate ? new Date(estimate.scheduledDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    });
+    setShowEditEstimateModal(true);
+  };
+
+  const handleSaveEstimateEdit = () => {
+    if (!selectedEstimateForEdit || !editEstimateForm.repairTechId || !editEstimateForm.scheduledDate) {
+      toast({ title: "Error", description: "Please select a technician and date", variant: "destructive" });
+      return;
+    }
+    
+    editEstimateMutation.mutate({
+      estimateId: selectedEstimateForEdit.id,
+      repairTechId: editEstimateForm.repairTechId,
+      repairTechName: editEstimateForm.repairTechName,
+      scheduledDate: editEstimateForm.scheduledDate,
     });
   };
 
@@ -3038,11 +3104,20 @@ Thank you.`;
                                           </div>
                                         </div>
                                       )}
-                                      <div className="mt-4 flex justify-end">
+                                      <div className="mt-4 flex justify-end gap-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => { e.stopPropagation(); handleOpenEditEstimateModal(estimate); }}
+                                          data-testid={`button-edit-estimate-${estimate.id}`}
+                                        >
+                                          <Users className="w-4 h-4 mr-1" /> Reassign / Change Date
+                                        </Button>
                                         <Button
                                           variant="outline"
                                           size="sm"
                                           onClick={(e) => { e.stopPropagation(); window.location.href = `/estimates?id=${estimate.id}`; }}
+                                          data-testid={`button-view-estimate-${estimate.id}`}
                                         >
                                           <Eye className="w-4 h-4 mr-1" /> View Full Estimate
                                         </Button>
@@ -3876,6 +3951,96 @@ Thank you.`;
                 <FileEdit className="w-4 h-4 mr-2" />
               )}
               Create Estimate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Estimate Modal - Reassign and Change Date */}
+      <Dialog open={showEditEstimateModal} onOpenChange={setShowEditEstimateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Estimate Assignment</DialogTitle>
+            <DialogDescription>
+              Change the assigned technician or scheduled date for this estimate.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedEstimateForEdit && (
+            <div className="space-y-4">
+              <div className="bg-slate-50 p-3 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-500">Estimate #</span>
+                  <span className="text-sm font-semibold">{selectedEstimateForEdit.estimateNumber || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-500">Property</span>
+                  <span className="text-sm">{selectedEstimateForEdit.propertyName || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-slate-500">Amount</span>
+                  <span className="text-sm font-semibold text-emerald-600">{formatCurrency(selectedEstimateForEdit.totalAmount)}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Assign to Technician</Label>
+                <Select
+                  value={editEstimateForm.repairTechId}
+                  onValueChange={(value) => {
+                    const tech = repairTechnicians.find((t: Technician) => t.id === value);
+                    setEditEstimateForm(prev => ({
+                      ...prev,
+                      repairTechId: value,
+                      repairTechName: tech ? `${tech.firstName} ${tech.lastName}` : "",
+                    }));
+                  }}
+                >
+                  <SelectTrigger data-testid="select-edit-tech">
+                    <SelectValue placeholder="Select a technician" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {repairTechnicians.filter((t: Technician) => t.active !== false).map((tech: Technician) => (
+                      <SelectItem key={tech.id} value={tech.id}>
+                        {tech.firstName} {tech.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Scheduled Date</Label>
+                <Input
+                  type="date"
+                  value={editEstimateForm.scheduledDate}
+                  onChange={(e) => setEditEstimateForm(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                  data-testid="input-edit-date"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditEstimateModal(false)}
+              data-testid="button-cancel-edit-estimate"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#0078D4] hover:bg-[#0078D4]/90 text-white"
+              onClick={handleSaveEstimateEdit}
+              disabled={editEstimateMutation.isPending}
+              data-testid="button-save-edit-estimate"
+            >
+              {editEstimateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
