@@ -3756,6 +3756,24 @@ export default function Estimates() {
                           )}
                           {estimate.status === "scheduled" && (
                             <>
+                              {(() => {
+                                const countdown = formatDeadlineCountdown(estimate.deadlineAt, estimate.deadlineValue, estimate.deadlineUnit);
+                                if (!countdown.text) {
+                                  return <span className="text-xs text-slate-400">—</span>;
+                                }
+                                const urgencyStyles = {
+                                  normal: "bg-green-50 text-green-600 border-green-200",
+                                  warning: "bg-amber-50 text-amber-600 border-amber-200",
+                                  critical: "bg-red-50 text-red-600 border-red-200",
+                                  expired: "bg-red-100 text-red-700 border-red-300",
+                                };
+                                return (
+                                  <Badge variant="outline" className={`text-xs px-2 py-0.5 ${urgencyStyles[countdown.urgency]}`} data-testid={`badge-timer-${estimate.id}`}>
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {countdown.text}
+                                  </Badge>
+                                );
+                              })()}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                   <Button variant="outline" size="sm" className="bg-[#f0f9ff] text-[#0077C5] border-[#e0f2fe] hover:bg-[#e0f2fe]" data-testid={`button-in-progress-${estimate.id}`}>
@@ -3791,21 +3809,6 @@ export default function Estimates() {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                              {estimate.deadlineAt && (() => {
-                                const { text, urgency } = formatDeadlineCountdown(estimate.deadlineAt, estimate.deadlineValue, estimate.deadlineUnit);
-                                const urgencyStyles = {
-                                  normal: "bg-green-50 text-green-600 border-green-200",
-                                  warning: "bg-amber-50 text-amber-600 border-amber-200",
-                                  critical: "bg-red-50 text-red-600 border-red-200",
-                                  expired: "bg-red-100 text-red-700 border-red-300",
-                                };
-                                return (
-                                  <Badge variant="outline" className={`text-xs px-2 py-0.5 ${urgencyStyles[urgency]}`} data-testid={`badge-timer-${estimate.id}`}>
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {text}
-                                  </Badge>
-                                );
-                              })()}
                               {estimate.repairTechName && (
                                 <span className="text-xs text-slate-500" data-testid={`text-tech-${estimate.id}`}>
                                   Tech: {estimate.repairTechName}

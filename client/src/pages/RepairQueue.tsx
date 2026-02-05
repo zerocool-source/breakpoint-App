@@ -1961,6 +1961,7 @@ Thank you.`;
                                     <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Property</th>
                                     <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Technician</th>
                                     <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date</th>
+                                    <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Timer</th>
                                     <th className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Description</th>
                                     <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Amount</th>
                                     <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Actions</th>
@@ -1995,6 +1996,24 @@ Thank you.`;
                                           </td>
                                           <td className="px-4 py-3">
                                             <span className="text-sm text-slate-500">{formatDate(wo.completedAt || wo.createdAt)}</span>
+                                          </td>
+                                          <td className="px-4 py-3">
+                                            {(() => {
+                                              const deadlineInfo = getDeadlineInfo((wo as any).deadlineAt, (wo as any).deadlineValue, (wo as any).deadlineUnit);
+                                              if (!deadlineInfo) return <span className="text-xs text-slate-400">—</span>;
+                                              const urgencyColors = {
+                                                normal: "bg-emerald-100 text-emerald-700",
+                                                warning: "bg-amber-100 text-amber-700",
+                                                critical: "bg-red-100 text-red-700",
+                                                expired: "bg-red-200 text-red-800",
+                                              };
+                                              return (
+                                                <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${urgencyColors[deadlineInfo.urgency]}`}>
+                                                  <Clock className="w-3 h-3" />
+                                                  {deadlineInfo.text}
+                                                </span>
+                                              );
+                                            })()}
                                           </td>
                                           <td className="px-4 py-3 max-w-[200px]">
                                             <span className="text-sm text-slate-600 truncate block" title={wo.title || wo.description || ""}>
@@ -2059,6 +2078,24 @@ Thank you.`;
                                         </td>
                                         <td className="px-4 py-3">
                                           <span className="text-sm text-slate-500">{formatDate(repair.jobDate)}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                          {(() => {
+                                            const deadlineInfo = getDeadlineInfo((repair as any).deadlineAt, (repair as any).deadlineValue, (repair as any).deadlineUnit);
+                                            if (!deadlineInfo) return <span className="text-xs text-slate-400">—</span>;
+                                            const urgencyColors = {
+                                              normal: "bg-emerald-100 text-emerald-700",
+                                              warning: "bg-amber-100 text-amber-700",
+                                              critical: "bg-red-100 text-red-700",
+                                              expired: "bg-red-200 text-red-800",
+                                            };
+                                            return (
+                                              <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${urgencyColors[deadlineInfo.urgency]}`}>
+                                                <Clock className="w-3 h-3" />
+                                                {deadlineInfo.text}
+                                              </span>
+                                            );
+                                          })()}
                                         </td>
                                         <td className="px-4 py-3 max-w-[200px]">
                                           <span className="text-sm text-slate-600 truncate block" title={repair.description || ""}>

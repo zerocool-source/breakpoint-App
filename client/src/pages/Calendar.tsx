@@ -2374,6 +2374,23 @@ export default function Calendar() {
                                 <MapPin className="w-3 h-3 shrink-0" />
                                 {repair.propertyName}
                               </p>
+                              {deadlineInfo ? (
+                                <p 
+                                  className={cn(
+                                    "text-[10px] mt-1 flex items-center gap-1",
+                                    urgencyColors[deadlineInfo.urgency].text
+                                  )}
+                                  data-testid={`deadline-repair-${repair.id}`}
+                                >
+                                  <Clock className={cn("w-3 h-3", urgencyColors[deadlineInfo.urgency].icon)} />
+                                  {deadlineInfo.text}
+                                </p>
+                              ) : (
+                                <p className="text-[10px] mt-1 flex items-center gap-1 text-slate-400" data-testid={`deadline-repair-${repair.id}`}>
+                                  <Clock className="w-3 h-3" />
+                                  —
+                                </p>
+                              )}
                               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                                 <span
                                   data-testid={`status-repair-${repair.id}`}
@@ -2392,19 +2409,6 @@ export default function Calendar() {
                                     ? "In Progress"
                                     : "Scheduled"}
                                 </span>
-                                {deadlineInfo && (
-                                  <span
-                                    data-testid={`deadline-repair-${repair.id}`}
-                                    className={cn(
-                                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
-                                      urgencyColors[deadlineInfo.urgency].bg,
-                                      urgencyColors[deadlineInfo.urgency].text
-                                    )}
-                                  >
-                                    <Clock className={cn("w-2.5 h-2.5", urgencyColors[deadlineInfo.urgency].icon)} />
-                                    {deadlineInfo.text}
-                                  </span>
-                                )}
                               </div>
                             </div>
                           );
