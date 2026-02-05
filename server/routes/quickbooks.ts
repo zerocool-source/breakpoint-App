@@ -1197,6 +1197,155 @@ export function registerQuickbooksRoutes(app: Express) {
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // Sync Invoices from QuickBooks - Pull invoices that exist in QB but not locally
+  app.post("/api/quickbooks/sync-invoices", async (_req: Request, res: Response) => {
+    console.log("=== SYNC INVOICES FROM QUICKBOOKS ===");
+    try {
+      const tokens = await getQuickBooksAccessToken();
+      if (!tokens) {
+        return res.status(401).json({ success: false, error: "QuickBooks not connected" });
+      }
+
+      const { accessToken, realmId } = tokens;
+      const isSandbox = !process.env.QUICKBOOKS_PRODUCTION;
+      const baseUrl = isSandbox 
+        ? `https://sandbox-quickbooks.api.intuit.com/v3/company/${realmId}`
+        : `https://quickbooks.api.intuit.com/v3/company/${realmId}`;
+      
+      console.log(`Using QuickBooks API: ${isSandbox ? 'SANDBOX' : 'PRODUCTION'}`);
+      
+      // Get existing local invoices with QB IDs
+      const localInvoices = await db.select().from(invoices);
+      const localQBIds = new Set(localInvoices.filter(inv => inv.quickbooksInvoiceId).map(inv => inv.quickbooksInvoiceId));
+      console.log(`Found ${localInvoices.length} local invoices, ${localQBIds.size} with QuickBooks IDs`);
+
+      // Query recent invoices from QuickBooks (last 90 days)
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const dateStr = ninetyDaysAgo.toISOString().split('T')[0];
+      
+      const query = `SELECT * FROM Invoice WHERE TxnDate >= '${dateStr}' ORDERBY TxnDate DESC MAXRESULTS 100`;
+      const queryUrl = `${baseUrl}/query?query=${encodeURIComponent(query)}`;
+      
+      console.log("Querying QuickBooks:", query);
+      
+      const qbResponse = await fetch(queryUrl, {
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Accept": "application/json",
+        },
+      });
+
+      if (!qbResponse.ok) {
+        const errorText = await qbResponse.text();
+        console.error("Failed to query QB invoices:", errorText);
+        return res.status(500).json({ success: false, error: "Failed to query QuickBooks invoices" });
+      }
+
+      const qbData = await qbResponse.json();
+      const qbInvoices = qbData.QueryResponse?.Invoice || [];
+      console.log(`Found ${qbInvoices.length} invoices in QuickBooks`);
+
+      let importedCount = 0;
+      let updatedCount = 0;
+      const errors: string[] = [];
+
+      for (const qbInv of qbInvoices) {
+        const qbId = qbInv.Id;
+        const docNumber = qbInv.DocNumber;
+        const customerName = qbInv.CustomerRef?.name || "Unknown Customer";
+        const totalAmount = Math.round(parseFloat(qbInv.TotalAmt || "0") * 100);
+        const balance = Math.round(parseFloat(qbInv.Balance || "0") * 100);
+        const txnDate = qbInv.TxnDate ? new Date(qbInv.TxnDate) : new Date();
+        const dueDate = qbInv.DueDate ? new Date(qbInv.DueDate) : new Date(Date.now() + 30*24*60*60*1000);
+        
+        // Check if this QB invoice already exists locally
+        const existingLocal = localInvoices.find(inv => inv.quickbooksInvoiceId === qbId);
+        
+        // Extract line items from QB invoice - convert ALL amounts to cents
+        const lineItems = (qbInv.Line || [])
+          .filter((line: any) => line.DetailType === 'SalesItemLineDetail')
+          .map((line: any) => ({
+            description: line.Description || '',
+            quantity: line.SalesItemLineDetail?.Qty || 1,
+            rate: Math.round((line.SalesItemLineDetail?.UnitPrice || 0) * 100), // Convert to cents
+            amount: Math.round((line.Amount || 0) * 100), // Convert to cents
+          }));
+
+        if (existingLocal) {
+          // Update existing invoice with latest QB data - refresh ALL financial fields
+          const updates: any = {
+            quickbooksDocNumber: docNumber,
+            quickbooksSyncedAt: new Date(),
+            totalAmount: totalAmount, // Refresh total from QB
+            amountDue: balance,
+            amountPaid: totalAmount - balance,
+            lineItems: lineItems, // Refresh line items from QB
+            updatedAt: new Date(),
+          };
+          if (balance === 0 && existingLocal.status !== "paid") {
+            updates.status = "paid";
+            updates.paidDate = new Date();
+          }
+          
+          await db.update(invoices).set(updates).where(eq(invoices.id, existingLocal.id));
+          updatedCount++;
+          console.log(`Updated existing invoice: ${existingLocal.invoiceNumber} (QB Doc: ${docNumber})`);
+        } else {
+          // Import new invoice from QB
+          try {
+            // Generate local invoice number
+            const year = new Date().getFullYear().toString().slice(-2);
+            const countResult = await db
+              .select({ count: sql<number>`COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM '[0-9]+$') AS INTEGER)), 0) + 1` })
+              .from(invoices)
+              .where(sql`invoice_number LIKE ${'INV-' + year + '-%'}`);
+            const nextNum = (countResult[0]?.count || 1).toString().padStart(5, '0');
+            const invoiceNumber = `INV-${year}-${nextNum}`;
+
+            await db.insert(invoices).values({
+              invoiceNumber,
+              customerName,
+              quickbooksInvoiceId: qbId,
+              quickbooksDocNumber: docNumber,
+              quickbooksSyncedAt: new Date(),
+              quickbooksSyncStatus: "synced",
+              lineItems, // Already converted to cents above
+              totalAmount, // Already in cents
+              amountDue: balance, // Already in cents
+              amountPaid: totalAmount - balance,
+              status: balance === 0 ? "paid" : "sent",
+              dueDate,
+              paidDate: balance === 0 ? new Date() : null,
+              createdAt: txnDate,
+              sentAt: txnDate,
+            });
+            
+            importedCount++;
+            console.log(`Imported new invoice from QB: ${docNumber} -> ${invoiceNumber} (Customer: ${customerName})`);
+          } catch (importError: any) {
+            console.error(`Error importing QB invoice ${docNumber}:`, importError.message);
+            errors.push(`${docNumber}: ${importError.message}`);
+          }
+        }
+      }
+
+      console.log(`\n=== SYNC COMPLETE ===`);
+      console.log(`Imported: ${importedCount}, Updated: ${updatedCount}, Errors: ${errors.length}`);
+
+      res.json({ 
+        success: true, 
+        imported: importedCount, 
+        updated: updatedCount,
+        total: qbInvoices.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error syncing invoices from QuickBooks:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 }
 
 // Process payment webhook - fetch payment details and update local records

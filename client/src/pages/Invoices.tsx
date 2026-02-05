@@ -77,6 +77,7 @@ export default function Invoices() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [technicianFilter, setTechnicianFilter] = useState<string>("all");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingInvoices, setIsSyncingInvoices] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [sendingInvoiceId, setSendingInvoiceId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -151,15 +152,56 @@ export default function Invoices() {
       const data = await res.json();
       if (data.success) {
         queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-        alert(`Payment sync complete! ${data.updated || 0} invoice(s) updated.`);
+        toast({
+          title: "Payment Sync Complete",
+          description: `${data.updated || 0} invoice(s) updated.`,
+        });
       } else {
-        alert(data.error || "Failed to sync payments");
+        toast({
+          title: "Sync Failed",
+          description: data.error || "Failed to sync payments",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error syncing payments:", error);
-      alert("Failed to sync payments from QuickBooks");
+      toast({
+        title: "Sync Error",
+        description: "Failed to sync payments from QuickBooks",
+        variant: "destructive",
+      });
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleSyncInvoices = async () => {
+    setIsSyncingInvoices(true);
+    try {
+      const res = await fetch("/api/quickbooks/sync-invoices", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+        toast({
+          title: "Invoice Sync Complete",
+          description: `Imported: ${data.imported || 0}, Updated: ${data.updated || 0}`,
+        });
+      } else {
+        toast({
+          title: "Sync Failed",
+          description: data.error || "Failed to sync invoices",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error syncing invoices:", error);
+      toast({
+        title: "Sync Error",
+        description: "Failed to sync invoices from QuickBooks",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncingInvoices(false);
     }
   };
 
@@ -235,6 +277,17 @@ export default function Invoices() {
                 </Badge>
               </Link>
             )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSyncInvoices}
+              disabled={isSyncingInvoices || !qbStatus?.connected}
+              className="gap-2"
+              data-testid="btn-sync-invoices"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingInvoices ? 'animate-spin' : ''}`} />
+              {isSyncingInvoices ? "Syncing..." : "Sync Invoices"}
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 
