@@ -80,10 +80,7 @@ function setupRoutes(app: any) {
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
-<<<<<<< HEAD
   registerHealthRoutes(app);
-=======
   registerNotificationRoutes(app);
->>>>>>> 93a89eba763d98230db7907d80ca492a442200d7
   app.use("/api/email-blast", emailBlastRouter);
 }
