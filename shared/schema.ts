@@ -1152,6 +1152,44 @@ export const insertServiceRepairJobSchema = createInsertSchema(serviceRepairJobs
 export type InsertServiceRepairJob = z.infer<typeof insertServiceRepairJobSchema>;
 export type ServiceRepairJob = typeof serviceRepairJobs.$inferSelect;
 
+// Job Reassignments (tracks when a job is reassigned from one tech to another)
+export const jobReassignments = pgTable("job_reassignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Job reference
+  jobId: text("job_id").notNull(), // ID of service_repair_job or estimate
+  jobType: text("job_type").notNull().default("repair"), // "repair" or "estimate"
+  jobNumber: text("job_number"),
+  
+  // Property info for display
+  propertyId: text("property_id"),
+  propertyName: text("property_name"),
+  
+  // Original technician
+  originalTechId: text("original_tech_id"),
+  originalTechName: text("original_tech_name"),
+  
+  // New technician
+  newTechId: text("new_tech_id"),
+  newTechName: text("new_tech_name"),
+  
+  // Reassignment details
+  reassignedAt: timestamp("reassigned_at").defaultNow(),
+  reassignedByUserId: text("reassigned_by_user_id"),
+  reassignedByUserName: text("reassigned_by_user_name"),
+  reason: text("reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertJobReassignmentSchema = createInsertSchema(jobReassignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertJobReassignment = z.infer<typeof insertJobReassignmentSchema>;
+export type JobReassignment = typeof jobReassignments.$inferSelect;
+
 // Repair Request Line Item type (stored as JSON)
 export interface RepairRequestLineItem {
   lineNumber: number;
