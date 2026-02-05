@@ -32,13 +32,13 @@ import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
   User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
   Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera,
-  FileEdit, Send, Paperclip, ExternalLink, Mail, Phone, MessageSquare
+  FileEdit, Send, Paperclip, ExternalLink, Mail, Phone, MessageSquare, Shuffle
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { RepairRequestForm } from "@/components/RepairRequestForm";
-import type { ServiceRepairJob, Technician, Emergency, RepairRequest } from "@shared/schema";
+import type { ServiceRepairJob, Technician, Emergency, RepairRequest, JobReassignment } from "@shared/schema";
 
 interface WorkOrder {
   id: string;
@@ -159,6 +159,15 @@ export default function RepairQueue() {
     queryFn: async () => {
       const response = await fetch("/api/emergencies");
       if (!response.ok) throw new Error("Failed to fetch emergencies");
+      return response.json();
+    },
+  });
+
+  const { data: jobReassignments = [] } = useQuery<JobReassignment[]>({
+    queryKey: ["job-reassignments"],
+    queryFn: async () => {
+      const response = await fetch("/api/job-reassignments");
+      if (!response.ok) throw new Error("Failed to fetch job reassignments");
       return response.json();
     },
   });
@@ -1788,6 +1797,13 @@ Thank you.`;
               <AlertTriangle className="w-4 h-4 mr-2" /> Repairs Needed ({pendingRepairRequests.length})
             </TabsTrigger>
             <TabsTrigger 
+              value="reassigned" 
+              data-testid="tab-reassigned"
+              className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
+            >
+              <Shuffle className="w-4 h-4 mr-2" /> Reassigned ({jobReassignments.length})
+            </TabsTrigger>
+            <TabsTrigger 
               value="completed" 
               data-testid="tab-completed"
               className="data-[state=active]:bg-[#0077b6] data-[state=active]:text-white data-[state=inactive]:bg-white data-[state=inactive]:border data-[state=inactive]:border-slate-200 data-[state=inactive]:text-slate-600 rounded-full px-4 py-2 font-medium transition-all shadow-sm"
@@ -2246,6 +2262,88 @@ Thank you.`;
                           ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Reassigned Jobs Tab */}
+          <TabsContent value="reassigned" className="mt-4">
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-slate-900">Reassigned Jobs</CardTitle>
+                  <Badge className="bg-[#0077b6]/10 text-[#0077b6] border-[#0077b6]/20">
+                    {jobReassignments.length} Reassignment{jobReassignments.length !== 1 ? 's' : ''}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {jobReassignments.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">
+                    <Shuffle className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <p className="text-lg font-medium">No reassigned jobs</p>
+                    <p className="text-sm">Jobs will appear here when technicians are changed after initial assignment</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b-2 border-slate-200">
+                          <TableHead className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Job #</TableHead>
+                          <TableHead className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Property</TableHead>
+                          <TableHead className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Original Technician</TableHead>
+                          <TableHead className="text-left text-xs font-semibold text-slate-600 px-4 py-3">New Technician</TableHead>
+                          <TableHead className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Date Reassigned</TableHead>
+                          <TableHead className="text-left text-xs font-semibold text-slate-600 px-4 py-3">Reason</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {jobReassignments.map((reassignment, index) => (
+                          <TableRow 
+                            key={reassignment.id} 
+                            className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${index % 2 === 1 ? 'bg-slate-25' : ''}`}
+                            data-testid={`row-reassignment-${reassignment.id}`}
+                          >
+                            <TableCell className="px-4 py-3">
+                              <span className="font-semibold text-slate-900 text-sm">{reassignment.jobNumber || "—"}</span>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span className="text-sm text-slate-700 font-medium">{reassignment.propertyName || "—"}</span>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
+                                    {(reassignment.originalTechName || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-slate-600">{reassignment.originalTechName || "Unassigned"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback className="bg-[#0077b6] text-white text-xs">
+                                    {(reassignment.newTechName || "?").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm text-[#0077b6] font-medium">{reassignment.newTechName || "—"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-3">
+                              <span className="text-sm text-slate-500">{formatDate(reassignment.reassignedAt)}</span>
+                            </TableCell>
+                            <TableCell className="px-4 py-3 max-w-[200px]">
+                              <span className="text-sm text-slate-600 truncate block" title={reassignment.reason || ""}>
+                                {reassignment.reason || "—"}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>
