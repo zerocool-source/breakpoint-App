@@ -308,6 +308,7 @@ export default function Calendar() {
   const [activeSeason, setActiveSeason] = useState<"summer" | "winter">("summer");
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
   const [expandedRouteBlocks, setExpandedRouteBlocks] = useState<Set<string>>(new Set());
+  const [expandedJobCells, setExpandedJobCells] = useState<Set<string>>(new Set()); // Track expanded job cells by "techId-dateStr"
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [showAddCoverageModal, setShowAddCoverageModal] = useState(false);
   const [showExtendedCoverModal, setShowExtendedCoverModal] = useState(false);
@@ -2277,6 +2278,138 @@ export default function Calendar() {
 
                       // Render scheduled repairs and assigned repair requests for repair technicians
                       if (tech.role === "repair" && (scheduledRepairsForDay.length > 0 || assignedRepairRequestsForDay.length > 0)) {
+                        const dateStr = date.toISOString().split('T')[0];
+                        const cellKey = `${tech.id}-${dateStr}`;
+                        const isExpanded = expandedJobCells.has(cellKey);
+                        const totalCards = assignedRepairRequestsForDay.length + scheduledRepairsForDay.length;
+                        const shouldCollapse = totalCards >= 2;
+                        
+                        const toggleExpand = (e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          setExpandedJobCells(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(cellKey)) {
+                              newSet.delete(cellKey);
+                            } else {
+                              newSet.add(cellKey);
+                            }
+                            return newSet;
+                          });
+                        };
+
+                        const renderAssessmentCard = (request: any) => (
+                          <div
+                            key={`rr-${request.id}`}
+                            data-testid={`card-repair-request-${request.id}`}
+                            className="rounded-lg p-2 border-l-[3px] bg-[#0ea5e915] border-l-[#0ea5e9] cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() => {
+                              setSelectedRepairRequest(request);
+                              setHighlightedRepairRequestId(request.id);
+                              setShowRepairsNeededSidebar(true);
+                            }}
+                          >
+                            <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
+                              <ClipboardList className="w-3 h-3 text-[#0ea5e9]" />
+                              <span className="truncate">Assessment</span>
+                            </div>
+                            <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-rr-property-${request.id}`}>
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              {request.propertyName}
+                            </p>
+                            {request.scheduledTime && (
+                              <p className="text-[10px] text-[#64748B] flex items-center gap-1">
+                                <Clock className="w-3 h-3 shrink-0" />
+                                {request.scheduledTime}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                              <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-[#0ea5e9] text-white">
+                                Pending Assessment
+                              </span>
+                              {request.isUrgent && (
+                                <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-red-600 text-white">
+                                  Urgent
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+
+                        const renderRepairCard = (repair: ScheduledRepair) => {
+                          const deadlineInfo = repair.status !== "completed" ? getDeadlineInfo(repair.deadlineAt, repair.deadlineValue, repair.deadlineUnit) : null;
+                          const urgencyColors = {
+                            normal: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'text-emerald-600' },
+                            warning: { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'text-amber-600' },
+                            critical: { bg: 'bg-red-100', text: 'text-red-700', icon: 'text-red-600' },
+                            expired: { bg: 'bg-red-200', text: 'text-red-800', icon: 'text-red-700' },
+                          };
+                          
+                          return (
+                            <div
+                              key={repair.id}
+                              data-testid={`card-repair-job-${repair.id}`}
+                              className={cn(
+                                "rounded-lg p-2 border-l-[3px] cursor-pointer hover:shadow-md transition-shadow",
+                                repair.status === "completed"
+                                  ? "bg-[#22c55e15] border-l-[#22c55e]"
+                                  : repair.status === "in_progress"
+                                  ? "bg-[#14b8a615] border-l-[#14b8a6]"
+                                  : "bg-[#f9731615] border-l-[#f97316]"
+                              )}
+                              onClick={() => {
+                                setSelectedJobForReschedule(repair);
+                                setRescheduleForm({
+                                  repairTechId: repair.repairTechId || "",
+                                  repairTechName: repair.repairTechName || "",
+                                  scheduledDate: repair.scheduledDate ? new Date(repair.scheduledDate) : null,
+                                });
+                                setShowRescheduleSidebar(true);
+                              }}
+                            >
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
+                                <Wrench className="w-3 h-3" />
+                                <span className="truncate" data-testid={`text-repair-title-${repair.id}`}>{repair.title}</span>
+                              </div>
+                              <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-repair-property-${repair.id}`}>
+                                <MapPin className="w-3 h-3 shrink-0" />
+                                {repair.propertyName}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                <span
+                                  data-testid={`status-repair-${repair.id}`}
+                                  className={cn(
+                                    "inline-block px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                    repair.status === "completed"
+                                      ? "bg-[#22c55e] text-white"
+                                      : repair.status === "in_progress"
+                                      ? "bg-[#14b8a6] text-white"
+                                      : "bg-[#f97316] text-white"
+                                  )}
+                                >
+                                  {repair.status === "completed"
+                                    ? "Completed"
+                                    : repair.status === "in_progress"
+                                    ? "In Progress"
+                                    : "Scheduled"}
+                                </span>
+                                {deadlineInfo && (
+                                  <span
+                                    data-testid={`deadline-repair-${repair.id}`}
+                                    className={cn(
+                                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
+                                      urgencyColors[deadlineInfo.urgency].bg,
+                                      urgencyColors[deadlineInfo.urgency].text
+                                    )}
+                                  >
+                                    <Clock className={cn("w-2.5 h-2.5", urgencyColors[deadlineInfo.urgency].icon)} />
+                                    {deadlineInfo.text}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        };
+
                         return (
                           <div
                             key={displayIndex}
@@ -2284,120 +2417,41 @@ export default function Calendar() {
                             data-testid={`cell-repair-${tech.id}-${dayIndex}`}
                           >
                             <div className="space-y-2">
-                              {/* Assigned Repair Requests (Assessments) */}
-                              {assignedRepairRequestsForDay.map((request: any) => (
-                                <div
-                                  key={`rr-${request.id}`}
-                                  data-testid={`card-repair-request-${request.id}`}
-                                  className="rounded-lg p-2 border-l-[3px] bg-[#0ea5e915] border-l-[#0ea5e9] cursor-pointer hover:shadow-md transition-shadow"
-                                  onClick={() => {
-                                    setSelectedRepairRequest(request);
-                                    setHighlightedRepairRequestId(request.id);
-                                    setShowRepairsNeededSidebar(true);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
-                                    <ClipboardList className="w-3 h-3 text-[#0ea5e9]" />
-                                    <span className="truncate">Assessment</span>
-                                  </div>
-                                  <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-rr-property-${request.id}`}>
-                                    <MapPin className="w-3 h-3 shrink-0" />
-                                    {request.propertyName}
-                                  </p>
-                                  {request.scheduledTime && (
-                                    <p className="text-[10px] text-[#64748B] flex items-center gap-1">
-                                      <Clock className="w-3 h-3 shrink-0" />
-                                      {request.scheduledTime}
-                                    </p>
-                                  )}
-                                  <div className="flex items-center gap-1.5 mt-1.5">
-                                    <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-[#0ea5e9] text-white">
-                                      Pending Assessment
-                                    </span>
-                                    {request.isUrgent && (
-                                      <span className="px-1.5 py-0.5 text-[9px] font-medium rounded bg-red-600 text-white">
-                                        Urgent
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-
-                              {/* Scheduled Repairs (Estimates) */}
-                              {scheduledRepairsForDay.map((repair) => {
-                                const deadlineInfo = repair.status !== "completed" ? getDeadlineInfo(repair.deadlineAt, repair.deadlineValue, repair.deadlineUnit) : null;
-                                const urgencyColors = {
-                                  normal: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: 'text-emerald-600' },
-                                  warning: { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'text-amber-600' },
-                                  critical: { bg: 'bg-red-100', text: 'text-red-700', icon: 'text-red-600' },
-                                  expired: { bg: 'bg-red-200', text: 'text-red-800', icon: 'text-red-700' },
-                                };
-                                
-                                return (
+                              {shouldCollapse && !isExpanded ? (
+                                <>
+                                  {/* Show only first card when collapsed */}
+                                  {assignedRepairRequestsForDay.length > 0 
+                                    ? renderAssessmentCard(assignedRepairRequestsForDay[0])
+                                    : scheduledRepairsForDay.length > 0 && renderRepairCard(scheduledRepairsForDay[0])
+                                  }
+                                  {/* Expand bar */}
                                   <div
-                                    key={repair.id}
-                                    data-testid={`card-repair-job-${repair.id}`}
-                                    className={cn(
-                                      "rounded-lg p-2 border-l-[3px] cursor-pointer hover:shadow-md transition-shadow",
-                                      repair.status === "completed"
-                                        ? "bg-[#22c55e15] border-l-[#22c55e]"
-                                        : repair.status === "in_progress"
-                                        ? "bg-[#14b8a615] border-l-[#14b8a6]"
-                                        : "bg-[#f9731615] border-l-[#f97316]"
-                                    )}
-                                    onClick={() => {
-                                      setSelectedJobForReschedule(repair);
-                                      setRescheduleForm({
-                                        repairTechId: repair.repairTechId || "",
-                                        repairTechName: repair.repairTechName || "",
-                                        scheduledDate: repair.scheduledDate ? new Date(repair.scheduledDate) : null,
-                                      });
-                                      setShowRescheduleSidebar(true);
-                                    }}
+                                    onClick={toggleExpand}
+                                    className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors text-xs text-slate-600 font-medium"
+                                    data-testid={`btn-expand-jobs-${cellKey}`}
                                   >
-                                    <div className="flex items-center gap-1.5 text-xs font-medium text-[#0F172A]">
-                                      <Wrench className="w-3 h-3" />
-                                      <span className="truncate" data-testid={`text-repair-title-${repair.id}`}>{repair.title}</span>
-                                    </div>
-                                    <p className="text-[10px] text-[#64748B] mt-1 truncate flex items-center gap-1" data-testid={`text-repair-property-${repair.id}`}>
-                                      <MapPin className="w-3 h-3 shrink-0" />
-                                      {repair.propertyName}
-                                    </p>
-                                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                                      <span
-                                        data-testid={`status-repair-${repair.id}`}
-                                        className={cn(
-                                          "inline-block px-1.5 py-0.5 text-[9px] font-medium rounded",
-                                          repair.status === "completed"
-                                            ? "bg-[#22c55e] text-white"
-                                            : repair.status === "in_progress"
-                                            ? "bg-[#14b8a6] text-white"
-                                            : "bg-[#f97316] text-white"
-                                        )}
-                                      >
-                                        {repair.status === "completed"
-                                          ? "Completed"
-                                          : repair.status === "in_progress"
-                                          ? "In Progress"
-                                          : "Scheduled"}
-                                      </span>
-                                      {deadlineInfo && (
-                                        <span
-                                          data-testid={`deadline-repair-${repair.id}`}
-                                          className={cn(
-                                            "inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded",
-                                            urgencyColors[deadlineInfo.urgency].bg,
-                                            urgencyColors[deadlineInfo.urgency].text
-                                          )}
-                                        >
-                                          <Clock className={cn("w-2.5 h-2.5", urgencyColors[deadlineInfo.urgency].icon)} />
-                                          {deadlineInfo.text}
-                                        </span>
-                                      )}
-                                    </div>
+                                    <span>+{totalCards - 1} more job{totalCards - 1 > 1 ? 's' : ''}</span>
+                                    <ChevronDown className="w-3.5 h-3.5" />
                                   </div>
-                                );
-                              })}
+                                </>
+                              ) : (
+                                <>
+                                  {/* Show all cards when expanded or when less than 2 cards */}
+                                  {assignedRepairRequestsForDay.map((request: any) => renderAssessmentCard(request))}
+                                  {scheduledRepairsForDay.map((repair) => renderRepairCard(repair))}
+                                  {/* Collapse bar (only show when expanded and shouldCollapse) */}
+                                  {shouldCollapse && isExpanded && (
+                                    <div
+                                      onClick={toggleExpand}
+                                      className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-slate-200 cursor-pointer transition-colors text-xs text-slate-600 font-medium"
+                                      data-testid={`btn-collapse-jobs-${cellKey}`}
+                                    >
+                                      <span>Collapse</span>
+                                      <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </div>
                           </div>
                         );
