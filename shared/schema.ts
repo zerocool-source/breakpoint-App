@@ -2277,3 +2277,28 @@ export const insertAiLearningInsightSchema = createInsertSchema(aiLearningInsigh
 
 export type InsertAiLearningInsight = z.infer<typeof insertAiLearningInsightSchema>;
 export type AiLearningInsight = typeof aiLearningInsights.$inferSelect;
+
+// Urgent Notifications - For sending notifications to technicians
+export const urgentNotifications = pgTable("urgent_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  severity: text("severity").default("info"), // "info", "warning", "urgent", "critical"
+  targetRole: text("target_role"), // "repair", "service", "supervisor", "foreman", "admin", null = all
+  targetUserId: varchar("target_user_id"), // Specific user ID, null = broadcast to role
+  relatedEntityType: text("related_entity_type"), // "repair_request", "job", "estimate", etc.
+  relatedEntityId: varchar("related_entity_id"), // ID of related entity
+  isDismissed: boolean("is_dismissed").default(false),
+  dismissedAt: timestamp("dismissed_at"),
+  dismissedByUserId: varchar("dismissed_by_user_id"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUrgentNotificationSchema = createInsertSchema(urgentNotifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUrgentNotification = z.infer<typeof insertUrgentNotificationSchema>;
+export type UrgentNotification = typeof urgentNotifications.$inferSelect;

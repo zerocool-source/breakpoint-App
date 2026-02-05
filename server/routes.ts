@@ -33,6 +33,7 @@ import { registerSearchRoutes } from "./routes/search";
 import { registerUserRoutes } from "./routes/users";
 import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
+import { registerNotificationRoutes } from "./routes/notifications";
 import emailBlastRouter from "./routes/emailBlast";
 import { registerCustomAuthRoutes } from "./replit_integrations/auth";
 import { registerHealthRoutes } from "./routes/health";
@@ -79,6 +80,10 @@ function setupRoutes(app: any) {
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
+<<<<<<< HEAD
   registerHealthRoutes(app);
+=======
+  registerNotificationRoutes(app);
+>>>>>>> 93a89eba763d98230db7907d80ca492a442200d7
   app.use("/api/email-blast", emailBlastRouter);
 }
