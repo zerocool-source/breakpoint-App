@@ -896,6 +896,99 @@ export function registerEstimateRoutes(app: any) {
     }
   });
 
+  // Calendar endpoint - get estimates for scheduling calendar
+  app.get("/api/estimates/for-calendar", async (req: Request, res: Response) => {
+    try {
+      const { weekStart } = req.query;
+      
+      // Parse week start or default to current week's Monday
+      let startDate: Date;
+      if (weekStart && typeof weekStart === 'string') {
+        startDate = new Date(weekStart);
+      } else {
+        startDate = new Date();
+        const day = startDate.getDay();
+        const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+        startDate = new Date(startDate.setDate(diff));
+      }
+      startDate.setHours(0, 0, 0, 0);
+      
+      // Calculate week end (Sunday)
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+      
+      // Get all estimates that are ready to assign or scheduled
+      const allEstimates = await storage.getEstimates();
+      
+      // Ready to assign: approved or needs_scheduling status, no assignedRepairJobId
+      const readyToAssign = allEstimates
+        .filter(est => 
+          (est.status === 'approved' || est.status === 'needs_scheduling') && 
+          !est.assignedRepairJobId
+        )
+        .sort((a, b) => {
+          // Sort by urgency first (emergency > priority > standard), then by createdAt
+          const urgencyOrder: Record<string, number> = { 'emergency': 0, 'priority': 1, 'standard': 2 };
+          const aUrgency = urgencyOrder[(a as any).urgency || 'standard'] ?? 2;
+          const bUrgency = urgencyOrder[(b as any).urgency || 'standard'] ?? 2;
+          if (aUrgency !== bUrgency) return aUrgency - bUrgency;
+          // Then by createdAt
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return aDate - bDate;
+        })
+        .map(est => ({
+          id: est.id,
+          estimateNumber: est.estimateNumber,
+          title: est.title,
+          propertyId: est.propertyId,
+          propertyName: est.propertyName,
+          propertyAddress: est.address,
+          customerName: est.customerName,
+          status: est.status,
+          urgency: (est as any).urgency || 'standard',
+          totalAmount: est.totalAmount,
+          estimateDate: est.estimateDate,
+          createdAt: est.createdAt,
+        }));
+      
+      // Scheduled: has scheduledDate within this week
+      const scheduled = allEstimates
+        .filter(est => {
+          if (est.status !== 'scheduled' || !est.scheduledDate) return false;
+          const schedDate = new Date(est.scheduledDate);
+          return schedDate >= startDate && schedDate <= endDate;
+        })
+        .map(est => ({
+          id: est.id,
+          estimateNumber: est.estimateNumber,
+          title: est.title,
+          propertyId: est.propertyId,
+          propertyName: est.propertyName,
+          propertyAddress: est.address,
+          customerName: est.customerName,
+          status: est.status,
+          urgency: (est as any).urgency || 'standard',
+          totalAmount: est.totalAmount,
+          scheduledDate: est.scheduledDate,
+          repairTechId: est.repairTechId,
+          repairTechName: est.repairTechName,
+          deadlineAt: est.deadlineAt,
+        }));
+      
+      res.json({
+        readyToAssign,
+        scheduled,
+        weekStart: startDate.toISOString(),
+        weekEnd: endDate.toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error fetching calendar estimates:", error);
+      res.status(500).json({ error: "Failed to fetch calendar estimates" });
+    }
+  });
+
   // Estimate metrics - must be before :id routes
   app.get("/api/estimates/metrics", async (req: Request, res: Response) => {
     try {
