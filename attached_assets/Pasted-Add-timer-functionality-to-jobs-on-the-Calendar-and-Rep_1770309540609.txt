@@ -1,0 +1,64 @@
+Add timer functionality to jobs on the Calendar and Repair Queue pages. When a job's 
+timer expires without completion, it automatically gets reassigned.
+
+## Requirements
+
+### 1. Timer Display
+Show countdown timer on job cards in:
+- Calendar page (on each scheduled job card)
+- Repair Queue page (in the "All Active Jobs" table and technician cards)
+
+Timer format: "Xh Xm remaining" or "X days remaining"
+- Green: More than 50% time remaining
+- Yellow: Less than 50% time remaining  
+- Red: Less than 10% remaining or overdue
+
+### 2. Timer Expiry Logic
+When a job timer expires and the job is NOT marked as completed:
+
+1. Remove job from technician's assignment
+2. Move job back to "Ready to Assign" queue
+3. Change estimate status from "In Progress" → "Approved"
+4. Show "Schedule" button on the estimate (instead of showing it as scheduled)
+5. Clear the scheduled date and assigned technician
+6. Log the expiry event (for the "Reassigned" tab tracking)
+
+### 3. Database Fields Needed
+For estimates/jobs:
+- deadline_hours (selected when scheduling: 8h, 10h, 24h, 48h, 1 week, 2 weeks)
+- deadline_start (timestamp when timer started)
+- deadline_end (calculated end time)
+- auto_reassigned (boolean - true if timer expired)
+- reassigned_at (timestamp)
+- original_technician_id (for tracking)
+
+### 4. Background Job/Cron
+Create a background process that:
+- Runs every 5-10 minutes
+- Checks for jobs where deadline_end < now AND status = "In Progress"
+- Triggers the auto-reassign logic for expired jobs
+- Sends notification (optional) to admin about expired jobs
+
+### 5. UI Updates
+
+Calendar page cards should show:
+┌─────────────────────────┐
+│ Job Title               │
+│ 📍 Property Name        │
+│ ⏱ 7h 45m remaining     │  ← Timer
+│ [Scheduled]             │
+└─────────────────────────┘
+
+Repair Queue "All Active Jobs" table - add Timer column:
+| Job # | Status | Property | Technician | Timer | Amount | Actions |
+
+### 6. When Scheduling
+When a job is scheduled/assigned, prompt user to select deadline:
+- 8 hours
+- 10 hours
+- 24 hours
+- 48 hours
+- 1 week
+- 2 weeks
+
+Start the countdown from assignment time.

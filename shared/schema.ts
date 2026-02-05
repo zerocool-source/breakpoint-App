@@ -1030,6 +1030,8 @@ export const estimates = pgTable("estimates", {
   // Auto-return tracking for deadline expiration
   autoReturnedAt: timestamp("auto_returned_at"),
   autoReturnedReason: text("auto_returned_reason"),
+  originalRepairTechId: text("original_repair_tech_id"), // Tech before auto-return
+  originalRepairTechName: text("original_repair_tech_name"),
 });
 
 export const insertEstimateSchema = createInsertSchema(estimates).omit({
