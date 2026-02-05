@@ -106,6 +106,53 @@ function getInitials(name: string | null | undefined): string {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
+// Helper to get deadline countdown info with percentage-based colors
+// Green: >50% time remaining, Yellow: <50%, Red: <10% or overdue
+function getDeadlineInfo(deadlineAt: string | null | undefined, deadlineValue?: number | null, deadlineUnit?: string | null): { text: string; urgency: 'normal' | 'warning' | 'critical' | 'expired' } | null {
+  if (!deadlineAt) return null;
+  const now = new Date();
+  const deadline = new Date(deadlineAt);
+  const diff = deadline.getTime() - now.getTime();
+  
+  if (diff <= 0) {
+    return { text: 'Overdue', urgency: 'expired' };
+  }
+  
+  // Calculate percentage remaining if we know the original duration
+  let percentRemaining = 100;
+  if (deadlineValue && deadlineValue > 0) {
+    let totalDurationHours = deadlineValue;
+    if (deadlineUnit === "days") {
+      totalDurationHours = deadlineValue * 24;
+    }
+    const totalDuration = totalDurationHours * 60 * 60 * 1000;
+    percentRemaining = Math.round((diff / totalDuration) * 100);
+  }
+  
+  // Determine urgency based on percentage remaining
+  let urgency: 'normal' | 'warning' | 'critical' | 'expired' = 'normal';
+  if (percentRemaining <= 10) urgency = 'critical';
+  else if (percentRemaining <= 50) urgency = 'warning';
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  
+  // Format the time remaining
+  let text = '';
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    const remainingHours = Math.floor(hours % 24);
+    text = `${days}d ${remainingHours}h`;
+  } else if (hours >= 1) {
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    text = `${hours}h ${mins}m`;
+  } else {
+    const mins = Math.floor(diff / (1000 * 60));
+    text = `${mins}m`;
+  }
+  
+  return { text, urgency };
+}
+
 export default function RepairQueue() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -2695,6 +2742,7 @@ Thank you.`;
                             <TableHead className="cursor-pointer hover:bg-slate-100" onClick={() => handleSort("status")}>
                               <div className="flex items-center gap-1">Status <SortIcon column="status" /></div>
                             </TableHead>
+                            <TableHead>Timer</TableHead>
                             <TableHead>Photos</TableHead>
                             <TableHead>Source</TableHead>
                             <TableHead className="cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleSort("value")}>
@@ -2766,6 +2814,28 @@ Thank you.`;
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
+                                    {(() => {
+                                      if (estimate.status !== "scheduled") return <span className="text-xs text-slate-400">—</span>;
+                                      const deadlineInfo = getDeadlineInfo(estimate.deadlineAt, estimate.deadlineValue, estimate.deadlineUnit);
+                                      if (!deadlineInfo) return <span className="text-xs text-slate-400">No deadline</span>;
+                                      const urgencyColors = {
+                                        normal: "bg-emerald-100 text-emerald-700",
+                                        warning: "bg-amber-100 text-amber-700",
+                                        critical: "bg-red-100 text-red-700",
+                                        expired: "bg-red-200 text-red-800",
+                                      };
+                                      return (
+                                        <span 
+                                          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${urgencyColors[deadlineInfo.urgency]}`}
+                                          data-testid={`timer-estimate-${estimate.id}`}
+                                        >
+                                          <Clock className="w-3 h-3" />
+                                          {deadlineInfo.text}
+                                        </span>
+                                      );
+                                    })()}
+                                  </TableCell>
+                                  <TableCell>
                                     {estimate.photos && estimate.photos.length > 0 ? (
                                       <div className="flex items-center gap-1">
                                         <Camera className="w-4 h-4 text-slate-400" />
@@ -2787,7 +2857,7 @@ Thank you.`;
                                 </TableRow>
                                 {expandedRow === estimate.id && (
                                   <TableRow>
-                                    <TableCell colSpan={10} className="bg-slate-50 p-4">
+                                    <TableCell colSpan={11} className="bg-slate-50 p-4">
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
                                           <h4 className="font-semibold text-sm mb-2">Estimate Details</h4>
