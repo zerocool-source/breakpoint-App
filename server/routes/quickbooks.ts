@@ -1131,14 +1131,16 @@ export function registerQuickbooksRoutes(app: Express) {
               console.log(`Payment query failed: ${paymentResponse.status}`);
             }
 
-            // Update the invoice
+            // Update the invoice - update BOTH amountPaid and paidAmount for consistency
             console.log(`\nUpdating invoice ${invoice.invoiceNumber}...`);
             await db
               .update(invoices)
               .set({
                 status: isFullyPaid ? "paid" : "partial",
-                paidAmount: paidAmount,
+                amountPaid: paidAmount, // Primary paid amount column
+                paidAmount: paidAmount, // Secondary paid amount column  
                 paidAt: isFullyPaid ? (paidAt || new Date()) : null,
+                paidDate: isFullyPaid ? (paidAt || new Date()) : null, // Also update paidDate
                 paymentMethod: paymentMethod,
                 amountDue: balance,
                 quickbooksDocNumber: needsDocNumberUpdate ? qbDocNumber : invoice.quickbooksDocNumber,
@@ -1168,20 +1170,41 @@ export function registerQuickbooksRoutes(app: Express) {
             }
 
             updatedCount++;
-          } else if (needsDocNumberUpdate) {
-            // Even if no payment, update DocNumber if missing
-            console.log(`\nUpdating invoice ${invoice.invoiceNumber} with QB DocNumber only...`);
-            await db
-              .update(invoices)
-              .set({
-                quickbooksDocNumber: qbDocNumber,
-                updatedAt: new Date(),
-              })
-              .where(eq(invoices.id, invoice.id));
-            console.log(`  - QB DocNumber updated to: ${qbDocNumber}`);
-            updatedCount++;
           } else {
-            console.log(`No payment detected and DocNumber already set - no update needed`);
+            // No payment made - check if overdue or update DocNumber
+            const qbDueDate = qbInvoice.DueDate ? new Date(qbInvoice.DueDate) : null;
+            const now = new Date();
+            const isOverdue = qbDueDate && qbDueDate < now && qbBalance > 0;
+            
+            if (isOverdue && invoice.status !== "overdue") {
+              console.log(`\nInvoice ${invoice.invoiceNumber} is OVERDUE - updating status...`);
+              await db
+                .update(invoices)
+                .set({
+                  status: "overdue",
+                  quickbooksDocNumber: needsDocNumberUpdate ? qbDocNumber : invoice.quickbooksDocNumber,
+                  amountDue: balance,
+                  updatedAt: new Date(),
+                })
+                .where(eq(invoices.id, invoice.id));
+              console.log(`  - Status updated to: overdue`);
+              console.log(`  - Due Date: ${qbDueDate}`);
+              updatedCount++;
+            } else if (needsDocNumberUpdate) {
+              // Even if no payment, update DocNumber if missing
+              console.log(`\nUpdating invoice ${invoice.invoiceNumber} with QB DocNumber only...`);
+              await db
+                .update(invoices)
+                .set({
+                  quickbooksDocNumber: qbDocNumber,
+                  updatedAt: new Date(),
+                })
+                .where(eq(invoices.id, invoice.id));
+              console.log(`  - QB DocNumber updated to: ${qbDocNumber}`);
+              updatedCount++;
+            } else {
+              console.log(`No payment detected, not overdue, and DocNumber already set - no update needed`);
+            }
           }
         } catch (error) {
           console.error(`Error checking invoice ${invoice.invoiceNumber}:`, error);
