@@ -1184,39 +1184,75 @@ export function registerEstimateRoutes(app: any) {
       const technicianName = req.query.technicianName as string | undefined;
       const technicianId = req.query.technicianId as string | undefined;
 
+      console.log('[for-tech] Request params:', { technicianEmail, technicianName, technicianId });
+
       if (!technicianEmail && !technicianName && !technicianId) {
         return res.status(400).json({ error: "technicianEmail, technicianName, or technicianId is required" });
       }
 
       // Get all scheduled estimates
       const allEstimates = await storage.getEstimates("scheduled");
+      console.log('[for-tech] Total scheduled estimates:', allEstimates.length);
+
+      // Log sample estimate to see structure
+      if (allEstimates.length > 0) {
+        const sample = allEstimates[0];
+        console.log('[for-tech] Sample estimate:', {
+          id: sample.id,
+          repairTechId: sample.repairTechId,
+          repairTechName: sample.repairTechName,
+          status: sample.status,
+          propertyName: sample.propertyName
+        });
+      }
 
       let filteredEstimates = allEstimates;
+      let matchedTech: any = null;
+
+      // Get technicians for lookup
+      const technicians = await storage.getTechnicians();
+      console.log('[for-tech] Total technicians:', technicians.length);
+
+      // Log all technicians with their emails
+      technicians.forEach((t: any) => {
+        console.log('[for-tech] Technician:', { id: t.id, name: `${t.firstName} ${t.lastName}`, email: t.email });
+      });
 
       // Filter by technicianId if provided directly
       if (technicianId) {
         filteredEstimates = filteredEstimates.filter((e: any) => e.repairTechId === technicianId);
+        matchedTech = technicians.find((t: any) => t.id === technicianId);
       }
 
       // Filter by technicianEmail - find matching technician first
-      if (technicianEmail) {
-        const technicians = await storage.getTechnicians();
-        const tech = technicians.find((t: any) =>
+      if (technicianEmail && !matchedTech) {
+        matchedTech = technicians.find((t: any) =>
           t.email?.toLowerCase() === technicianEmail.toLowerCase()
         );
-        if (tech) {
-          filteredEstimates = filteredEstimates.filter((e: any) => e.repairTechId === tech.id);
-        } else {
-          filteredEstimates = [];
+        console.log('[for-tech] Email lookup result:', matchedTech ? { id: matchedTech.id, name: `${matchedTech.firstName} ${matchedTech.lastName}` } : 'NOT FOUND');
+
+        if (matchedTech) {
+          filteredEstimates = filteredEstimates.filter((e: any) => e.repairTechId === matchedTech.id);
         }
       }
 
-      // Filter by technicianName
-      if (technicianName) {
-        filteredEstimates = filteredEstimates.filter((e: any) =>
-          e.repairTechName?.toLowerCase().includes(technicianName.toLowerCase())
-        );
+      // Fallback: Filter by technicianName if provided OR if email lookup failed
+      if (technicianName || (!matchedTech && technicianEmail)) {
+        const nameToSearch = technicianName || technicianEmail?.split('@')[0]?.replace(/[._]/g, ' ');
+        console.log('[for-tech] Trying name-based search:', nameToSearch);
+
+        if (nameToSearch && !matchedTech) {
+          // Try to find by repairTechName on the estimates themselves
+          filteredEstimates = allEstimates.filter((e: any) => {
+            const techName = e.repairTechName?.toLowerCase() || '';
+            const searchName = nameToSearch.toLowerCase();
+            return techName.includes(searchName) || searchName.includes(techName.split(' ')[0]);
+          });
+          console.log('[for-tech] Name-based filter found:', filteredEstimates.length, 'estimates');
+        }
       }
+
+      console.log('[for-tech] Filtered estimates count:', filteredEstimates.length);
 
       // Map to job format expected by mobile
       const jobs = filteredEstimates.map((e: any) => ({
@@ -1231,14 +1267,23 @@ export function registerEstimateRoutes(app: any) {
         description: e.title || e.description || 'Scheduled Repair',
         notes: e.description || '',
         totalAmount: e.totalAmount,
-        priority: 'medium',
+        priority: e.deadlineAt ? 'urgent' : 'medium',
         scheduledDate: e.scheduledDate,
+        deadlineAt: e.deadlineAt,
         status: e.status === 'scheduled' ? 'pending' : e.status,
         technicianId: e.repairTechId,
         technicianName: e.repairTechName,
       }));
 
-      res.json({ jobs, total: jobs.length });
+      res.json({
+        jobs,
+        total: jobs.length,
+        debug: {
+          searchedBy: { technicianEmail, technicianName, technicianId },
+          matchedTechnician: matchedTech ? { id: matchedTech.id, name: `${matchedTech.firstName} ${matchedTech.lastName}`, email: matchedTech.email } : null,
+          totalScheduledEstimates: allEstimates.length,
+        }
+      });
     } catch (error: any) {
       console.error("Error fetching tech estimates:", error);
       res.status(500).json({ error: "Failed to fetch tech estimates" });
