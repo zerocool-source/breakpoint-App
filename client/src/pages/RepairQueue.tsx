@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ import {
   Wrench, Loader2, CheckCircle, Clock, AlertTriangle,
   User, MapPin, DollarSign, Calendar, Eye, Users, TrendingUp, Target, FileText, MoreVertical, CalendarDays,
   Download, X, AlertCircle, Package, Search, Filter, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Image, Camera,
-  FileEdit, Send, Paperclip, ExternalLink, Mail, Phone, MessageSquare, Shuffle
+  FileEdit, Send, Paperclip, ExternalLink, Mail, Phone, MessageSquare, Shuffle, MoreHorizontal
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
@@ -727,6 +728,21 @@ export default function RepairQueue() {
     return estimates
       .filter((e: any) => e.sourceServiceRepairId || e.repairTechName)
       .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [estimates]);
+
+  // Active estimates - scheduled or in progress with deadlines
+  const activeEstimates = useMemo(() => {
+    return estimates
+      .filter((e: any) => e.status === "scheduled" || e.status === "in_progress")
+      .sort((a: any, b: any) => {
+        // Sort by deadline (earliest first), then by date
+        if (a.deadlineAt && b.deadlineAt) {
+          return new Date(a.deadlineAt).getTime() - new Date(b.deadlineAt).getTime();
+        }
+        if (a.deadlineAt) return -1;
+        if (b.deadlineAt) return 1;
+        return new Date(b.scheduledDate || b.createdAt).getTime() - new Date(a.scheduledDate || a.createdAt).getTime();
+      });
   }, [estimates]);
 
   // Sorted and paginated estimates with search
@@ -2113,22 +2129,119 @@ Thank you.`;
           {/* Active Jobs Tab - Shows all jobs currently assigned and not yet completed */}
           <TabsContent value="active-jobs" className="mt-4">
             <HorizontalFiltersPanel />
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#0077b6]" />
-              </div>
-            ) : filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-slate-500">
-                  <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No active jobs{hasActiveFilters ? " matching filters" : ""}</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredRepairs.filter(r => r.status === "pending" || r.status === "in_progress" || r.status === "assigned").map(renderRepairCard)}
-              </div>
-            )}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-slate-900">Active Jobs</CardTitle>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                    {activeEstimates.length} {activeEstimates.length === 1 ? 'job' : 'jobs'}
+                  </Badge>
+                </div>
+                <p className="text-sm text-slate-500 mt-1">Scheduled estimates with assigned technicians and deadlines</p>
+              </CardHeader>
+              <CardContent>
+                {activeEstimates.length === 0 ? (
+                  <div className="py-12 text-center text-slate-500">
+                    <Wrench className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p>No active jobs{hasActiveFilters ? " matching filters" : ""}</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="font-semibold">Job #</TableHead>
+                          <TableHead className="font-semibold">Status</TableHead>
+                          <TableHead className="font-semibold">Property</TableHead>
+                          <TableHead className="font-semibold">Technician</TableHead>
+                          <TableHead className="font-semibold">Date</TableHead>
+                          <TableHead className="font-semibold">Timer</TableHead>
+                          <TableHead className="font-semibold text-right">Amount</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {activeEstimates.map((estimate: any) => {
+                          const deadlineInfo = getDeadlineInfo(estimate.deadlineAt, estimate.deadlineValue, estimate.deadlineUnit);
+                          const statusColors: Record<string, string> = {
+                            scheduled: "bg-teal-100 text-teal-600",
+                            in_progress: "bg-blue-100 text-blue-600",
+                          };
+                          const urgencyColors = {
+                            normal: "bg-emerald-100 text-emerald-700",
+                            warning: "bg-amber-100 text-amber-700",
+                            critical: "bg-red-100 text-red-700",
+                            expired: "bg-red-200 text-red-800",
+                          };
+                          return (
+                            <TableRow 
+                              key={estimate.id} 
+                              className="cursor-pointer hover:bg-slate-50"
+                              data-testid={`row-active-job-${estimate.id}`}
+                            >
+                              <TableCell className="font-medium">
+                                <span className="text-[#0077b6]">{estimate.estimateNumber || estimate.id?.slice(0, 8)}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={statusColors[estimate.status] || "bg-slate-100"}>
+                                  {estimate.status === "scheduled" ? "Scheduled" : "In Progress"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-slate-400" />
+                                  <span className="truncate max-w-[150px]">{estimate.propertyName || "—"}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <User className="w-3 h-3 text-slate-400" />
+                                  {estimate.repairTechName || "—"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {estimate.scheduledDate ? format(new Date(estimate.scheduledDate), "MMM d, yyyy") : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {deadlineInfo ? (
+                                  <span 
+                                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${urgencyColors[deadlineInfo.urgency]}`}
+                                    data-testid={`timer-active-${estimate.id}`}
+                                  >
+                                    <Clock className="w-3 h-3" />
+                                    {deadlineInfo.text}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-400">No deadline</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(estimate.totalAmount)}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => window.location.href = `/estimates?id=${estimate.id}`}>
+                                      <Eye className="w-4 h-4 mr-2" />
+                                      View Details
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Repairs Needed Tab - Shows repair requests awaiting evaluation */}
