@@ -35,6 +35,7 @@ import { registerZoneRoutes } from "./routes/zones";
 import { registerServiceAssignmentRoutes } from "./routes/serviceAssignments";
 import emailBlastRouter from "./routes/emailBlast";
 import { registerCustomAuthRoutes } from "./replit_integrations/auth";
+import { registerHealthRoutes } from "./routes/health";
 
 export async function registerRoutes(app: any) {
   const server = createServer(app);
@@ -78,5 +79,6 @@ function setupRoutes(app: any) {
   registerUserRoutes(app);
   registerZoneRoutes(app);
   registerServiceAssignmentRoutes(app);
+  registerHealthRoutes(app);
   app.use("/api/email-blast", emailBlastRouter);
 }
